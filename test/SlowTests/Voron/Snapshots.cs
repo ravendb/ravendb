@@ -59,14 +59,10 @@ namespace SlowTests.Voron
 
                 for (var i = 0; i < DocumentCount; i++)
                 {
-                    var result = snapshot.CreateTree("tree1").Read("docs/" + i);
-                    Assert.NotNull(result);
-
-                    {
-                        var bytes = result.Reader.ReadBytes(result.Reader.Length);
-                        Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
-
-                    }
+                    var readResult = snapshot.CreateTree("tree1").Read("docs/" + i);
+                    Assert.False(readResult.IsNull);
+                    var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
+                    Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
                 }
             }
         }
@@ -118,13 +114,11 @@ namespace SlowTests.Voron
 
                 for (var i = 0; i < DocumentCount; i++)
                 {
-                    var result = snapshot.ReadTree("tree1").Read("docs/" + i);
-                    Assert.NotNull(result);
+                    var readResult = snapshot.ReadTree("tree1").Read("docs/" + i);
+                    Assert.False(readResult.IsNull);
 
-                    {
-                        var bytes = result.Reader.ReadBytes(result.Reader.Length);
-                        Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
-                    }
+                    var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
+                    Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
                 }
             }
         }

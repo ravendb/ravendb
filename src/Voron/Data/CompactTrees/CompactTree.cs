@@ -351,7 +351,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         Lookup<CompactKeyLookup> inner;
         var llt = parent.Llt;
         var existing = parent.Read(name);
-        if (existing == null)
+        if (existing.IsNull)
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
@@ -399,14 +399,14 @@ public sealed partial class CompactTree : IPrepareForCommit
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
         var existingDictionary = llt.RootObjects.Read(dictionarySlice);
-        return existingDictionary != null;
+        return existingDictionary.IsNull == false;
     }
     
     public static unsafe long GetDictionaryId(LowLevelTransaction llt)
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
         var read = llt.RootObjects.Read(dictionarySlice);
-        if (read != null)
+        if (read.IsNull == false)
         {
             return ((PersistentDictionaryRootHeader*)read.Reader.Base)->PageNumber;
         }

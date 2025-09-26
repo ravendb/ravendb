@@ -330,7 +330,7 @@ namespace Voron.Data.BTrees
                     return null;
             }
 
-            return new DecompressedReadResult(GetValueReaderFromHeader(node), decompressed);
+            return new DecompressedReadResult(new ReadResult(GetValueReaderFromHeader(node)), decompressed);
         }
 
         public struct DecompressionInput

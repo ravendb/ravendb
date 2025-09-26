@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Sharding
             mergedCvSlice = Slices.Empty;
 
             var readResult = tree.Read(keySlice);
-            if (readResult == null)
+            if (readResult.IsNull)
             {
                 stats = inMemoryStats;
             }

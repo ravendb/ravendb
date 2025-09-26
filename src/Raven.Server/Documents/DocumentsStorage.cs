@@ -390,7 +390,7 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(GlobalTreeSlice);
             var val = tree.Read(GlobalChangeVectorSlice);
-            if (val == null)
+            if (val.IsNull)
             {
                 return string.Empty;
             }
@@ -456,7 +456,7 @@ namespace Raven.Server.Documents
             var tx = context.Transaction.InnerTransaction;
             var tree = tx.ReadTree(GlobalTreeSlice);
             var val = tree.Read(GlobalFullChangeVectorSlice);
-            if (val == null)
+            if (val.IsNull)
             {
                 return GetDatabaseChangeVector(context);
             }
@@ -601,9 +601,7 @@ namespace Raven.Server.Documents
 
             var tree = tx.CreateTree(EtagsSlice);
             var readResult = tree.Read(LastEtagSlice);
-            long lastEtag = 0;
-            if (readResult != null)
-                lastEtag = readResult.Reader.ReadLittleEndianInt64();
+            var lastEtag = readResult.ReadLittleEndianInt64OrDefault(0);
 
             var lastDocumentEtag = ReadLastDocumentEtag(tx);
             if (lastDocumentEtag > lastEtag)
@@ -645,13 +643,8 @@ namespace Raven.Server.Documents
             {
                 return 0;
             }
-            var readResult = tree.Read(LastCompletedClusterTransactionIndexSlice);
-            if (readResult == null)
-            {
-                return 0;
-            }
 
-            return readResult.Reader.ReadLittleEndianInt64();
+            return tree.Read(LastCompletedClusterTransactionIndexSlice).ReadLittleEndianInt64OrDefault(0);
         }
 
         public void SetLastCompletedClusterTransactionIndex(DocumentsOperationContext context, long index)
@@ -667,9 +660,8 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(GlobalTreeSlice);
             var val = tree.Read(FixCountersLastKeySlice);
-            if (val == null)
-                return null;
-            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
+
+            return val.IsNull ? null : Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
         public void SetLastFixedCounterKey(DocumentsOperationContext context, string lastKey)
@@ -2594,10 +2586,7 @@ namespace Raven.Server.Documents
         {
             var readTree = context.Transaction.InnerTransaction.ReadTree(LastReplicatedEtagsSlice);
             var readResult = readTree.Read(dbId);
-            if (readResult == null)
-                return 0;
-
-            return readResult.Reader.ReadLittleEndianInt64();
+            return readResult.IsNull ? 0 : readResult.Reader.ReadLittleEndianInt64();
         }
 
         public static void SetLastReplicatedEtagFrom(DocumentsOperationContext context, string dbId, long etag)

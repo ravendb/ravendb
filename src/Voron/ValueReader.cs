@@ -141,16 +141,19 @@ namespace Voron
 
         public string ReadString(int length)
         {
-            var arraySegment = ReadBytes(length);
-            return Encodings.Utf8.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
+            var count = Math.Min(length, _len - _pos);
+            if (count <= 0)
+                return "";
+
+            string result = Encodings.Utf8.GetString(Base + _pos, count);
+            
+            // Move forward
+            _pos += count;
+            
+            return result;
         }
 
-        public string ToStringValue()
-        {
-            int length = _len - _pos;
-            var arraySegment = ReadBytes(length);
-            return Encodings.Utf8.GetString(arraySegment.Array, arraySegment.Offset, arraySegment.Count);
-        }
+        public string ToStringValue() => ReadString(_len - _pos);
 
         public override string ToString()
         {

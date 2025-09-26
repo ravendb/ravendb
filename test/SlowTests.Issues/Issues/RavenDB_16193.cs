@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -64,7 +65,8 @@ namespace SlowTests.Issues
                     using (var tx = indexStorage.Environment().ReadTransaction())
                     {
                         var statsTree = tx.ReadTree(IndexSchema.StatsTree);
-                        return Task.FromResult(statsTree.Read(IndexSchema.EntriesCount));
+                        const string nonNull = IndexSchema.StatsTree;
+                        return Task.FromResult(statsTree.Read(IndexSchema.EntriesCount).IsNull ? null : nonNull);
                     }
                 });
 

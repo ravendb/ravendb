@@ -95,7 +95,7 @@ namespace Voron.Data.Tables
                 if (_activeDataSmallSection == null)
                 {
                     var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
-                    if (readResult == null)
+                    if (readResult.IsNull)
                         throw new VoronErrorException($"Could not find active sections for {Name}");
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
@@ -206,16 +206,20 @@ namespace Voron.Data.Tables
         public bool VerifyKeyExists(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree?.Read(key);
-            return readResult != null;
+            if (pkTree == null)
+                return false;
+            return pkTree.Read(key).IsNull == false;
         }
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
             id = -1;
             var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree?.Read(key);
-            if (readResult == null)
+            if (pkTree == null)
+                return false;
+            
+            var readResult = pkTree.Read(key);
+            if (readResult.IsNull)
                 return false;
 
             id = readResult.Reader.ReadLittleEndianInt64();
@@ -855,8 +859,8 @@ namespace Voron.Data.Tables
                 var dictionariesTree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
                 var rev = Bits.SwapBytes(id);
                 using var _ = Slice.From(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-                var readResult = dictionariesTree?.Read(slice);
-                if (readResult == null)
+                ReadResult readResult;
+                if (dictionariesTree == null || (readResult = dictionariesTree.Read(slice)).IsNull)
                 {
                     // we may be checking an empty section, so let's return an empty
                     // dictionary there
@@ -1273,7 +1277,7 @@ namespace Voron.Data.Tables
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
-            if (readResult == null)
+            if (readResult.IsNull)
                 return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)

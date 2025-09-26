@@ -496,7 +496,7 @@ public unsafe partial class IndexWriter
             // then we'll insert data to it as if it was any other term
             var entry = tree.Read(_indexedField.Name);
 
-            if (entry != null)
+            if (entry.IsNull == false)
             {
                 Debug.Assert(sizeof(long) * 2 == sizeof((long, long)));
                 Debug.Assert(entry.Reader.Length == sizeof((long, long)));

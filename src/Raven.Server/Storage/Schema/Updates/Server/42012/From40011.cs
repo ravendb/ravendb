@@ -155,9 +155,10 @@ namespace Raven.Server.Storage.Schema.Updates.Server
         {
             var localState = tx.ReadTree(LocalNodeStateTreeName);
             var read = localState.Read(key);
-            if (read == null)
+            if (read.IsNull)
                 return null;
-            BlittableJsonReaderObject localStateBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            
+            BlittableJsonReaderObject localStateBlittable = new(read.Reader.Base, read.Reader.Length, context);
 
             Transaction.DebugDisposeReaderAfterTransaction(tx, localStateBlittable);
             return localStateBlittable;

@@ -42,12 +42,12 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var read = tx.CreateTree("tree").Read("key1");
-                Assert.NotNull(read);
+                var readResult = tx.CreateTree("tree").Read("key1");
+                Assert.False(readResult.IsNull);
 
-                var reader = read.Reader;
-                Assert.Equal(buffer.Length, read.Reader.Length);
-                var bytes = reader.ReadBytes(read.Reader.Length);
+                var reader = readResult.Reader;
+                Assert.Equal(buffer.Length, readResult.Reader.Length);
+                var bytes = reader.ReadBytes(readResult.Reader.Length);
                 Assert.Equal(buffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
             }
         }
@@ -90,15 +90,12 @@ namespace SlowTests.Voron
 
                 using (var tx = env.ReadTransaction())
                 {
-                    var read = tx.CreateTree("tree").Read("key1");
-                    Assert.NotNull(read);
+                    var readResult = tx.CreateTree("tree").Read("key1");
+                    Assert.False(readResult.IsNull);
 
-                    {
-                        Assert.Equal(buffer.Length, read.Reader.Length);
-                        var bytes = read.Reader.ReadBytes(read.Reader.Length);
-                        Assert.Equal(buffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
-
-                    }
+                    Assert.Equal(buffer.Length, readResult.Reader.Length);
+                    var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
+                    Assert.Equal(buffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
                 }
             }
         }

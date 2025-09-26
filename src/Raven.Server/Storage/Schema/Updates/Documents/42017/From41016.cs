@@ -266,10 +266,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 // let's remove remaining counter trees from the root
 
-                if (step.WriteTx.LowLevelTransaction.RootObjects.Read(CounterKeysSlice) != null)
+                if (step.WriteTx.LowLevelTransaction.RootObjects.Read(CounterKeysSlice).IsNull == false)
                     step.WriteTx.DeleteTree(CounterKeysSlice);
 
-                if (step.WriteTx.LowLevelTransaction.RootObjects.Read(AllCountersEtagSlice) != null)
+                if (step.WriteTx.LowLevelTransaction.RootObjects.Read(AllCountersEtagSlice).IsNull == false)
                     step.WriteTx.DeleteFixedTree(AllCountersEtagSlice.ToString());
             }
 
@@ -496,12 +496,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             Debug.Assert(metadataTree != null);
             // ReSharper disable once PossibleNullReferenceException
             var dbId = metadataTree.Read("db-id");
-            if (dbId == null)
+            if (dbId.IsNull)
                 VoronUnrecoverableErrorException.Raise(step.WriteTx.LowLevelTransaction,
                     "Could not find db id in metadata tree, possible mismatch / corruption?");
 
             var buffer = new byte[16];
-            Debug.Assert(dbId != null);
+            Debug.Assert(dbId.IsNull == false);
             // ReSharper disable once PossibleNullReferenceException
             var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
             if (dbIdBytes != 16)

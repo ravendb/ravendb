@@ -321,12 +321,12 @@ namespace Voron
                 Debug.Assert(metadataTree != null);
                 // ReSharper disable once PossibleNullReferenceException
                 var dbId = metadataTree.Read("db-id");
-                if (dbId == null)
+                if (dbId.IsNull)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
-                Debug.Assert(dbId != null);
+                Debug.Assert(dbId.IsNull == false);
                 // ReSharper disable once PossibleNullReferenceException
                 var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
@@ -364,7 +364,7 @@ namespace Voron
                     var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
 
                     var schemaVersion = metadataTree.Read("schema-version");
-                    if (schemaVersion == null)
+                    if (schemaVersion.IsNull)
                         SchemaErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
                     schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();

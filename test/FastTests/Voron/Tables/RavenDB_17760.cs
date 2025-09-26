@@ -328,7 +328,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var readResult = GetStatsFor(tx, bucket);
-                Assert.NotNull(readResult);
+                Assert.False(readResult.IsNull);
 
                 var size = *(int*)readResult.Reader.Base;
                 Assert.Equal(41, size);
@@ -346,7 +346,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var readResult = GetStatsFor(tx, bucket);
-                Assert.NotNull(readResult);
+                Assert.False(readResult.IsNull);
 
                 var size = *(int*)readResult.Reader.Base;
                 Assert.Equal(43, size);
@@ -432,7 +432,7 @@ namespace FastTests.Voron.Tables
                 var keySlice = new Slice(keyBuffer);
                 var readResult = tree.Read(keySlice);
                 long size = 0;
-                if (readResult != null)
+                if (readResult.IsNull == false)
                 {
                     var reader = readResult.Reader;
                     size = *(long*)reader.Base;

@@ -122,7 +122,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
             *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
             var readResult = tree.Read(new Slice(keyBuffer));
-            if (readResult == null)
+            if (readResult.IsNull)
                 return null;
 
             var reader = readResult.Reader;
@@ -275,7 +275,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
             *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
             var readResult = tree.Read(new Slice(keyBuffer));
-            if (readResult == null)
+            if (readResult.IsNull)
                 return null;
 
             var cvStr = Documents.BucketStats.GetMergedChangeVector(readResult.Reader);

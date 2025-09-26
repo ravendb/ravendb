@@ -59,12 +59,9 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                Assert.Null(tree.Read("a"));
-
+                Assert.True(tree.Read("a").IsNull);
                 tx.Commit();
             }
-
-
         }
 
         [RavenFact(RavenTestCategory.Voron)]
@@ -75,7 +72,7 @@ namespace FastTests.Voron.Trees
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < 1000; i++)
                 {
-                    tree.Add(string.Format("{0,5}", i), StreamFor("abcdefg"));
+                    tree.Add($"{i,5}", StreamFor("abcdefg"));
                 }
                 tx.Commit();
             }
@@ -83,7 +80,7 @@ namespace FastTests.Voron.Trees
             var expected = new List<string>();
             for (int i = 15; i < 1000; i++)
             {
-                expected.Add(string.Format("{0,5}", i));
+                expected.Add($"{i,5}");
             }
 
             using (var tx = Env.WriteTransaction())
@@ -91,7 +88,7 @@ namespace FastTests.Voron.Trees
                 var tree = tx.ReadTree("foo");
                 for (int i = 0; i < 15; i++)
                 {
-                    tree.Delete(string.Format("{0,5}", i));
+                    tree.Delete($"{i,5}");
                 }
                 tx.Commit();
             }

@@ -41,7 +41,7 @@ namespace SlowTests.Voron
                 Slice key;
                 Slice.From(tx.Allocator, BitConverter.GetBytes(1203), out key);
                 var readResult = tree.Read(key);
-                Assert.NotNull(readResult);
+                Assert.False(readResult.IsNull);
 
                 var memoryStream = new MemoryStream();
                 readResult.Reader.CopyTo(memoryStream);

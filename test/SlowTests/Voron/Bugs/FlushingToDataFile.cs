@@ -64,7 +64,7 @@ namespace SlowTests.Voron.Bugs
                 {
                     var readResult = tree.Read("foo/" + i);
 
-                    Assert.NotNull(readResult);
+                    Assert.False(readResult.IsNull);
                     Assert.Equal(value1.Length, readResult.Reader.Length);
 
                     var memoryStream = new MemoryStream(readResult.Reader.Length);
@@ -118,7 +118,7 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 var readResult = tree.Read("foo/0");
 
-                Assert.NotNull(readResult);
+                Assert.False(readResult.IsNull);
                 Assert.Equal(value1.Length, readResult.Reader.Length);
 
                 var memoryStream = new MemoryStream();
@@ -135,7 +135,7 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 var readResult = tree.Read("foo/0");
 
-                Assert.NotNull(readResult);
+                Assert.False(readResult.IsNull);
                 Assert.Equal(value1.Length, readResult.Reader.Length);
 
                 var memoryStream = new MemoryStream();
