@@ -53,13 +53,20 @@ export function withStorybookContexts(Story: StoryFunction) {
     );
 }
 
+const storyTopBarHeight = 40;
+
 export function withBootstrap5(Story: StoryFunction) {
     return (
         <React.Fragment key="bs5">
             <div
                 id="page-host"
                 className="bs5"
-                style={{ padding: "30px", minHeight: "100vh", display: "flex", flexDirection: "column" }}
+                style={{
+                    padding: "30px",
+                    height: `calc(100vh - ${storyTopBarHeight}px)`,
+                    display: "flex",
+                    flexDirection: "column",
+                }}
             >
                 <Story />
             </div>
