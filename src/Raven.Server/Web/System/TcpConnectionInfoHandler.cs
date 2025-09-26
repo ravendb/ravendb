@@ -141,7 +141,7 @@ namespace Raven.Server.Web.System
                     {
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
-                            var cert = httpContext.Connection.ClientCertificate;
+                            var cert = RavenServer.GetCertificateForAuthorization(httpContext.Connection.ClientCertificate);
 #pragma warning disable CS0618 // Type or member is obsolete
                             if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)
                             {
