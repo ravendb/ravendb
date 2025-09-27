@@ -175,15 +175,22 @@ namespace Raven.Server.Web
                 Server.Configuration.Http.UseResponseCompression &&
                 (HttpContext.Request.IsHttps == false ||
                     (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
-                HasHttpAcceptEncoding(HttpContext.Request.Headers, Constants.Headers.Encodings.Gzip);
+                HasGzipHttpCompressionAlgorithmInHeaders(HttpContext.Request.Headers, Constants.Headers.AcceptEncoding);
         }
 
-        private static bool HasHttpAcceptEncoding(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encoding)
+        private static bool HasGzipHttpCompressionAlgorithmInHeaders(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
         {
-            if (headers.TryGetValue(Constants.Headers.AcceptEncoding, out Microsoft.Extensions.Primitives.StringValues acceptEncodings) == false)
+            if (headers.TryGetValue(encodingsHeader, out Microsoft.Extensions.Primitives.StringValues acceptedContentEncodings) == false)
                 return false;
 
-            return acceptEncodings.ToString().Contains(encoding);
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var encoding in acceptedContentEncodings)
+            {
+                if (encoding.Contains(Constants.Headers.Encodings.Gzip))
+                    return true;
+            }
+
+            return false;
         }
 
         private static HttpCompressionAlgorithm? GetHttpCompressionAlgorithmFromHeaders(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
