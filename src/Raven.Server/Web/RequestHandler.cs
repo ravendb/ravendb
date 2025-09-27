@@ -171,12 +171,19 @@ namespace Raven.Server.Web
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected bool ClientAcceptsGzipResponse()
         {
-
             return
                 Server.Configuration.Http.UseResponseCompression &&
                 (HttpContext.Request.IsHttps == false ||
                     (HttpContext.Request.IsHttps && Server.Configuration.Http.AllowResponseCompressionOverHttps)) &&
-                GetHttpCompressionAlgorithmFromHeaders(HttpContext.Request.Headers, Constants.Headers.AcceptEncoding) == HttpCompressionAlgorithm.Gzip;
+                HasHttpAcceptEncoding(HttpContext.Request.Headers, Constants.Headers.Encodings.Gzip);
+        }
+
+        private static bool HasHttpAcceptEncoding(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encoding)
+        {
+            if (headers.TryGetValue(Constants.Headers.AcceptEncoding, out Microsoft.Extensions.Primitives.StringValues acceptEncodings) == false)
+                return false;
+
+            return acceptEncodings.ToString().Contains(encoding);
         }
 
         private static HttpCompressionAlgorithm? GetHttpCompressionAlgorithmFromHeaders(IDictionary<string, Microsoft.Extensions.Primitives.StringValues> headers, string encodingsHeader)
