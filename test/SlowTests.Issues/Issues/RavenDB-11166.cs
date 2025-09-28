@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -71,9 +71,9 @@ namespace SlowTests.Issues
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -124,7 +124,7 @@ namespace SlowTests.Issues
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<Dog>>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -142,9 +142,9 @@ namespace SlowTests.Issues
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    await mre.WaitAsync(TimeSpan.FromSeconds(60));
+                    await amre.WaitAsync(TimeSpan.FromSeconds(60));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -201,7 +201,7 @@ namespace SlowTests.Issues
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<Dog>>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -219,9 +219,9 @@ namespace SlowTests.Issues
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    await mre.WaitAsync(TimeSpan.FromSeconds(60));
+                    await amre.WaitAsync(TimeSpan.FromSeconds(60));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -260,7 +260,7 @@ select f(dog)
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -274,9 +274,9 @@ select f(dog)
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -315,7 +315,7 @@ select f(dog)
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -334,9 +334,9 @@ select f(dog)
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }

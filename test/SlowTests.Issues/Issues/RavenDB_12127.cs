@@ -57,13 +57,13 @@ namespace SlowTests.Issues
                 {
                     sub.SubscriptionTcpVersion = 40;
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }

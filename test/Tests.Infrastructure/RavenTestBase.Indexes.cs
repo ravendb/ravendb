@@ -351,15 +351,15 @@ public partial class RavenTestBase
         {
             var database = await _parent.GetDatabase(store.Database);
 
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
             database.IndexStore.IndexBatchCompleted += x =>
             {
                 if (predicate(x))
-                    mre.Set();
+                    amre.Set();
             };
 
-            return mre;
+            return amre;
         }
         
         public async Task<Index> WaitForRollingIndexAsync(string database, string name, RavenServer server)

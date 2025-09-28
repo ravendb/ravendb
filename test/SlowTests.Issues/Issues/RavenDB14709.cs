@@ -56,15 +56,15 @@ namespace SlowTests.Issues
                 }
             });
 
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
             subscription.AfterAcknowledgment += batch =>
             {
-                mre.Set();
+                amre.Set();
                 return Task.CompletedTask;
             };
 
-            Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+            Assert.True(await amre.WaitAsync(_reasonableWaitTime));
             await subscription.DisposeAsync();
             await subscriptionTask;
             Assert.NotEmpty(names);

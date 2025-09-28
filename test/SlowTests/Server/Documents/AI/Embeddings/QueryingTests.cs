@@ -368,7 +368,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 await session1.StoreAsync(dto3);
                 await session1.SaveChangesAsync();
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
                 var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);

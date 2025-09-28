@@ -29,8 +29,8 @@ namespace SlowTests.Issues
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                 });
 
-                var mre = new AsyncManualResetEvent();
-                subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
+                var amre = new AsyncManualResetEvent();
+                subscription.AfterAcknowledgment += b => { amre.Set(); return Task.CompletedTask; };
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 }
                 var task = subscription.Run(user => { });
 
-                await mre.WaitAsync(TimeSpan.FromSeconds(20));
+                await amre.WaitAsync(TimeSpan.FromSeconds(20));
 
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
 

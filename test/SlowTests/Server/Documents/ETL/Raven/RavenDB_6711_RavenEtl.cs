@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -115,7 +116,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -140,7 +141,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {

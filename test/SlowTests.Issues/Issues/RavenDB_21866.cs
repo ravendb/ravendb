@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,7 +53,7 @@ function loadTimeSeriesOfEventDocumentsBehavior(docId, timeSeriesName) {
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(15)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(15)));
 
             using (var session = dest.OpenAsyncSession())
             {

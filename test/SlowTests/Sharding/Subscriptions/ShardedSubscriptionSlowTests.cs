@@ -214,7 +214,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     using var first = new CountdownEvent(count);
                     using var second = new CountdownEvent(count / 2);
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var mre2 = new ManualResetEventSlim();
                     var t = subscription.Run(async x =>
                     {
@@ -227,7 +227,7 @@ namespace SlowTests.Sharding.Subscriptions
                             first.Signal(x.NumberOfItemsInBatch);
                             if (first.IsSet)
                             {
-                                await mre.WaitAsync();
+                                await amre.WaitAsync();
                             }
                         }
                     });
@@ -276,7 +276,7 @@ namespace SlowTests.Sharding.Subscriptions
                     try
                     {
                         // advance subscription worker
-                        mre.Set();
+                        amre.Set();
 
                         await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                         {
@@ -442,7 +442,7 @@ namespace SlowTests.Sharding.Subscriptions
                 });
 
                 var ackDocs = new List<string>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
                 var f = true;
                 subscription.AfterAcknowledgment += async batch =>
@@ -460,7 +460,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     if (f)
                     {
-                        mre.Set();
+                        amre.Set();
                         Assert.True(await mre2.WaitAsync(_reasonableWaitTime));
                     }
                 };
@@ -506,7 +506,7 @@ namespace SlowTests.Sharding.Subscriptions
                     session.SaveChanges();
                 }
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 var f1 = addedDocs.First();
                 var f2 = ackDocs.First();
@@ -858,7 +858,7 @@ namespace SlowTests.Sharding.Subscriptions
                 });
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -872,9 +872,9 @@ namespace SlowTests.Sharding.Subscriptions
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -1424,7 +1424,7 @@ namespace SlowTests.Sharding.Subscriptions
                         await session.SaveChangesAsync();
                     }
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                     {
                         MaxDocsPerBatch = 5,
@@ -1433,10 +1433,10 @@ namespace SlowTests.Sharding.Subscriptions
                     {
                         var t = worker.Run(_ =>
                         {
-                            mre.Set();
+                            amre.Set();
                         });
 
-                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                        Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     }
                 }
             }
@@ -1527,7 +1527,7 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.True(states.Any(x => x.SubscriptionName.Equals("sub1")));
                 Assert.True(states.Any(x => x.SubscriptionName.Equals("sub2")));
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                 {
                     MaxDocsPerBatch = 5,
@@ -1536,10 +1536,10 @@ namespace SlowTests.Sharding.Subscriptions
                 {
                     var t = worker.Run(_ =>
                     {
-                        mre.Set();
+                        amre.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 }
             }
         }
@@ -1712,7 +1712,7 @@ namespace SlowTests.Sharding.Subscriptions
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 });
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
                 var exceptions = new List<Exception>();
                 subscription.OnUnexpectedSubscriptionError += exception =>
@@ -1721,12 +1721,12 @@ namespace SlowTests.Sharding.Subscriptions
                 };
                 var t = subscription.Run(async x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     Assert.True(await mre2.WaitAsync(_reasonableWaitTime), "await mre2.WaitAsync(_reasonableWaitTime)");
                 });
 
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime), "await mre.WaitAsync(_reasonableWaitTime)");
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime), "await amre.WaitAsync(_reasonableWaitTime)");
                 await subscription.DisposeAsync(false);
                 try
                 {
@@ -1813,7 +1813,7 @@ namespace SlowTests.Sharding.Subscriptions
                 });
                 try
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     worker1.AfterAcknowledgment += batch =>
                     {
                         foreach (var x in batch.Items)
@@ -1839,13 +1839,13 @@ namespace SlowTests.Sharding.Subscriptions
                     {
                         if (ids.Count == 3)
                         {
-                            mre.Set();
+                            amre.Set();
                             Assert.True(await mre2.WaitAsync(_reasonableWaitTime), "mre2");
                         }
 
                         await Task.Delay(16);
                     });
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime), "mre" + Environment.NewLine +
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime), "mre" + Environment.NewLine +
                                                                           PrintException(exceptions1));
                 }
                 finally

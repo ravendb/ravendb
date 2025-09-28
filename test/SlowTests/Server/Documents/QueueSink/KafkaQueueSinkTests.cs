@@ -94,7 +94,7 @@ namespace SlowTests.Server.Documents.QueueSink
             var config = SetupKafkaQueueSink(store, "put(this.Id, this)", new List<string>() { UsersQueueName });
 
             var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config).GetAwaiter().GetResult();
 
             using var session = store.OpenSession();
 
@@ -136,7 +136,7 @@ namespace SlowTests.Server.Documents.QueueSink
             var config = SetupKafkaQueueSink(store, script, new List<string>() { UsersQueueName });
 
             var queueSinkDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
-            AssertQueueSinkDone(queueSinkDone, TimeSpan.FromMinutes(1), store.Database, config);
+            AssertQueueSinkDoneAsync(queueSinkDone, TimeSpan.FromMinutes(1), store.Database, config).GetAwaiter().GetResult();
 
             using var session = store.OpenSession();
 
@@ -174,7 +174,7 @@ namespace SlowTests.Server.Documents.QueueSink
             var config = SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
 
             var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= numberOfUsers);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config).GetAwaiter().GetResult();
 
             using var session = store.OpenSession();
 
@@ -210,7 +210,7 @@ namespace SlowTests.Server.Documents.QueueSink
             var config = SetupKafkaQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)", new List<string>() { UsersQueueName });
 
             var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= numberOfUsers);
-            AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+            AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config).GetAwaiter().GetResult();
 
             using var session = store.OpenSession();
 
@@ -236,7 +236,7 @@ namespace SlowTests.Server.Documents.QueueSink
                 producer.Produce(UsersQueueName, kafkaMessage);
             }
 
-            etlDone.Wait();
+            etlDone.Wait(TimeSpan.FromSeconds(60));
             
             var users2 = session.Query<User>().ToList();
             Assert.Equal(20, users2.Count);

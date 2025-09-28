@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
@@ -56,7 +57,7 @@ namespace SlowTests.Server.Documents.ETL
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(src);
                 var etlProcess = database.EtlLoader.Processes.First();

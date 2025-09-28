@@ -327,7 +327,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -336,11 +336,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         var exception = string.Empty;
                         var t = subscription.Run(x =>
@@ -499,7 +499,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = subscription2.Run(async x =>
                         {
@@ -508,11 +508,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -598,7 +598,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -607,11 +607,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -697,7 +697,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -706,11 +706,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -1063,7 +1063,7 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
                     Query = "from Users where Name != 'R'"
@@ -1097,12 +1097,12 @@ namespace SlowTests.Client.Subscriptions
                         var res = Interlocked.Add(ref count, x.NumberOfItemsInBatch);
                         if (res >= collectionSize)
                         {
-                            mre.Set();
+                            amre.Set();
                         }
 
                     });
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
 
                     using (var session = store.OpenSession())
                     {

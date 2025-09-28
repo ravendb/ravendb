@@ -128,8 +128,8 @@ namespace SlowTests.Authentication
             Server.Dispose();
             UseNewLocalServer(sockets: setupInfo.Sockets);
 
-            var mre = new AsyncManualResetEvent();
-            Server.ServerCertificateChanged += (sender, args) => mre.Set();
+            var amre = new AsyncManualResetEvent();
+            Server.ServerCertificateChanged += (sender, args) => amre.Set();
 
             var ct = Certificates.GenerateAndSaveSelfSignedCertificate(with2Eku);
             var first = Server.Certificate.ServerCertificate.Thumbprint;
@@ -147,7 +147,7 @@ namespace SlowTests.Authentication
                 await store.Maintenance.Server.SendAsync(op2);
             }
 
-            await mre.WaitAsync(TimeSpan.FromSeconds(15));
+            await amre.WaitAsync(TimeSpan.FromSeconds(15));
             Assert.NotEqual(first, Server.Certificate.ServerCertificate.Thumbprint);
         }
 
@@ -315,10 +315,10 @@ namespace SlowTests.Authentication
 
                 Server.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(80);
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var clusterReplacementConfirmed = new AsyncManualResetEvent();
 
-                Server.ServerCertificateChanged += (sender, args) => mre.Set();
+                Server.ServerCertificateChanged += (sender, args) => amre.Set();
                 Server.ServerStore.ForTestingPurposesOnly().OnConfirmCertificateReplacedValueChanged += clusterReplacementConfirmed.Set;
 
                 var command = new ForceRenewCertCommand(store.Conventions, context);
@@ -327,7 +327,7 @@ namespace SlowTests.Authentication
 
                 Assert.True(command.Result.Success, "ForceRenewCertCommand returned false");
 
-                var result = await mre.WaitAsync(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(4));
+                var result = await amre.WaitAsync(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(4));
 
                 if (result == false && Server.RefreshTask.IsCompleted)
                 {

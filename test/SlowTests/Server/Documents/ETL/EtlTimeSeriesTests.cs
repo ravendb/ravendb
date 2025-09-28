@@ -30,6 +30,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -328,7 +329,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
 
 
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
             using (var session = dest.OpenAsyncSession())
             {
@@ -1803,7 +1804,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var etlDone = Etl.WaitForEtlToComplete(src, (_, statistics) => statistics.LastProcessedEtag >= lastEtag);
                 Etl.AddEtl(src, dest, collections, script, applyToAllDocuments: collections.Length == 0);
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 TimeSeriesEntry[] actual = null;
                 await AssertWaitForValueAsync(async () =>

@@ -172,7 +172,7 @@ namespace SlowTests.Client.Subscriptions
                         Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
                         Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
 
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
                         using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                         {
                             MaxDocsPerBatch = 5,
@@ -181,10 +181,10 @@ namespace SlowTests.Client.Subscriptions
                         {
                             var t = worker.Run(_ =>
                             {
-                                mre.Set();
+                                amre.Set();
                             });
 
-                            Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                            Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                         }
                     }
                 }
@@ -232,7 +232,7 @@ namespace SlowTests.Client.Subscriptions
                         await session.SaveChangesAsync();
                     }
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                     {
                         MaxDocsPerBatch = 5,
@@ -241,10 +241,10 @@ namespace SlowTests.Client.Subscriptions
                     {
                         var t = worker.Run(_ =>
                         {
-                            mre.Set();
+                            amre.Set();
                         });
 
-                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                        Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     }
                 }
             }
@@ -829,7 +829,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = @"from Dogs" });
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Dog(DateTime.Now) { Name = 1 });
@@ -843,11 +843,11 @@ namespace SlowTests.Client.Subscriptions
 
                     subscription.OnUnexpectedSubscriptionError += x =>
                     {
-                        mre.Set();
+                        amre.Set();
                     };
                     var t = subscription.Run(x => { });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 }
                 finally
                 {
@@ -1129,7 +1129,7 @@ namespace SlowTests.Client.Subscriptions
         [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DisposeSubscriptionWorkerShouldNotThrow()
         {
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
             var mre2 = new AsyncManualResetEvent();
             using (var store = GetDocumentStore(new Options()
             {
@@ -1139,7 +1139,7 @@ namespace SlowTests.Client.Subscriptions
                     {
                         if (args.Url.Contains("info/remote-task/tcp?database="))
                         {
-                            mre.Set();
+                            amre.Set();
                             await mre2.WaitAsync(_reasonableWaitTime);
                         }
                     };
@@ -1152,7 +1152,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var t = worker.Run(x => { });
 
-                await mre.WaitAsync(_reasonableWaitTime);
+                await amre.WaitAsync(_reasonableWaitTime);
                 await worker.DisposeAsync(false);
                 mre2.Set();
 
@@ -1590,9 +1590,9 @@ namespace SlowTests.Client.Subscriptions
                     ConnectionStreamTimeout = TimeSpan.FromSeconds(15),
                 };
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 await using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(ops);
-                subscription.OnEstablishedSubscriptionConnection += () => mre.Set();
+                subscription.OnEstablishedSubscriptionConnection += () => amre.Set();
 
                 var processingSubs = subscription.Run(ProcessDocuments);
                 await using var subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(ops);
@@ -1604,7 +1604,7 @@ namespace SlowTests.Client.Subscriptions
                 subscription3.OnSubscriptionConnectionRetry += exception => exceptions.Add(exception);
                 subscription3.OnUnexpectedSubscriptionError += exception => exceptions.Add(exception);
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 var waitingSubs1 = subscription2.Run(ProcessDocuments);
                 var waitingSubs2 = subscription3.Run(ProcessDocuments);

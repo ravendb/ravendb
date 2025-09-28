@@ -42,7 +42,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
             new List<string>() { UsersQueueName });
 
         var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -90,7 +90,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
             new List<string>() { UsersQueueName, developersQueueName });
 
         var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses ! >= 4);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -144,7 +144,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
         var config = SetupRabbitMqQueueSink(store, script, new List<string>() { UsersQueueName });
 
         var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 2);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 
@@ -182,7 +182,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
             new List<string>() { UsersQueueName });
 
         var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= numberOfUsers);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using var session = store.OpenSession();
 

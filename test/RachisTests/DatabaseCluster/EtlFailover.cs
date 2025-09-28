@@ -13,7 +13,9 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -191,7 +193,7 @@ namespace RachisTests.DatabaseCluster
                 var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
                     .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
 
-                var etlDone = new ManualResetEventSlim();
+                var etlDone = new AsyncManualResetEvent();
                 database.EtlLoader.BatchCompleted += x =>
                 {
                     if (x.Statistics.LoadSuccesses > 0)
@@ -207,7 +209,7 @@ namespace RachisTests.DatabaseCluster
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
 
                 // BEFORE THE FIX: this will change the database record and restart the ETL, which would fail the test.
@@ -234,7 +236,7 @@ namespace RachisTests.DatabaseCluster
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
             }
         }

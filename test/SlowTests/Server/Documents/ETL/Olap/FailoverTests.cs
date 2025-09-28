@@ -168,16 +168,16 @@ loadToOrders(partitionBy(key),
         {
             var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
             database.EtlLoader.BatchCompleted += x =>
             {
                 if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                    mre.Set();
+                    amre.Set();
             };
 
 
-            return mre;
+            return amre;
         }
 
         private async Task<string> GetPerformanceStats(RavenServer server, string database, TimeSpan timeout)

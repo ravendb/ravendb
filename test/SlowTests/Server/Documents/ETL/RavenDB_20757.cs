@@ -195,12 +195,12 @@ public class RavenDB_20757 : ReplicationTestBase
     private static async Task<AsyncManualResetEvent> WaitForEtl(RavenServer server, string database)
     {
         var documentDatabase = await GetDatabase(server, database);
-        var mre = new AsyncManualResetEvent();
+        var amre = new AsyncManualResetEvent();
         documentDatabase.EtlLoader.BatchCompleted += x =>
         {
             if (x.Statistics.LoadSuccesses > 0)
-                mre.Set();
+                amre.Set();
         };
-        return mre;
+        return amre;
     }
 }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -46,7 +47,7 @@ namespace InterversionTests
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest54.OpenSession())
                 {
@@ -64,7 +65,7 @@ namespace InterversionTests
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest54.OpenSession())
                 {

@@ -27,6 +27,7 @@ using SlowTests.Server.Documents.Migration;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -86,7 +87,7 @@ loadToOrders(orderData);
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     Assert.Equal(testCount, GetOrdersCount(connectionString));
                 }
@@ -175,7 +176,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -231,7 +232,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
 
                     SetupSqlEtl(store, connectionString, script);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -297,7 +298,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
                         FactoryName = "Microsoft.Data.SqlClient"
                     });
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -346,7 +347,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
 };
 loadToOrders(orderData);");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -398,7 +399,7 @@ loadToOrders(orderData);");
 };
 loadToOrders(orderData);");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -438,7 +439,7 @@ loadToOrders(orderData);");
 
                     SetupSqlEtl(store, connectionString, "if(this.OrderLines.length > 0) { \r\n" + DefaultScript + " \r\n}");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     AssertCounts(1, 1, connectionString);
 
@@ -450,7 +451,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                     AssertCounts(0, 0, connectionString);
                 }
             }
@@ -498,7 +499,7 @@ loadToOrders(orderData);");
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     AssertCounts(1, 2, connectionString);
 
@@ -511,7 +512,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                     AssertCounts(1, 0, connectionString);
                 }
             }
@@ -544,7 +545,7 @@ loadToOrders(orderData);");
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     AssertCounts(1, 2, connectionString);
 
@@ -553,7 +554,7 @@ loadToOrders(orderData);");
                     using (var commands = store.Commands())
                         await commands.DeleteAsync("orders/1-A", null);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     AssertCounts(0, 0, connectionString);
                 }
@@ -587,7 +588,7 @@ loadToOrders(orderData);");
 
                     SetupSqlEtl(store, connectionString, DefaultScript, insertOnly: true);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     AssertCounts(1, 2, connectionString);
 
@@ -600,7 +601,7 @@ loadToOrders(orderData);");
                         await session.SaveChangesAsync();
                     }
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                     // we end up with duplicates
                     AssertCounts(2, 5, connectionString);
                 }
@@ -627,7 +628,7 @@ loadToOrders(orderData);");
                     var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
                     var sb = new StringBuilder();
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
 
                     await client.ConnectAsync(new Uri(str), CancellationToken.None);
                     var task = Task.Run(async () =>
@@ -638,7 +639,7 @@ loadToOrders(orderData);");
                             var value = await ReadFromWebSocket(buffer, client);
                             lock (sb)
                             {
-                                mre.Set();
+                                amre.Set();
                                 sb.AppendLine(value);
                             }
 
@@ -648,7 +649,7 @@ loadToOrders(orderData);");
 
                         }
                     });
-                    await mre.WaitAsync(TimeSpan.FromSeconds(60));
+                    await amre.WaitAsync(TimeSpan.FromSeconds(60));
                     SetupSqlEtl(store, connectionString, @"output ('Tralala'); 
 
 undefined();
@@ -883,7 +884,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -958,7 +959,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -1049,7 +1050,7 @@ for (var i = 0; i < attachments.length; i++)
                         }
                     }, new SqlConnectionString { Name = "test", FactoryName = "Microsoft.Data.SqlClient", ConnectionString = connectionString });
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -1101,7 +1102,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -1155,7 +1156,7 @@ loadToOrders(orderData);
 
                     SetupSqlEtl(store, connectionString, DefaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -1277,7 +1278,7 @@ loadToUsers(
                             }
                     }, new SqlConnectionString { Name = "test", FactoryName = "Microsoft.Data.SqlClient", ConnectionString = connectionString });
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -1339,7 +1340,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     var database = await GetDatabase(store.Database);
 
@@ -1351,7 +1352,7 @@ loadToOrders(orderData);
 
                     etlDone = Etl.WaitForEtlToComplete(store, (n, s) => s.LoadSuccesses >= 6);
 
-                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                    Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
                 }
             }
         }

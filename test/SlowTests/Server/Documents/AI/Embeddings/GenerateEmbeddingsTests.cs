@@ -337,7 +337,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 aiTaskDone.Reset();
                 session.Store(dto);
                 session.SaveChanges();
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
                 var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
@@ -365,7 +365,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 dto.Age = 37;
                 session.SaveChanges();
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
                 var stats2 = etlProcess.GetPerformanceStats()
                     .Where(x => x.NumberOfLoadedItems > 0)
@@ -402,7 +402,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
@@ -440,7 +440,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
@@ -548,7 +548,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
@@ -582,7 +582,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 session.SaveChanges();
             }
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Name1"], dto.Id);
 
             using (var session = store.OpenSession())

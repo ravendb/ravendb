@@ -27,6 +27,7 @@ using SlowTests.Core.Utils.Entities;
 using Snowflake.Data.Client;
 using Sparrow.Server;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using TestSnowflakeConnectionString = Tests.Infrastructure.ConnectionString.SnowflakeConnectionString;
@@ -236,7 +237,7 @@ loadToRegions({
                 
                 SetupSnowflakeEtl(store, connectionString, DefaultScript, insertOnly: true);
 
-                etlDone.Wait(TimeSpan.FromSeconds(10));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(10));
 
                 AssertCounts(1, 2, connectionString);
 
@@ -249,7 +250,7 @@ loadToRegions({
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                 // we end up with duplicates
                 AssertCounts(2, 5, connectionString);
             }
@@ -274,7 +275,7 @@ loadToRegions({
 
                 SetupComplexDataSnowflakeEtl(store, connectionString, DefaultScriptRegionsTableWithTerritoriesArrayColumn, insertOnly: true);
 
-                etlDone.Wait(TimeSpan.FromSeconds(10));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(10));
                 
                 AssertCountsRegions(1, connectionString);
             }
@@ -319,7 +320,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
 
                 SetupSnowflakeEtl(store, connectionString, script);
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -365,7 +366,7 @@ TotalCost: 0
 };
 loadToOrders(orderData);");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -410,7 +411,7 @@ TotalCost: 0
 };
 loadToOrders(orderData);");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -450,7 +451,7 @@ loadToOrders(orderData);");
 
                 SetupSnowflakeEtl(store, connectionString, "if(this.OrderLines.length > 0) { \r\n" + DefaultScript + " \r\n}");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 1, connectionString);
 
@@ -462,7 +463,7 @@ loadToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                 AssertCounts(0, 0, connectionString);
             }
         }
@@ -495,7 +496,7 @@ loadToOrders(orderData);");
 
                 SetupSnowflakeEtl(store, connectionString, DefaultScript);
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 2, connectionString);
 
@@ -508,7 +509,7 @@ loadToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                 AssertCounts(1, 0, connectionString);
             }
         }
@@ -542,7 +543,7 @@ loadToOrders(orderData);");
 
                 SetupSnowflakeEtl(store, connectionString, DefaultScript, insertOnly: true);
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 2, connectionString);
 
@@ -555,7 +556,7 @@ loadToOrders(orderData);");
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                 // we end up with duplicates
                 AssertCounts(2, 5, connectionString);
             }
@@ -582,7 +583,7 @@ loadToOrders(orderData);");
                 var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
                 var sb = new StringBuilder();
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
                 var task = Task.Run(async () =>
@@ -593,7 +594,7 @@ loadToOrders(orderData);");
                         var value = await ReadFromWebSocket(buffer, client);
                         lock (sb)
                         {
-                            mre.Set();
+                            amre.Set();
                             sb.AppendLine(value);
                         }
 
@@ -603,7 +604,7 @@ loadToOrders(orderData);");
 
                     }
                 });
-                await mre.WaitAsync(TimeSpan.FromSeconds(60));
+                await amre.WaitAsync(TimeSpan.FromSeconds(60));
                 SetupSnowflakeEtl(store, connectionString, @"output ('Tralala'); 
 
 undefined();
@@ -931,7 +932,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -1015,7 +1016,7 @@ for (var i = 0; i < attachments.length; i++)
                     }
                 }, new SnowflakeConnectionString() { Name = "test", ConnectionString = connectionString });
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -1062,7 +1063,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -1116,7 +1117,7 @@ loadToOrders(orderData);
 
                 SetupSnowflakeEtl(store, connectionString, DefaultScript, collections: new List<string> { "Orders", "FavouriteOrders" });
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 using (var con = new SnowflakeDbConnection())
                 {
@@ -1220,7 +1221,7 @@ var orderData = {
 
 loadToOrders(orderData);
 ");
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                 using (var con = new SnowflakeDbConnection())
                 {
                     con.ConnectionString = connectionString;
@@ -1272,7 +1273,7 @@ loadToOrders(orderData);
 
                 SetupSnowflakeEtl(store, connectionString, DefaultScript);
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 AssertCounts(1, 2, connectionString);
 
@@ -1281,7 +1282,7 @@ loadToOrders(orderData);
                 using (var commands = store.Commands())
                     await commands.DeleteAsync("orders/1-A", null);
                 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 AssertCounts(0, 0, connectionString);
             }

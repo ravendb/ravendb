@@ -18,6 +18,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -261,7 +262,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
                 session.SaveChanges();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
             EtlErrorInfo error = null;
             var value = await WaitForValueAsync(async () =>
@@ -396,7 +397,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             session.SaveChanges();
         }
 
-        Assert.False(etlDone.Wait(TimeSpan.FromSeconds(10)));
+        Assert.False(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
         using (var session = store.OpenSession())
         {
@@ -510,7 +511,7 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         // assert that the comment with model failure is processed in the next ETL batch
         var etlDone = Etl.WaitForEtlToComplete(store);
 
-        Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(60)));
 
         using (var session = store.OpenSession())
         {

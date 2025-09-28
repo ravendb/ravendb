@@ -46,11 +46,11 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var mre = new AsyncManualResetEvent();
-                var t = subscription.Run(x => mre.Set());
+                var amre = new AsyncManualResetEvent();
+                var t = subscription.Run(x => amre.Set());
                 GC.KeepAlive(t);
 
-                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
 
                 await Assert.ThrowsAsync<SubscriptionInUseException>(() => store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {

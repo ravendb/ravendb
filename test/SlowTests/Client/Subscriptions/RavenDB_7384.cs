@@ -41,7 +41,7 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var results = new List<User>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 using (var session = store.OpenSession())
                 {
@@ -56,11 +56,11 @@ namespace SlowTests.Client.Subscriptions
 
                 subscription.AfterAcknowledgment += x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 var currentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -95,7 +95,7 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var results = new List<User>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 using (var session = store.OpenSession())
                 {
@@ -110,12 +110,12 @@ namespace SlowTests.Client.Subscriptions
 
                 subscription.AfterAcknowledgment += x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
-                mre.Reset();
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                amre.Reset();
                 Assert.Equal("David", results[0].Name);
                 results.Clear();
                 var currentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -166,7 +166,7 @@ namespace SlowTests.Client.Subscriptions
 
                 subscription.AfterAcknowledgment += x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
 
@@ -177,7 +177,7 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 Assert.Equal("Jorgen", results[0].Name);
             }
         }

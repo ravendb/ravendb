@@ -16,6 +16,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -84,7 +85,7 @@ loadToOrders(partitionBy(key),
 ";
                     SetupGoogleCloudOlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -149,7 +150,7 @@ loadToOrders(partitionBy(key),
 ";
                     SetupGoogleCloudOlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -317,7 +318,7 @@ loadToOrders(partitionBy(key), orderData);
 ";
 
                     SetupGoogleCloudOlapEtl(store, script, settings);
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -467,7 +468,7 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     SetupGoogleCloudOlapEtl(store, settings, configuration);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -527,7 +528,7 @@ loadToOrders(noPartition(),
 ";
                     SetupGoogleCloudOlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -659,7 +660,7 @@ loadToOrders(partitionBy(
 ";
                     SetupGoogleCloudOlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
@@ -737,7 +738,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                     const string customPartition = "shop-16";
                     SetupGoogleCloudOlapEtl(store, script, settings, customPartition: customPartition);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -842,7 +843,7 @@ for (var i = 0; i < this.Lines.length; i++){
 })}";
                     SetupGoogleCloudOlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = new RavenGoogleCloudClient(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))

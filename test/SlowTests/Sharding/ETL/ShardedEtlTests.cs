@@ -1181,7 +1181,7 @@ person.addCounter(loadCounter('down'));
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     using (var con = new SqlConnection())
                     {
@@ -1235,7 +1235,7 @@ person.addCounter(loadCounter('down'));
 
                     SetupSqlEtl(store, connectionString, DefaultScript);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                     Assert.Equal(testCount, SqlEtlTests.GetOrdersCount(connectionString));
                 }
@@ -1566,7 +1566,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 await EnsureNonStaleElasticResultsAsync(client);
 
@@ -1585,7 +1585,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 await EnsureNonStaleElasticResultsAsync(client);
 
@@ -1700,7 +1700,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1725,7 +1725,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 Assert.NotEqual(originalLocation, newLocation);
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1751,7 +1751,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1847,7 +1847,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
                     }
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(90)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(90)));
 
                 using (var session = dest.OpenSession())
                 {

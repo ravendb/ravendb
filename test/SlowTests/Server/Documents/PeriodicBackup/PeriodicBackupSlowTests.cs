@@ -3756,18 +3756,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             }))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var task = subscription.Run(batch =>
                 {
                     foreach (var b in batch.Items)
                     {
                         lastCv = b.ChangeVector;
                     }
-                    mre.Set();
+                    amre.Set();
                 });
 
-                await mre.WaitAsync(_reasonableWaitTime);
-                mre.Reset();
+                await amre.WaitAsync(_reasonableWaitTime);
+                amre.Reset();
                 List<SubscriptionState> subscriptionsConfig;
                 await WaitForValueAsync(async () =>
                 {
@@ -3794,7 +3794,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     session.SaveChanges();
                 }
-                await mre.WaitAsync(_reasonableWaitTime);
+                await amre.WaitAsync(_reasonableWaitTime);
 
                 subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
                 Assert.Equal(1, subscriptionsConfig.Count);
@@ -3856,17 +3856,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
             }))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var task = subscription.Run(batch =>
                 {
                     foreach (var b in batch.Items)
                     {
                         lastCv = b.ChangeVector;
                     }
-                    mre.Set();
+                    amre.Set();
                 });
 
-                await mre.WaitAsync(_reasonableWaitTime);
+                await amre.WaitAsync(_reasonableWaitTime);
 
                 var subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
 

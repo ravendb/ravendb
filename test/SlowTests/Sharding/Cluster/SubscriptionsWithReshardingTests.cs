@@ -580,7 +580,7 @@ namespace SlowTests.Sharding.Cluster
                              MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
                          }))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var t = subscription.Run(batch =>
                 {
                     foreach (var item in batch.Items)
@@ -592,7 +592,7 @@ namespace SlowTests.Sharding.Cluster
 
                         if (users.Count == numberOfDocs + 1)
                         {
-                            mre.Set();
+                            amre.Set();
                         }
                     }
                 });
@@ -615,7 +615,7 @@ namespace SlowTests.Sharding.Cluster
                     // expected, means the worker is still alive  
                 }
 
-                if (await mre.WaitAsync(TimeSpan.FromSeconds(3)) == false)
+                if (await amre.WaitAsync(TimeSpan.FromSeconds(3)) == false)
                 {
                     await subscription.DisposeAsync(true);
                 }

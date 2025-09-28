@@ -14,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Employee = Orders.Employee;
 using Xunit.Abstractions;
@@ -248,7 +249,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenAsyncSession())
                 {
@@ -267,7 +268,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenAsyncSession())
                 {
@@ -722,7 +723,7 @@ loadToOrders(orderData);
 
                 var timeout = TimeSpan.FromSeconds(30);
 
-                Assert.True(etlDone.Wait(timeout), await AddDebugInfo(src, dest, timeout, srcDbMode));
+                Assert.True(await etlDone.WaitAsync(timeout), await AddDebugInfo(src, dest, timeout, srcDbMode));
 
                 using (var session = dest.OpenSession())
                 {
@@ -770,7 +771,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(timeout);
+                await etlDone.WaitAsync(timeout);
 
                 using (var session = dest.OpenSession())
                 {

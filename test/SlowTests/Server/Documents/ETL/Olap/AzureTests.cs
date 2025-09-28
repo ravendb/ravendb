@@ -18,6 +18,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -86,7 +87,7 @@ loadToOrders(partitionBy(key),
 ";
                     SetupAzureEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -153,7 +154,7 @@ loadToOrders(partitionBy(key),
 ";
                     SetupAzureEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -323,7 +324,7 @@ loadToOrders(partitionBy(key), orderData);
 
 
                     SetupAzureEtl(store, script, settings);
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -474,7 +475,7 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     SetupAzureEtl(store, settings, configuration);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -534,7 +535,7 @@ loadToOrders(noPartition(),
 ";
                     SetupAzureEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -669,7 +670,7 @@ loadToOrders(partitionBy(
 ";
                     SetupAzureEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
@@ -796,7 +797,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                     var etlDone = Etl.WaitForEtlToComplete(store);
                     SetupAzureEtl(store, script, settings, customPartition);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
