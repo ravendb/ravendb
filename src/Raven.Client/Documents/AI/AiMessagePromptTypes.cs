@@ -1,12 +1,12 @@
 ﻿namespace Raven.Client.Documents.AI
 {
-    public class AiMessagePromptFields
+    internal class AiMessagePromptFields
     {
         public const string Text = "text";
         public const string Type = "type";
     }
 
-    public class AiMessagePromptTypes
+    internal class AiMessagePromptTypes
     {
         public const string Text = "text";
     }
