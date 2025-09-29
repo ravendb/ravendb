@@ -33,8 +33,12 @@ interface DocumentSchemaOperationConfirmProps {
     onConfirm: () => void;
 }
 
-export default function DocumentSchemaOperationConfirm({ type, validators, toggle, onConfirm }: DocumentSchemaOperationConfirmProps) {
-
+export default function DocumentSchemaOperationConfirm({
+    type,
+    validators,
+    toggle,
+    onConfirm,
+}: DocumentSchemaOperationConfirmProps) {
     const schemaGroups = getSchemaGroups(type, validators).filter((x) => x.schemas.length > 0);
 
     const onSubmit = () => {
@@ -140,7 +144,10 @@ function getStatusIcon(isDisabled: boolean): IconName {
     return isDisabled ? "stop" : "play";
 }
 
-function getSchemaGroups(type: DocumentSchemaOperationConfirmType, schemas: DocumentSchemaValidatorConfig[]): SchemaGroup[] {
+function getSchemaGroups(
+    type: DocumentSchemaOperationConfirmType,
+    schemas: DocumentSchemaValidatorConfig[]
+): SchemaGroup[] {
     switch (type) {
         case "enable": {
             const affectedSchemaGrouped = schemas.reduce(
@@ -163,7 +170,8 @@ function getSchemaGroups(type: DocumentSchemaOperationConfirmType, schemas: Docu
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-success">enable</strong> following document schemas
+                            You&apos;re about to <strong className="text-success">enable</strong> following document
+                            schemas
                         </>
                     ),
                     schemas: affectedSchemaGrouped.enabling,
@@ -196,7 +204,8 @@ function getSchemaGroups(type: DocumentSchemaOperationConfirmType, schemas: Docu
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-danger">disable</strong> following document schemas
+                            You&apos;re about to <strong className="text-danger">disable</strong> following document
+                            schemas
                         </>
                     ),
                     schemas: affectedSchemaGrouped.disabling,

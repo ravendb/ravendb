@@ -36,7 +36,9 @@ import DocumentSchemaSelectActions from "components/pages/database/settings/docu
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import DocumentSchemaAboutView from "components/pages/database/settings/documentSchema/partials/DocumentSchemaAboutView";
 import DocumentSchemaDeleteModal from "components/pages/database/settings/documentSchema/partials/DocumentSchemaDeleteModal";
-import DocumentSchemaOperationConfirm, { DocumentSchemaOperationConfirmType } from "components/pages/database/settings/documentSchema/partials/DocumentSchemaOperationConfirm";
+import DocumentSchemaOperationConfirm, {
+    DocumentSchemaOperationConfirmType,
+} from "components/pages/database/settings/documentSchema/partials/DocumentSchemaOperationConfirm";
 import { EmptySet } from "components/common/EmptySet";
 import { useDocumentSchema } from "components/pages/database/settings/documentSchema/useDocumentSchema";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -195,8 +197,12 @@ interface DocumentSchemaStatusProps {
     isTogglingState: boolean;
 }
 
-export function DocumentSchemaStatus({validator, canEdit, onStatusToggle, isTogglingState}: DocumentSchemaStatusProps) {
-
+export function DocumentSchemaStatus({
+    validator,
+    canEdit,
+    onStatusToggle,
+    isTogglingState,
+}: DocumentSchemaStatusProps) {
     return (
         <Dropdown>
             <Dropdown.Toggle
@@ -274,7 +280,9 @@ const CollectionSchemaRichPanel = ({
         try {
             setTogglingStatus();
             const updatedValidator = { ...validator, Disabled: disabled };
-            dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedValidator }));
+            dispatch(
+                documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedValidator })
+            );
             const next = [...validatorsAll.filter((v) => v.Name !== validator.Name), updatedValidator];
             await asyncSaveValidators(next);
         } finally {
