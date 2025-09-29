@@ -17,40 +17,6 @@ import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefi
 import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
 
 export class DatabasesStubs {
-    private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
-        return {
-            Name: name,
-            IsEncrypted: false,
-            LockMode: "Unlock",
-            DeletionInProgress: {},
-            Sharding: null,
-            IndexesCount: 0,
-            NodesTopology: {
-                PriorityOrder: [],
-                Members: [
-                    {
-                        NodeTag: "A",
-                        ResponsibleNode: null,
-                        NodeUrl: "http://a.ravendb",
-                    },
-                ],
-                Promotables: [],
-                Rehabs: [],
-                Status: {
-                    A: DatabasesStubs.statusOk(),
-                },
-                DynamicNodesDistribution: false,
-            },
-            IsDisabled: false,
-            HasRefreshConfiguration: false,
-            HasExpirationConfiguration: false,
-            HasDataArchivalConfiguration: false,
-            HasRevisionsConfiguration: false,
-            StudioEnvironment: "None",
-            IsSharded: false,
-        };
-    }
-
     static nonShardedSingleNodeDatabaseDto() {
         return DatabasesStubs.genericDatabaseInfo("db1");
     }
@@ -311,13 +277,6 @@ export class DatabasesStubs {
         };
     }
 
-    private static statusOk(): DatabaseGroupNodeStatus {
-        return {
-            LastStatus: "Ok",
-            LastError: null,
-        };
-    }
-
     static refreshConfiguration(): RefreshConfiguration {
         return {
             Disabled: false,
@@ -464,6 +423,7 @@ export class DatabasesStubs {
             CompressRevisions: true,
         };
     }
+
     static emptyConnectionStrings(): Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult {
         return {
             ElasticSearchConnectionStrings: {},
@@ -1085,14 +1045,80 @@ return docs[0];`,
 
     static schemaValidators(): Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration {
         return {
-            Disabled: false,
-            ValidatorsPerCollection: {
-                TestObjs: {
-                    Disabled: false,
-                    Schema: '{"properties":{"Prop":{"const":"12212213"}}}',
-                    LastModifiedTime: "2025-09-19T14:08:13.2913345Z",
+    "Disabled": false,
+    "ValidatorsPerCollection": {
+        "TestObjs": {
+            "Disabled": false,
+            "Schema": "{\"properties\":{\"Prop\":{\"const\":\"12212213\"}}}",
+            "LastModifiedTime": "2025-09-19T14:08:13.2913345Z"
+        },
+        "UserProfiles": {
+            "Disabled": false,
+            "Schema": "{\"properties\":{\"Username\":{\"type\":\"string\"},\"Email\":{\"format\":\"email\"}}}",
+            "LastModifiedTime": "2025-09-20T09:22:47.1234567Z"
+        },
+        "Orders": {
+            "Disabled": true,
+            "Schema": "{\"properties\":{\"OrderId\":{\"type\":\"string\"},\"Amount\":{\"type\":\"number\"}}}",
+            "LastModifiedTime": "2025-09-18T11:15:33.9876543Z"
+        },
+        "Products": {
+            "Disabled": false,
+            "Schema": "{\"properties\":{\"ProductName\":{\"type\":\"string\"},\"Price\":{\"type\":\"number\",\"minimum\":0}}}",
+            "LastModifiedTime": "2025-09-21T07:45:00.0000000Z"
+        },
+        "Logs": {
+            "Disabled": false,
+            "Schema": "{\"properties\":{\"Timestamp\":{\"type\":\"string\",\"format\":\"date-time\"},\"Message\":{\"type\":\"string\"}}}",
+            "LastModifiedTime": "2025-09-22T13:00:00.1234567Z"
+        },
+        "Inventory": {
+            "Disabled": true,
+            "Schema": "{\"properties\":{\"ItemId\":{\"type\":\"string\"},\"Quantity\":{\"type\":\"integer\",\"minimum\":0}}}",
+            "LastModifiedTime": "2025-09-17T16:30:25.6543210Z"
+        }
+    }
+}
+    }
+
+    private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
+        return {
+            Name: name,
+            IsEncrypted: false,
+            LockMode: "Unlock",
+            DeletionInProgress: {},
+            Sharding: null,
+            IndexesCount: 0,
+            NodesTopology: {
+                PriorityOrder: [],
+                Members: [
+                    {
+                        NodeTag: "A",
+                        ResponsibleNode: null,
+                        NodeUrl: "http://a.ravendb",
+                    },
+                ],
+                Promotables: [],
+                Rehabs: [],
+                Status: {
+                    A: DatabasesStubs.statusOk(),
                 },
+                DynamicNodesDistribution: false,
             },
+            IsDisabled: false,
+            HasRefreshConfiguration: false,
+            HasExpirationConfiguration: false,
+            HasDataArchivalConfiguration: false,
+            HasRevisionsConfiguration: false,
+            StudioEnvironment: "None",
+            IsSharded: false,
+        };
+    }
+
+    private static statusOk(): DatabaseGroupNodeStatus {
+        return {
+            LastStatus: "Ok",
+            LastError: null,
         };
     }
 }
