@@ -47,11 +47,16 @@ export const documentSchemaSlice = createSlice({
         validatorAdded: (state, { payload }: PayloadAction<DocumentSchemaValidatorConfig>) => {
             validatorsAdapter.addOne(state.validators, payload);
         },
-        validatorEdited: (state, { payload }: PayloadAction<DocumentSchemaValidatorConfig>) => {
-            validatorsAdapter.updateOne(state.validators, {
-                id: payload.Name,
-                changes: { ...payload },
-            });
+        validatorEdited: (state, { payload }: PayloadAction<{ originalName: string; validator: DocumentSchemaValidatorConfig }>) => {
+            if (payload.originalName !== payload.validator.Name) {
+                validatorsAdapter.removeOne(state.validators, payload.originalName);
+                validatorsAdapter.addOne(state.validators, payload.validator);
+            } else {
+                validatorsAdapter.updateOne(state.validators, {
+                    id: payload.validator.Name,
+                    changes: payload.validator,
+                });
+            }
         },
         validatorDeleted: (state, { payload: name }: PayloadAction<string>) => {
             validatorsAdapter.removeOne(state.validators, name);
