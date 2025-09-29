@@ -12,7 +12,7 @@ class getSchemaValidationCommand extends commandBase {
         const url = endpoints.databases.schemaValidation.schemaValidationConfig;
 
         const deferred = $.Deferred<SchemaValidationConfiguration>();
-        return this.query<SchemaValidationConfiguration>(url, null, this.db)
+        this.query<SchemaValidationConfiguration>(url, null, this.db)
             .done((schemaValidation: SchemaValidationConfiguration) => deferred.resolve(schemaValidation))
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
@@ -21,7 +21,10 @@ class getSchemaValidationCommand extends commandBase {
                     deferred.reject(xhr);
                     this.reportError("Failed to get schema validation configuration", xhr.responseText, xhr.statusText);
                 }
-            });    }
+            });
+
+        return deferred;
+    }
 }
 
 export = getSchemaValidationCommand;
