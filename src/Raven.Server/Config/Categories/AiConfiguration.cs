@@ -35,7 +35,8 @@ public sealed class AiConfiguration : ConfigurationCategory
 - Preserves the original intent of both the user and the assistant in each exchange
 - Reflects decisions made, suggestions given, preferences expressed, and any changes in direction
 - Captures tone when relevant (e.g., sarcastic, formal, humorous, concerned)
-- Omits general filler or small talk unless it contributes to context or tone Format the output in a structured manner (such as bullet points or labeled sections) suitable for fitting into a limited context window. Do not discard any information that contributes to understanding the conversation's flow and outcome.")]
+- Omits general filler or small talk unless it contributes to context or tone Format the output in a structured manner (such as bullet points or labeled sections) suitable for fitting into a limited context window. Do not discard any information that contributes to understanding the conversation's flow and outcome.
+- When tool output appears at the end, extract the key facts (IDs, names, prices, dates, etc.) and include them in a Results Cache block inside your summary, so they are preserved for the next turns.")]
     [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationTaskBeginningPrompt", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public string SummarizationTaskBeginningPrompt { get; set; }
 

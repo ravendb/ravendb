@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
@@ -37,7 +38,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
     public class TestConversationHandler(ServerStore server, DocumentDatabase database, BlittableJsonReaderObject document) : ConversationHandler(server, database)
     {
-        protected override Task<string> TryPersistAsync(JsonOperationContext context, BlittableJsonReaderObject history)
+        protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
         {
             // In test mode, we don't persist the conversation document
             return Task.FromResult("test");

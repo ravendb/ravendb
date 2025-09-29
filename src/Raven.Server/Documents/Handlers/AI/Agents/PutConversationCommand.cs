@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -10,22 +9,23 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 {
     internal class PutConversationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
+        public (PutOperationResults Conversation, List<PutOperationResults> History) PutResult;
+
         private string _id;
-        private ConversationDocument _conversation;
         private BlittableJsonReaderObject _conversationDoc;
-        private BlittableJsonReaderObject _historyDoc;
+        private readonly ConversationDocument _conversation;
+        private readonly List<BlittableJsonReaderObject> _historyDocs;
         private readonly LazyStringValue _expectedChangeVector;
-        private DocumentDatabase _database;
-        private AiAgentConfiguration _configuration;
-        public (PutOperationResults Conversation, PutOperationResults History) PutResult;
+        private readonly DocumentDatabase _database;
+        private readonly AiAgentConfiguration _configuration;
 
         private const string AiAgentConversationHistoryIdPrefix = "ConversationHistory";
 
-        public PutConversationCommand(string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
+        public PutConversationCommand(string conversationId, ConversationDocument conversation, List<BlittableJsonReaderObject> history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
         {
             _id = conversationId;
             _conversation = conversation;
-            _historyDoc = history;
+            _historyDocs = history;
             _expectedChangeVector = changeVector;
             _database = database;
             _configuration = configuration;
@@ -35,42 +35,47 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             _id = _database.DocumentsStorage.DocumentPut.BuildDocumentId(_id, _database.DocumentsStorage.GenerateNextEtag(), out _);
 
-            PutOperationResults putHistoryResult = default;
-            if (_historyDoc != null)
+            List<PutOperationResults> putHistoryResults = default;
+            if (_historyDocs != null)
             {
-                var historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId($"{AiAgentConversationHistoryIdPrefix}{_database.IdentityPartsSeparator}", _database.DocumentsStorage.GenerateNextEtag(), out _);
-                historyId = $"{historyId}${_id}";
-                
-                putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, _historyDoc);
-                _conversation.LinkedConversations.Add(putHistoryResult.Id);
+                putHistoryResults = new List<PutOperationResults>(_historyDocs.Count);
+                foreach (var historyDoc in _historyDocs)
+                {
+                    var historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId($"{AiAgentConversationHistoryIdPrefix}{_database.IdentityPartsSeparator}", _database.DocumentsStorage.GenerateNextEtag(), out _);
+                    historyId = $"{historyId}${_id}";
+
+                    var putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, historyDoc);
+                    putHistoryResults.Add(putHistoryResult);
+                    _conversation.LinkedConversations.Add(putHistoryResult.Id);
+                }
             }
 
             _conversationDoc = _conversation.ToBlittable(context);
             var putResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
-            PutResult = (putResult, putHistoryResult);
+            PutResult = (putResult, putHistoryResults);
 
             return 1;
         }
 
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new PutChatCommandDto(_id, _conversation, _historyDoc, _expectedChangeVector, _configuration, _database);
+            return new PutChatCommandDto(_id, _conversation, _historyDocs, _expectedChangeVector, _configuration, _database);
         }
 
         public class PutChatCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, PutConversationCommand>
         {
             private string _id;
             private ConversationDocument _conversation;
-            private BlittableJsonReaderObject _historyDoc;
+            private List<BlittableJsonReaderObject> _historyDocs;
             private readonly LazyStringValue _expectedChangeVector;
             private DocumentDatabase _database;
             private AiAgentConfiguration _configuration;
 
-            public PutChatCommandDto(string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
+            public PutChatCommandDto(string conversationId, ConversationDocument conversation, List<BlittableJsonReaderObject> history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
             {
                 _id = conversationId;
                 _conversation = conversation;
-                _historyDoc = history;
+                _historyDocs = history;
                 _expectedChangeVector = changeVector;
                 _database = database;
                 _configuration = configuration;
@@ -78,7 +83,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             public PutConversationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new PutConversationCommand(_id, _conversation, _historyDoc, _expectedChangeVector, _configuration, _database);
+                return new PutConversationCommand(_id, _conversation, _historyDocs, _expectedChangeVector, _configuration, _database);
             }
         }
     }

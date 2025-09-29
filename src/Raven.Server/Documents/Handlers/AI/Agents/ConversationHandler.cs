@@ -149,8 +149,11 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     {
         talker.Init();
 
-        AiResponse r;
-        while (true)
+        AiResponse r = default;
+        List<BlittableJsonReaderObject> historyDocs = default;
+        bool shouldContinueConversation = true;
+
+        while (shouldContinueConversation)
         {
             using var request = talker.CreateCompletionRequest(_request.Attachments);
 
@@ -177,18 +180,27 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
 
             if (r.Type is AiResponseType.Result)
-                break;
+            {
+                shouldContinueConversation = false;
+            }
+            else
+            {
+                await HandleQueryToolCallsAsync(context, r.ToolCalls);
+                shouldContinueConversation = TryGetUserTools(context, r.ToolCalls) == false;
+            }
 
-            await HandleQueryToolCallsAsync(context, r.ToolCalls);
+            _document.CurrentUsage = talker.AiUsage;
 
-            if (TryGetUserTools(context, r.ToolCalls))
-                break; // we need to return the user tool requests to the client, so we can continue the conversation
+            // check if we should summarize or truncate the chat history
+            var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
+            if (reductionResult != null)
+            {
+                historyDocs ??= [];
+                historyDocs.Add(reductionResult);
+            }
         }
 
-        var history = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
-        _document.CurrentUsage = talker.AiUsage;
-
-        _conversationId = await TryPersistAsync(context, history);
+        _conversationId = await TryPersistAsync(context, historyDocs);
 
         return (r.Result, talker.AiUsage);
     }
@@ -250,6 +262,23 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             : summarization.SummarizationTaskBeginningPrompt;
         beginningPrompt += $" The original system prompt was: {systemPrompt}, the rest of follows";
 
+        var endPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt)
+            ? database.Configuration.Ai.SummarizationTaskEndPrompt
+            : summarization.SummarizationTaskEndPrompt;
+
+        if (EndsWithTool(oldChat))
+        {
+            // Add a small nudge when the transcript ends with tool output, in order to avoid running the same tool again
+
+            beginningPrompt +=
+                " The transcript ends with tool output. Your summary must explicitly include the key results from those tool calls. " +
+                "These results must appear in the assistant’s summary message so that the conversation can continue without re-running the same tools.";
+
+            endPrompt +=
+                " Make sure the final summary message contains the essential tool results already obtained, so they are available for future turns. " +
+                "Do not suggest re-running the same tools unless the user explicitly asks for new data.";
+        }
+
         var messages = new List<BlittableJsonReaderObject>()
         {
             context.ReadObject(
@@ -261,9 +290,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         };
         messages.AddRange(oldChat.Messages.Skip(1));
 
-        var endPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt)
-            ? database.Configuration.Ai.SummarizationTaskEndPrompt
-            : summarization.SummarizationTaskEndPrompt;
         messages.Add(context.ReadObject(
             new DynamicJsonValue
             {
@@ -295,6 +321,15 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         oldChat.UpdateUsage(usage);
         oldChat.CurrentUsage = new AiUsage();
+    }
+
+    private bool EndsWithTool(ConversationDocument doc)
+    {
+        if (doc.Messages.Count < 2)
+            return false;
+
+        return doc.Messages[^1].TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) &&
+                          role.Equals("tool", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool TryGetUserTools(JsonOperationContext context, List<AiToolCall> toolCalls)
@@ -343,6 +378,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
     public async Task HandleQueryToolCallsAsync(JsonOperationContext context, List<AiToolCall> toolCalls)
     {
+        if (toolCalls == null || toolCalls.Count == 0)
+            return;
+
         DynamicJsonArray reqs = [];
         List<string> toolCallsIds = [];
         var queryUrl = $"/databases/{database.Name}/queries";
@@ -365,6 +403,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 }
             });
         }
+
+        if (reqs.Count == 0)
+            return;
 
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext
@@ -408,7 +449,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
     }
-    protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, BlittableJsonReaderObject history)
+    protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         if (_conversationId[^1] == '|')
         {
@@ -417,7 +458,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
 
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
-        var cmd = new PutConversationCommand(_conversationId, _document, history, changeVectorLsv, _configuration, database);
+        var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
         await database.TxMerger.Enqueue(cmd);
         _document.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
         return cmd.PutResult.Conversation.Id;
@@ -455,7 +496,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             // We have pending tool-call results from the user;
             // skip reduction - persist the document now without history,
             // ensuring we can recover if TalkAsync fails.
-            await TryPersistAsync(context, history: null);
+            await TryPersistAsync(context, historyDocs: null);
             return false;
         }
 
