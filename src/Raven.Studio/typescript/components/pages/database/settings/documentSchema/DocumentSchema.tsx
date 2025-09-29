@@ -111,7 +111,10 @@ export default function DocumentSchema() {
                                     <Icon icon="info-new" margin="ms-1" />
                                 </PopoverWithHoverWrapper>
                             </HrHeader>
-                            <DocumentSchemaBody asyncLoadValidators={asyncLoadValidators} />
+                            <DocumentSchemaBody
+                                filteredValidators={filteredValidators}
+                                asyncLoadValidators={asyncLoadValidators}
+                            />
                         </div>
                     </Col>
                     <Col sm={12} lg={4}>
@@ -125,10 +128,11 @@ export default function DocumentSchema() {
 
 interface DocumentSchemaBodyProps {
     asyncLoadValidators: UseAsyncReturn<Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration>;
+    filteredValidators: DocumentSchemaValidatorConfig[];
 }
-const DocumentSchemaBody = ({ asyncLoadValidators }: DocumentSchemaBodyProps) => {
-    const { handleCancelNew, handleNewSchemaSubmit, filteredValidators, draftIds, allCollectionNames } =
-        useDocumentSchema();
+
+const DocumentSchemaBody = ({ asyncLoadValidators, filteredValidators }: DocumentSchemaBodyProps) => {
+    const { handleCancelNew, handleNewSchemaSubmit, draftIds, allCollectionNames } = useDocumentSchema();
 
     if (asyncLoadValidators.loading) {
         return <LoadingView />;
