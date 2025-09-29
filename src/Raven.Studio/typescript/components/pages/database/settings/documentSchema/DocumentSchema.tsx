@@ -36,6 +36,7 @@ import DocumentSchemaSelectActions from "components/pages/database/settings/docu
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import DocumentSchemaAboutView from "components/pages/database/settings/documentSchema/partials/DocumentSchemaAboutView";
 import DocumentSchemaDeleteModal from "components/pages/database/settings/documentSchema/partials/DocumentSchemaDeleteModal";
+import DocumentSchemaOperationConfirm, { DocumentSchemaOperationConfirmType } from "components/pages/database/settings/documentSchema/partials/DocumentSchemaOperationConfirm";
 import { EmptySet } from "components/common/EmptySet";
 import { useDocumentSchema } from "components/pages/database/settings/documentSchema/useDocumentSchema";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -43,6 +44,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import genUtils from "common/generalUtils";
+import Dropdown from "react-bootstrap/Dropdown";
+import Spinner from "react-bootstrap/Spinner";
 
 export default function DocumentSchema() {
     const dispatch = useAppDispatch();
@@ -165,14 +168,6 @@ const DocumentSchemaBody = ({ asyncLoadValidators, filteredValidators }: Documen
 
     return (
         <>
-            {filteredValidators.map((v) => (
-                <CollectionSchemaRichPanel
-                    schemaValidatorCollections={allCollectionNames}
-                    key={v.Name}
-                    collectionName={v.Name}
-                    schema={genUtils.stringify(JSON.parse(v.Schema))}
-                />
-            ))}
             {draftIds.map((id) => (
                 <NewCollectionSchemaRichPanel
                     key={id}
@@ -181,25 +176,69 @@ const DocumentSchemaBody = ({ asyncLoadValidators, filteredValidators }: Documen
                     onCancel={() => handleCancelNew(id)}
                 />
             ))}
+            {filteredValidators.map((v) => (
+                <CollectionSchemaRichPanel
+                    schemaValidatorCollections={allCollectionNames}
+                    key={v.Name}
+                    validator={v}
+                    schema={genUtils.stringify(JSON.parse(v.Schema))}
+                />
+            ))}
         </>
     );
 };
 
+interface DocumentSchemaStatusProps {
+    validator: DocumentSchemaValidatorConfig;
+    canEdit: boolean;
+    onStatusToggle: (disabled: boolean) => void;
+    isTogglingState: boolean;
+}
+
+export function DocumentSchemaStatus({validator, canEdit, onStatusToggle, isTogglingState}: DocumentSchemaStatusProps) {
+
+    return (
+        <Dropdown>
+            <Dropdown.Toggle
+                disabled={!canEdit || isTogglingState}
+                variant={validator.Disabled ? "warning" : "success"}
+            >
+                {isTogglingState && <Spinner size="sm" />} {validator.Disabled ? "Disabled" : "Enabled"}
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+                <Dropdown.Item onClick={() => onStatusToggle(false)}>
+                    <Icon icon="play" color="success" /> Enable
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => onStatusToggle(true)}>
+                    <Icon icon="stop" color="danger" />
+                    Disable
+                </Dropdown.Item>
+            </Dropdown.Menu>
+        </Dropdown>
+    );
+}
+
 interface CollectionSchemaRichPanelProps {
-    collectionName: string;
+    validator: DocumentSchemaValidatorConfig;
     schema: string;
     schemaValidatorCollections: string[];
 }
 
 const CollectionSchemaRichPanel = ({
-    collectionName = "",
+    validator,
     schema = "",
     schemaValidatorCollections,
 }: CollectionSchemaRichPanelProps) => {
     const { value: isEditingSchema, toggle: toggleEditingSchema } = useBoolean(false);
+    const { value: isTogglingStatus, setTrue: setTogglingStatus, setFalse: unsetTogglingStatus } = useBoolean(false);
+    const [operationConfirm, setOperationConfirm] = React.useState<{
+        type: DocumentSchemaOperationConfirmType;
+        onConfirm: () => void;
+        validators: DocumentSchemaValidatorConfig[];
+    }>(null);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const dispatch = useAppDispatch();
-    const isSelected = useAppSelector(documentSchemaSelectors.isSelectedCollectionName(collectionName));
+    const isSelected = useAppSelector(documentSchemaSelectors.isSelectedCollectionName(validator.Name));
     const validatorsAll = useAppSelector(documentSchemaSelectors.allValidators);
     const { databasesService } = useServices();
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
@@ -216,7 +255,7 @@ const CollectionSchemaRichPanel = ({
     const form = useForm<DocumentSchemaFormData>({
         resolver: yupResolver(formSchema),
         defaultValues: {
-            collection: collectionName,
+            collection: validator.Name,
             schema,
         },
     });
@@ -225,10 +264,32 @@ const CollectionSchemaRichPanel = ({
 
     const handleEditSchema = async (data: DocumentSchemaFormData) => {
         const updatedItem = documentSchemaUtils.mapToDocumentSchemaValidatorConfigDto(data);
-        dispatch(documentSchemaActions.validatorEdited({ originalName: collectionName, validator: updatedItem }));
-        const next = [...validatorsAll.filter((v) => v.Name !== collectionName), updatedItem];
+        dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedItem }));
+        const next = [...validatorsAll.filter((v) => v.Name !== validator.Name), updatedItem];
         await asyncSaveValidators(next);
         toggleEditingSchema();
+    };
+
+    const handleBulkStatusToggle = async (disabled: boolean) => {
+        try {
+            setTogglingStatus();
+            const updatedValidator = { ...validator, Disabled: disabled };
+            dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedValidator }));
+            const next = [...validatorsAll.filter((v) => v.Name !== validator.Name), updatedValidator];
+            await asyncSaveValidators(next);
+        } finally {
+            unsetTogglingStatus();
+        }
+    };
+
+    const handleStatusToggle = (disabled: boolean) => {
+        const operationType: DocumentSchemaOperationConfirmType = disabled ? "disable" : "enable";
+
+        setOperationConfirm({
+            type: operationType,
+            onConfirm: () => handleBulkStatusToggle(disabled),
+            validators: [validator],
+        });
     };
 
     return (
@@ -242,29 +303,23 @@ const CollectionSchemaRichPanel = ({
                                     <Checkbox
                                         toggleSelection={() =>
                                             dispatch(
-                                                documentSchemaActions.selectedCollectionNameToggled(collectionName)
+                                                documentSchemaActions.selectedCollectionNameToggled(validator.Name)
                                             )
                                         }
                                         selected={isSelected}
                                     />
                                 </RichPanelSelect>
                             )}
-                            <RichPanelName>{collectionName}</RichPanelName>
+                            <RichPanelName>{validator.Name}</RichPanelName>
                         </RichPanelInfo>
                         {hasDatabaseAdminAccess && (
                             <RichPanelActions>
-                                {/*For now schema playground is not available.*/}
-                                {/*<ConditionalPopover*/}
-                                {/*    conditions={{*/}
-                                {/*        isActive: isEditingSchema,*/}
-                                {/*        message: "The schema must be saved in order to test it against existing documents.",*/}
-                                {/*    }}*/}
-                                {/*>*/}
-                                {/*    <Button variant="secondary" disabled={isEditingSchema}>*/}
-                                {/*        <Icon margin="m-0" icon="rocket" />*/}
-                                {/*    </Button>*/}
-                                {/*</ConditionalPopover>*/}
-
+                                <DocumentSchemaStatus
+                                    validator={validator}
+                                    canEdit={hasDatabaseAdminAccess}
+                                    onStatusToggle={handleStatusToggle}
+                                    isTogglingState={isTogglingStatus}
+                                />
                                 <ButtonWithSpinner
                                     onClick={isEditingSchema ? handleSubmit(handleEditSchema) : toggleEditingSchema}
                                     variant={isEditingSchema ? "success" : "secondary"}
@@ -278,7 +333,7 @@ const CollectionSchemaRichPanel = ({
                                         variant="secondary"
                                         disabled={form.formState.isSubmitting}
                                         onClick={() => {
-                                            reset({ collection: collectionName, schema });
+                                            reset({ collection: validator.Name, schema });
                                             toggleEditingSchema();
                                         }}
                                     >
@@ -300,14 +355,22 @@ const CollectionSchemaRichPanel = ({
                     {isEditingSchema && (
                         <RichPanelDetailsEditSchema
                             schemaValidatorCollections={schemaValidatorCollections}
-                            collectionName={collectionName}
+                            collectionName={validator.Name}
                         />
                     )}
                     {!isEditingSchema && <RichPanelDetailsViewSchema schema={schema} />}
                 </RichPanel>
             </FormProvider>
             {isDeleteModalOpen && (
-                <DocumentSchemaDeleteModal collectionName={collectionName} onHide={toggleDeleteModal} />
+                <DocumentSchemaDeleteModal collectionName={validator.Name} onHide={toggleDeleteModal} />
+            )}
+            {operationConfirm && (
+                <DocumentSchemaOperationConfirm
+                    type={operationConfirm.type}
+                    validators={operationConfirm.validators}
+                    toggle={() => setOperationConfirm(null)}
+                    onConfirm={operationConfirm.onConfirm}
+                />
             )}
         </>
     );
