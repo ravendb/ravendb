@@ -1,19 +1,17 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
+type AiAssistantOperationType = Raven.Server.Documents.AI.AiAssistant.AiAssistantOperationType;
+type RefineTextRequest = Raven.Server.Documents.AI.AiAssistant.Requests.RefineTextRequest;
+type RefineGenAiPromptRequest = Raven.Server.Documents.AI.AiAssistant.Requests.RefineGenAiPromptRequest;
+
+type AiRequest<T extends AiAssistantOperationType, R> = {
+    OperationType: Extract<AiAssistantOperationType, T>;
+} & Omit<R, "OperationType" | "CertificateThumbprint" | "License">;
+
 export type AssistAiAssistantRequestDto =
-    | ({
-          OperationType: Extract<Raven.Server.Documents.AI.AiAssistant.AiAssistantOperationType, "RefineText">;
-      } & Omit<
-          Raven.Server.Documents.AI.AiAssistant.Requests.RefineTextRequest,
-          "OperationType" | "CertificateThumbprint" | "License"
-      >)
-    | ({
-          OperationType: Extract<Raven.Server.Documents.AI.AiAssistant.AiAssistantOperationType, "RefineGenAiPrompt">;
-      } & Omit<
-          Raven.Server.Documents.AI.AiAssistant.Requests.RefineGenAiPromptRequest,
-          "OperationType" | "CertificateThumbprint" | "License"
-      >);
+    | AiRequest<"RefineText", RefineTextRequest>
+    | AiRequest<"RefineGenAiPrompt", RefineGenAiPromptRequest>;
 
 export interface AssistAiAssistantResultDto {
     InputTokenCount: number;
