@@ -225,8 +225,8 @@ const CollectionSchemaRichPanel = ({
 
     const handleEditSchema = async (data: DocumentSchemaFormData) => {
         const updatedItem = documentSchemaUtils.mapToDocumentSchemaValidatorConfigDto(data);
-        dispatch(documentSchemaActions.validatorEdited(updatedItem));
-        const next = [...validatorsAll.filter((v) => v.Name !== updatedItem.Name), updatedItem];
+        dispatch(documentSchemaActions.validatorEdited({ originalName: collectionName, validator: updatedItem }));
+        const next = [...validatorsAll.filter((v) => v.Name !== collectionName), updatedItem];
         await asyncSaveValidators(next);
         toggleEditingSchema();
     };
