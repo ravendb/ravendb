@@ -268,9 +268,8 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.Null(tx.CreateTree("tree").Read("a1001"));
+                Assert.True(tx.CreateTree("tree").Read("a1001").IsNull);
             }
-
         }
 
         [RavenFact(RavenTestCategory.Voron)]

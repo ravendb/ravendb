@@ -92,8 +92,8 @@ namespace SlowTests.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                Assert.Null(tx.LowLevelTransaction.RootObjects.Read("first"));
-                Assert.Null(tx.LowLevelTransaction.RootObjects.Read("second"));
+                Assert.True(tx.LowLevelTransaction.RootObjects.Read("first").IsNull);
+                Assert.True(tx.LowLevelTransaction.RootObjects.Read("second").IsNull);
             }
         }
     }
