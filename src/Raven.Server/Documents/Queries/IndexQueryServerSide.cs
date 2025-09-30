@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, long start, long pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string clientQueryId = null, string overrideQuery = null)
+        public static async ValueTask<IndexQueryServerSide> CreateAsync(HttpContext httpContext, long start, long pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string clientQueryId = null, string overrideQuery = null)
         {
             IndexQueryServerSide result = null;
             try

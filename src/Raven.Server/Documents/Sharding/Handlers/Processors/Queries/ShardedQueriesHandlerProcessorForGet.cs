@@ -39,7 +39,7 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
         return returnContext;
     }
 
-    protected override async ValueTask<IndexEntriesQueryResult> GetIndexEntriesAsync(TransactionOperationContext queryContext, TransactionOperationContext context, IndexQueryServerSide query, long? existingResultEtag,
+    protected override async Task<IndexEntriesQueryResult> GetIndexEntriesAsync(TransactionOperationContext queryContext, TransactionOperationContext context, IndexQueryServerSide query, long? existingResultEtag,
         bool ignoreLimit, OperationCancelToken token)
     {
         using (var timings = Timings(query))
@@ -74,7 +74,7 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
 
     protected override RavenConfiguration Configuration => RequestHandler.DatabaseContext.Configuration;
 
-    protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async Task<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
         using (var timings = Timings(query))
         {
@@ -95,7 +95,7 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
         }
     }
 
-    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async Task<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
         using (var timings = Timings(query))
         {

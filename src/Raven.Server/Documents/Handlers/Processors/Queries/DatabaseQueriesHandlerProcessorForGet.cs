@@ -34,16 +34,16 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
 
     protected override RavenConfiguration Configuration => RequestHandler.Database.Configuration;
 
-    protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
+    protected override Task<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
         long? existingResultEtag, OperationCancelToken token)
     {
-        return await RequestHandler.Database.QueryRunner.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
+        return RequestHandler.Database.QueryRunner.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
     }
 
-    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
+    protected override Task<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
         long? existingResultEtag, OperationCancelToken token)
     {
-        return await RequestHandler.Database.QueryRunner.ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
+        return RequestHandler.Database.QueryRunner.ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
     }
 
     protected override async ValueTask<QueryResultServerSide<Document>> GetQueryResultsAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
@@ -57,9 +57,9 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
         queryContext.WithQuery(indexQuery.Metadata);
     }
 
-    protected override async ValueTask<IndexEntriesQueryResult> GetIndexEntriesAsync(QueryOperationContext queryContext, DocumentsOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token)
+    protected override Task<IndexEntriesQueryResult> GetIndexEntriesAsync(QueryOperationContext queryContext, DocumentsOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token)
     {
-        return await RequestHandler.Database.QueryRunner.ExecuteIndexEntriesQuery(query, queryContext, ignoreLimit, existingResultEtag, token);
+        return RequestHandler.Database.QueryRunner.ExecuteIndexEntriesQuery(query, queryContext, ignoreLimit, existingResultEtag, token);
     }
 
     protected override async ValueTask ExplainAsync(QueryOperationContext queryContext, IndexQueryServerSide query, OperationCancelToken token)

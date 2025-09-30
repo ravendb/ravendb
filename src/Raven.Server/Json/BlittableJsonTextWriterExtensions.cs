@@ -419,7 +419,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteSuggestionQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, CancellationToken token)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteSuggestionQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, CancellationToken token)
         {
             writer.WriteStartObject();
 
@@ -452,8 +452,11 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
-            var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
-
+            var numberOfResultsTask = writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
+            var numberOfResults = numberOfResultsTask.IsCompletedSuccessfully 
+                ? numberOfResultsTask.Result 
+                : await numberOfResultsTask;
+            
             writer.WriteEndObject();
 
             return numberOfResults;

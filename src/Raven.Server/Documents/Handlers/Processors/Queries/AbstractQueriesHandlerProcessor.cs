@@ -43,34 +43,39 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         return new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
     }
 
-    public async ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false)
+    public ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker, bool addSpatialProperties = false)
     {
-        if (method == HttpMethod.Get)
-            return await ReadIndexQueryAsync(context, tracker, addSpatialProperties);
+        return method == HttpMethod.Get 
+            ? ReadIndexQueryAsync(context, tracker, addSpatialProperties) 
+            : GetIndexQueryFromPostRequestAsync();
 
-        var json = await context.ReadForMemoryAsync(_stream, "index/query");
-
-        if (json == null)
-            throw new BadRequestException("Missing JSON content.");
-
-        var queryType = QueryType.Select;
-
-        if (method == HttpMethod.Patch)
+        async ValueTask<IndexQueryServerSide> GetIndexQueryFromPostRequestAsync()
         {
-            queryType = QueryType.Update;
+            var readJsonTask = context.ReadForMemoryAsync(_stream, "index/query");
+            var json = readJsonTask.IsCompletedSuccessfully ? readJsonTask.Result : await readJsonTask;
+            
+            if (json == null)
+                throw new BadRequestException("Missing JSON content.");
 
-            if (json.TryGet("Query", out BlittableJsonReaderObject q) == false || q == null)
-                throw new BadRequestException("Missing 'Query' property.");
+            var queryType = QueryType.Select;
 
-            json = q;
+            if (method == HttpMethod.Patch)
+            {
+                queryType = QueryType.Update;
+
+                if (json.TryGet("Query", out BlittableJsonReaderObject q) == false || q == null)
+                    throw new BadRequestException("Missing 'Query' property.");
+
+                json = q;
+            }
+
+            return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
         }
-
-        return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
     }
 
-    private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    private ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
-        return await IndexQueryServerSide.CreateAsync(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties);
+        return IndexQueryServerSide.CreateAsync(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties);
     }
     
     protected static void AssertQueryDoesNotUseFilterClause(IndexQueryServerSide query)
