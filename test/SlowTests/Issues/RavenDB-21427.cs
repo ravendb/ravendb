@@ -42,6 +42,8 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Commands.QueueSink;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -443,6 +445,19 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Revisions)]
+        public async Task Put_Disabled_Revisions()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = true, MinimumRevisionsToKeep = 0 } };
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+            }
+        }
+
         // ----------------------------------------
         // Tests for Backup License Limits
         // ----------------------------------------
@@ -641,6 +656,20 @@ namespace SlowTests.Issues
                 await DisableRevisionCompression(Server, store);
                 await ChangeLicense(Server, RL_DEV);
                 await ChangeLicense(Server, RL_PRO);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.BackupExportImport)]
+        public async Task Put_Disabled_PeriodicBackup()
+        {
+            DoNotReuseServer();
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", disabled: true);
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
             }
         }
 
@@ -916,6 +945,22 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
+        public async Task Put_Disabled_ClientConfiguration()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var config = new ClientConfiguration { MaxNumberOfRequestsPerSession = 50, Disabled = true };
+
+                var command = new PutDatabaseClientConfigurationCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
         // ----------------------------------------
         // Tests for Studio Configuration License Limits
         //  ----------------------------------------
@@ -961,6 +1006,22 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
+        public async Task Put_Disabled_StudioConfiguration()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+                var command = new PutDatabaseStudioConfigurationCommand(
+                    new ServerWideStudioConfiguration { DisableAutoIndexCreation = true, Disabled = true },
+                    store.Database, RaftIdGenerator.NewId());
+
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
         // ----------------------------------------
         // Tests for Expiration License Limits
         //  ----------------------------------------
@@ -999,6 +1060,23 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
+        public async Task Put_Disabled_ExpirationConfiguration()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+                var config = new ExpirationConfiguration { Disabled = true, DeleteFrequencyInSec = 60 };
+                await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+            }
+        }
+
+        // ----------------------------------------
+        // Tests for Refresh License Limits
+        //  ----------------------------------------
+
         [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.ExpirationRefresh)]
         public async Task Prevent_License_Downgrade_Refresh_Configuration()
         {
@@ -1035,6 +1113,21 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.ExpirationRefresh)]
+        public async Task Put_Disabled_Refresh_Configuration()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var refConfig = new RefreshConfiguration { RefreshFrequencyInSec = 33, Disabled = true };
+                await store.Maintenance.SendAsync(new ConfigureRefreshOperation(refConfig));
+            }
+        }
+        
         // ----------------------------------------
         // Tests for Encryption License Limits
         //  ----------------------------------------
@@ -1204,6 +1297,45 @@ public class MyAnalyzer2 : Analyzer
                 await FailToChangeLicense(Server, RL_COMM, LimitType.DocumentsCompression);
                 await FailToChangeLicense(Server, RL_PRO, LimitType.DocumentsCompression);
                 await ChangeLicense(Server, RL_DEV);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
+        public async Task Put_Disabled_Document_Compression()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var config = new DocumentsCompressionConfiguration
+                {
+                    CompressAllCollections = false,
+                    Collections = new string[] { }
+                };
+                await Server.ServerStore.SendToLeaderAsync(
+                    new EditDocumentsCompressionCommand(config, store.Database, RaftIdGenerator.NewId()));
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Revisions)]
+        public async Task Put_Disabled_Revision_Compression()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+                var config = new DocumentsCompressionConfiguration
+                {
+                    CompressRevisions = false,
+                    CompressAllCollections = false,
+                    Collections = new string[] { }
+                };
+                await Server.ServerStore.SendToLeaderAsync(
+                    new EditDocumentsCompressionCommand(config, store.Database, RaftIdGenerator.NewId()));
             }
         }
 
@@ -1735,6 +1867,237 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
+        public async Task Put_Disabled_Raven_ETL()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+                var connectionString = new RavenConnectionString
+                {
+                    Name = "RavenConnStr",
+                    Database = store.Database,
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:12345" }
+                };
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var config = new RavenEtlConfiguration
+                {
+                    Name = "RavenEtlTask",
+                    ConnectionStringName = "RavenConnStr",
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "Script1",
+                            Collections = new List<string> { "Users" },
+                            Script = null
+                        }
+                    },
+                    Disabled = true
+                };
+                var command = new AddRavenEtlCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
+        public async Task Put_Disabled_Sql_ETL()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var connectionString = new SqlConnectionString
+                {
+                    Name = "SqlConnStr",
+                    FactoryName = "System.Data.SqlClient",
+                    ConnectionString = "Server=localhost;Database=Test;User Id=sa;Password=123456;"
+                };
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(connectionString));
+
+                var config = new SqlEtlConfiguration
+                {
+                    Name = "SqlEtlTask",
+                    ConnectionStringName = "SqlConnStr",
+                    SqlTables = { new SqlEtlTable { TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false } },
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "Script1",
+                            Collections = new List<string> { "Users" },
+                            Script = "loadToUsers(this)"
+                        }
+                    },
+                    Disabled = true
+                };
+
+                var command = new AddSqlEtlCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
+        public async Task Put_Disabled_Olap_ETL()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var connectionString = new OlapConnectionString
+                {
+                    Name = "OlapConnStr",
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = NewDataPath(suffix: "OlapOutput")
+                    }
+                };
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
+
+                var config = new OlapEtlConfiguration
+                {
+                    Name = "OlapEtlTask",
+                    ConnectionStringName = "OlapConnStr",
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "OlapTransform",
+                            Collections = new List<string> { "Orders" },
+                            Script = "loadToUsers(this)"
+                        }
+                    },
+                    Disabled = true
+                };
+
+                var command = new AddOlapEtlCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
+        public async Task Put_Disabled_Elasticsearch_ETL()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var connectionString = new ElasticSearchConnectionString
+                {
+                    Name = "ElasticConnStr",
+                    Nodes = new[] { "http://localhost:9200" }
+                };
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<ElasticSearchConnectionString>(connectionString));
+
+                var config = new ElasticSearchEtlConfiguration
+                {
+                    Name = "ElasticEtlTask",
+                    ConnectionStringName = "ElasticConnStr",
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "Script1",
+                            Collections = new List<string> { "Products" },
+                            Script = "loadToUsers(this)"
+                        }
+                    },
+                    Disabled = true
+                };
+                var command = new AddElasticSearchEtlCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
+        public async Task Put_Disabled_Queue_ETL()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var connectionString = new QueueConnectionString
+                {
+                    Name = "QueueConnStr",
+                    BrokerType = QueueBrokerType.Kafka,
+                    KafkaConnectionSettings = new KafkaConnectionSettings
+                    {
+                        BootstrapServers = "localhost:9092"
+                    }
+                };
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<QueueConnectionString>(connectionString));
+
+                var config = new QueueEtlConfiguration
+                {
+                    Name = "QueueEtlTask",
+                    ConnectionStringName = "QueueConnStr",
+                    BrokerType = QueueBrokerType.Kafka,
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = "QueueScript",
+                            Collections = new List<string> { "Orders" },
+                            Script = "loadToUsers(this)"
+                        }
+                    },
+                    Disabled = true
+                };
+
+                var command = new AddQueueEtlCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Etl)]
+        public async Task Put_Disabled_Downgrade_QueueSink()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(
+                    new PutConnectionStringOperation<QueueConnectionString>(
+                        new QueueConnectionString
+                        {
+                            Name = "KafkaConStr",
+                            BrokerType = QueueBrokerType.Kafka,
+                            KafkaConnectionSettings = new KafkaConnectionSettings() { BootstrapServers = "localhost:9092" }
+                        }));
+
+                QueueSinkScript queueSinkScript = new()
+                {
+                    Name = "orders",
+                    Queues = new List<string>() { "orders" },
+                    Script = @"this['@metadata']['@collection'] = 'Orders';
+               put(this.Id.toString(), this)"
+                };
+
+                var config = new QueueSinkConfiguration() { ConnectionStringName = "KafkaConStr", BrokerType = QueueBrokerType.Kafka, Scripts = { queueSinkScript }, Disabled = true };
+
+                store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(config));
+
+                var command = new AddQueueSinkCommand(config, store.Database, RaftIdGenerator.NewId());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
         // ----------------------------------------
         // Tests for Replication License Limits
         //  ----------------------------------------
@@ -2091,6 +2454,39 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.TimeSeries)]
+        public async Task Put_Disabled_TimeSeries_Configuration()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                await DisableRevisionCompression(Server, store);
+                await PutLicense(Server, RL_COMM);
+
+                var timeSeriesConfig = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        {
+                            "Users", new TimeSeriesCollectionConfiguration
+                            {
+                                Policies = new List<TimeSeriesPolicy>
+                                {
+                                    new TimeSeriesPolicy("30Seconds", TimeValue.FromSeconds(30)),
+                                    new TimeSeriesPolicy("1Hour", TimeValue.FromHours(1))
+                                },
+                                RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromMinutes(1)),
+                                Disabled = true
+                            }
+                        }
+                    }
+
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfig));
+            }
+        }
         private static async Task FailToChangeLicense(RavenServer leader, string licenseType, LimitType limitType)
         {
             var license = Environment.GetEnvironmentVariable(licenseType);

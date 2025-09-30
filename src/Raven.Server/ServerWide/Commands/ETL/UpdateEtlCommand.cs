@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ETL
 {
-    public abstract class UpdateEtlCommand<T, TConnectionString> : UpdateDatabaseCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
+    public abstract class UpdateEtlCommand<T, TConnectionString> : UpdateDatabaseRecordFeaturesCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
     {
         public long TaskId { get; protected set; }
 
@@ -57,6 +57,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new AddRavenEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class UpdateSqlEtlCommand : UpdateEtlCommand<SqlEtlConfiguration, SqlConnectionString>
@@ -77,6 +79,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new AddSqlEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class UpdateOlapEtlCommand : UpdateEtlCommand<OlapEtlConfiguration, OlapConnectionString>
@@ -96,6 +100,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.OlapEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddOlapEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
     
     public sealed class UpdateElasticSearchEtlCommand : UpdateEtlCommand<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
@@ -115,6 +121,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.ElasticSearchEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddElasticSearchEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class UpdateQueueEtlCommand : UpdateEtlCommand<QueueEtlConfiguration, QueueConnectionString>
@@ -134,5 +142,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.QueueEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddQueueEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

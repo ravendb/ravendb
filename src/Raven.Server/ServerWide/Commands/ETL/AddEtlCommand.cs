@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ETL
 {
-    public abstract class AddEtlCommand<T, TConnectionString> : UpdateDatabaseCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
+    public abstract class AddEtlCommand<T, TConnectionString> : UpdateDatabaseRecordFeaturesCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
     {
         public T Configuration { get; protected set; }
 
@@ -64,6 +64,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.RavenEtls, record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class AddSqlEtlCommand : AddEtlCommand<SqlEtlConfiguration, SqlConnectionString>
@@ -82,6 +84,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.SqlEtls, record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class AddElasticSearchEtlCommand : AddEtlCommand<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>
@@ -100,6 +104,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.ElasticSearchEtls, record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class AddOlapEtlCommand : AddEtlCommand<OlapEtlConfiguration, OlapConnectionString>
@@ -118,6 +124,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.OlapEtls, record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 
     public sealed class AddQueueEtlCommand : AddEtlCommand<QueueEtlConfiguration, QueueConnectionString>
@@ -136,5 +144,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             Add(ref record.QueueEtls, record, etag);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }
