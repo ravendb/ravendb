@@ -519,7 +519,7 @@ namespace Tests.Infrastructure
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree("values");
                 var read = tree.Read(name);
-                return read.IsNull ? null : read.Reader.ToStringValue();
+                return read.HasValue ? read.Reader.ToStringValue() : null;
             }
 
             protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)

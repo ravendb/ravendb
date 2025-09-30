@@ -102,7 +102,7 @@ namespace StressTests.Voron
                             keys.Add(iterator.CurrentKey.ToString());
                             Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
                             var readResult = readTree.Read( iterator.CurrentKey);
-                            Assert.False(readResult.IsNull);
+                            Assert.True(readResult.HasValue);
 
                             count++;
                         }

@@ -60,7 +60,7 @@ namespace SlowTests.Voron
                 for (var i = 0; i < DocumentCount; i++)
                 {
                     var readResult = snapshot.CreateTree("tree1").Read("docs/" + i);
-                    Assert.False(readResult.IsNull);
+                    Assert.True(readResult.HasValue);
                     var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
                     Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());
                 }
@@ -115,7 +115,7 @@ namespace SlowTests.Voron
                 for (var i = 0; i < DocumentCount; i++)
                 {
                     var readResult = snapshot.ReadTree("tree1").Read("docs/" + i);
-                    Assert.False(readResult.IsNull);
+                    Assert.True(readResult.HasValue);
 
                     var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
                     Assert.Equal(testBuffer, bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray());

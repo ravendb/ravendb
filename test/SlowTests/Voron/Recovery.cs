@@ -64,7 +64,7 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 100; i++)
                     {
-                        Assert.False(tree.Read("key" + i).IsNull);
+                        Assert.True(tree.Read("key" + i).HasValue);
                     }
                 }
             }
@@ -174,12 +174,12 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 1000; i++)
                     {
-                        Assert.False(aTree.Read("key" + i).IsNull);
+                        Assert.True(aTree.Read("key" + i).HasValue);
                     }
 
                     for (var i = 0; i < 1; i++)
                     {
-                        Assert.False(bTree.Read("key" + i).IsNull);
+                        Assert.True(bTree.Read("key" + i).HasValue);
                     }
                 }
             }
@@ -232,12 +232,12 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 1000; i++)
                     {
-                        Assert.False(aTree.Read("key" + i).IsNull);
+                        Assert.True(aTree.Read("key" + i).HasValue);
                     }
 
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.False(bTree.Read("key" + i).IsNull);
+                        Assert.True(bTree.Read("key" + i).HasValue);
                     }
                 }
             }
@@ -302,7 +302,7 @@ namespace SlowTests.Voron
                     for (var i = 0; i < count; i++)
                     {
                         var readResult = aTree.Read("a" + i);
-                        Assert.False(readResult.IsNull);
+                        Assert.True(readResult.HasValue);
                         Assert.Equal(expectedString, readResult.Reader.ToStringValue());
                     }
 

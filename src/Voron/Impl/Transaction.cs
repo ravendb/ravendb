@@ -224,7 +224,7 @@ namespace Voron.Impl
             var clonedName = name.Clone(Allocator);
             
             var existing = LowLevelTransaction.RootObjects.Read(name);
-            if (existing.IsNull)
+            if (!existing.HasValue)
             {
                 var state = new PostingListState();
                 PostingList.Create(this.LowLevelTransaction, ref state);
@@ -663,7 +663,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal) // must not delete global indexes
                     continue;
 
-                if (tableTree.Read(indexDef.Name).IsNull)
+                if (!tableTree.Read(indexDef.Name).HasValue)
                     continue;
 
                 var indexTree = table.GetTree(indexDef);
@@ -678,7 +678,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal)  // must not delete global indexes
                     continue;
 
-                if (tableTree.Read(indexDef.Name).IsNull)
+                if (!tableTree.Read(indexDef.Name).HasValue)
                     continue;
 
                 var index = table.GetFixedSizeTree(indexDef);
@@ -692,7 +692,7 @@ namespace Voron.Impl
 
             table.ActiveDataSmallSection.FreeRawDataSectionPages();
 
-            if (tableTree.Read(TableSchema.ActiveCandidateSectionSlice).IsNull == false)
+            if (tableTree.Read(TableSchema.ActiveCandidateSectionSlice).HasValue)
             {
                 using (var it = table.ActiveCandidateSection.Iterate())
                 {
@@ -708,7 +708,7 @@ namespace Voron.Impl
                 DeleteFixedTree(table.ActiveCandidateSection, isInRoot: false);
             }
 
-            if (tableTree.Read(TableSchema.InactiveSectionSlice).IsNull == false)
+            if (tableTree.Read(TableSchema.InactiveSectionSlice).HasValue)
                 DeleteFixedTree(table.InactiveSections, isInRoot: false);
 
             DeleteTree(name);

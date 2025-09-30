@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                     {
                         var statsTree = tx.ReadTree(IndexSchema.StatsTree);
                         const string nonNull = IndexSchema.StatsTree;
-                        return Task.FromResult(statsTree.Read(IndexSchema.EntriesCount).IsNull ? null : nonNull);
+                        return Task.FromResult(statsTree.Read(IndexSchema.EntriesCount).HasValue ? nonNull : null);
                     }
                 });
 

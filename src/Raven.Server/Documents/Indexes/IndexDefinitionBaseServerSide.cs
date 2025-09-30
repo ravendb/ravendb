@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var tree = tx.CreateTree("Definition");
             var result = tree.Read(DefinitionSlice);
-            if (result.IsNull)
+            if (!result.HasValue)
                 return null;
 
             var stream = result.Reader.AsStream();

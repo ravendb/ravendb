@@ -62,7 +62,7 @@ namespace SlowTests.Voron.Bugs
                     for (int i = 0; i < 100; i++)
                     {
                         var readResult = tree.Read("items/" + i);
-                        Assert.False(readResult.IsNull);
+                        Assert.True(readResult.HasValue);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);

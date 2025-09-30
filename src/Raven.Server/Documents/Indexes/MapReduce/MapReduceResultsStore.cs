@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         else
                         {
                             var read = Tree.Read(entrySlice);
-                            if (read.IsNull)
+                            if (!read.HasValue)
                                 throw new InvalidOperationException($"Could not find a map result with id '{id}' in '{Tree.Name}' tree");
                             return new ReadMapEntryScope(PtrSize.Create(read.Reader.Base, read.Reader.Length));
                         }

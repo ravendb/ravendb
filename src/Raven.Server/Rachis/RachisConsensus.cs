@@ -372,7 +372,7 @@ namespace Raven.Server.Rachis
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
             var read = state.Read(CurrentTermSlice);
-            if (read.IsNull || read.Reader.Length != sizeof(long))
+            if (!read.HasValue || read.Reader.Length != sizeof(long))
             {
                 using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
                     *(long*)ptr = 0;
@@ -1183,7 +1183,7 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(TopologySlice);
-            if (read.IsNull)
+            if (!read.HasValue)
             {
                 return new ClusterTopology(
                     null,
@@ -1204,7 +1204,7 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(TopologySlice);
-            if (read.IsNull)
+            if (!read.HasValue)
                 return null;
 
             BlittableJsonReaderObject topologyBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
@@ -1721,7 +1721,7 @@ namespace Raven.Server.Rachis
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastTruncatedSlice);
-            if (read.IsNull)
+            if (!read.HasValue)
             {
                 lastTruncatedIndex = 0;
                 lastTruncatedTerm = 0;
@@ -1771,7 +1771,7 @@ namespace Raven.Server.Rachis
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastCommitSlice);
-            if (read.IsNull)
+            if (!read.HasValue)
             {
                 index = 0;
                 term = 0;
@@ -1799,7 +1799,7 @@ namespace Raven.Server.Rachis
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastCommitSlice);
-            if (read.IsNull == false)
+            if (read.HasValue)
             {
                 var reader = read.Reader;
                 var oldIndex = reader.ReadLittleEndianInt64();
@@ -2014,7 +2014,7 @@ namespace Raven.Server.Rachis
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             var read = state.Read(CurrentTermSlice);
            
-            long? votedTerm = read.IsNull ? null : read.Reader.ReadLittleEndianInt64();
+            long? votedTerm = read.HasValue ? read.Reader.ReadLittleEndianInt64() : null;
 
             if (votedTerm != term && votedTerm.HasValue)
                 return (null, votedTerm.Value);

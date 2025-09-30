@@ -40,7 +40,7 @@ namespace SlowTests.Voron.Storage
             {
                 var readResult = tx.ReadTree("tree0").Read("key/1");
 
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 Assert.Equal(12, readResult.Reader.ReadLittleEndianInt64());
             }
         }

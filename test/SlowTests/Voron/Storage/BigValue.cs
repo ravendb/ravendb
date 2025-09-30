@@ -60,7 +60,7 @@ namespace SlowTests.Voron.Storage
             {
                 var tree = tx.CreateTree("foo");
                 Slice.From(Allocator, BitConverter.GetBytes(1203), out Slice key);
-                Assert.True(tree.Read(key).IsNull);
+                Assert.False(tree.Read(key).HasValue);
             }
 
             if (restartCount >= 2)
@@ -70,7 +70,7 @@ namespace SlowTests.Voron.Storage
             {
                 var tree = tx.CreateTree("foo");
                 Slice.From(Allocator, BitConverter.GetBytes(1203), out Slice key);
-                Assert.True(tree.Read(key).IsNull);
+                Assert.False(tree.Read(key).HasValue);
             }
 
             using (var tx = Env.WriteTransaction())
@@ -89,7 +89,7 @@ namespace SlowTests.Voron.Storage
                 Slice key;
                 Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
                 var readResult = tree.Read(key);
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
 
                 var memoryStream = new MemoryStream();
                 readResult.Reader.CopyTo(memoryStream);
@@ -106,7 +106,7 @@ namespace SlowTests.Voron.Storage
                 Slice key;
                 Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
                 var readResult = tree.Read(key);
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
 
                 var memoryStream = new MemoryStream();
                 readResult.Reader.CopyTo(memoryStream);
@@ -122,7 +122,7 @@ namespace SlowTests.Voron.Storage
                 Slice key;
                 Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
                 var readResult = tree.Read(key);
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
 
                 var memoryStream = new MemoryStream();
                 readResult.Reader.CopyTo(memoryStream);
@@ -141,7 +141,7 @@ namespace SlowTests.Voron.Storage
                 Slice key;
                 Slice.From(Allocator, BitConverter.GetBytes(1203), out key);
                 var readResult = tree.Read(key);
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
 
                 var memoryStream = new MemoryStream();
                 readResult.Reader.CopyTo(memoryStream);
@@ -185,7 +185,7 @@ namespace SlowTests.Voron.Storage
                     Slice key;
                     Slice.From(Allocator, BitConverter.GetBytes(i), out key);
                     var readResult = tree.Read(key);
-                    Assert.False(readResult.IsNull);
+                    Assert.True(readResult.HasValue);
 
                     var memoryStream = new MemoryStream();
                     readResult.Reader.CopyTo(memoryStream);

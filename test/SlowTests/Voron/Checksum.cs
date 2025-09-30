@@ -86,7 +86,7 @@ namespace SlowTests.Voron
                             {
                                 var readResult = tree.Read($"{treeName}/items/{i}");
 
-                                Assert.False(readResult.IsNull);
+                                Assert.True(readResult.HasValue);
 
                                 if (i % 2 == 0)
                                 {

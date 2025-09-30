@@ -59,7 +59,7 @@ namespace SlowTests.Voron
                 for (var i = 0; i < 1000; i++)
                 {
                     var readResult = tx.CreateTree("tree").Read("a" + i);
-                    Assert.False(readResult.IsNull);
+                    Assert.True(readResult.HasValue);
                     Assert.Equal(100, readResult.Reader.Length);
                 }
                 tx.Commit();
@@ -176,11 +176,11 @@ namespace SlowTests.Voron
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("tree");
-                Assert.False(tree.Read("exists").IsNull);
-                Assert.True(tree.Read("a1").IsNull);
-                Assert.True(tree.Read("a100").IsNull);
-                Assert.True(tree.Read("a500").IsNull);
-                Assert.True(tree.Read("a1000").IsNull);
+                Assert.True(tree.Read("exists").HasValue);
+                Assert.False(tree.Read("a1").HasValue);
+                Assert.False(tree.Read("a100").HasValue);
+                Assert.False(tree.Read("a500").HasValue);
+                Assert.False(tree.Read("a1000").HasValue);
 
                 tx.Commit();
             }
@@ -268,7 +268,7 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.True(tx.CreateTree("tree").Read("a1001").IsNull);
+                Assert.False(tx.CreateTree("tree").Read("a1001").HasValue);
             }
         }
 

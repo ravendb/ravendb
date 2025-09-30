@@ -193,7 +193,7 @@ namespace Voron.Data.BTrees
         public long GetLookupRootPage(Slice name)
         {
             var result = Read(name);
-            if (result.IsNull)
+            if (!result.HasValue)
                 return -1;
             var header = (LookupState*)result.Reader.Base;
             if (header->RootObjectType != RootObjectType.Lookup)

@@ -178,7 +178,7 @@ namespace FastTests.Voron.Trees
                     {
                         var key = "test-" + j.ToString("000") + "-" + i.ToString("000");
 
-                        Assert.False(tree.Read(key).IsNull);
+                        Assert.True(tree.Read(key).HasValue);
                     }
                 }
             }

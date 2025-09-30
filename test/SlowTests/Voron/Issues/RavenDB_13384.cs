@@ -62,7 +62,7 @@ namespace SlowTests.Voron.Issues
             using (var tx = Env.ReadTransaction())
             {
                 var readResult = tx.ReadTree("tree").Read("item");
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 var buf = new byte[3];
                 var read = readResult.Reader.Read(buf, 0, 3);
                 Assert.Equal(3, read);
@@ -106,7 +106,7 @@ namespace SlowTests.Voron.Issues
             using (var tx = Env.ReadTransaction())
             {
                 var readResult = tx.ReadTree("tree").Read("item");
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 var buf = new byte[3];
                 var read = readResult.Reader.Read(buf, 0, 3);
                 Assert.Equal(3, read);
@@ -137,7 +137,7 @@ namespace SlowTests.Voron.Issues
             using (var tx = Env.ReadTransaction())
             {
                 var readResult = tx.ReadTree("tree").Read("item");
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 var buf = new byte[3];
                 var read = readResult.Reader.Read(buf, 0, 3);
                 Assert.Equal(3, read);

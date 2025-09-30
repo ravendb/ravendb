@@ -84,7 +84,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             step.WriteTx.DeleteTable(oldTableName);
 
             // remove the remaining CompareExchange global index
-            if (step.WriteTx.LowLevelTransaction.RootObjects.Read(ClusterStateMachine.CompareExchangeIndex).IsNull == false)
+            if (step.WriteTx.LowLevelTransaction.RootObjects.Read(ClusterStateMachine.CompareExchangeIndex).HasValue)
                 step.WriteTx.DeleteTree(ClusterStateMachine.CompareExchangeIndex);
 
             return true;

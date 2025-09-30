@@ -328,7 +328,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         LookupState header;
 
         var existing = parent.Read(name);
-        if (existing.IsNull)
+        if (!existing.HasValue)
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;

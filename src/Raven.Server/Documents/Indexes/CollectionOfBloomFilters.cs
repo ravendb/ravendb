@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes
         internal static long GetVersion(Tree tree, bool isNew)
         {
             var read = tree.Read(VersionSlice);
-            if (read.IsNull == false)
+            if (read.HasValue)
                 return read.Reader.ReadLittleEndianInt64();
 
             return isNew
@@ -131,11 +131,11 @@ namespace Raven.Server.Documents.Indexes
         private static long GetCount(Tree tree, ref Mode mode)
         {
             var read = tree.Read(mode == Mode.X64 ? Count64Slice : Count32Slice);
-            if (read.IsNull == false)
+            if (read.HasValue)
                 return read.Reader.ReadLittleEndianInt64();
 
             read = tree.Read(mode == Mode.X64 ? Count32Slice : Count64Slice);
-            if (read.IsNull == false)
+            if (read.HasValue)
             {
                 mode = mode == Mode.X64 ? Mode.X86 : Mode.X64;
                 return read.Reader.ReadLittleEndianInt64();
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Indexes
             private long ReadCount()
             {
                 var read = _tree.Read(_keySlice);
-                return read.IsNull ? 0 : read.Reader.ReadLittleEndianInt64();
+                return read.ReadLittleEndianInt64OrDefault(0);
             }
 
             internal bool Add(LazyStringValue key)
@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.Indexes
                 Slice.From(_allocator, $"{_key:D5}/{number:D4}", out Slice partitionKey);
 
                 var read = _tree.Read(partitionKey);
-                if (read.IsNull == false)
+                if (read.HasValue)
                 {
                     return _partitions[number] = new Partition
                     {

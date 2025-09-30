@@ -63,12 +63,12 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 var readResult = tree.Read("item/1");
 
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 Assert.Equal(4000, readResult.Reader.Length);
 
                 readResult = tree.Read("item/2");
 
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 Assert.Equal(3999, readResult.Reader.Length);
             }
         }
@@ -109,12 +109,12 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 var readResult = tree.Read("item/1");
 
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 Assert.Equal(4000, readResult.Reader.Length);
 
                 readResult = tree.Read("item/2");
 
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 Assert.Equal(3999, readResult.Reader.Length);
             }
         }
@@ -138,7 +138,7 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 var readResult = tree.Read("items/1");
 
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
                 Assert.Equal(3, readResult.Reader.Length);
             }
         }

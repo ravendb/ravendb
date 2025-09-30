@@ -50,7 +50,7 @@ namespace SlowTests.Voron.Bugs
                 {
                     var readResult = tree.Read(item.Key.ToString("0000000000000000"));
 
-                    Assert.False(readResult.IsNull);
+                    Assert.True(readResult.HasValue);
 
                     Assert.Equal(item.Value.Length, readResult.Reader.Length);
                 }

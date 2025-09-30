@@ -45,7 +45,7 @@ namespace SlowTests.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                Assert.True(tx.LowLevelTransaction.RootObjects.Read("docs").IsNull);
+                Assert.False(tx.LowLevelTransaction.RootObjects.Read("docs").HasValue);
             }
         }
     }

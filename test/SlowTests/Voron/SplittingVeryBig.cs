@@ -43,7 +43,7 @@ namespace SlowTests.Voron
             using (var tx = Env.ReadTransaction())
             {
                 var readResult = tx.CreateTree("tree").Read("key1");
-                Assert.False(readResult.IsNull);
+                Assert.True(readResult.HasValue);
 
                 var reader = readResult.Reader;
                 Assert.Equal(buffer.Length, readResult.Reader.Length);
@@ -91,7 +91,7 @@ namespace SlowTests.Voron
                 using (var tx = env.ReadTransaction())
                 {
                     var readResult = tx.CreateTree("tree").Read("key1");
-                    Assert.False(readResult.IsNull);
+                    Assert.True(readResult.HasValue);
 
                     Assert.Equal(buffer.Length, readResult.Reader.Length);
                     var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);

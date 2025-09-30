@@ -2,7 +2,7 @@ namespace Voron
 {
     /// <summary>
     /// A struct representing a read result.
-    /// If the read returns a null, <see cref="IsNull"/> is true. Otherwise, the <see cref="ValueReader"/> can be accessed via <see cref="Reader"/>.
+    /// If the read returns a null, <see cref="HasValue"/> is false. Otherwise, the <see cref="ValueReader"/> can be accessed via <see cref="Reader"/>.
     /// </summary>
     public readonly unsafe struct ReadResult(byte* val, int len)
     {
@@ -10,20 +10,20 @@ namespace Voron
 
         public ValueReader Reader => new(val, len);
 
-        public bool IsNull => val == null;
+        public bool HasValue => val != null;
 
         public static readonly ReadResult Null = default;
 
         // The null handling helper methods.
         
-        public T[] ToArrayEmptyOnNull<T>() where T : unmanaged => IsNull ? [] : Reader.ToUnmanagedSpan<T>().ToSpan().ToArray();
+        public T[] ToArrayEmptyOnNull<T>() where T : unmanaged => HasValue ? Reader.ToUnmanagedSpan<T>().ToSpan().ToArray() : [];
 
-        public long ReadLittleEndianInt64OrDefault(long defaultValue = 0) => IsNull ? defaultValue : Reader.ReadLittleEndianInt64();
+        public long ReadLittleEndianInt64OrDefault(long defaultValue = 0) => HasValue ? Reader.ReadLittleEndianInt64() : defaultValue;
         
-        public int ReadLittleEndianInt32OrDefault(int defaultValue = 0) => IsNull ? defaultValue : Reader.ReadLittleEndianInt32();
+        public int ReadLittleEndianInt32OrDefault(int defaultValue = 0) => HasValue ? Reader.ReadLittleEndianInt32() : defaultValue;
         
-        public byte ReadByteOrDefault(byte defaultValue = 0) => IsNull ? defaultValue : Reader.ReadByte();
+        public byte ReadByteOrDefault(byte defaultValue = 0) => HasValue ? Reader.ReadByte() : defaultValue;
 
-        public string ToStringValueOrDefault(string defaultValue = null) => IsNull ? defaultValue : Reader.ToStringValue();
+        public string ToStringValueOrDefault(string defaultValue = null) => HasValue ? Reader.ToStringValue() : defaultValue;
     }
 }

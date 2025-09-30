@@ -152,7 +152,7 @@ public partial class IndexSearcher
         double termRatioToWholeCollection;
         var totalTerms = tree.NumberOfEntries;
         var entry = _metadataTree.Read(field.TermLengthSumName);
-        var totalSum = entry.IsNull ? totalTerms : entry.Reader.ReadLittleEndianInt64();
+        var totalSum = entry.HasValue ? entry.Reader.ReadLittleEndianInt64() : totalTerms;
 
         if (totalTerms == 0 || totalSum == 0)
             termRatioToWholeCollection = 1;

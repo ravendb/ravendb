@@ -1830,7 +1830,7 @@ namespace Raven.Server.ServerWide
 
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
-            if (overwrite == false && tree.Read(name).IsNull == false)
+            if (overwrite == false && !tree.Read(name).HasValue == false)
                 throw new InvalidOperationException($"Attempt to overwrite secret key {name}, which isn\'t permitted (you\'ll lose access to the encrypted db).");
 
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
@@ -1864,7 +1864,7 @@ namespace Raven.Server.ServerWide
                 return null;
             
             var readResult = tree.Read(name);
-            if (readResult.IsNull)
+            if (!readResult.HasValue)
                 return null;
 
             var protectedData = new byte[readResult.Reader.Length];

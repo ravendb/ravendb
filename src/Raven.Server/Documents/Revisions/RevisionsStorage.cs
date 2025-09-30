@@ -2788,15 +2788,11 @@ namespace Raven.Server.Documents.Revisions
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(DocumentsStorage.GlobalTreeSlice);
             var readResult = tree.Read(DocumentsStorage.RevisionsBinCleanerLastEtag);
-            if (readResult.IsNull)
-            {
-                // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
-                // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
-                // so we start from etag (key) 1.
-                return 1;
-            }
 
-            return readResult.Reader.ReadLittleEndianInt64();
+            // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
+            // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
+            // so we start from etag (key) 1.
+            return readResult.ReadLittleEndianInt64OrDefault(1);
         }
 
         public static unsafe void SetLastRevisionsBinCleanerLastEtag(DocumentsOperationContext context, long etag)

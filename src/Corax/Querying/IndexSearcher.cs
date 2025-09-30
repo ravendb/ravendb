@@ -396,7 +396,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (_persistedDynamicTreeAnalyzer == null)
             return FieldIndexingMode.Normal; 
         var readResult = _persistedDynamicTreeAnalyzer.Read(name);
-        if (readResult.IsNull)
+        if (!readResult.HasValue)
             return FieldIndexingMode.Normal;
 
         var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
@@ -676,7 +676,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
         
         var result = _fieldsTree.Read(fieldName);
-        if (result.IsNull)
+        if (!result.HasValue)
         {
             rootPage = notFound;
             return false;

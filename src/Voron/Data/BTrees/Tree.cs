@@ -230,7 +230,7 @@ namespace Voron.Data.BTrees
             long currentValue = 0;
 
             var read = Read(key);
-            if (read.IsNull == false)
+            if (read.HasValue)
                 currentValue = *(long*)read.Reader.Base;
 
             var value = currentValue + delta;
@@ -246,7 +246,7 @@ namespace Voron.Data.BTrees
         public long? ReadInt64(Slice key)
         {
             var read = Read(key);
-            if (read.IsNull)
+            if (!read.HasValue)
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(long));
             return *(long*)read.Reader.Base;
@@ -258,7 +258,7 @@ namespace Voron.Data.BTrees
         public int? ReadInt32(Slice key)
         {
             var read = Read(key);
-            if (read.IsNull) 
+            if (!read.HasValue) 
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(int));
             return *(int*)read.Reader.Base;
@@ -271,7 +271,7 @@ namespace Voron.Data.BTrees
             where T : unmanaged
         {
             var read = Read(key);
-            if (read.IsNull) 
+            if (!read.HasValue) 
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(T));
             return *(T*)read.Reader.Base;
