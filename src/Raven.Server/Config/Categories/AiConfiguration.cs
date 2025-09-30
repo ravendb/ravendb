@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 
 namespace Raven.Server.Config.Categories;
 
@@ -21,7 +20,6 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Embeddings.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public TimeSetting EmbeddingsGenerationMaxFallbackTime { get; set; }
     
-    
     [Description("Maximum number of query embedding batches that can be processed concurrently. Controls the degree of parallelism when sending query embedding requests to AI providers. " +
                  "Higher values improve throughput but increase resource usage and may trigger rate limits.")]
     [DefaultValue(4)]
@@ -36,21 +34,21 @@ public sealed class AiConfiguration : ConfigurationCategory
 - Reflects decisions made, suggestions given, preferences expressed, and any changes in direction
 - Captures tone when relevant (e.g., sarcastic, formal, humorous, concerned)
 - Omits general filler or small talk unless it contributes to context or tone Format the output in a structured manner (such as bullet points or labeled sections) suitable for fitting into a limited context window. Do not discard any information that contributes to understanding the conversation's flow and outcome.
-- When tool output appears at the end, extract the key facts (IDs, names, prices, dates, etc.) and include them in a Results Cache block inside your summary, so they are preserved for the next turns.")]
+- If the transcript ends with tool output, your summary must explicitly include the key results from those tool calls - extract the key facts (IDs, names, prices, dates, etc.) and include them in a Results Cache block inside your summary, so they are preserved for the next turns and the conversation can continue without re-running the same tools.")]
     [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationTaskBeginningPrompt", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public string SummarizationTaskBeginningPrompt { get; set; }
 
     [Description("The user-role message that triggers the conversation summarization process.")]
-    [DefaultValue("Reminder - go over the entire previous conversation and summarize that according to the original instructions")]
+    [DefaultValue(@"Reminder:
+- Go over the entire previous conversation and summarize that according to the original instructions.
+- Make sure the final summary message contains the essential tool results already obtained, so they are available for future turns.")]
     [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationTaskEndPrompt", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public string SummarizationTaskEndPrompt { get; set; }
-
 
     [Description("The text prefix that appears before the generated summary of the previous conversation.")]
     [DefaultValue("Summary of previous conversation: ")]
     [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationResultPrefix", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public string SummarizationResultPrefix { get; set; }
-
 
     [Description("The recommanded token threshold for a tool response to the LLM. If the response exceeds this threshold, a notification will be raised.")]
     [DefaultValue(10_000)]

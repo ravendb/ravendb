@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 {
     internal class PutConversationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
-        public (PutOperationResults Conversation, List<PutOperationResults> History) PutResult;
+        public PutOperationResults PutResult;
 
         private string _id;
         private BlittableJsonReaderObject _conversationDoc;
@@ -35,24 +35,20 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             _id = _database.DocumentsStorage.DocumentPut.BuildDocumentId(_id, _database.DocumentsStorage.GenerateNextEtag(), out _);
 
-            List<PutOperationResults> putHistoryResults = default;
             if (_historyDocs != null)
             {
-                putHistoryResults = new List<PutOperationResults>(_historyDocs.Count);
                 foreach (var historyDoc in _historyDocs)
                 {
                     var historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId($"{AiAgentConversationHistoryIdPrefix}{_database.IdentityPartsSeparator}", _database.DocumentsStorage.GenerateNextEtag(), out _);
                     historyId = $"{historyId}${_id}";
 
                     var putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, historyDoc);
-                    putHistoryResults.Add(putHistoryResult);
                     _conversation.LinkedConversations.Add(putHistoryResult.Id);
                 }
             }
 
             _conversationDoc = _conversation.ToBlittable(context);
-            var putResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
-            PutResult = (putResult, putHistoryResults);
+            PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
 
             return 1;
         }

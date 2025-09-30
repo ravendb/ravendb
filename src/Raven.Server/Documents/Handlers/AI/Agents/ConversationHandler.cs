@@ -262,22 +262,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             : summarization.SummarizationTaskBeginningPrompt;
         beginningPrompt += $" The original system prompt was: {systemPrompt}, the rest of follows";
 
-        var endPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt)
-            ? database.Configuration.Ai.SummarizationTaskEndPrompt
-            : summarization.SummarizationTaskEndPrompt;
-
-        if (EndsWithTool(oldChat))
-        {
-            // Add a small nudge when the transcript ends with tool output, in order to avoid running the same tool again
-
-            beginningPrompt +=
-                " The transcript ends with tool output. Your summary must explicitly include the key results from those tool calls. " +
-                "These results must appear in the assistant’s summary message so that the conversation can continue without re-running the same tools.";
-
-            endPrompt +=
-                " Make sure the final summary message contains the essential tool results already obtained, so they are available for future turns. " +
-                "Do not suggest re-running the same tools unless the user explicitly asks for new data.";
-        }
 
         var messages = new List<BlittableJsonReaderObject>()
         {
@@ -290,6 +274,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         };
         messages.AddRange(oldChat.Messages.Skip(1));
 
+        var endPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt)
+            ? database.Configuration.Ai.SummarizationTaskEndPrompt
+            : summarization.SummarizationTaskEndPrompt;
+
         messages.Add(context.ReadObject(
             new DynamicJsonValue
             {
@@ -297,7 +285,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 [ChatCompletionClient.Constants.RequestFields.Content] = endPrompt,
                 [ChatCompletionClient.Constants.RequestFields.MaxCompletionToken] = summarization.MaxTokensAfterSummarization
             }, "system/summary/final/msg"));
-
 
         var usage = new AiUsage();
         var tools = ConversationDocument.GenerateTools(context, configuration);
@@ -321,15 +308,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         oldChat.UpdateUsage(usage);
         oldChat.CurrentUsage = new AiUsage();
-    }
-
-    private bool EndsWithTool(ConversationDocument doc)
-    {
-        if (doc.Messages.Count < 2)
-            return false;
-
-        return doc.Messages[^1].TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) &&
-                          role.Equals("tool", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool TryGetUserTools(JsonOperationContext context, List<AiToolCall> toolCalls)
@@ -460,8 +438,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
         var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
         await database.TxMerger.Enqueue(cmd);
-        _document.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
-        return cmd.PutResult.Conversation.Id;
+        _document.ChangeVector = cmd.PutResult.ChangeVector;
+        return cmd.PutResult.Id;
     }
 
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
