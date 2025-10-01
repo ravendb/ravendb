@@ -559,6 +559,10 @@ rvn_one_time_init(int32_t* detailed_error_code)
             g_cfg.write_mode = rvn_write_mode_file_io;
             return SUCCESS;
 
+        case rvn_write_mode_mmap:
+            g_cfg.write_mode = rvn_write_mode_mmap;
+            return SUCCESS;
+
         default:
             *detailed_error_code = ENOTSUP;
             return FAIL_INVALID_CONFIGURATION;
