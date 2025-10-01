@@ -88,7 +88,7 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                     style={{
                         width: `${testAreaResizable.width}px`,
                         borderLeft: `1px solid ${testAreaResizable.isDragging ? "#ccc" : "#4c4c63"}`,
-                        zIndex: 1100,
+                        zIndex: 12,
                         position: "relative",
                         ...(!isTestPinned && testPanelUnpinnedStyles),
                     }}
