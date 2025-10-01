@@ -80,14 +80,14 @@ namespace Voron.Data.BTrees
                     return;
             }
             
-            int maxNodeSize = Llt.DataPager.NodeMaxSize;
+            int maxNodeSize = Constants.Tree.NodeMaxSize;
             EnsureValuesAreSorted(values);
             ValidateValuesForMultiBulkAdd(maxNodeSize, values);
             
             // This is a new tree, we've to put a flag in the header.
-            if ((State.Header.Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
+            if ((ReadHeader().Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
             {
-                ref var state = ref State.Modify();
+                ref var state = ref ModifyHeader();
                 state.Flags |= TreeFlags.MultiValueTrees;
             }
 

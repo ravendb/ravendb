@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Intrinsics;
 using Sparrow;
 using Sparrow.Server;
@@ -100,7 +101,7 @@ public unsafe struct TermsReader : IDisposable
             _pagesToPrefetch[idX] >>= pageSizeShift;
         
         _pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(_pagesToPrefetch.RawItems, _pagesToPrefetch.Count); 
-        _llt.DataPager.MaybePrefetchMemory(_pagesToPrefetch.GetEnumerator());
+        _llt.DataPager.MaybePrefetchMemory(_llt.DataPagerState, _pagesToPrefetch.GetEnumerator());
         
         _rawTermsContainer.ResetAndEnsureCapacity(ids.Length);
         _rawTermsContainer.Count = ids.Length;

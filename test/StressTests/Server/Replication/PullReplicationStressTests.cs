@@ -142,7 +142,7 @@ namespace StressTests.Server.Replication
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
             // let's export a sink's server certificate and register it on a hub
-            var pullReplicationCertificate = CertificateLoaderUtil.CreateCertificate(sinkCerts.ServerCertificate.Value.Export(X509ContentType.Cert));
+            var pullReplicationCertificate = CertificateLoaderUtil.CreateCertificateFromAny(sinkCerts.ServerCertificate.Value.Export(X509ContentType.Cert));
             Assert.False(pullReplicationCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options
