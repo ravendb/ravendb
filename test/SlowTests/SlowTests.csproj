@@ -217,5 +217,8 @@
     <None Update="Voron\LeafsCompression\Data\RavenDB-17660-page-5728-compressed">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData_from12.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
