@@ -23,7 +23,6 @@ using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Cluster;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -1314,8 +1313,8 @@ namespace InterversionTests
                 var dbName = await CreateDatabase(storeA, 3);
                 await Task.Delay(500);
 
-                await ClusterOperationTests.ReverseOrderSuccessfully(storeA, dbName);
-                await ClusterOperationTests.FailSuccessfully(storeA, dbName);
+                await ReverseOrderSuccessfully(storeA, dbName);
+                await FailSuccessfully(storeA, dbName);
             }
 
         }
@@ -1677,6 +1676,42 @@ namespace InterversionTests
             var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
             var subscriptionState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, database);
             return databaseRecord.Topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, null);
+        }
+        
+        public static async Task ReverseOrderSuccessfully(IDocumentStore store, string db)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
+            var topology = record.IsSharded ? record.Sharding.Orchestrator.Topology : record.Topology;
+            topology.Members.Reverse();
+            var copy = new List<string>(topology.Members);
+            await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(db, topology.Members));
+            record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
+            topology = record.IsSharded ? record.Sharding.Orchestrator.Topology : record.Topology;
+            Assert.True(copy.All(topology.Members.Contains));
+        }
+        
+        public static async Task FailSuccessfully(IDocumentStore store, string db)
+        {
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+            {
+                await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(db, new List<string>()
+                {
+                    "A",
+                    "B"
+                }));
+            });
+            Assert.True(ex.InnerException is ArgumentException);
+            ex = await Assert.ThrowsAsync<RavenException>(async () =>
+            {
+                await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(db, new List<string>()
+                {
+                    "C",
+                    "B",
+                    "A",
+                    "F"
+                }));
+            });
+            Assert.True(ex.InnerException is ArgumentException);
         }
     }
 }

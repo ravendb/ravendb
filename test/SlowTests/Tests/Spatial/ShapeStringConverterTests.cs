@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Utils;
-using SlowTests.Utils.Attributes;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

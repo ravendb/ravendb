@@ -34,7 +34,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Raven.Server.Documents.AI;
 
-internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
+internal class ChatCompletionClient : IDisposable
 {
     public static readonly string EmptySchema = GetSchemaFromSampleObject("{}");
 
@@ -314,6 +314,26 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         };
     }
 
+    public async Task<string> TestCompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
+    {
+        using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext context);
+        var prompt = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleSystemValue,
+            [Constants.RequestFields.Content] = systemPrompt
+        }, "system/msg");
+
+        var user = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+            [Constants.RequestFields.Content] = userPrompt
+        }, "system/msg");
+
+        var request = CreateCompletionRequest(context, [prompt, user], attachments: null, tools: null, useTools: false, streaming: false, schema);
+        var r = await CompleteAsync(context, request, new AiUsage(), token);
+        return r.Result.ToString();
+    }
+
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
     {
         AddDefaultHeaders(request);
@@ -407,49 +427,16 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
 
     protected virtual Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
-
-    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<AiAttachment> attachments, CancellationToken token)
-    {
-        if (_forTestingPurposes?.SimulateFailureAsync != null)
-            await _forTestingPurposes.SimulateFailureAsync(userPrompt);
-
-        using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
-
-        var msg1 = new DynamicJsonValue
-        {
-            [Constants.RequestFields.Role] = Constants.RequestFields.RoleSystemValue,
-            [Constants.RequestFields.Content] = systemPrompt
-        };
-        var msg2 = new DynamicJsonValue
-        {
-            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-            [Constants.RequestFields.Content] = userPrompt
-        };
-
-        var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg")};
-
-        if (attachments?.Count > 0)
-        {
-            var msg3 = new DynamicJsonValue
-            {
-                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-                [Constants.RequestFields.Content] = CreateContentWithAttachments(attachments)
-            };
-            messages.Add(ctx.ReadObject(msg3, "user/msg"));
-        }
-
-        using var request = CreateCompletionRequest(ctx, messages, schema);
-        var usage = new AiUsage();
-        var results = await CompleteAsync(ctx, request, usage, token);
-
-        return (results.Result.ToString(), usage);
-    }
-
-
-    private DynamicJsonArray CreateContentWithAttachments(List<AiAttachment> attachments)
+  
+    public static DynamicJsonValue CreateMessageWithAttachments(IEnumerable<AiAttachment> attachments)
     {
         var content = new DynamicJsonArray();
-
+        var message = new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+            [Constants.RequestFields.Content] = content
+        };
+ 
         foreach (var attachment in attachments)
         {
             if (attachment.Source == AiAttachmentSource.NotFound)
@@ -493,14 +480,12 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             });
         }
 
-        return content;
+        return message;
     }
 
-
-    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, streaming: false, schema);
-
-    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx,
+     public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx,
         List<BlittableJsonReaderObject> messages,
+        List<AiAttachment> attachments,
         List<BlittableJsonReaderObject> tools,
         bool useTools,
         bool streaming,
@@ -519,7 +504,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     return;
                 }
 
-                WriteCompletionRequestPayload(writer, ctx, messages, tools, useTools, streaming, schema);
+                WriteCompletionRequestPayload(writer, ctx, messages, attachments, tools, useTools, streaming, schema);
             }
         }, ConventionsToUse);
 
@@ -535,7 +520,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return request;
     }
 
-    public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, bool streaming, string schema)
+    public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments, List<BlittableJsonReaderObject> tools, bool useTools, bool streaming,
+        string schema)
     {
         writer.WriteStartObject();
 
@@ -545,8 +531,11 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty)];
 
-        writer.WriteArray(ctx, Constants.RequestFields.Messages, messages, (w, context, message) =>
+        writer.WriteArray(ctx, Constants.RequestFields.Messages, messages.WithAttachments(ctx, attachments), (w, context, message) =>
         {
+            if (_forTestingPurposes?.SimulateFailureAsync != null)
+                _forTestingPurposes.SimulateFailureAsync(message.ToString()).GetAwaiter().GetResult();
+
             w.WriteStartObject();
             w.WriteObjectWithFilter(message, filterProperties.Contains);
             w.WriteEndObject();
@@ -590,7 +579,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         }
 
         _settings.HandleCompletionRequestPayload(writer);
-        
+
         writer.WriteEndObject();
         return;
 
@@ -732,6 +721,11 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return values.FirstOrDefault();
     }
 
+    private static readonly Regex GoDurationRegex = new(
+        @"(?<value>\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant
+    );
+
     private static bool TryParseResetTime(string input, out TimeSpan time)
     {
         time = TimeSpan.Zero;
@@ -754,7 +748,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         }
 
         // As Duration (go style): 17ms, 1m8.754s, 5m, 1h
-        var matches = IChatCompletionClient.GoDurationRegex.Matches(input);
+        var matches = GoDurationRegex.Matches(input);
         if (matches.Count == 0)
             return false;
 
@@ -917,14 +911,25 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return Base64UrlEncoder.Encode(Encoding.UTF8.GetBytes(hash));
     }
 
-    private IChatCompletionClientForTesting.TestingStuff _forTestingPurposes;
+    public sealed class TestingStuff
+    {
+        internal TestingStuff()
+        {
+        }
 
-    public IChatCompletionClientForTesting.TestingStuff ForTestingPurposesOnly()
+        internal Action<AsyncBlittableJsonTextWriter> ModifyPayload;
+
+        internal Func<string, Task> SimulateFailureAsync;
+    }
+
+    private TestingStuff _forTestingPurposes;
+
+    public TestingStuff ForTestingPurposesOnly()
     {
         if (_forTestingPurposes != null)
             return _forTestingPurposes;
 
-        return _forTestingPurposes = new IChatCompletionClientForTesting.TestingStuff();
+        return _forTestingPurposes = new TestingStuff();
     }
 
     public static class Constants
@@ -943,7 +948,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string ErrorTypeInsufficientQuota = "insufficient_quota";
             public const string ErrorTypeTokens = "tokens";
             public const string ErrorTypeRequests = "requests";
-            
+
             public const string Index = "index";
             public const string Id = "id";
             public const string Type = "type";
@@ -1013,9 +1018,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             // HTTP headers
             public const string HeaderContentType = "Content-Type";
             public const string MediaTypeApplicationJson = "application/json";
-            
+
             public const string AuthorizationApiKeyProperty = "Bearer";
-            
+
             public const string Stream = "stream";
             public const string StreamOptions = "stream_options";
             public const string IncludeUsage = "include_usage";
@@ -1038,6 +1043,23 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string MediaTypeImagePng = "image/png";
             public const string MediaTypeImageGif = "image/gif";
             public const string MediaTypeImageWebp = "image/webp";
+        }
     }
 }
+
+public static class ChatCompletionClientExtensions
+{
+    public static IEnumerable<BlittableJsonReaderObject> WithAttachments(this IEnumerable<BlittableJsonReaderObject> messages, JsonOperationContext context, List<AiAttachment> attachments)
+    {
+        foreach (var message in messages)
+        {
+            yield return message;
+        }
+
+        if (attachments is not null && attachments.Count > 0)
+        {
+            var message = ChatCompletionClient.CreateMessageWithAttachments(attachments);
+            yield return context.ReadObject(message, "write-ai-attachments");
+        }
+    }
 }

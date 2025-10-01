@@ -20,6 +20,7 @@ using Raven.Server.Logging;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Exceptions;
@@ -342,21 +343,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             if (rawRecord.Sharding.Orchestrator.Topology.RelevantFor(ServerStore.NodeTag) == false)
                                 continue;
+
+                            // write the main database record which includes the individual shards configuration
+                            await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context);
+
+                            foreach (var shard in rawRecord.Sharding.Shards)
+                            {
+                                await WriteInfo($"{ShardHelper.ToShardName(databaseName, shard.Key)}", rawRecord);
+                            }
                         }
                         else
                         {
                             if (rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
                                 continue;
+
+                            await WriteInfo(databaseName, rawRecord);
                         }
-
-                        await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context);
-
-                        if (rawRecord.IsDisabled ||
-                            rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
-                            IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
-                            continue;
-
-                        await WriteDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName, token);
                     }
                 }
 
@@ -370,7 +372,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
 
                     return allDatabases.ToHashSet();
-        }
+                }
+
+                async Task WriteInfo(string databaseName, RawDatabaseRecord rawRecord)
+                {
+                    await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, context);
+
+                    if (rawRecord.IsDisabled ||
+                        rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
+                        IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
+                        return;
+
+                    await WriteDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName, token);
+                }
             }
         }
 
@@ -422,7 +436,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 try
                 {
                     await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, token);
-                    debugInfoDict[route.Path] = sw.Elapsed;
                 }
                 catch (Exception e)
                 {
@@ -431,6 +444,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 finally
                 {
+                    debugInfoDict[route.Path] = sw.Elapsed;
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Finished gathering debug info from '{route.Path}' for Debug Package '{id}'. Took: {(int)sw.Elapsed.TotalMilliseconds} ms",
                             ex);

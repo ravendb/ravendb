@@ -35,9 +35,9 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
-using static SlowTests.Issues.RavenDB_8450;
 using DisposableAction = Voron.Util.DisposableAction;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 

@@ -2,9 +2,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using RachisTests;
+using FastTests;
+using FastTests.Client;
 using Raven.Server.Utils;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -26,11 +26,11 @@ public static class Program
             {
                 Console.WriteLine(i);
                 using (ConsoleTestOutputHelper testOutputHelper = new())
-                using (RavenDB_13293 test = new(testOutputHelper))
+                using (var test = new CRUD(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 
-                    await test.CanPassNodeTagToRestorePatchOperation();
+                    test.CRUD_Operations(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single), true);
                 }
             }
             catch (Exception e)

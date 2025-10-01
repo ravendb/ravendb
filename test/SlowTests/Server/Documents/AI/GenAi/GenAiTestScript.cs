@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ public class GenAiTestScript : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAiScript(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -143,7 +144,7 @@ if($output.Blocked)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanReuseContextFromPreviousRun(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -250,7 +251,7 @@ for (const comment of this.Comments)
     }
     
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanReuseModelOutputFromPreviousRun(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -354,7 +355,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanModifyUpdateScript(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -457,7 +458,7 @@ this.Comments[idx].Reason = $output.Reason;
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanModifyPromptAndSchema(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -571,7 +572,7 @@ Provide an explanation, confidence level (0.0–1.0), and summarize the comment 
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanEditDocumentAndTestAgain(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -665,7 +666,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanEditContextAndTestAgain(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -774,7 +775,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAiScript_ViaEndpoint(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -831,7 +832,7 @@ for (const comment of this.Comments)
 
                 // create context objects
                 var bjro = store.Conventions.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
-                var cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 using var requestExecutor = store.GetRequestExecutor();
                 await requestExecutor.ExecuteAsync(cmd, context);
 
@@ -894,7 +895,7 @@ for (const comment of this.Comments)
                     bjro = context.ReadObject(bjro, id);
                 }
 
-                cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 await requestExecutor.ExecuteAsync(cmd, context);
 
                 result = cmd.Result;
@@ -964,7 +965,7 @@ for (const comment of this.Comments)
                     bjro = context.ReadObject(bjro, id);
                 }
 
-                cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 await requestExecutor.ExecuteAsync(cmd, context);
 
                 result = cmd.Result;
@@ -983,7 +984,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAiScript_ViaEndpoint_WithDocumentAsInput(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1075,7 +1076,7 @@ for (const comment of this.Comments)
 
                 bjro = context.ReadObject(bjro, id);
 
-                var cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 using var requestExecutor = store.GetRequestExecutor();
                 await requestExecutor.ExecuteAsync(cmd, context);
 
@@ -1111,7 +1112,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAi_WithFakeDocumentAndNoId(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1245,7 +1246,7 @@ if($output.Blocked)
 
     // todo: Fix test
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false, Skip = "Failing test")] 
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Skip = "Failing test")] 
     public async Task TestGenAi_ShouldNotSendCachedItems(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -1423,7 +1424,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false, Skip = "need to fix")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Skip = "need to fix")]
     public async Task TestGenAi_ShouldTrackAiHashesInMetadata(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -1526,7 +1527,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldStripMetadataPropertiesFromInputDocument(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1653,7 +1654,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldReturnModelUsageStats(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1726,37 +1727,6 @@ if($output.Blocked)
                     Assert.True(usage.CompletionTokens > 0);
                 }
             }
-        }
-    }
-
-    internal class GenAiTestCmd : RavenCommand<BlittableJsonReaderObject>
-    {
-        private readonly DocumentConventions _conventions;
-        private readonly BlittableJsonReaderObject _testScript;
-        public override bool IsReadRequest => true;
-
-        public GenAiTestCmd(DocumentConventions conventions, BlittableJsonReaderObject testScript)
-        {
-            _conventions = conventions;
-            _testScript = testScript;
-        }
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{node.Database}/admin/ai/gen-ai/test";
-
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _testScript).ConfigureAwait(false), _conventions)
-            };
-
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            Result = response;
         }
     }
 }

@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -32,7 +32,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
         chat.SetUserPrompt("Give me 15 real cities names, one per line");
         var sb = new StringBuilder();
         var result = await chat.StreamAsync<AiAgentBasics.OutputSchema>( a=>a.Answer, s =>
-        {
+        { 
             sb.Append(s);
             return Task.CompletedTask;
         }, CancellationToken.None);
@@ -41,7 +41,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
     }
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults_WithTools(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

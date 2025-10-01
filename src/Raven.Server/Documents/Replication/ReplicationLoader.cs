@@ -427,6 +427,8 @@ namespace Raven.Server.Documents.Replication
                             if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.HubToSink) == false)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
                             CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, pullReplicationDefinition, header);
+                            
+                            // The early return
                             return;
 
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
@@ -438,7 +440,7 @@ namespace Raven.Server.Documents.Replication
                             allowedPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
                             preventDeletionsMode = pullReplicationDefinition.PreventDeletionsMode;
 
-                            // same as normal incoming replication, just using the filtering
+                            // Use the same as in normal incoming replication, just using the filtering.
                             break;
 
                         default:
@@ -515,7 +517,8 @@ namespace Raven.Server.Documents.Replication
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
 
-            outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions.Stream, supportedVersions);
+            // tcp ownership - the tcp is passed as a scope of the replication so that it can be properly disposed.
+            outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions, tcpConnectionOptions.Stream, supportedVersions);
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
@@ -676,6 +679,7 @@ namespace Raven.Server.Documents.Replication
         protected virtual IncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
             PullReplicationParams incomingPullParams, ReplicationLatestEtagRequest getLatestEtagMessage)
         {
+            // tcp ownership - both IncomingReplicationHandler and IncomingPullReplicationHandler properly manage the ownership and the disposal
             if (incomingPullParams == null)
             {
                 return new IncomingReplicationHandler(

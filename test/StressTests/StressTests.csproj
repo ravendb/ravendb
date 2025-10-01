@@ -20,18 +20,16 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Corax\Bugs\Terms.log.gz" />
+    <EmbeddedResource Include="Data\RavenDB_22498\AutoIndexes.SlowTests.json.gz" />
     <EmbeddedResource Include="Voron\Data\*.txt" />
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
-    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
-    <ProjectReference Include="..\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
+    <ProjectReference Include="..\SlowTests.Issues\SlowTests.Issues.csproj" />
     <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
-    <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

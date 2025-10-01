@@ -99,7 +99,7 @@ namespace Voron.Data.BTrees
                 MultiAdd(keySlice, valueSlice);
             }
         }
-
+        
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiAdd(string key, Slice value)
         {

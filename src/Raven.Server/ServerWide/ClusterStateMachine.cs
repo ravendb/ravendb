@@ -1214,7 +1214,7 @@ namespace Raven.Server.ServerWide
         private void ConfirmServerCertificateReplaced(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             if (_parent.Log.IsDebugEnabled)
-                _parent.Log.Error($"Received {nameof(ConfirmServerCertificateReplacedCommand)}, index = {index}.");
+                _parent.Log.Debug($"Received {nameof(ConfirmServerCertificateReplacedCommand)}, index = {index}.");
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);

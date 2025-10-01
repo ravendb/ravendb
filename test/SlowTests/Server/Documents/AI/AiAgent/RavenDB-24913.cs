@@ -23,7 +23,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
     private record Reply(string Answer);
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanProvideInitialContextToQuery(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -48,7 +48,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanProvideInitialContextToQueryWithStreaming(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

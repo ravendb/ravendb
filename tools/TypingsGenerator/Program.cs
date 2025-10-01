@@ -611,7 +611,7 @@ namespace TypingsGenerator
 
             // AI Agent
             scripter.AddType(typeof(AiAgentConfiguration));
-            scripter.AddType(typeof(AbstractAiAgentProcessor.RequestBody));
+            scripter.AddType(typeof(RequestBody));
             scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestRequest));
             scripter.AddType(typeof(AiAgentActionRequest));
             scripter.AddType(typeof(ConversionRequestBody));

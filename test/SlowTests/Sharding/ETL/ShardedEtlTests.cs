@@ -52,7 +52,7 @@ using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace SlowTests.Sharding.ETL
 {
-    public class ShardedEtlTests : RavenTestBase
+    public class ShardedEtlTests : SqlAwareTestBase
     {
         public ShardedEtlTests(ITestOutputHelper output) : base(output)
         {
@@ -1154,7 +1154,7 @@ person.addCounter(loadCounter('down'));
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     SqlEtlTests.CreateRdbmsSchema(connectionString);
 
@@ -1206,7 +1206,7 @@ person.addCounter(loadCounter('down'));
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     SqlEtlTests.CreateRdbmsSchema(connectionString);
                     int testCount = 5000;

@@ -27,6 +27,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -1341,14 +1342,6 @@ namespace SlowTests.Sharding.Replication
                 WaitForDocumentWithAttachmentToReplicate<User>(destination, id, "foo3.png", 10_000);
 
                 Assert.False(shardedDb.NotificationCenter.Exists("AlertRaised/Replication"));
-            }
-        }
-
-        public class GetReplicationActiveConnectionsInfoOperation : IMaintenanceOperation<ReplicationActiveConnectionsPreview>
-        {
-            public RavenCommand<ReplicationActiveConnectionsPreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new GetReplicationActiveConnectionsInfoCommand();
             }
         }
 

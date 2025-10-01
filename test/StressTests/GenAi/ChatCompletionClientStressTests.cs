@@ -47,7 +47,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Ai, Skip = "Consume tokens for all other tests")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Skip = "Stress test")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
     // Ollama Doesn't throw
     public async Task RateLimit_MaxTokens(Options options, GenAiConfiguration configuration)
     {
@@ -68,12 +68,12 @@ public class ChatCompletionClientStressTests : RavenTestBase
 
             context = sb.ToString();
 
-            await Assert.ThrowsAsync<TooManyTokensException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, default));
+            await Assert.ThrowsAsync<TooManyTokensException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
         }
     }
 
     [RavenTheory(RavenTestCategory.Ai, Skip = "Consume tokens for all other tests")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Skip = "Stress test")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
     // Ollama Doesn't throw
     public async Task RateLimit_ByHighRequestFreq(Options options, GenAiConfiguration configuration)
     {
@@ -89,7 +89,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
             var tasks = new List<Task>();
             for (int i = 0; i < 20_000; i++)
             {
-                var t = client.CompleteAsync(prompt, context, defaultJsonSchema, null, default);
+                var t = client.TestCompleteAsync(prompt, context, defaultJsonSchema, default);
                 tasks.Add(t);
             }
             await Task.WhenAll(tasks);

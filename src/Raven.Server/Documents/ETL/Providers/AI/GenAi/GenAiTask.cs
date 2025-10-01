@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
@@ -17,6 +19,7 @@ using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -40,9 +43,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
     private const string TestDocumentId = "GenAi/TestDocument";
     private int _maxConcurrency;
-    private IChatCompletionClient _chatCompletionClient;
-    private string _schema;
-    public string Schema => _schema ??= ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject);
+    private ChatCompletionClient _chatCompletionClient;
 
     public GenAiTask(Transformation transformation, GenAiConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, GenAiTaskTag)
@@ -54,7 +55,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             _chatCompletionClient = GetClient();
     }
     
-    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection);
+    private ChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection);
 
     public override EtlType EtlType => EtlType.GenAi;
     public override bool ShouldTrackCounters() => false;
@@ -169,6 +170,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results.Count;
     }
 
+    private AiAgentConfiguration _agent;
+
+    private AiAgentConfiguration Agent => _agent ??= new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
+    {
+        OutputSchema = Configuration.JsonSchema,
+        SampleObject = Configuration.SampleObject,
+    };
+
     private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope)
     {
         using (var statsScope = scope.For(GenAiOperations.LoadToModel))
@@ -196,9 +205,20 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 string json = item.ContextOutput.Context.ToString();
                 Task<(string Result, AiUsage Usage)> task;
+
+                var handler = new GenAiConversationHandler(Database.ServerStore, Database);
+                handler.Initialize(Agent, $"GenAI/{item.DocumentId}", new RequestBody
+                {
+                    CreationOptions = new AiConversationCreationOptions(),
+                    UserPrompt = json,
+                    Attachments = item.ContextOutput.Attachments,
+                }, changeVector: null);
+
+                handler.SetClient(_chatCompletionClient);
+
                 try
                 {
-                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json,Schema, item.ContextOutput.Attachments, CancellationToken);
+                    task = handler.HandleRequest(CancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -562,5 +582,5 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results;
     }
 
-    internal IChatCompletionClient GetChatCompletionClient() => _chatCompletionClient;
+    internal ChatCompletionClient GetChatCompletionClient() => _chatCompletionClient;
 }

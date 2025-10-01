@@ -1,15 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -41,13 +40,12 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
         var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
         var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
 
-        DatabaseRecord databaseRecord;
+        Dictionary<string, string> settings;
 
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
-            var dbId = Constants.Documents.Prefix + RequestHandler.DatabaseName;
             using (context.OpenReadTransaction())
-            using (var dbDoc = RequestHandler.ServerStore.Cluster.Read(context, dbId, out long etag))
+            using (var dbDoc = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, RequestHandler.DatabaseName, out _))
             {
                 if (dbDoc == null)
                 {
@@ -55,7 +53,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
                     return;
                 }
 
-                databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
+                settings = dbDoc.Settings;
             }
         }
 
@@ -66,7 +64,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
             if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                 continue;
 
-            var entry = new ConfigurationEntryDatabaseValue(GetDatabaseConfiguration(), databaseRecord, configurationEntryMetadata, status);
+            var entry = new ConfigurationEntryDatabaseValue(GetDatabaseConfiguration(), settings, configurationEntryMetadata, status);
             settingsResult.Settings.Add(entry);
         }
 

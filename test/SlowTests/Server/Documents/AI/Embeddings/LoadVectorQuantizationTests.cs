@@ -57,7 +57,9 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan).Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
+                .Children[0]
+                .Parameters["SimilarityMethod"];
             Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
         }
     }
@@ -98,7 +100,9 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan).Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
+                .Children[0]
+                .Parameters["SimilarityMethod"];
             Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
         }
     }
@@ -136,7 +140,9 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan).Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
+                .Children[0]
+                .Parameters["SimilarityMethod"];
             Assert.Equal("HammingDistance", usedSimilarityMethod);
         }
     }
@@ -183,7 +189,10 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan).Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
+                .Children[0]
+                .Parameters["SimilarityMethod"];
+            WaitForUserToContinueTheTest(store);
             Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
         }
     }

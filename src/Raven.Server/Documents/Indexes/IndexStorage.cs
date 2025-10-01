@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
@@ -753,7 +754,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public void RemoveReferences(Slice key, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
+            public void RemoveReferences(Slice key, string collection, List<Slice> referenceKeysToSkip, RavenTransaction tx)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
 
@@ -767,7 +768,7 @@ namespace Raven.Server.Documents.Indexes
 
                     do
                     {
-                        if (referenceKeysToSkip == null || referenceKeysToSkip.Contains(it.CurrentKey) == false)
+                        if (referenceKeysToSkip == null || referenceKeysToSkip.Contains(it.CurrentKey, SliceComparer.Instance) == false)
                             referenceKeys.Add(it.CurrentKey.Clone(tx.InnerTransaction.Allocator, ByteStringType.Immutable));
                     } while (it.MoveNext());
                 }
@@ -785,7 +786,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public void RemoveReferencesByPrefix(Slice prefixKey, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
+            public void RemoveReferencesByPrefix(Slice prefixKey, string collection, List<Slice> referenceKeysToSkip, RavenTransaction tx)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
 
@@ -812,7 +813,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public void WriteReferences(Dictionary<string, Dictionary<Slice, HashSet<Slice>>> referencesByCollection, RavenTransaction tx)
+            public void WriteReferences(Dictionary<string, ReferenceContainer> referencesByCollection, RavenTransaction tx)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
 
@@ -822,24 +823,25 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            private void WriteReferencesForSingleCollectionInternal(Tree referencesTree, string collection, Dictionary<Slice, HashSet<Slice>> references, RavenTransaction tx)
+            private void WriteReferencesForSingleCollectionInternal(Tree referencesTree, string collection, ReferenceContainer references, RavenTransaction tx)
             {
                 var collectionTree = tx.InnerTransaction.CreateTree(_referenceCollectionPrefix + collection); // #collection
+                references.PrepareForIndexing(out var inverted);
 
-                foreach (var keys in references)
-                {
-                    var key = keys.Key;
-                    foreach (var referenceKey in keys.Value)
-                    {
-                        collectionTree.MultiAdd(referenceKey, key);
-                        referencesTree.MultiAdd(key, referenceKey);
-                    }
+                var referencesIterator =  references.GetEnumerator();
+                while (referencesIterator.MoveNext())
+                    referencesTree.MultiBulkAdd(referencesIterator.CurrentKey, referencesIterator.CurrentValues);
 
-                    RemoveReferences(key, collection, keys.Value, tx);
+                var collectionIterator = inverted.GetEnumerator();
+                while (collectionIterator.MoveNext())
+                    collectionTree.MultiBulkAdd(collectionIterator.CurrentKey, collectionIterator.CurrentValues);
+                
+                referencesIterator.Reset();
+                while (referencesIterator.MoveNext())
+                    RemoveReferences(referencesIterator.CurrentKey, collection, referencesIterator.CurrentValuesAsList, tx);
                 }
-            }
 
-            public void WriteReferencesForSingleCollection(string collection, Dictionary<Slice, HashSet<Slice>> references, RavenTransaction tx)
+            public void WriteReferencesForSingleCollection(string collection, ReferenceContainer references, RavenTransaction tx)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
                 WriteReferencesForSingleCollectionInternal(referencesTree, collection, references, tx);
