@@ -25,9 +25,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
-internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, TOperationContext, TQueryContext, TQueryResult> : AbstractQueriesHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, TOperationContext, TQueryContext, TQueryResult, TQueryResultsContainer> : AbstractQueriesHandlerProcessor<TRequestHandler, TOperationContext>
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+    where TQueryResultsContainer : QueryResultServerSide<TQueryResult>
     where TQueryContext : IDisposable
 {
     protected AbstractQueriesHandlerProcessorForGet([NotNull] TRequestHandler requestHandler, QueryMetadataCache queryMetadataCache, HttpMethod method) : base(requestHandler, queryMetadataCache)
@@ -87,14 +88,15 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     protected abstract Task<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
-    protected abstract ValueTask<QueryResultServerSide<TQueryResult>> GetQueryResultsAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag,
+    protected abstract Task<TQueryResultsContainer> GetQueryResultsAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag,
         bool metadataOnly,
         OperationCancelToken token);
 
     protected override HttpMethod QueryMethod { get; }
 
-    public override async ValueTask ExecuteAsync()
+    public async Task ExecuteAsTask()
     {
+        using (this)
         using (AllocateContextForQueryOperation(out var queryContext, out var context))
         using (var tracker = CreateRequestTimeTracker())
         {
@@ -119,79 +121,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     EnsureQueryContextInitialized(queryContext, indexQuery);
 
-                    if (string.IsNullOrWhiteSpace(parameters.Debug) == false)
-                    {
-                        await HandleDebugAsync(indexQuery, queryContext, context, parameters, existingResultEtag, token);
-                        return;
-                    }
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        RequestHandler.TrafficWatchQuery(indexQuery);
-
-                    if (indexQuery.Metadata.HasFacet)
-                    {
-                        await HandleFacetedQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
-                        return;
-                    }
-
-                    if (indexQuery.Metadata.HasSuggest)
-                    {
-                        await HandleSuggestQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
-                        return;
-                    }
-
-                    QueryResultServerSide<TQueryResult> result = null;
-                    try
-                    {
-                        result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, parameters.MetadataOnly, token).AsTask();
-                    }
-                    catch (IndexDoesNotExistException)
-                    {
-                        result?.Dispose();
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
-                    catch (Exception)
-                    {
-                        result?.Dispose();
-                        throw;
-                    }
-
-                    using (result)
-                    {
-                        if (result.NotModified)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                            return;
-                        }
-
-                        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-                        long numberOfResults;
-                        long totalDocumentsSizeInBytes;
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
-                        {
-                            result.Timings = indexQuery.Timings?.ToTimings();
-                            var writeResultsTask = writer.WriteDocumentQueryResultAsync(context, result, parameters.MetadataOnly,
-                                WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), token.Token);
-                            (numberOfResults, totalDocumentsSizeInBytes) = writeResultsTask.IsCompletedSuccessfully ? writeResultsTask.Result : await writeResultsTask; 
-                            var maybeFlushAsync = writer.MaybeFlushAsync(token.Token);
-                            if (maybeFlushAsync.IsCompletedSuccessfully == false)
-                                await maybeFlushAsync;
-                        }
-
-
-                        QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-
-                        if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
-                        {
-                            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"Query ({result.IndexName})",
-                                $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs,
-                                totalDocumentsSizeInBytes);
-                        }
-
-                        AddQueryTimingsToTrafficWatch(indexQuery);
-                    }
+                    var processQueryTask = ProcessQueryAsync(parameters, indexQuery, queryContext, context, existingResultEtag, token);
+                    if (processQueryTask.IsCompletedSuccessfully == false)
+                        await processQueryTask;
                 }
             }
             catch (Exception e)
@@ -217,7 +149,95 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 throw;
             }
         }
+
+        ValueTask ProcessQueryAsync(QueryStringParameters parameters, IndexQueryServerSide indexQuery, TQueryContext queryContext, TOperationContext context,
+            long? existingResultEtag, OperationCancelToken token)
+        {
+            if (string.IsNullOrWhiteSpace(parameters.Debug) == false)
+            {
+                return HandleDebugAsync(indexQuery, queryContext, context, parameters, existingResultEtag, token);
+            }
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                RequestHandler.TrafficWatchQuery(indexQuery);
+
+            if (indexQuery.Metadata.HasFacet)
+            {
+                return HandleFacetedQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
+            }
+
+            if (indexQuery.Metadata.HasSuggest)
+            {
+                return HandleSuggestQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
+            }
+
+            return HandleIndexQueryAsync(indexQuery, queryContext, existingResultEtag, parameters, token, context);
+        }
     }
+    
+    private async ValueTask HandleIndexQueryAsync(IndexQueryServerSide indexQuery, TQueryContext queryContext, long? existingResultEtag, QueryStringParameters parameters,
+        OperationCancelToken token, TOperationContext context)
+    {
+        TQueryResultsContainer result = null;
+        try
+        {
+            result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, parameters.MetadataOnly, token);
+        }
+        catch (IndexDoesNotExistException)
+        {
+            result?.Dispose();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            return;
+        }
+        catch (Exception)
+        {
+            result?.Dispose();
+            throw;
+        }
+
+        using (result)
+        {
+            if (result.NotModified)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
+            long numberOfResults;
+            long totalDocumentsSizeInBytes;
+            var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token);
+            try
+            {
+                result.Timings = indexQuery.Timings?.ToTimings();
+                var writeResultsTask = writer.WriteDocumentQueryResultAsync(context, result, parameters.MetadataOnly,
+                    WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), token.Token);
+                (numberOfResults, totalDocumentsSizeInBytes) = writeResultsTask.IsCompletedSuccessfully ? writeResultsTask.Result : await writeResultsTask; 
+            }
+            finally
+            {
+                var disposeAsync = writer.DisposeAsync();
+                if (disposeAsync.IsCompletedSuccessfully == false)
+                    await disposeAsync;
+            }
+
+
+            QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
+
+            if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
+            {
+                RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"Query ({result.IndexName})",
+                    $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs,
+                    totalDocumentsSizeInBytes);
+            }
+
+            AddQueryTimingsToTrafficWatch(indexQuery);
+        }
+    }
+    
+    public override ValueTask ExecuteAsync() => throw new NotImplementedException();
+    
 
     protected virtual void AssertIndexQuery(IndexQueryServerSide indexQuery)
     {

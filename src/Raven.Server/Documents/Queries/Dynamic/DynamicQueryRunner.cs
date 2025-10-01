@@ -142,17 +142,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        public async Task<(long? Index, Index Instance)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
+        public Task<(long? Index, Index Instance)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
         {
             if (query.Metadata.AutoIndexName != null)
             {
                 var index = GetIndex(query.Metadata.AutoIndexName, throwIfNotExists: false);
 
                 if (index != null)
-                    return (null, index);
+                    return Task.FromResult<(long? Index, Index Instance)>((Index: null, Instance: index));
             }
 
-            return await CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, token);
+            return CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, token);
         }
 
         private async Task<(long? Index, Index Instance)> CreateAutoIndexIfNeeded(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)

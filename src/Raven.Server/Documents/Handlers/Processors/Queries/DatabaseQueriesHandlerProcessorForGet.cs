@@ -15,7 +15,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
-internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<QueriesHandler, DocumentsOperationContext, QueryOperationContext, Document>
+internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<QueriesHandler, DocumentsOperationContext, QueryOperationContext, Document, DocumentQueryResult>
 {
     public DatabaseQueriesHandlerProcessorForGet([NotNull] QueriesHandler requestHandler, HttpMethod method) : base(requestHandler, requestHandler.Database.QueryMetadataCache, method)
     {
@@ -46,10 +46,10 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
         return RequestHandler.Database.QueryRunner.ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
     }
 
-    protected override async ValueTask<QueryResultServerSide<Document>> GetQueryResultsAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
+    protected override Task<DocumentQueryResult> GetQueryResultsAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
         long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
-        return await RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token);
+        return RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token);
     }
 
     protected override void EnsureQueryContextInitialized(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)

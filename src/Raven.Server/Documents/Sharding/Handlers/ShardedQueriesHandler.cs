@@ -8,17 +8,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public sealed class ShardedQueriesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/queries", "POST")]
-        public async Task Post()
+        public Task Post()
         {
-            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post))
-                await processor.ExecuteAsync();
+            return new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post).ExecuteAsTask();
         }
 
         [RavenShardedAction("/databases/*/queries", "GET")]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get))
-                await processor.ExecuteAsync();
+            return new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get).ExecuteAsTask();
         }
 
         [RavenShardedAction("/databases/*/queries", "PATCH")]

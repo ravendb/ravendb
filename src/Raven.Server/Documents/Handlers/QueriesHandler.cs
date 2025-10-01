@@ -8,17 +8,15 @@ namespace Raven.Server.Documents.Handlers
     public sealed class QueriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public async Task Post()
+        public Task Post()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post))
-                await processor.ExecuteAsync();
+            return new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post).ExecuteAsTask();
         }
 
         [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get))
-                await processor.ExecuteAsync();
+            return new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get).ExecuteAsTask();
         }
 
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]

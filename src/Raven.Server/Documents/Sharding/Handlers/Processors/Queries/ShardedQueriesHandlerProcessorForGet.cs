@@ -24,7 +24,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
-internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<ShardedQueriesHandler, TransactionOperationContext, TransactionOperationContext, BlittableJsonReaderObject>
+internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<ShardedQueriesHandler, TransactionOperationContext, TransactionOperationContext, BlittableJsonReaderObject, QueryResultServerSide<BlittableJsonReaderObject>>
 {
     public ShardedQueriesHandlerProcessorForGet([NotNull] ShardedQueriesHandler requestHandler, HttpMethod method) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache, method)
     {
@@ -116,7 +116,7 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
         }
     }
 
-    protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query,
+    protected override async Task<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query,
         TransactionOperationContext queryContext, long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
         using (var timings = Timings(query))
