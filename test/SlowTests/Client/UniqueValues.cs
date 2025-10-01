@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using EmbeddedTests;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -616,7 +615,7 @@ namespace SlowTests.Client
         [RavenFact(RavenTestCategory.CompareExchange)]
         public async Task CanImportCompareExchangeWithoutMetadata()
         {
-            var dummyDump = SmugglerTests.CreateDummyDump(1);
+            var dummyDump = CreateDummyDump(1);
             var key = "EGR";
             var value = 322;
             var compareExchangeList = new List<DynamicJsonValue>();
@@ -656,6 +655,33 @@ namespace SlowTests.Client
                     Assert.Equal(value, res.Value);
                 }
             }
+        }
+        
+        private static DynamicJsonValue CreateDummyDump(int count)
+        {
+            var docsList = new List<DynamicJsonValue>();
+
+            for (int i = 0; i < count; i++)
+            {
+                docsList.Add(new DynamicJsonValue()
+                {
+                    ["π"] = Math.PI,
+                    ["e"] = Math.E,
+                    ["Num"] = 0xDEAD,
+                    ["@metadata"] = new DynamicJsonValue()
+                    {
+                        ["@collection"] = $"{nameof(Math)}s",
+                        ["@id"] = Guid.NewGuid().ToString()
+                    }
+                });
+            }
+
+            var dummyDump = new DynamicJsonValue()
+            {
+                ["Docs"] = new DynamicJsonArray(docsList)
+            };
+
+            return dummyDump;
         }
     }
 }

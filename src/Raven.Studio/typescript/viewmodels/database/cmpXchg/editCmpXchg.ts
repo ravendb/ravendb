@@ -394,7 +394,9 @@ class editCmpXchg extends shardViewModelBase {
 
         this.spinners.save(true);
 
-        new saveCompareExchangeItemCommand(this.db, this.key(), this.loadedIndex(), valueDto, metadataDto)
+        const index = this.isCreatingNewItem() ? 0 : this.loadedIndex();
+
+        new saveCompareExchangeItemCommand(this.db, this.key(), index, valueDto, metadataDto)
             .execute()
             .done(saveResult => this.onValueSaved(saveResult))
             .fail(() => this.spinners.save(false));

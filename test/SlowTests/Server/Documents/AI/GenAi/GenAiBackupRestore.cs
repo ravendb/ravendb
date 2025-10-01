@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.AI.GenAi;
 public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai | RavenTestCategory.Smuggler)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanExportAndImportGenAiConfiguration(Options options, GenAiConfiguration config)
     {
         var exportFile = GetTempFileName();
@@ -57,8 +57,8 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai | RavenTestCategory.BackupExportImport)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { BackupType.Backup }, Skip = "flaky")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { BackupType.Snapshot }, Skip = "flaky")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup }, Skip = "flaky")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot }, Skip = "flaky")]
     public async Task CanBackupAndRestoreGenAiEtl(Options options, GenAiConfiguration config, BackupType backupType)
     {
         var backupPath = NewDataPath();

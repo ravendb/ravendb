@@ -13,7 +13,7 @@ module.exports = {
     },
     "ecmaVersion": "latest"
   },
-  "plugins": ["react", "jest", "@typescript-eslint", "local-rules", "eslint-plugin-react-compiler"],
+  "plugins": ["react", "jest", "@typescript-eslint", "local-rules"],
   "ignorePatterns": ["typescript/transitions/**/*.ts", "typescript/widgets/**/*.ts"],
   "rules": {
     "react/prop-types": "off",
@@ -32,7 +32,6 @@ module.exports = {
       }
     ],
     "react/react-in-jsx-scope": "off",
-    "react-compiler/react-compiler": "error",
     "react-hooks/exhaustive-deps": "off", // for now turned off (we must better handle DB switching, etc.)
     "local-rules/mixed-imports": "warn",
     "curly": "warn",

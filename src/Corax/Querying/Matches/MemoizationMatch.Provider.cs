@@ -20,6 +20,8 @@ namespace Corax.Querying.Matches
         private readonly Querying.IndexSearcher _indexSearcher;
         private TInner _inner;
 
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
+        
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
         public QueryCountConfidence Confidence => _inner.Confidence;

@@ -7,7 +7,6 @@ export function useAsyncDebounce<T>(
     waitTimeMs = 500,
     options: Partial<UseAsyncOptionsNormalized<T>> = null
 ): UseAsyncReturn<T, []> {
-    // eslint-disable-next-line react-compiler/react-compiler
     const memorizedCallback = useCallback(callback, params);
 
     const asyncCallback = useAsyncCallback(memorizedCallback, options);

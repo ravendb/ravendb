@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Retention : RestoreFromS3
+    public class Retention : RestoreFromS3TestBase
     {
         public Retention(ITestOutputHelper output) : base(output)
         {

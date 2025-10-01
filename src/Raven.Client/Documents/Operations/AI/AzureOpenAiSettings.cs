@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -7,7 +8,7 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 {
     public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null, double? temperature = null) : base(apiKey, endpoint, model, dimensions, temperature)
     {
-        DeploymentName = deploymentName;
+        DeploymentName = deploymentName ?? throw new ArgumentNullException(nameof(deploymentName));
     }
 
     public AzureOpenAiSettings()

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading;
 using Microsoft.Extensions.AI;
-using Microsoft.SemanticKernel.Embeddings;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.AI;
@@ -21,6 +19,7 @@ where TConfig : EtlConfiguration<AiConnectionString>
 {
     TConfig GetAiConfiguration();
     Lazy<bool> CanConnect { get; }
+    bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token);
     Lazy<AiConnectorType> AiConnectorType { get; }
     bool MissingRequiredEnvVariables(out string environmentVariableName);
 }
@@ -115,7 +114,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
         try
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
             {
                 return TryConnect(out logger, cts.Token);
             }
@@ -147,14 +146,14 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
             logger?.Dispose();
         }
     }
-    protected abstract bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token);
+    public abstract bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token);
 
 }
 
 public abstract class AbstractEmbeddingsConnectorForTesting<T> : BaseAiConnectorForTesting<T, EmbeddingsGenerationConfiguration>
     where T : AbstractEmbeddingsConnectorForTesting<T>, new()
 {
-    protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
+    public override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
         logger = null;
 
@@ -173,7 +172,7 @@ public abstract class AbstractEmbeddingsConnectorForTesting<T> : BaseAiConnector
 public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTesting<T, GenAiConfiguration>
     where T : AbstractGenAiConnectorForTesting<T>, new()
 {
-    protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
+    public override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
         var configuration = _aiIntegrationConfiguration.Value;
         var schema = ChatCompletionClient.GetSchemaFromSampleObject("{ \"Answer\" : \"answer here\" }");
@@ -181,10 +180,8 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
             logger = null;
-            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, null, token).GetAwaiter().GetResult();
-
+            client.TestCompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, token).GetAwaiter().GetResult();
             return true;
-
         }
     }
 }

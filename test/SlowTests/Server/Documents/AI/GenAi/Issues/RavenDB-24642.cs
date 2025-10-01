@@ -49,9 +49,9 @@ ai.genContext({}).withPng(img1);
 
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false,
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
         Data = new object[] { true })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false,
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
         Data = new object[] { false })]
     public async Task CanProcessNonExistedImageAttachment(Options options, GenAiConfiguration config, bool withNullAttachments)
     {
@@ -179,9 +179,9 @@ ai.genContext({
 2025-01-06,Internet Bill,Utilities,79.99"u8;
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false,
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
         Data = new object[] { true })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false,
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
         Data = new object[] { false })]
     public async Task CanProcessNonExistedTextAttachment(Options options, GenAiConfiguration config, bool withNullAttachments)
     {
@@ -261,7 +261,7 @@ ai.genContext({
     public record FileDescription(string Description, bool SafeForWork, string[] Tags);
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiDifferentAttachmentsPerContexts(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -357,7 +357,7 @@ ai.genContext({})
     public record Comment(string Id, string Author, string Content, string AuthorDescription, string ProfileImage);
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiMultipleAttachment(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Index = SlowTests.Issues.Index;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -46,7 +47,7 @@ namespace SlowTests.Server.Documents.ETL
                         new Transformation()
                         {
                             Name = "allUsers",
-                            Collections = {"Users"}
+                            Collections = { "Users" }
                         }
                     }
                 };
@@ -87,7 +88,7 @@ namespace SlowTests.Server.Documents.ETL
                         new Transformation()
                         {
                             Name = "allUsers",
-                            Collections = {"Users"}
+                            Collections = { "Users" }
                         }
                     }
                 };
@@ -118,7 +119,6 @@ namespace SlowTests.Server.Documents.ETL
 
                 for (int i = 0; i < 10; i++)
                 {
-
                     Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)), $"blah at {i}");
 
                     mre.Set();
@@ -172,6 +172,37 @@ namespace SlowTests.Server.Documents.ETL
 
                 var record = await src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database));
                 Assert.Equal(100, record.Indexes.Count);
+            }
+        }
+
+        public class MyEntity
+        {
+            public string Id { get; set; }
+            public string AuthorId { get; set; }
+            public string Title { get; set; }
+            public string Language { get; set; }
+        }
+
+        public class Index : AbstractIndexCreationTask<MyEntity>
+        {
+            private readonly string _indexName;
+
+            public override string IndexName => _indexName ?? base.IndexName;
+
+            public Index(string name) : this()
+            {
+                _indexName = name;
+            }
+
+            public Index()
+            {
+                Map = entities => from e in entities
+                    select new
+                    {
+                        e.AuthorId,
+                        e.Title,
+                        e.Language,
+                    };
             }
         }
     }

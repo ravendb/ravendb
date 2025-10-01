@@ -102,7 +102,9 @@ namespace Corax.Indexing
         private HashSet<long> _nullTermsMarkers;
         private HashSet<long> _nonExistingTermsMarkers;
         private Dictionary<long, IndexedField> _fieldsByRootPage;
-
+        
+        internal EntryIdPaginationSupportStatus PaginationBasedOnEntryIdSupportStatus { get; private set; }
+        
         /// <summary>
         /// Method to update dynamic mapping in runtime. 
         /// </summary>
@@ -178,9 +180,28 @@ namespace Corax.Indexing
             _fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
 
             _indexMetadata = _transaction.CreateTree(Constants.IndexMetadataSlice);
-            _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-            _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
-
+            Debug.Assert(_indexMetadata is not null);
+            
+            _initialNumberOfEntries = _indexMetadata.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            var paginationBasedOnEntryIdSupportStatus = _indexMetadata.ReadInt64(Constants.IndexWriter.PaginationBasedOnEntryIdSupportStatus);
+            if (paginationBasedOnEntryIdSupportStatus.HasValue == false)
+            {
+                if (_supportedFeatures.PaginationBasedOnEntryId)
+                {
+                    _indexMetadata.Add(Constants.IndexWriter.PaginationBasedOnEntryIdSupportStatus, (long)EntryIdPaginationSupportStatus.Supported);
+                    PaginationBasedOnEntryIdSupportStatus = EntryIdPaginationSupportStatus.Supported;
+                }
+                else
+                {
+                    PaginationBasedOnEntryIdSupportStatus = EntryIdPaginationSupportStatus.Disabled;
+                }
+            }
+            else
+            {
+                PaginationBasedOnEntryIdSupportStatus = (EntryIdPaginationSupportStatus)paginationBasedOnEntryIdSupportStatus.Value;
+            }
+            
+            _lastEntryId =  _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
             _nullEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
             _nonExistingEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NonExistingPostingLists);
@@ -266,11 +287,20 @@ namespace Corax.Indexing
 
             // We do not dispose because we will be storing the slice in the hash set.
             Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
-            _indexedEntries.Add(keySlice); // Register entry by key. 
+            var isUnique = _indexedEntries.Add(keySlice);  // Register entry by key.
+            if (isUnique == false && PaginationBasedOnEntryIdSupportStatus == EntryIdPaginationSupportStatus.Supported)
+                DisablePaginationBasedOnEntryIdSupport();
+
             int index = InsertTermsPerEntry(entryId);
             _builder.Init(entryId, index, keySlice);
 
             return _builder;
+        }
+
+        private void DisablePaginationBasedOnEntryIdSupport()
+        {
+            PaginationBasedOnEntryIdSupportStatus = EntryIdPaginationSupportStatus.Disabled;
+            _indexMetadata.Add(Constants.IndexWriter.PaginationBasedOnEntryIdSupportStatus, (long)EntryIdPaginationSupportStatus.Disabled);
         }
 
         private long InitBuilder()

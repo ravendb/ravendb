@@ -553,17 +553,18 @@ namespace Raven.Server.Web.System
                         if (ShouldSkipCache(info))
                             continue;
 
-                        StaticContentCache.TryAdd(file.Substring(wwwRootBasePath.Length + 1).Replace('\\', '/'),
-                            new Lazy<CachedStaticFile>(() =>
-                           {
-                               var serverRelativeFileName = file.Substring(wwwRootBasePath.Length);
-                               var fileETag = GenerateETagFor(ETagFileSystemFileSource, serverRelativeFileName.GetHashCode(),
-                                   info.LastWriteTimeUtc.Ticks);
-                               using (var stream = info.OpenRead())
-                               {
-                                   return BuildForCache(serverRelativeFileName, fileETag, info, stream);
-                               }
-                           }));
+                        var serverRelativeFileName = file.Substring(wwwRootBasePath.Length + 1).Replace('\\', '/');
+
+                        if (StaticContentCache.ContainsKey(serverRelativeFileName))
+                            continue;
+
+                        var fileETag = GenerateETagFor(ETagFileSystemFileSource, serverRelativeFileName.GetHashCode(), info.LastWriteTimeUtc.Ticks);
+
+                        using (var entry = info.OpenRead())
+                        {
+                            var cacheEntry = BuildForCache(serverRelativeFileName, fileETag, info, entry);
+                            StaticContentCache.TryAdd(serverRelativeFileName, new Lazy<CachedStaticFile>(cacheEntry));
+                        }
                     }
                 }
 

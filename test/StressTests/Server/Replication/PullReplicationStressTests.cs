@@ -119,5 +119,67 @@ namespace StressTests.Server.Replication
             }
             return resList;
         }
+
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task PullReplicationWithSinkServerCertificateUsage(bool with2Eku)
+        {
+            var hubSettings = new ConcurrentDictionary<string, string>();
+            var sinkSettings = new ConcurrentDictionary<string, string>();
+
+            var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true, with2Eku: with2Eku);
+            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
+
+            var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: false, with2Eku: with2Eku);
+            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
+
+            var hubDB = GetDatabaseName();
+            var sinkDB = GetDatabaseName();
+            var pullReplicationName = $"{hubDB}-pull";
+
+            var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
+            var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
+
+            // let's export a sink's server certificate and register it on a hub
+            var pullReplicationCertificate = CertificateLoaderUtil.CreateCertificate(sinkCerts.ServerCertificate.Value.Export(X509ContentType.Cert));
+            Assert.False(pullReplicationCertificate.HasPrivateKey);
+
+            using (var hubStore = GetDocumentStore(new Options
+                   {
+                       ClientCertificate = hubCerts.ServerCertificateForCommunication.Value,
+                       Server = hubServer,
+                       ModifyDatabaseName = _ => hubDB
+                   }))
+            using (var sinkStore = GetDocumentStore(new Options
+                   {
+                       ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
+                       Server = sinkServer,
+                       ModifyDatabaseName = _ => sinkDB
+                   }))
+            {
+                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
+                await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(pullReplicationName, new ReplicationHubAccess
+                {
+                    Name = pullReplicationCertificate.Thumbprint,
+                    CertificateBase64 = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
+                }));
+
+                var configurationResult = await SetupPullReplicationAsync(
+                    pullReplicationName,
+                    sinkStore,
+                    null /* it forces to use server certificate */,
+                    hubStore);
+
+                using (var hubSession = hubStore.OpenSession())
+                {
+                    hubSession.Store(new User(), "foo/bar");
+                    hubSession.SaveChanges();
+                }
+
+                var timeout = 5000;
+                Assert.True(WaitForDocument(sinkStore, "foo/bar", timeout), sinkStore.Identifier);
+            }
+        }
     }
 }

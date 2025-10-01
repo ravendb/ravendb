@@ -156,4 +156,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
                 { nameof(Hnsw.SimilarityMethod), _nearestSearches[0].SimilarityMethod.ToString() },
             });
     }
+
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
 }

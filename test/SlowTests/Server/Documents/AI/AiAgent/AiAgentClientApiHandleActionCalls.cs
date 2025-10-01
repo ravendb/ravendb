@@ -31,7 +31,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleToolCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -63,9 +63,9 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, 
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, 
         Data = [AiHandleErrorStrategy.SendErrorsToModel])]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, 
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, 
         Data = [AiHandleErrorStrategy.RaiseImmediately])]
     public async Task CanHandleToolCallWithException(Options options, GenAiConfiguration config, AiHandleErrorStrategy strategy)
     {
@@ -105,7 +105,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleToolCallWithArgs(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -139,7 +139,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CantCreateNewConversationWithSameId(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

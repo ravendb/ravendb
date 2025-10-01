@@ -42,7 +42,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1115,7 +1114,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, SnowflakeRequired = true)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1779,7 +1778,7 @@ namespace SlowTests.Smuggler
 
         private static Stream GetDump(string name)
         {
-            var assembly = typeof(RavenDB_9912).Assembly;
+            var assembly = typeof(BackupDatabaseRecordTests).Assembly;
             return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
 
