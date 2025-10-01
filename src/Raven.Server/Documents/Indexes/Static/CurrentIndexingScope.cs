@@ -291,8 +291,7 @@ namespace Raven.Server.Documents.Indexes.Static
             
             if (ValidateSchema(doc, _schemaValidationErrorBuilder))
                 return DynamicNullObject.Null;
-
-            //TODO Maybe worth to avoid allocation by creating a LazyStringValue
+            
             return _schemaValidationErrorBuilder.GetErrors().ToString();
         }
 

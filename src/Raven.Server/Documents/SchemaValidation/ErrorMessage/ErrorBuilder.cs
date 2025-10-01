@@ -149,6 +149,8 @@ public class ErrorBuilder : IDisposable
     }
     
     public void Reset() => _errorBuffer.Reset();
+
+    public LazyStringValue ToLazyStringValue(JsonOperationContext context) => context.GetLazyString(GetErrors(), false);
     
     public override string ToString() => _errorBuffer?.ToString();
     

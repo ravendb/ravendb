@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Processors.SchemaValidation;
 using Raven.Server.Documents.Sharding.Handlers.Processors.SchemaValidation;
 using Raven.Server.Routing;
 
@@ -17,6 +18,13 @@ public sealed class ShardedSchemaValidationHandler : ShardedDatabaseRequestHandl
     public async Task ConfigSchemaValidation()
     {
         using (var processor = new ShardedSchemaValidationHandlerProcessorForPost(this))
+            await processor.ExecuteAsync();
+    }
+    
+    [RavenShardedAction("/databases/*/schema-validation/validate", "POST")]
+    public async Task ValidateSchemaValidation()
+    {
+        using (var processor = new ShardedSchemaValidationHandlerProcessorForValidate(this))
             await processor.ExecuteAsync();
     }
 }

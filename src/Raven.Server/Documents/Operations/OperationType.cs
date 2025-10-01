@@ -80,5 +80,8 @@ public enum OperationType
     Resharding,
 
     [Description("Adopt Orphaned Revisions")]
-    AdoptOrphanedRevisions
+    AdoptOrphanedRevisions,
+    
+    [Description("Validate Schema Validation")]
+    ValidateSchemaValidation
 }

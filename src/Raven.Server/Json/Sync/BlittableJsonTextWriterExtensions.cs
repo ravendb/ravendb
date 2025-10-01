@@ -469,8 +469,8 @@ namespace Raven.Server.Json.Sync
                             writer.WritePropertyName(nameof(keyValue.Value));
                             writer.WriteStartObject();
                             {
-                                writer.WritePropertyName(nameof(keyValue.Value.SchemaDefinition));
-                                writer.WriteString(keyValue.Value.SchemaDefinition);
+                                writer.WritePropertyName(nameof(keyValue.Value.Schema));
+                                writer.WriteString(keyValue.Value.Schema);
                             }
                             writer.WriteEndObject();
                         }

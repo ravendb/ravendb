@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -55,7 +56,7 @@ public class SchemaValidationIndexingTests : RavenTestBase
             Maps = { map },
             SchemaValidationConfiguration = new SchemaValidationConfiguration
             {
-                ValidatorsPerCollection = new Dictionary<string, SchemaValidator> { { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition } } }
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition> { { "TestObjs", new SchemaDefinition { Schema = schemaDefinition } } }
             }
         };
         await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
@@ -108,7 +109,7 @@ public class SchemaValidationIndexingTests : RavenTestBase
             Maps = { map },
             SchemaValidationConfiguration = new SchemaValidationConfiguration
             {
-                ValidatorsPerCollection = new Dictionary<string, SchemaValidator> { { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition } } }
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition> { { "TestObjs", new SchemaDefinition { Schema = schemaDefinition } } }
             }
         };
         await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
@@ -159,7 +160,7 @@ public class SchemaValidationIndexingTests : RavenTestBase
             Maps = { map },
             SchemaValidationConfiguration = new SchemaValidationConfiguration
             {
-                ValidatorsPerCollection = new Dictionary<string, SchemaValidator> { { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition } } }
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition> { { "TestObjs", new SchemaDefinition { Schema = schemaDefinition } } }
             },
             Fields = new Dictionary<string, IndexFieldOptions>{{"Error", new IndexFieldOptions{Storage = FieldStorage.Yes}}}
         };
@@ -182,7 +183,7 @@ public class SchemaValidationIndexingTests : RavenTestBase
             Assert.Contains("The length of the value '0123456789a' at 'Prop' should not exceed 10, but its actual length is 11.", dicResults[invalidDocId].Error);
         }
     }
-
+    
     private class TestObj
     {
         public string Id { get; set; }

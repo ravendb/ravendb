@@ -184,8 +184,6 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
             
-            //TODO Maybe validate this is a document
-            
             if (doc is not DynamicBlittableJson json)
             {
                 if (doc is DynamicNullObject)
@@ -204,14 +202,12 @@ namespace Raven.Server.Documents.Indexes.Static
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
             
-            //TODO Maybe validate this is a document
-            
             if (doc is not DynamicBlittableJson json)
             {
                 if (doc is DynamicNullObject)
                     return doc;
                 
-                ThrowInvalidDocType(doc, nameof(SchemaValid));
+                ThrowInvalidDocType(doc, nameof(SchemaError));
                 // never hit
                 return null;
             }

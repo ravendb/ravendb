@@ -495,33 +495,40 @@ namespace Sparrow.Json
             return GetLazyString(field, longLived: false);
         }
 
-        private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
+        private LazyStringValue GetLazyString(StringSegment field, bool longLived)
+        {
+            return GetLazyString(field.AsSpan(), field, longLived);
+        }
+
+        public LazyStringValue GetLazyString(ReadOnlySpan<char> value, bool longLived)
+        {
+            return GetLazyString(value, StringSegment.Empty, longLived);
+        }
+        
+        public unsafe LazyStringValue GetLazyString(ReadOnlySpan<char> value, StringSegment strValue, bool longLived)
         {
             var state = new JsonParserState();
-            var maxByteCount = Encodings.Utf8.GetMaxByteCount(field.Length);
+            var maxByteCount = Encodings.Utf8.GetMaxByteCount(value.Length);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(field, out _);
+            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(value, out _);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
 
-            fixed (char* pField = field.Buffer)
+            var address = memory.Address;
+            var actualSize = Encodings.Utf8.GetBytes(value, new Span<byte>(address, memory.SizeInBytes));
+
+            state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
+
+            state.WriteEscapePositionsTo(address + actualSize);
+            LazyStringValue result = longLived == false ? AllocateStringValue(strValue.Value, address, actualSize) : new LazyStringValue(strValue.Value, address, actualSize, this);
+            result.AllocatedMemoryData = memory;
+
+            if (state.EscapePositions.Count > 0)
             {
-                var address = memory.Address;
-                var actualSize = Encodings.Utf8.GetBytes(pField + field.Offset, field.Length, address, memory.SizeInBytes);
-
-                state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
-
-                state.WriteEscapePositionsTo(address + actualSize);
-                LazyStringValue result = longLived == false ? AllocateStringValue(field.Value, address, actualSize) : new LazyStringValue(field.Value, address, actualSize, this);
-                result.AllocatedMemoryData = memory;
-
-                if (state.EscapePositions.Count > 0)
-                {
-                    result.EscapePositions = state.EscapePositions.ToArray();
-                }
-                return result;
+                result.EscapePositions = state.EscapePositions.ToArray();
             }
+            return result;
         }
 
         public unsafe LazyStringValue GetLazyString(Span<byte> span, bool longLived)
