@@ -14,43 +14,36 @@ namespace Sparrow.Server.Platform
 
         static Pal()
         {
-            PalFlags.FailCodes rc;
-            int errorCode;
-            PalDefinitions.SystemInformation sysInfo; 
+            PalFlags.FailCodes rcConfigure;
+            int errorCodeConfigure;
+
+            PalFlags.FailCodes rcGetSysInfo;
+            int errorCodeGetSysInfo;
+
+            PalDefinitions.SystemInformation sysInfo;
+
+            var cfg = new rvn_configuration
+            {
+                io_ring_queue_size = PalConfiguration.IoRingQueueSize,
+                low_priority_io = PalConfiguration.LowPriorityIo,
+                pal_version = -1, // loaded by the call
+                version = RvnConfigurationVersion.Current,
+                write_mode = PalConfiguration.WriteMode,
+                memoryLockCallback = &MemoryLockUsage.UpdateLockedMemory,
+                recoveryMemoryLockFailureCallback = &MemoryLockUsage.RecoverLockedMemoryFailure
+            };
+
             try
             {
-                var cfg = new rvn_configuration
-                {
-                    io_ring_queue_size = PalConfiguration.IoRingQueueSize,
-                    low_priority_io = PalConfiguration.LowPriorityIo,
-                    pal_version = -1, // loaded by the call
-                    version = RvnConfigurationVersion.Current,
-                    write_mode = PalConfiguration.WriteMode,
-                    memoryLockCallback = &MemoryLockUsage.UpdateLockedMemory,
-                    recoveryMemoryLockFailureCallback = &MemoryLockUsage.RecoverLockedMemoryFailure
-                };
-                rc = rvn_startup_configure(ref cfg, out errorCode);
-                if(rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, "Failed to configure PAL library.");
-                
+                rcConfigure = rvn_startup_configure(ref cfg, out errorCodeConfigure);
+
                 if (cfg.pal_version != PAL_VER)
                 {
                     throw new IncorrectDllException(
                         $"{LIBRVNPAL} version '{cfg.pal_version}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Did you forget to set new value in 'rvn_get_pal_ver()'");
                 }
 
-                if (PalConfiguration.WriteMode == RvnWriteMode.Auto)
-                {
-                    // set the actual write mode
-                    PalConfiguration.WriteMode = cfg.write_mode;
-                }
-
-                if (PalConfiguration.WriteMode != cfg.write_mode)
-                {
-                    throw new InvalidOperationException($"Requested write mode '{PalConfiguration.WriteMode}', actual write mode was set to '{cfg.write_mode}'");
-                }
-                
-                rc = rvn_get_system_information(out sysInfo, out errorCode);
+                rcGetSysInfo = rvn_get_system_information(out sysInfo, out errorCodeGetSysInfo);
             }
             catch (Exception ex)
             {
@@ -65,8 +58,25 @@ namespace Sparrow.Server.Platform
                 throw new IncorrectDllException(errString, ex);
             }
 
-            if (rc != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(rc, errorCode, "Cannot get system information");
+            if (rcConfigure != PalFlags.FailCodes.Success)
+            {
+                PalHelper.ThrowLastError(rcConfigure, errorCodeConfigure, $"Failed to configure PAL library with '{cfg.write_mode}' write mode. " +
+                                                                       $"Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}");
+            }
+
+            if (PalConfiguration.WriteMode == RvnWriteMode.Auto)
+            {
+                // set the actual write mode
+                PalConfiguration.WriteMode = cfg.write_mode;
+            }
+
+            if (PalConfiguration.WriteMode != cfg.write_mode)
+            {
+                throw new InvalidOperationException($"Requested write mode '{PalConfiguration.WriteMode}', actual write mode was set to '{cfg.write_mode}'");
+            }
+
+            if (rcGetSysInfo != PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(rcGetSysInfo, errorCodeGetSysInfo, "Cannot get system information");
             
             PalVoronPageSize = sysInfo.VoronPageSize;
         }
