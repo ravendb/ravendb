@@ -667,10 +667,16 @@ internal static class RavenLogManagerServerExtensions
         if (Path.Exists(path) == false)
             yield break;
 
+        var fileTargetFileName = logManager.FindDefaultFileTargetFileName();
+
         foreach (var file in Directory.GetFiles(path, "*.log", SearchOption.TopDirectoryOnly))
         {
             var fileInfo = new FileInfo(file);
             var fileName = fileInfo.Name;
+            
+            if (fileTargetFileName?.Name == fileName)
+                yield return fileInfo;
+            
             var fileExtension = fileInfo.Extension;
             var fileNameWithoutExtension = fileName;
             if (string.IsNullOrEmpty(fileExtension) == false)
@@ -838,6 +844,39 @@ internal static class RavenLogManagerServerExtensions
 
         legacyArchiveAboveSize = default;
         return false;
+    }
+
+    public static FileInfo FindDefaultFileTargetFileName(this RavenLogManager logManager)
+    {
+        if (DefaultRule == null)
+            return null;
+
+        foreach (var target in DefaultRule.Targets)
+        {
+            if (target is FileTarget fileTarget1)
+                return GetFileNameSafely(fileTarget1);
+
+            if (target is AsyncTargetWrapper asyncTargetWrapper && asyncTargetWrapper.WrappedTarget is FileTarget fileTarget2)
+                return GetFileNameSafely(fileTarget2);
+        }
+
+        return null;
+
+        static FileInfo GetFileNameSafely(FileTarget fileTarget)
+        {
+            try
+            {
+                var fileName = fileTarget.FileName?.ToString();
+                if (fileName == null)
+                    return null;
+                
+                return new FileInfo(fileName);
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 #endif
 }
