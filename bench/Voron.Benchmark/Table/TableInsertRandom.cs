@@ -47,10 +47,9 @@ namespace Voron.Benchmark.Table
         public double GenerationDeletionProbability { get; set; } = 0.1;
 
         /// <summary>
-        /// Random seed used to generate values. If -1, uses time for seeding.
+        /// Random seed used to generate values.
         /// </summary>
-        [Params(-1)]
-        public int RandomSeed { get; set; } = -1;
+        public const int RandomSeed = 42;
 
         private const string TableName = "TestTable2";
 
@@ -83,7 +82,7 @@ namespace Voron.Benchmark.Table
             var totalPairs = Utils.GenerateUniqueRandomSlicePairs(
                 NumberOfTransactions * NumberOfRecordsPerTransaction,
                 KeyLength,
-                RandomSeed == -1 ? null as int? : RandomSeed);
+                RandomSeed);
 
             _valueBuilders = new List<TableValueBuilder>[NumberOfTransactions];
 
