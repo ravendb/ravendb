@@ -12,6 +12,8 @@ namespace Sparrow.Server.Platform
         public const string ErrorMediaIsWriteProtectedHintMessage =
             "This might indicate a hardware or OS issue. If you are running in the cloud, please consider contacting your provider since your volume's data might be inconsistent.";
 
+        private const int ERROR_NOT_SUPPORTED = 50;
+
         [DoesNotReturn]
         public static void ThrowLastError(PalFlags.FailCodes rc, int lastError, string msg)
         {
@@ -25,6 +27,9 @@ namespace Sparrow.Server.Platform
 
             if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
                 throw new DiskFullException(txt);
+
+            if (lastError is ERROR_NOT_SUPPORTED)
+                throw new NotSupportedException(txt);
 
             if (lastError is ERROR_WRITE_PROTECT)
                 txt += $"{Environment.NewLine}{ErrorMediaIsWriteProtectedHintMessage}";
