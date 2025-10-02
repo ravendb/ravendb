@@ -41,11 +41,43 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Error(Exception exception, string message, params object[] args)
+        {
+        }
+
+        public void Error<TArgument>(string message, TArgument argument)
+        {
+        }
+
+        public void Error<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+        {
+        }
+
+        public void Error<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+        {
+        }
+
         public void Info(string message)
         {
         }
 
         public void Info(string message, Exception exception)
+        {
+        }
+
+        public void Info(Exception exception, string message, params object[] args)
+        {
+        }
+
+        public void Info<TArgument>(string message, TArgument argument)
+        {
+        }
+
+        public void Info<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+        {
+        }
+
+        public void Info<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
         {
         }
 
@@ -57,11 +89,43 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Debug(Exception exception, string message, params object[] args)
+        {
+        }
+
+        public void Debug<TArgument>(string message, TArgument argument)
+        {
+        }
+
+        public void Debug<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+        {
+        }
+
+        public void Debug<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+        {
+        }
+
         public void Warn(string message)
         {
         }
 
         public void Warn(string message, Exception exception)
+        {
+        }
+
+        public void Warn(Exception exception, string message, params object[] args)
+        {
+        }
+
+        public void Warn<TArgument>(string message, TArgument argument)
+        {
+        }
+
+        public void Warn<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+        {
+        }
+
+        public void Warn<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
         {
         }
 
@@ -73,11 +137,43 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Fatal(Exception exception, string message, params object[] args)
+        {
+        }
+
+        public void Fatal<TArgument>(string message, TArgument argument)
+        {
+        }
+
+        public void Fatal<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+        {
+        }
+
+        public void Fatal<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+        {
+        }
+
         public void Trace(string message)
         {
         }
 
         public void Trace(string message, Exception exception)
+        {
+        }
+
+        public void Trace(Exception exception, string message, params object[] args)
+        {
+        }
+
+        public void Trace<TArgument>(string message, TArgument argument)
+        {
+        }
+
+        public void Trace<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+        {
+        }
+
+        public void Trace<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
         {
         }
 
