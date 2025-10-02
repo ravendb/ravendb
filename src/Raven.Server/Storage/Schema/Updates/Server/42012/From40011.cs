@@ -155,7 +155,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
         {
             var localState = tx.ReadTree(LocalNodeStateTreeName);
             var read = localState.Read(key);
-            if (!read.HasValue)
+            if (read.HasValue == false)
                 return null;
             
             BlittableJsonReaderObject localStateBlittable = new(read.Reader.Base, read.Reader.Length, context);

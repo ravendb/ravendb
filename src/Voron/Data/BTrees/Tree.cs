@@ -246,7 +246,7 @@ namespace Voron.Data.BTrees
         public long? ReadInt64(Slice key)
         {
             var read = Read(key);
-            if (!read.HasValue)
+            if (read.HasValue == false)
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(long));
             return *(long*)read.Reader.Base;
@@ -258,7 +258,7 @@ namespace Voron.Data.BTrees
         public int? ReadInt32(Slice key)
         {
             var read = Read(key);
-            if (!read.HasValue) 
+            if (read.HasValue == false) 
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(int));
             return *(int*)read.Reader.Base;
@@ -271,7 +271,7 @@ namespace Voron.Data.BTrees
             where T : unmanaged
         {
             var read = Read(key);
-            if (!read.HasValue) 
+            if (read.HasValue == false) 
                 return null;
             Debug.Assert(read.Reader.Length == sizeof(T));
             return *(T*)read.Reader.Base;

@@ -351,7 +351,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         Lookup<CompactKeyLookup> inner;
         var llt = parent.Llt;
         var existing = parent.Read(name);
-        if (!existing.HasValue)
+        if (existing.HasValue == false)
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;

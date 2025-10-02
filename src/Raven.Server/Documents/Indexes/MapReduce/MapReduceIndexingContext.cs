@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             var read = mapEntriesTree.Read(LastMapResultIdKey);
 
-            if (!read.HasValue)
+            if (read.HasValue == false)
                 return;
 
             NextMapResultId = *(long*)read.Reader.Base;

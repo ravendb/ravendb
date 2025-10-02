@@ -95,7 +95,7 @@ namespace Voron.Data.Tables
                 if (_activeDataSmallSection == null)
                 {
                     var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
-                    if (!readResult.HasValue)
+                    if (readResult.HasValue == false)
                         throw new VoronErrorException($"Could not find active sections for {Name}");
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
@@ -219,7 +219,7 @@ namespace Voron.Data.Tables
                 return false;
             
             var readResult = pkTree.Read(key);
-            if (!readResult.HasValue)
+            if (readResult.HasValue == false)
                 return false;
 
             id = readResult.Reader.ReadLittleEndianInt64();
@@ -860,7 +860,7 @@ namespace Voron.Data.Tables
                 var rev = Bits.SwapBytes(id);
                 using var _ = Slice.From(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
                 ReadResult readResult;
-                if (dictionariesTree == null || !(readResult = dictionariesTree.Read(slice)).HasValue)
+                if (dictionariesTree == null || (readResult = dictionariesTree.Read(slice)).HasValue == false)
                 {
                     // we may be checking an empty section, so let's return an empty
                     // dictionary there
@@ -1277,7 +1277,7 @@ namespace Voron.Data.Tables
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
-            if (!readResult.HasValue)
+            if (readResult.HasValue == false)
                 return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)

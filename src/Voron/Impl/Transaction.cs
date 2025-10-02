@@ -224,7 +224,7 @@ namespace Voron.Impl
             var clonedName = name.Clone(Allocator);
             
             var existing = LowLevelTransaction.RootObjects.Read(name);
-            if (!existing.HasValue)
+            if (existing.HasValue == false)
             {
                 var state = new PostingListState();
                 PostingList.Create(this.LowLevelTransaction, ref state);
@@ -663,7 +663,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal) // must not delete global indexes
                     continue;
 
-                if (!tableTree.Read(indexDef.Name).HasValue)
+                if (tableTree.Read(indexDef.Name).HasValue == false)
                     continue;
 
                 var indexTree = table.GetTree(indexDef);
@@ -678,7 +678,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal)  // must not delete global indexes
                     continue;
 
-                if (!tableTree.Read(indexDef.Name).HasValue)
+                if (tableTree.Read(indexDef.Name).HasValue == false)
                     continue;
 
                 var index = table.GetFixedSizeTree(indexDef);

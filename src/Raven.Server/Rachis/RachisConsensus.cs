@@ -372,7 +372,7 @@ namespace Raven.Server.Rachis
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
             var read = state.Read(CurrentTermSlice);
-            if (!read.HasValue || read.Reader.Length != sizeof(long))
+            if (read.HasValue == false || read.Reader.Length != sizeof(long))
             {
                 using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
                     *(long*)ptr = 0;
@@ -1183,20 +1183,21 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(TopologySlice);
-            if (!read.HasValue)
+            
+            if (read.HasValue)
             {
-                return new ClusterTopology(
-                    null,
-                    new Dictionary<string, string>(),
-                    new Dictionary<string, string>(),
-                    new Dictionary<string, string>(),
-                    "",
-                    -1
-                );
+                var json = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+                return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
             }
 
-            var json = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
-            return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
+            return new ClusterTopology(
+                null,
+                new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
+                "",
+                -1
+            );
         }
 
         public unsafe BlittableJsonReaderObject GetTopologyRaw(ClusterOperationContext context)
@@ -1204,10 +1205,10 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(TopologySlice);
-            if (!read.HasValue)
+            if (read.HasValue == false)
                 return null;
 
-            BlittableJsonReaderObject topologyBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            BlittableJsonReaderObject topologyBlittable = new(read.Reader.Base, read.Reader.Length, context);
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, topologyBlittable);
 
@@ -1721,12 +1722,13 @@ namespace Raven.Server.Rachis
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastTruncatedSlice);
-            if (!read.HasValue)
+            if (read.HasValue == false)
             {
                 lastTruncatedIndex = 0;
                 lastTruncatedTerm = 0;
                 return;
             }
+            
             var reader = read.Reader;
             lastTruncatedIndex = reader.ReadLittleEndianInt64();
             lastTruncatedTerm = reader.ReadLittleEndianInt64();
@@ -1771,7 +1773,7 @@ namespace Raven.Server.Rachis
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
             var read = state.Read(LastCommitSlice);
-            if (!read.HasValue)
+            if (read.HasValue == false)
             {
                 index = 0;
                 term = 0;
