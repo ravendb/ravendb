@@ -181,41 +181,35 @@ namespace Raven.Server.Documents.Indexes.Static
         
         protected dynamic SchemaValid(dynamic doc)
         {
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException("Indexing scope was not initialized.");
-            
-            if (doc is not DynamicBlittableJson json)
-            {
-                if (doc is DynamicNullObject)
-                    return doc;
-                
-                ThrowInvalidDocType(doc, nameof(SchemaValid));
-                // never hit
-                return null;
-            }
-
-            return CurrentIndexingScope.Current.SchemaValid(json.BlittableJson);
+            var json = EnsureSourceDocumentOrThrow(doc, nameof(SchemaValid));
+            return CurrentIndexingScope.Current.SchemaValid(json);
         }
         
         protected dynamic SchemaError(dynamic doc)
         {
+            var json = EnsureSourceDocumentOrThrow(doc, nameof(SchemaError));
+            return CurrentIndexingScope.Current.SchemaError(json);
+        }
+
+        private static BlittableJsonReaderObject EnsureSourceDocumentOrThrow(dynamic doc, string funcName)
+        {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
             if (doc is not DynamicBlittableJson json)
             {
-                if (doc is DynamicNullObject)
-                    return doc;
-                
-                ThrowInvalidDocType(doc, nameof(SchemaError));
+                ThrowInvalidDocType(doc, funcName);
                 // never hit
                 return null;
             }
-
-            return CurrentIndexingScope.Current.SchemaError(json.BlittableJson);
+            
+            if(CurrentIndexingScope.Current.Source is not DynamicBlittableJson srcDoc 
+               || ReferenceEquals(srcDoc.BlittableJson, json.BlittableJson) == false)
+                throw new InvalidOperationException($"'{funcName}' can only be performed on the source document.");
+            return json.BlittableJson;
         }
 
-        
+
         [DoesNotReturn]
         private static void ThrowInvalidDocType(dynamic doc, string funcName)
         {

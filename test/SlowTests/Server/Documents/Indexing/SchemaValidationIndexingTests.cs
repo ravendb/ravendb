@@ -98,7 +98,7 @@ public class SchemaValidationIndexingTests : RavenTestBase
                     "schema-validation-configuration").ToString();
         }
 
-        var indexDefinition = new IndexDefinition
+        var indexDefinition = new IndexDefinition()
         {
             Name = "MyCounterIndex",
             Maps = { map },

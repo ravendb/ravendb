@@ -301,9 +301,6 @@ namespace Raven.Server.Documents.Indexes.Static
             if (schemaValidator == null)
                 throw new InvalidOperationException("Schema validation was not configured for this index.");
 
-            if(Current.Source is not DynamicBlittableJson dynamicBlittableJson || !ReferenceEquals(dynamicBlittableJson.BlittableJson, doc))
-                throw new InvalidOperationException("Schema validation can only be performed on the source document.");
-            
             return schemaValidator.Validate(doc, errorBuilder);
         }
 
