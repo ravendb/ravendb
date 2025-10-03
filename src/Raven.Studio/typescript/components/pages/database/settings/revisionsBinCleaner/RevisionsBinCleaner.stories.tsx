@@ -1,5 +1,5 @@
 import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import RevisionsBinCleaner from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleaner";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";

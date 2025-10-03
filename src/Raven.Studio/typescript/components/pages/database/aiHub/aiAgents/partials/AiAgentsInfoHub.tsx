@@ -20,7 +20,7 @@ export default function AiAgentsInfoHub() {
     });
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={hasAiAgent ? null : "licensing"}>
             <AccordionItemWrapper
                 icon="about"
                 color="info"

@@ -19,6 +19,8 @@ import notificationCenter from "common/notifications/notificationCenter";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import genUtils from "common/generalUtils";
+import studioSettings from "common/settings/studioSettings";
+import { Switch } from "components/common/Checkbox";
 
 interface DeleteDocumentsModalProps {
     close: () => void;
@@ -35,9 +37,17 @@ export default function DeleteDocumentsModal({
 }: DeleteDocumentsModalProps) {
     const selection = gridController.selection();
 
+    // Note: wrapped in function to avoid type error (JQueryPromise<globalSettings>)
+    const asyncGlobalSettings = useAsync(async () => await studioSettings.default.globalSettings(), []);
+
+    const isRequireTypedConfirm =
+        asyncGlobalSettings.result?.isRequireTypedConfirmationToDeleteDocuments.getValue() ?? true;
+
+    const isSelectedAll = selection.count === currentCollection().documentCount();
+
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const { confirmText, handleTextChange, isConfirmed } = useDeleteConfirmation();
+    const { confirmText, handleTextChange, isConfirmed } = useDeleteConfirmation(isRequireTypedConfirm);
     const { tasksService } = useServices();
     const collectionsList = useAsync(() => tasksService.fetchCollectionsStats(dbName), []);
 
@@ -56,44 +66,62 @@ export default function DeleteDocumentsModal({
         await deleteCollection.execute();
     };
 
+    const toggleIsRequireTypedConfirm = async () => {
+        if (!asyncGlobalSettings.result) {
+            messagePublisher.reportError("Failed to load studio global settings");
+            return;
+        }
+
+        asyncGlobalSettings.result.isRequireTypedConfirmationToDeleteDocuments.setValue(!isRequireTypedConfirm);
+        await asyncGlobalSettings.execute();
+    };
+
     return (
         <Modal show contentClassName="modal-border bulge-danger">
             <Modal.Header closeButton className="vstack gap-4" onCloseClick={close}>
                 <div className="text-center">
                     <Icon icon="trash" color="danger" className="fs-1" margin="m-0" />
                 </div>
-                <div className="text-center lead">Delete all documents?</div>
+                <div className="text-center lead">Delete {isSelectedAll ? "all" : "selected"} documents?</div>
             </Modal.Header>
             <Modal.Body>
                 <CollectionsInfo
                     collectionsList={collectionsList}
                     virtualGridSelection={selection}
                     currentCollection={currentCollection}
+                    isSelectedAll={isSelectedAll}
                 />
-                <Form.Group>
-                    <Form.Label className="fw-bold">Type DELETE to confirm</Form.Label>
-                    <Form.Control placeholder="DELETE" value={confirmText} onChange={handleTextChange} />
-                </Form.Group>
+                {isRequireTypedConfirm && (
+                    <Form.Group>
+                        <Form.Label className="fw-bold">Type DELETE to confirm</Form.Label>
+                        <Form.Control placeholder="DELETE" value={confirmText} onChange={handleTextChange} />
+                    </Form.Group>
+                )}
             </Modal.Body>
-            <Modal.Footer>
-                <Button variant="link" onClick={close} className="link-muted">
-                    Cancel
-                </Button>
-                <ButtonWithSpinner
-                    isSpinning={deleteCollection.loading}
-                    variant="danger"
-                    onClick={onConfirm}
-                    className="rounded-pill"
-                    disabled={!isConfirmed || collectionsList.loading}
-                >
-                    Delete
-                </ButtonWithSpinner>
+            <Modal.Footer className="hstack justify-content-between">
+                <Switch selected={isRequireTypedConfirm} toggleSelection={toggleIsRequireTypedConfirm} color="primary">
+                    Require typed confirmation
+                </Switch>
+                <div className="hstack gap-2 flex-grow-1 justify-content-end">
+                    <Button variant="link" onClick={close} className="link-muted">
+                        Cancel
+                    </Button>
+                    <ButtonWithSpinner
+                        isSpinning={deleteCollection.loading}
+                        variant="danger"
+                        onClick={onConfirm}
+                        className="rounded-pill"
+                        disabled={!isConfirmed || collectionsList.loading}
+                    >
+                        Delete
+                    </ButtonWithSpinner>
+                </div>
             </Modal.Footer>
         </Modal>
     );
 }
 
-function useDeleteConfirmation() {
+function useDeleteConfirmation(isRequireTypedConfirm: boolean) {
     const [confirmText, setConfirmText] = useState("");
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +131,7 @@ function useDeleteConfirmation() {
     return {
         confirmText,
         handleTextChange,
-        isConfirmed: confirmText === "DELETE",
+        isConfirmed: isRequireTypedConfirm ? confirmText === "DELETE" : true,
     };
 }
 
@@ -175,17 +203,24 @@ interface CollectionsInfoProps {
     virtualGridSelection: virtualGridSelection<document>;
     collectionsList: UseAsyncReturn<collectionsStats>;
     currentCollection: KnockoutObservable<collection>;
+    isSelectedAll: boolean;
 }
 
-function CollectionsInfo({ virtualGridSelection, collectionsList, currentCollection }: CollectionsInfoProps) {
+function CollectionsInfo({
+    virtualGridSelection,
+    collectionsList,
+    currentCollection,
+    isSelectedAll,
+}: CollectionsInfoProps) {
     const collectionName =
         currentCollection().name === collection.allDocumentsCollectionName ? "all" : currentCollection().name;
+
     const isAllDocuments = collectionName === "all";
 
     return (
         <LazyLoad active={collectionsList.loading}>
             <p>
-                All documents from{" "}
+                {isSelectedAll ? "All" : "Selected"} documents from{" "}
                 {isAllDocuments ? (
                     <>
                         <b className="text-uppercase">{collectionName}</b> collections

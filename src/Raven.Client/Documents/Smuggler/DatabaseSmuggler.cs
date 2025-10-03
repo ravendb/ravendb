@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Smuggler
         private RequestExecutor _requestExecutor;
         private RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _getRequestExecutor(_databaseName) : null);
 
-        public DatabaseSmuggler(IDocumentStore store, string databaseName = null) 
+        public DatabaseSmuggler(IDocumentStore store, string databaseName = null)
             : this(store.Changes, store.GetRequestExecutor, databaseName ?? store.Database)
         {
         }
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Smuggler
                 try
                 {
                     await handleStreamResponse(stream).ConfigureAwait(false);
-                    
+
                     tcs.TrySetResult(null);
                 }
                 catch (Exception e)
@@ -144,7 +144,8 @@ namespace Raven.Client.Documents.Smuggler
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
+
+                var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
 
                 var command = new ExportCommand(RequestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
 
@@ -242,6 +243,7 @@ namespace Raven.Client.Documents.Smuggler
                 var op = await ImportAsync(options, filePath, cancellationToken).ConfigureAwait(false);
                 await op.WaitForCompletionAsync().WithCancellation(cancellationToken).ConfigureAwait(false);
             }
+
             options.OperateOnTypes = oldOperateOnTypes;
 
             var lastFilePath = Path.Combine(fromDirectory, files.Last());
@@ -292,27 +294,27 @@ namespace Raven.Client.Documents.Smuggler
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
+                var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
 
                 var command = new ImportCommand(RequestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
                 var task = RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                 requestTask = task
-                        .ContinueWith(t =>
+                    .ContinueWith(t =>
+                    {
+                        returnContext?.Dispose();
+                        cancellationTokenRegistration.Dispose();
+                        using (disposeStream)
                         {
-                            returnContext?.Dispose();
-                            cancellationTokenRegistration.Dispose();
-                            using (disposeStream)
+                            if (t.IsFaulted)
                             {
-                                if (t.IsFaulted)
-                                {
-                                    tcs.TrySetException(t.Exception);
+                                tcs.TrySetException(t.Exception);
 
-                                    if (Logger.IsErrorEnabled)
-                                        Logger.Error("Could not execute import", t.Exception);
-                                }
+                                if (Logger.IsErrorEnabled)
+                                    Logger.Error("Could not execute import", t.Exception);
                             }
-                        }, token);
+                        }
+                    }, token);
 
                 try
                 {
@@ -326,7 +328,6 @@ namespace Raven.Client.Documents.Smuggler
 
                 return new Operation(RequestExecutor, () => _getChanges(_databaseName, getOperationIdCommand.NodeTag), RequestExecutor.Conventions, operationId,
                     nodeTag: getOperationIdCommand.NodeTag, afterOperationCompleted: task);
-
             }
             catch (Exception e)
             {

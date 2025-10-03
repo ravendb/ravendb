@@ -43,9 +43,9 @@ namespace EmbeddedTests
                     var testingStuff = store.Smuggler.ForTestingPurposesOnly();
                     using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                     using (testingStuff.CallBeforeSerializeToStreamAsync(() =>
-                    {
-                        Thread.Sleep(2000);
-                    }))
+                           {
+                               Thread.Sleep(2000);
+                           }))
                     {
                         Exception e = null;
                         try
@@ -95,9 +95,9 @@ namespace EmbeddedTests
                         var testingStuff = store.Smuggler.ForTestingPurposesOnly();
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                         using (testingStuff.CallBeforeSerializeToStreamAsync(() =>
-                        {
-                            Thread.Sleep(2000);
-                        }))
+                               {
+                                   Thread.Sleep(2000);
+                               }))
                         {
                             Exception e = null;
                             try
@@ -108,7 +108,7 @@ namespace EmbeddedTests
                                         {
                                             OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.Identities | DatabaseItemType.CompareExchange
                                         }, ms, cts.Token);
-                                
+
 
                                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                             }
@@ -159,5 +159,5 @@ namespace EmbeddedTests
 
             return dummyDump;
         }
-                }
-            }
+    }
+}

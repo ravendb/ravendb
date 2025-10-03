@@ -130,7 +130,8 @@ export interface AiConnection extends ConnectionBase {
         | "ollamaSettings"
         | "embeddedSettings"
         | "openAiSettings"
-        | "mistralAiSettings";
+        | "mistralAiSettings"
+        | "vertexSettings";
     modelType?: Raven.Client.Documents.Operations.AI.AiModelType;
     azureOpenAiSettings?: {
         apiKey?: string;
@@ -180,6 +181,13 @@ export interface AiConnection extends ConnectionBase {
     mistralAiSettings?: {
         apiKey?: string;
         endpoint?: string;
+        model?: string;
+        embeddingsMaxConcurrentBatches?: number;
+    };
+    vertexSettings?: {
+        aiVersion?: Raven.Client.Documents.Operations.AI.VertexAIVersion;
+        googleCredentialsJson?: string;
+        location?: string;
         model?: string;
         embeddingsMaxConcurrentBatches?: number;
     };

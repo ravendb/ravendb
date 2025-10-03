@@ -71,6 +71,14 @@ namespace Raven.Server.Documents.AI
         {
             StatusCode = statusCode;
         }
+
+        public static void Throw(string message, HttpStatusCode statusCode, string requestId)
+        {
+            throw new UnsuccessfulRequestException($"Status Code: {statusCode}, Message: {message}", statusCode)
+            {
+                RequestId = requestId
+            };
+        }
     }
 
     public class TooManyRequestsException : UnsuccessfulRequestException

@@ -16,7 +16,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class Aws : RestoreFromS3
+    public class Aws : RestoreFromS3TestBase
     {
         public Aws(ITestOutputHelper output) : base(output)
         {

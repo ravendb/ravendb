@@ -23,6 +23,8 @@ public sealed class AiConnectionString : ConnectionString
     public HuggingFaceSettings HuggingFaceSettings { get; set; }
 
     public MistralAiSettings MistralAiSettings { get; set; }
+    
+    public VertexSettings VertexSettings { get; set; }
 
     public override ConnectionStringType Type => ConnectionStringType.Ai;
 
@@ -38,7 +40,8 @@ public sealed class AiConnectionString : ConnectionString
             EmbeddedSettings,
             GoogleSettings,
             HuggingFaceSettings,
-            MistralAiSettings
+            MistralAiSettings,
+            VertexSettings
         };
 
         var configuredSettings = allSettings.Where(s => s != null).ToArray();
@@ -94,6 +97,7 @@ public sealed class AiConnectionString : ConnectionString
             AiConnectorType.Google => GoogleSettings.Compare(newConnectionString.GoogleSettings),
             AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(newConnectionString.HuggingFaceSettings),
             AiConnectorType.MistralAi => MistralAiSettings.Compare(newConnectionString.MistralAiSettings),
+            AiConnectorType.Vertex => VertexSettings.Compare(newConnectionString.VertexSettings),
             _ => AiSettingsCompareDifferences.All
         };
 
@@ -118,6 +122,7 @@ public sealed class AiConnectionString : ConnectionString
                 return string.IsNullOrWhiteSpace(this.HuggingFaceSettings.Endpoint) || this.HuggingFaceSettings.Endpoint.StartsWith("https");
             case AiConnectorType.Embedded:
             case AiConnectorType.Google:
+            case AiConnectorType.Vertex:
                 return true;
 
             default:
@@ -141,6 +146,8 @@ public sealed class AiConnectionString : ConnectionString
             return AiConnectorType.HuggingFace;
         if (MistralAiSettings != null)
             return AiConnectorType.MistralAi;
+        if (VertexSettings != null)
+            return AiConnectorType.Vertex;
 
         return AiConnectorType.None;
     }
@@ -174,6 +181,7 @@ public sealed class AiConnectionString : ConnectionString
             AiConnectorType.Google => GoogleSettings.Compare(aiConnectionString.GoogleSettings) == AiSettingsCompareDifferences.None,
             AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(aiConnectionString.HuggingFaceSettings) == AiSettingsCompareDifferences.None,
             AiConnectorType.MistralAi => MistralAiSettings.Compare(aiConnectionString.MistralAiSettings) == AiSettingsCompareDifferences.None,
+            AiConnectorType.Vertex => VertexSettings.Compare(aiConnectionString.VertexSettings) == AiSettingsCompareDifferences.None,
             AiConnectorType.None => true,
             _ => false
         };
@@ -192,6 +200,7 @@ public sealed class AiConnectionString : ConnectionString
         json[nameof(GoogleSettings)] = GoogleSettings?.ToJson();
         json[nameof(HuggingFaceSettings)] = HuggingFaceSettings?.ToJson();
         json[nameof(MistralAiSettings)] = MistralAiSettings?.ToJson();
+        json[nameof(VertexSettings)] = VertexSettings?.ToJson();
 
         return json;
     }
@@ -210,6 +219,7 @@ public sealed class AiConnectionString : ConnectionString
                EmbeddedSettings ??
                GoogleSettings ??
                HuggingFaceSettings ??
+               VertexSettings ??
                (AbstractAiSettings)MistralAiSettings;
     }
 }

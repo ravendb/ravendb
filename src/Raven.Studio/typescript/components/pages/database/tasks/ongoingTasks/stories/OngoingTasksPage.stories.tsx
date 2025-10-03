@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { OngoingTasksPage } from "../OngoingTasksPage";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";

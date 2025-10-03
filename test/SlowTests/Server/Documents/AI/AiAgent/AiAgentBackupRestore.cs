@@ -24,8 +24,8 @@ public class AiAgentBackupRestore : ReplicationTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { BackupType.Backup })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { BackupType.Snapshot })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
     public async Task CanBackupAndRestoreAiAgents(Options options, GenAiConfiguration aiConfig, BackupType backupType)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");

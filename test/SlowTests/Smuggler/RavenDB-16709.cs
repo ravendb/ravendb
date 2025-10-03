@@ -7,9 +7,9 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
 using Xunit.Abstractions;
-using static SlowTests.Issues.RavenDB_9519;
 
 namespace SlowTests.Smuggler;
 

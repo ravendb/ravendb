@@ -1,6 +1,6 @@
 import React from "react";
 import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 

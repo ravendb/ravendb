@@ -20,7 +20,7 @@ namespace Sparrow.Server
 
         public AsyncManualResetEvent(CancellationToken token)
         {
-            _cancellationTokenRegistration = token.Register(() => _tcs.TrySetCanceled());
+            _cancellationTokenRegistration = token.Register(static (state) => ((TaskCompletionSource<bool>)state).TrySetCanceled(), _tcs);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _token = _cts.Token;
         }
@@ -58,7 +58,7 @@ namespace Sparrow.Server
                   tcs.TrySetResult(t.Result);
               }, token);
 
-            await using (token.Register(() => tcs.TrySetCanceled(token)))
+            await using (token.Register(static (state, t) => ((TaskCompletionSource<bool>)state).TrySetCanceled(t), tcs))
             {
                 return await tcs.Task.ConfigureAwait(false);
             }

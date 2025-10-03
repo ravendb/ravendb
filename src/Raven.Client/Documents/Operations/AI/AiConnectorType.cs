@@ -9,5 +9,6 @@ public enum AiConnectorType
     Embedded,
     Google,
     HuggingFace,
-    MistralAi
+    MistralAi,
+    Vertex
 }

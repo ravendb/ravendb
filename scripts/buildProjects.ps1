@@ -121,7 +121,7 @@ function BuildSparrow ( $srcDir ) {
 }
 
 function NpmInstall () {
-    write-host "Doing npm install..."
+    write-host "Doing npm ci..."
 
     foreach ($i in 1..3) {
         try {
@@ -130,11 +130,11 @@ function NpmInstall () {
             return
         }
         catch {
-            write-host "Error doing npm install... Retrying."
+            write-host "Error doing npm ci... Retrying."
         }
     }
 
-    throw "npm install failed. Please see error above."
+    throw "npm ci failed. Please see error above."
 }
 
 function BuildStudio ( $srcDir, $version ) {

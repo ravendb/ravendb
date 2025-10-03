@@ -1,4 +1,4 @@
-﻿import { Meta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react-webpack5";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import Spinner from "react-bootstrap/Spinner";

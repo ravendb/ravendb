@@ -13,6 +13,7 @@ public abstract class CoraxBooleanQueryBase : IQueryMatch
     protected readonly CoraxQueryBuilder.Parameters _parameters;
     protected bool _hasBinary;
     public bool HasBinary => _hasBinary;
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => throw new InvalidOperationException($"{nameof(DuplicatesOccurrenceStatus)} should never be used in {nameof(CoraxBooleanQueryBase)}");
 
     protected CoraxBooleanQueryBase(IndexSearcher indexSearcher, CoraxQueryBuilder.Parameters parameters)
     {

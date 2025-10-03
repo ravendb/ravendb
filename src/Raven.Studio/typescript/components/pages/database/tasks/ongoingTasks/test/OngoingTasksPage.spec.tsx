@@ -3,7 +3,7 @@ import React from "react";
 
 import * as stories from "../stories/OngoingTasksPage.stories";
 
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { EmptyView, FullView } = composeStories(stories);
 

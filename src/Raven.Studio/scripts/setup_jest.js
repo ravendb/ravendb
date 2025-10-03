@@ -3,6 +3,7 @@ const knockout = require("knockout");
 require("knockout-postbox");
 const jquery = require("jquery");
 const ROP = require("@juggle/resize-observer")
+const { hooksForAutoMock } = require("../typescript/components/hooks/hooksForAutoMock");
 
 global._ = lodash;
 global.ko = knockout;
@@ -13,9 +14,7 @@ require("bootstrap/dist/js/bootstrap");
 
 require("../typescript/test/mocks");
 
-const customHooks = require("../typescript/components/hooks/hooksForAutoMock.json").hooks;
-
-customHooks.forEach(hook => {
+hooksForAutoMock.forEach(hook => {
     jest.mock("hooks/" + hook);
 });
 

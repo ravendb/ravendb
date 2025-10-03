@@ -16,6 +16,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.Handlers.AI.Agents;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -31,7 +32,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CannotOverrideAgentParameters(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -82,47 +83,49 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.SampleObject = "{\"Answer\":\"The answer to the query\"}";
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var fake = new FakeDatabaseRequestHandler();
-            fake.Init(new RequestHandlerContext { HttpContext = new DefaultHttpContext(), Database = database, RavenServer = database.ServerStore.Server, });
-            using (var processor = new AiAgentWithEvilLlm(fake))
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                using (fake.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                var creation = new AiConversationCreationOptions().AddParameter("company", "companies/1-A");
+                var blittable = context.ReadObject(creation.ToJson(), "fake-params");
+                blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
+              
+                var x = new EvilLmHandler(Server.ServerStore, database);
+                x.Initialize(agent, "Dummy", new RequestBody
                 {
-                    var creation = new AiConversationCreationOptions().AddParameter("company", "companies/1-A");
-                    var blittable = context.ReadObject(creation.ToJson(), "fake-params");
-                    blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
+                    Parameters = parameters,
+                    CreationOptions = new AiConversationCreationOptions(),
+                    UserPrompt = "fetch my orders"
+                }, changeVector: null);
+                var r = await x.HandleRequest(context, CancellationToken.None);
 
-                    var conv = new ConversationDocument(agent.Name, parameters: parameters);
-                    conv.Initialize(context, agent);
-                    var r = await processor.TalkAsync(context, agent, conv.Id, conv, CancellationToken.None);
-                    var response = r.Response.ToString();
+                var response = r.Response.ToString();
 
-                    Assert.Contains("my order", response);
-                    Assert.DoesNotContain("secret", response);
-                }
+                Assert.Contains("my order", response);
+                Assert.DoesNotContain("secret", response);
             }
         }
 
-        internal class AiAgentWithEvilLlm : AbstractAiAgentProcessor
+        private class EvilLmHandler : ConversationHandler
         {
-            public AiAgentWithEvilLlm(DatabaseRequestHandler requestHandler) : base(requestHandler)
-            {
-            }
+            private readonly DocumentDatabase _database;
 
-            protected override ChatCompletionClient CreateClient(AiConnectionString connection)
+            public EvilLmHandler(Raven.Server.ServerWide.ServerStore server, DocumentDatabase database) 
+                : base(server, database)
             {
+                _database = database;
+            }
+            
+            protected internal override ChatCompletionClient CreateClient()
+            {
+                var connection = GetAiConnectionString();
                 if (AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings) == false)
                 {
                     var connectorType = connection.GetActiveProvider();
                     throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
                 }
 
-                return new EvilLlm(ContextPool, settings, ChatCompletionClient.ConventionsToUse);
+                return new EvilLlm(_database.DocumentsStorage.ContextPool, settings, ChatCompletionClient.ConventionsToUse);
             }
-        }
-
-        public class FakeDatabaseRequestHandler : DatabaseRequestHandler
-        {
         }
 
         internal class EvilLlm : ChatCompletionClient

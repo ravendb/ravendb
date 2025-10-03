@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5, databaseAccessArgType, licenseArgType } from "test/storybookTestUtils";
 import ConnectionStrings from "./ConnectionStrings";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";

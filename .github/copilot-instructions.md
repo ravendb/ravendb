@@ -28,7 +28,7 @@ dotnet build -c Release
 
 # Studio development
 cd src/Raven.Studio
-npm install && npm run restore_compile   # Initial setup
+npm ci && npm run restore_compile   # Initial setup
 npm run webpack-watch                    # Development mode
 ```
 
@@ -76,7 +76,7 @@ grep -r "\t" --include="*.cs" src/                              # Check for tabs
 ### Before Making Changes
 1. **Run FastTests baseline:** `cd test/FastTests && dotnet test --configuration Release`
 2. **Verify .NET version:** `dotnet --version` (must match the `global.json` one)
-3. **For Studio work:** `cd src/Raven.Studio && npm install && npm run restore_compile`
+3. **For Studio work:** `cd src/Raven.Studio && npm ci && npm run restore_compile`
 
 ### Efficient Development Commands
 ```bash
@@ -91,7 +91,7 @@ cd test/FastTests && dotnet test           # Run after each change
 ```
 
 ### Common Issues & Solutions
-- **Build hangs:** Kill node processes, delete `node_modules`, `npm install`
+- **Build hangs:** Kill node processes, delete `node_modules`, `npm ci`
 - **.NET mismatch:** Verify `global.json` matches installed SDK  
 - **Memory issues:** Studio build requires 4GB+ RAM
 - **CI failures:** Check for tabs in files, verify commit message format

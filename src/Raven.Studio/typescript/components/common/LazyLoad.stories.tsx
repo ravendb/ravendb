@@ -1,4 +1,4 @@
-﻿import { Meta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react-webpack5";
 import { boundCopy } from "../utils/common";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import {

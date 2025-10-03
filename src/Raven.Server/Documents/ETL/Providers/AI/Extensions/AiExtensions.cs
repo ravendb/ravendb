@@ -1,15 +1,18 @@
 ﻿using System;
 using System.ClientModel;
 using System.Collections.Generic;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.HuggingFace;
 using OllamaSharp;
 using OpenAI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
 using GoogleApiVersion = Raven.Client.Documents.Operations.AI.GoogleAIVersion;
+using VertexApiVersion = Raven.Client.Documents.Operations.AI.VertexAIVersion;
 
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
@@ -29,6 +32,19 @@ public static class AiExtensions
                 return Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion.V1_Beta;
             default:
                 throw new ArgumentOutOfRangeException(nameof(googleApiVersion), googleApiVersion, null);
+        }
+    }
+    
+    public static Microsoft.SemanticKernel.Connectors.Google.VertexAIVersion ToVertexApiVersion(this VertexApiVersion vertexApiVersion)
+    {
+        switch (vertexApiVersion)
+        {
+            case VertexApiVersion.V1:
+                return Microsoft.SemanticKernel.Connectors.Google.VertexAIVersion.V1;
+            case VertexApiVersion.V1_Beta:
+                return Microsoft.SemanticKernel.Connectors.Google.VertexAIVersion.V1_Beta;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(vertexApiVersion), vertexApiVersion, null);
         }
     }
 
@@ -119,15 +135,43 @@ public static class AiExtensions
                 }
 
                 break;
+            
+            case AiConnectorType.Vertex:
+                var vertexSettings = connectionString.VertexSettings;
+                var tokenProvider = new VertexBearerTokenProvider(vertexSettings);
+                var projectId = vertexSettings.GetProjectId();
+
+                if (vertexSettings.AiVersion.HasValue)
+                {
+                    kernelBuilder.AddVertexAIEmbeddingGenerator(
+                        vertexSettings.Model,
+                        tokenProvider.BearerTokenProvider,
+                        vertexSettings.Location,
+                        projectId,
+                        vertexSettings.AiVersion.Value.ToVertexApiVersion());
+                }
+                else
+                {
+                    kernelBuilder.AddVertexAIEmbeddingGenerator(
+                        vertexSettings.Model,
+                        tokenProvider.BearerTokenProvider,
+                        vertexSettings.Location,
+                        projectId);
+                }
+
+                break;
 
             case AiConnectorType.HuggingFace:
                 var huggingFaceSettings = connectionString.HuggingFaceSettings;
-                var huggingFaceUri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
+                var endpoint = huggingFaceSettings.Endpoint;
+                
+                if (string.IsNullOrEmpty(endpoint))
+                    endpoint = $"https://router.huggingface.co/hf-inference/models/{huggingFaceSettings.Model}/pipeline/feature-extraction";
 
-                  kernelBuilder.AddHuggingFaceEmbeddingGenerator(
-                    huggingFaceSettings.Model,
-                    huggingFaceUri,
-                    huggingFaceSettings.ApiKey);
+                kernelBuilder.Services.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>(serviceKey: null, (serviceProvider, _) =>
+                    new HuggingFaceEmbeddingGenerator(
+                        new Uri(endpoint),
+                        apiKey: huggingFaceSettings.ApiKey));
                 break;
 
             case AiConnectorType.MistralAi:

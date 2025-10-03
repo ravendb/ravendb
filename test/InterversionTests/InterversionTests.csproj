@@ -26,7 +26,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />
-    <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
     <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>

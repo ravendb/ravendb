@@ -1,7 +1,7 @@
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import * as stories from "./StudioSearchWithDatabaseSwitcher.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { DefaultStory } = composeStories(stories);
 

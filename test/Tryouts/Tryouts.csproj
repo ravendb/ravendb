@@ -67,13 +67,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Corax\Corax.csproj" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
-    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
-    <ProjectReference Include="..\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
     <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
-    <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
 
   <Target Name="PlatformMessage" AfterTargets="Build">
