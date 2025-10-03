@@ -64,8 +64,8 @@ namespace Raven.Server.Web.System
 
             var djv = new DynamicJsonValue
             {
-                ["TotalConnections"] = connections?.Length ?? 0,
-                ["Connections"] = ToDynamic(connections)
+                [nameof(ActiveConnectionsResult.TotalConnections)] = connections?.Length ?? 0,
+                [nameof(ActiveConnectionsResult.Connections)] = ToDynamic(connections)
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -104,6 +104,12 @@ namespace Raven.Server.Web.System
 
                 return array;
             }
+        }
+        
+        public class ActiveConnectionsResult
+        {
+            public int TotalConnections;
+            public TcpConnectionInformation[] Connections;
         }
     }
 }

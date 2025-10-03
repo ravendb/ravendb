@@ -19,6 +19,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         public string OsName { get; set; }
         public OSType OsType { get; set; }
 
+        public TimeSpan? UpTime { get; set; }
         public override ClusterDashboardNotificationType Type => ClusterDashboardNotificationType.ClusterOverview;
         
         public override DynamicJsonValue ToJson()
@@ -34,6 +35,9 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
             json[nameof(OsName)] = OsName;
             json[nameof(OsType)] = OsType;
 
+            if (UpTime != null)
+                json[nameof(UpTime)] = UpTime;
+            
             return json;
         }
         

@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, indexDefinitionRaftIndex: null, token);
+            using var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, indexDefinitionRaftIndex: null, token);
 
             QueryRunner.AssertValidQuery(query, result);
 

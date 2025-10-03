@@ -60,6 +60,9 @@ abstract class backupConfiguration {
     locationInfo = ko.observableArray<Raven.Server.Web.Studio.SingleNodeDataDirectoryResult>([]);
     folderPathOptions = ko.observableArray<string>([]);
 
+    isSetMaxReadOpsPerSecond = ko.observable<boolean>(false);
+    maxReadOpsPerSecond = ko.observable<number>(null);
+
     spinners = {
         locationInfoLoading: ko.observable<boolean>(false)
     };

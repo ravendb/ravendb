@@ -1,12 +1,16 @@
 using System;
+using System.Diagnostics;
+using System.Runtime.Intrinsics;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Corax.Querying;
 
@@ -21,7 +25,10 @@ public unsafe struct TermsReader : IDisposable
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _cacheScope;
     private Page _lastPage;
     private readonly long _dictionaryId;
-
+    private ContextBoundNativeList<long> _pagesToPrefetch;
+    private ContextBoundNativeList<long> _termsLocation;
+    private ContextBoundNativeList<UnmanagedSpan> _rawTermsContainer;
+    
     public TermsReader(LowLevelTransaction llt, Tree entriesToTermsTree, Slice name)
     {
         _llt = llt;
@@ -33,12 +40,71 @@ public unsafe struct TermsReader : IDisposable
         _xKeyScope = new CompactKeyCacheScope(_llt);
         _yKeyScope = new CompactKeyCacheScope(_llt);
         _dictionaryId = CompactTree.GetDictionaryId(llt);
+        _pagesToPrefetch = new ContextBoundNativeList<long>(_llt.Allocator);
+        _termsLocation = new ContextBoundNativeList<long>(_llt.Allocator);
+        _rawTermsContainer = new ContextBoundNativeList<UnmanagedSpan>(_llt.Allocator);
     }
 
     public string GetTermFor(long id)
     {
         TryGetTermFor(id, out string s);
         return s;
+    }
+    
+    /// <summary>
+    /// Read terms in bulk. The result is not associated with ids by index.
+    /// Caution:
+    /// - the `termsSet` span is being invalidated between calls.
+    /// - the method modifies 'ids' (change the order) of the buffer (!)
+    /// - the order of the terms is based on sorted ids values
+    /// </summary>
+    public int GetAllTermsFromSet(Span<long> ids, out Span<UnmanagedSpan> termsSet)
+    {
+        const int pageSizeShift = 13;
+        Debug.Assert(1 << pageSizeShift == (long)Voron.Global.Constants.Storage.PageSize);
+        
+        // Process a maximum of 1024 IDs per iteration to limit memory allocations within the terms reader.
+        // Testing demonstrated that larger buffer sizes do not provide additional benefits.
+        var maxToProcess = Math.Min(ids.Length, 1024); 
+        ids = ids[..maxToProcess];
+
+        if (ids.IsEmpty)
+        {
+            termsSet = default;
+            return 0;
+        }
+        
+        _termsLocation.ResetAndEnsureCapacity(ids.Length);
+        _termsLocation.Count = ids.Length;
+        _lookup.GetFor(ids, _termsLocation.ToSpan(), -1L);
+        
+        var idX = 0;
+        _pagesToPrefetch.ResetAndEnsureCapacity(ids.Length);
+        _pagesToPrefetch.Count = ids.Length;
+        _termsLocation.CopyTo(_pagesToPrefetch.ToSpan(), startFrom: 0);
+        
+        if (AdvInstructionSet.IsAcceleratedVector128)
+        {
+            var N = Vector512<long>.Count;
+            for (; idX + N < _pagesToPrefetch.Count; idX += N)
+            {
+                var ptr = _pagesToPrefetch.RawItems + idX;
+                var containers = Vector512.Load(ptr);
+                Vector512.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
+            }
+        }
+
+        for (; idX < _pagesToPrefetch.Count; ++idX)
+            _pagesToPrefetch[idX] >>= pageSizeShift;
+        
+        _pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(_pagesToPrefetch.RawItems, _pagesToPrefetch.Count); 
+        _llt.DataPager.MaybePrefetchMemory(_pagesToPrefetch.GetEnumerator());
+        
+        _rawTermsContainer.ResetAndEnsureCapacity(ids.Length);
+        _rawTermsContainer.Count = ids.Length;
+        Container.GetAll(_llt, _termsLocation.ToSpan(), _rawTermsContainer.RawItems, -1L, _llt.PageLocator);
+        termsSet = _rawTermsContainer.ToSpan();
+        return maxToProcess;
     }
     
     public bool TryGetRawTermFor(long id, out UnmanagedSpan term)
@@ -151,6 +217,9 @@ public unsafe struct TermsReader : IDisposable
 
     public void Dispose()
     {
+        _pagesToPrefetch.Dispose();
+        _termsLocation.Dispose();
+        _rawTermsContainer.Dispose();
         _cacheScope.Dispose();
         _yKeyScope.Dispose();
         _xKeyScope .Dispose();

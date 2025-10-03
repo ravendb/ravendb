@@ -29,6 +29,11 @@ namespace Raven.Server.Config
     
     public abstract class ConfigurationEntryValue : IDynamicJson
     {
+        protected ConfigurationEntryValue()
+        {
+            // for deserialization
+        }
+        
         protected ConfigurationEntryValue(ConfigurationEntryMetadata metadata)
         {
             Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
@@ -86,7 +91,7 @@ namespace Raven.Server.Config
 
     public sealed class ConfigurationEntryDatabaseValue : ConfigurationEntryServerValue
     {
-        public ConfigurationEntryDatabaseValue(RavenConfiguration configuration, DatabaseRecord dbRecord, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
+        public ConfigurationEntryDatabaseValue(RavenConfiguration configuration, Dictionary<string, string> settings, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
             : base(configuration.ServerWideSettings, metadata, authenticationStatus)
         {
             if (Metadata.Scope == ConfigurationEntryScope.ServerWideOnly)
@@ -100,7 +105,7 @@ namespace Raven.Server.Config
                 var hasValue = configuration.DoesKeyExistInSettings(key);
                 var value = configuration.GetSetting(key);
 
-                if (dbRecord.Settings.TryGetValue(key, out var valueInDbRecord) == false)
+                if (settings.TryGetValue(key, out var valueInDbRecord) == false)
                 {
                     if (hasValue &&
                         string.Equals(key, RavenConfiguration.GetKey(x => x.Core.DataDirectory), StringComparison.OrdinalIgnoreCase) == false &&

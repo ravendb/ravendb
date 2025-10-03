@@ -14,6 +14,19 @@ namespace Voron.Debugging
         public long TempRecyclableJournalsInBytes { get; set; }
     }
 
+    public class EnvironmentStorageReport
+    {
+        public string BasePath { get; set; }
+        public List<DatabaseStorageComponentReport> Results { get; set; }
+    }
+
+    public class DatabaseStorageComponentReport
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public StorageReport Report { get; set; }
+    }
+    
     public sealed class StorageReport
     {
         public DataFileReport DataFile { get; set; }

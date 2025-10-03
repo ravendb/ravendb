@@ -192,11 +192,12 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxSearchWildcardAdjustment_61 = 61_003; // RavenDB-22937
             public const long CoraxUnicodeAnalyzers_62 = 62_004; // RavenDB-22999
             private const long LowerCasedReferences_62 = 62_005; // RavenDB-23100
+            public const long CoraxPagingBasedOnEntriesId_62 = 62_006; // RavenDB-23100
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = LowerCasedReferences_62;
+            public const long CurrentVersion = CoraxPagingBasedOnEntriesId_62;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {

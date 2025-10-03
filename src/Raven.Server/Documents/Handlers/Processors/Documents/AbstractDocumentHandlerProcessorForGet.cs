@@ -26,6 +26,7 @@ using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -58,146 +59,166 @@ internal abstract class
 
     public override ValueTask ExecuteAsync() => throw new NotImplementedException();
     
-    public async Task ExecuteAsTaskAsync()
+    public Task ExecuteAsTaskAsync([CanBeNull] List<ReadOnlyMemory<char>> ids = null, [CanBeNull] TOperationContext context = null)
     {
         // This processor is being disposed here. It means you can execute a command only once per processor instance. 
         // The reason behind this is to avoid awaiting execution in the handler and do it directly in the router code.
         // This reduces AsyncStateMachine size by avoiding creating state in the handler code.
-        using (this)
-        using (ContextPool.AllocateOperationContext(out TOperationContext context))
+        using (var @thisScope = this.AllowBorrow())
+            
+        // For the context, allocate only if it was not previously allocated by the caller.
+        // If not provided by the caller, we create one and wrap it in borrowable to pass down to async path, if needed.
+        // If provided, we don't scope it cause the caller owns it.
         {
-            var sw = Stopwatch.StartNew();
-
-            var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
-
-            if (_method == HttpMethod.Get)
+            using (DisposableBorrow<IDisposable> ctxScope = context == null ? ContextPool.AllocateOperationContext(out context).AllowBorrow() : default)
             {
-                // no-op - this was parses via QueryStringParameters few lines up
-            }
-            else if (_method == HttpMethod.Post)
-                parameters.Ids = await GetIdsFromRequestBodyAsync(context, RequestHandler);
-            else
-                throw new NotSupportedException($"Unhandled method type: {_method}");
+                var sw = Stopwatch.StartNew();
 
-            if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
-                RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
+                var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
 
-            (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
-            int pageSize;
-            string actionName;
-
-            if (parameters.Ids is { Count: > 0 })
-            {
-                pageSize = parameters.Ids.Count;
-                actionName = nameof(GetDocumentsByIdAsync);
-
-                var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-
-                // includes
-                var revisions = GetRevisionsToInclude(parameters);
-                var timeSeries = GetTimeSeriesToInclude(parameters);
-
-                var getDocumentsByIds = GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
-                responseWriteStats = getDocumentsByIds.IsCompletedSuccessfully
-                    ? getDocumentsByIds.Result
-                    : await getDocumentsByIds;
-            }
-            else
-            {
-                pageSize = RequestHandler.GetPageSize();
-                actionName = nameof(GetDocumentsAsync);
-
-                var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-                var etag = RequestHandler.GetLongQueryString("etag", false);
-
-                var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
-
-                StartsWithParams startsWithParams = null;
-
-                if (isStartsWith)
+                if (_method == HttpMethod.Get)
                 {
-                    startsWithParams = new StartsWithParams
+                    // no-op - this was parses via QueryStringParameters few lines up
+                }
+                else if (_method == HttpMethod.Post)
+                    parameters.Ids = ids;
+                else
+                    throw new NotSupportedException($"Unhandled method type: {_method}");
+
+                if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
+                    RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
+
+                int pageSize;
+                string actionName;
+
+                ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> getDocumentsAsync;
+                if (parameters.Ids is { Count: > 0 })
+                {
+                    pageSize = parameters.Ids.Count;
+                    actionName = nameof(GetDocumentsByIdAsync);
+
+                    var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+
+                    // includes
+                    var revisions = GetRevisionsToInclude(parameters);
+                    var timeSeries = GetTimeSeriesToInclude(parameters);
+
+                    getDocumentsAsync = GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
+                }
+                else
+                {
+                    pageSize = RequestHandler.GetPageSize();
+                    actionName = nameof(GetDocumentsAsync);
+
+                    var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+                    var etag = RequestHandler.GetLongQueryString("etag", false);
+
+                    var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
+
+                    StartsWithParams startsWithParams = null;
+
+                    if (isStartsWith)
                     {
-                        IdPrefix = HttpContext.Request.Query["startsWith"],
-                        Matches = HttpContext.Request.Query["matches"],
-                        Exclude = HttpContext.Request.Query["exclude"],
-                        StartAfterId = HttpContext.Request.Query["startAfter"],
-                    };
+                        startsWithParams = new StartsWithParams
+                        {
+                            IdPrefix = HttpContext.Request.Query["startsWith"],
+                            Matches = HttpContext.Request.Query["matches"],
+                            Exclude = HttpContext.Request.Query["exclude"],
+                            StartAfterId = HttpContext.Request.Query["startAfter"],
+                        };
+                    }
+
+                    getDocumentsAsync = GetDocumentsAsync(context, etag, startsWithParams, parameters.MetadataOnly, changeVector);
                 }
 
-                var getDocumentsAsync = GetDocumentsAsync(context, etag, startsWithParams, parameters.MetadataOnly, changeVector);
-                
-                
-                responseWriteStats = getDocumentsAsync.IsCompletedSuccessfully 
-                    ? getDocumentsAsync.Result 
-                    : await getDocumentsAsync;
-            }
+                if (getDocumentsAsync.IsCompletedSuccessfully)
+                {
+                    HandleGetDocumentResult(getDocumentsAsync.Result, parameters, actionName, pageSize, sw);
+                    return Task.CompletedTask;
+                }
+            
+                // Slow async path requires careful scope considerations:
+                // 1. @thisScope is always created, and we need to borrow it for the async method
+                // 2. ctxScope leverages the fact that the Borrow on the default returns null so it's a null safe.
+                return HandleGetDocumentResultAsync(@thisScope.Borrow(), ctxScope.Borrow(), getDocumentsAsync, parameters, actionName, pageSize, sw);
+            
+                static string IdsToString(List<ReadOnlyMemory<char>> ids)
+                {
+                    if (ids == null || ids.Count == 0)
+                        return string.Empty;
 
-            if (responseWriteStats != NoResults)
+                    var sb = new StringBuilder();
+                    for (int i = 0; i < ids.Count; i++)
+                    {
+                        if (i != 0)
+                            sb.Append(",");
+
+                        ReadOnlyMemory<char> id = ids[i];
+                        sb.Append(id);
+                    }
+
+                    return sb.ToString();
+                }
+            }
+        }
+    }
+
+    private async Task HandleGetDocumentResultAsync(AbstractDocumentHandlerProcessorForGet<TRequestHandler, TOperationContext, TDocumentType> instance, [CanBeNull] IDisposable contextScope,
+        ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> responseWriteStats,
+        QueryStringParameters parameters, string actionName, int pageSize,
+        Stopwatch sw)
+    {
+        using (instance)
+        using (contextScope)
+        {
+            HandleGetDocumentResult(await responseWriteStats, parameters, actionName, pageSize, sw);    
+        }
+    }
+    
+    private void HandleGetDocumentResult((long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats, QueryStringParameters parameters, string actionName, int pageSize,
+        Stopwatch sw)
+    {
+        if (responseWriteStats != NoResults)
+        {
+            if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
             {
-                if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
-                {
-                    string details;
+                string details = parameters.Ids is { Count: > 0 } ? CreatePerformanceHintDetails(parameters) : HttpContext.Request.QueryString.Value;
 
-                    if (parameters.Ids is { Count: > 0 })
-                        details = CreatePerformanceHintDetails();
-                    else
-                        details = HttpContext.Request.QueryString.Value;
-
-                    RequestHandler.AddPagingPerformanceHint(
-                        PagingOperationType.Documents,
-                        actionName,
-                        details,
-                        responseWriteStats.NumberOfResults,
-                        pageSize,
-                        sw.ElapsedMilliseconds,
-                        responseWriteStats.TotalDocumentsSizeInBytes);
-                }
+                RequestHandler.AddPagingPerformanceHint(
+                    PagingOperationType.Documents,
+                    actionName,
+                    details,
+                    responseWriteStats.NumberOfResults,
+                    pageSize,
+                    sw.ElapsedMilliseconds,
+                    responseWriteStats.TotalDocumentsSizeInBytes);
             }
+        }
 
-            string CreatePerformanceHintDetails()
+        static string CreatePerformanceHintDetails(QueryStringParameters parameters)
+        {
+            var sb = new StringBuilder();
+            var addedIdsCount = 0;
+            var first = true;
+
+            while (sb.Length < 1024 && addedIdsCount < parameters.Ids.Count)
             {
-                var sb = new StringBuilder();
-                var addedIdsCount = 0;
-                var first = true;
+                if (first == false)
+                    sb.Append(", ");
+                else
+                    first = false;
 
-                while (sb.Length < 1024 && addedIdsCount < parameters.Ids.Count)
-                {
-                    if (first == false)
-                        sb.Append(", ");
-                    else
-                        first = false;
-
-                    sb.Append($"{parameters.Ids[addedIdsCount++]}");
-                }
-
-                var idsLeftCount = parameters.Ids.Count - addedIdsCount;
-
-                if (idsLeftCount > 0)
-                {
-                    sb.Append($" ... (and {idsLeftCount} more)");
-                }
-
-                return sb.ToString();
+                sb.Append($"{parameters.Ids[addedIdsCount++]}");
             }
 
-            static string IdsToString(List<ReadOnlyMemory<char>> ids)
+            var idsLeftCount = parameters.Ids.Count - addedIdsCount;
+
+            if (idsLeftCount > 0)
             {
-                if (ids == null || ids.Count == 0)
-                    return string.Empty;
-
-                var sb = new StringBuilder();
-                for (int i = 0; i < ids.Count; i++)
-                {
-                    if (i != 0)
-                        sb.Append(",");
-
-                    ReadOnlyMemory<char> id = ids[i];
-                    sb.Append(id.ToString());
-                }
-
-                return sb.ToString();
+                sb.Append($" ... (and {idsLeftCount} more)");
             }
+
+            return sb.ToString();
         }
     }
 
@@ -503,7 +524,7 @@ internal abstract class
         }
     }
 
-    private static async ValueTask<List<ReadOnlyMemory<char>>> GetIdsFromRequestBodyAsync(TOperationContext context, TRequestHandler requestHandler)
+    public static async ValueTask<List<ReadOnlyMemory<char>>> GetIdsFromRequestBodyAsync(TOperationContext context, TRequestHandler requestHandler)
     {
         var docs = await context.ReadForMemoryAsync(requestHandler.RequestBodyStream(), "docs");
         if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)

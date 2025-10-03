@@ -257,6 +257,10 @@ export class TasksStubs {
                 MinimumBackupAgeToKeep: "1.00:00:00",
             },
             PinToMentorNode: false,
+            FullBackupFrequency: "0 2 * * 0",
+            IncrementalBackupFrequency: "0 2 * * *",
+            BackupUploadMode: "Default",
+            HasCloudBackup: false,
         };
     }
 

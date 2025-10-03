@@ -153,7 +153,7 @@ namespace Raven.Server.Web.System
                     {
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
-                            var cert = httpContext.Connection.ClientCertificate;
+                            var cert = RavenServer.GetCertificateForAuthorization(httpContext.Connection.ClientCertificate);
 
                             if (serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _))
                                 return true;

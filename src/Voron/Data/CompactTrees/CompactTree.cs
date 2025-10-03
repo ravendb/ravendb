@@ -335,13 +335,19 @@ public sealed partial class CompactTree : IPrepareForCommit
     public long Add(CompactKey key, long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
-        AssertValueAndKeySize(key, value);
-
         var lookup = new CompactKeyLookup(key);
         CompactTreeDumper.WriteAddition(this, ref lookup, value);
         _inner.Add(ref lookup, value);
 
         return lookup.ContainerId;
+    }
+    
+    public long Add(CompactKeyLookup key, long value)
+    {
+        Debug.Assert(key.Key.Dictionary == _inner.State.DictionaryId);
+        CompactTreeDumper.WriteAddition(this, ref key, value);
+        _inner.Add(ref key, value);
+        return key.ContainerId;
     }
 
     public void PrepareForCommit()
@@ -349,16 +355,6 @@ public sealed partial class CompactTree : IPrepareForCommit
         _inner.PrepareForCommit();
         CompactTreeDumper.WriteCommit(this);
     }
-
-    private void AssertValueAndKeySize(CompactKey key, long value)
-    {
-        if (value < 0)
-            throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
-        if (key.MaxLength > Constants.CompactTree.MaximumKeySize)
-            throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key.Decoded()),
-                $"key must be less than {Constants.CompactTree.MaximumKeySize} bytes in size");
-    }
-
 
     public static unsafe CompactTree InternalCreate(Tree parent, Slice name)
     {

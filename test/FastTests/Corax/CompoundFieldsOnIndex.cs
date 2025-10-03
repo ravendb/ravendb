@@ -132,12 +132,12 @@ public class CompoundFieldsOnIndex : RavenTestBase
     
     private async Task CanOptimizeToSkipSorting<TIndex>()  where TIndex : AbstractIndexCreationTask, new()
     {
-        await TestQueryBuilder<MultiTermMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
+        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Location, "Hadera")
             .OrderBy(x => x.Name)
             .GetIndexQuery()
         );
-        await TestQueryBuilder<MultiTermMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
+        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Name, "Corax")
             .OrderBy(x => x.Birthday)
             .GetIndexQuery()

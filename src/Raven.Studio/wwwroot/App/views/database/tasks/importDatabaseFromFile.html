@@ -219,6 +219,15 @@
                         <div data-bind="with: databaseModel">
                             <div data-bind="compose: $root.smugglerDatabaseRecordView"></div>
                         </div>
+                        <div class="toggle">
+                            <input id="isSetMaxReadOpsPerSecond" type="checkbox" data-bind="checked: isSetMaxReadOpsPerSecond" />
+                            <label for="isSetMaxReadOpsPerSecond" class="margin-right margin-right-sm">Set Max Read Operations Per Second </label>
+                        </div>
+                        <div data-bind="collapse: isSetMaxReadOpsPerSecond">
+                            <div class="input-group margin-right">
+                                <input id="maxReadOpsPerSecond" type="number" min="1" class="form-control input-border" data-bind="numericInput: maxReadOpsPerSecond" placeholder="Max read operations per second" />
+                            </div>
+                        </div>
                     </div>
                     <div class="flex-horizontal" data-bind="with: $root">
                         <div class="btn-group">

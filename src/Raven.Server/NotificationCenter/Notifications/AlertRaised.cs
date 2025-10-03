@@ -7,6 +7,11 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public sealed class AlertRaised : Notification
     {
+        public AlertRaised()
+        {
+            // for deserialization
+        }
+        
         private AlertRaised(string database, DateTime? createdAt = null) 
             : base(NotificationType.AlertRaised, database, createdAt)
         {

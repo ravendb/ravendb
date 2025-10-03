@@ -33,6 +33,7 @@ namespace Corax.Querying;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
+    internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
@@ -53,7 +54,42 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public bool IsAccelerated => Vector256.IsHardwareAccelerated && !ForceNonAccelerated;
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+
+    private EntryIdPaginationSupportStatus? _entryIdPaginationSupportStatus;
+
+    private long? _lastEntryId;
+
     
+    public long LastEntryId
+    {
+        get
+        {
+            if (_lastEntryId is null)
+            {
+                _lastEntryId = _metadataTree?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
+            }
+
+            return _lastEntryId.Value;
+        }
+    }
+
+    public EntryIdPaginationSupportStatus EntryIdPaginationSupportStatus
+    {
+        get
+        {
+            if (_entryIdPaginationSupportStatus is null)
+            {
+
+                var persistedConfiguration = _metadataTree?.ReadInt64(Constants.IndexWriter.PaginationBasedOnEntryIdSupportStatus);
+                _entryIdPaginationSupportStatus = persistedConfiguration.HasValue
+                    ? (EntryIdPaginationSupportStatus)persistedConfiguration.Value
+                    : EntryIdPaginationSupportStatus.Unknown;
+            }
+
+            return _entryIdPaginationSupportStatus.Value;
+        }
+    }
+
     public ByteStringContext Allocator => _transaction.Allocator;
 
     internal Transaction Transaction => _transaction;
@@ -554,6 +590,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
     }
+
+    public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner, bool forceHashset = false) 
+        where TInner : IQueryMatch 
+        => new(this, inner, forceHashset);
     
     private void InitializeSpecialTermsMarkers()
     {

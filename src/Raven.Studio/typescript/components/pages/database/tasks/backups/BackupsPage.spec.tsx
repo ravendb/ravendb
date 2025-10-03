@@ -2,7 +2,7 @@
 import React from "react";
 
 import * as stories from "./BackupsPage.stories";
-import { composeStories, composeStory } from "@storybook/react";
+import { composeStories, composeStory } from "@storybook/react-webpack5";
 
 const { EmptyView, FullView } = composeStories(stories);
 

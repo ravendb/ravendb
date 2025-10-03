@@ -658,7 +658,11 @@ public sealed partial class ClusterStateMachine
 
         var clusterSubscriptionsCounts =
             GetDatabaseNames(context)
-                .Sum(databaseName => GetSubscriptionsCountForDatabase(context.Allocator, items, databaseName, subscriptionsNamesPerDatabase[databaseName]));
+                .Sum(databaseName =>
+                {
+                    subscriptionsNamesPerDatabase.TryGetValue(databaseName, out var toExclude);
+                    return GetSubscriptionsCountForDatabase(context.Allocator, items, databaseName, toExclude);
+                });
 
         var subscriptionCommandsCount = subscriptionsNamesPerDatabase.Sum(x => x.Value.Count);
         if (clusterSubscriptionsCounts + subscriptionCommandsCount > maxSubscriptionsPerCluster == false)

@@ -1,6 +1,6 @@
 // This component is only displayed in the storybook. To modify the actual splash screen, make changes in wwwroot/index.html
 
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import { SplashScreen } from "./SplashScreen";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";

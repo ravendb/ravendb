@@ -44,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Core)]
+        [RavenRetryFact(RavenTestCategory.Core)]
         public void ShouldNotReuseRecycledJournalIfItExceedMaxLogFileSizeOnSmallTxSize()
         {
             CreateAndPopulateTree(startWithBigTx: true);

@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization
@@ -16,6 +17,8 @@ namespace Raven.Client.Json.Serialization
         IJsonSerializer CreateDeserializer(CreateDeserializerOptions options = null);
 
         IBlittableJsonConverter DefaultConverter { get; }
+
+        ISubscriptionsBlittableJsonConverter CreateConverter<T>(SubscriptionBatch<T> batch);
 
         ISessionBlittableJsonConverter CreateConverter(InMemoryDocumentSessionOperations session);
 

@@ -16,12 +16,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public sealed class TransactionDebugHandler : DatabaseRequestHandler
     {
-        public sealed class TransactionInfo
+        internal sealed class TransactionInfo
         {
             public string Path;
-            public List<LowLevelTransaction> Information;
+            public List<TxInfoResult> Information;
         }
 
+        public const string TotalTimeMSecondsSuffix = "mSecs";
+        
         [RavenAction("/databases/*/admin/debug/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task TxInfo()
         {
@@ -32,8 +34,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var txInfo = new TransactionInfo
                 {
                     Path = env.Environment.Options.BasePath.FullPath,
-                    Information = env.Environment.ActiveTransactions.AllTransactionsInstances
+                    Information = env.Environment.ActiveTransactions.AllTransactionsInstances.Select(ToTxInfoResult).ToList()
                 };
+                
                 results.Add(txInfo);
             }
 
@@ -45,6 +48,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["tx-info"] = ToJson(results)
                 });
             }
+        }
+
+        internal static TxInfoResult ToTxInfoResult(LowLevelTransaction lowLevelTransaction)
+        {
+            return new TxInfoResult
+            {
+                TransactionId = lowLevelTransaction.Id,
+                ThreadId = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
+                ThreadName = lowLevelTransaction.CurrentTransactionHolder?.Name,
+                CallerName = lowLevelTransaction.CallerName,
+                StartTime = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
+                TotalTime = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} {TotalTimeMSecondsSuffix}",
+                FlushInProgressLockTaken = lowLevelTransaction.FlushInProgressLockTaken,
+                Flags = lowLevelTransaction.Flags,
+                IsCloned = lowLevelTransaction.IsCloned,
+                NumberOfModifiedPages = lowLevelTransaction.NumberOfModifiedPages,
+                Committed = lowLevelTransaction.Committed,
+                TotalAllocatedSize = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
+                DecompressedBufferSize = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
+                TotalEncryptionBufferSize = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
+                IsDisposed = lowLevelTransaction.IsDisposed,
+            };
         }
 
         [RavenAction("/databases/*/admin/debug/cluster/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
@@ -68,37 +93,37 @@ namespace Raven.Server.Documents.Handlers.Debugging
             };
         }
 
-        private static DynamicJsonValue ToJson(LowLevelTransaction lowLevelTransaction)
+        private static DynamicJsonValue ToJson(TxInfoResult txInfo)
         {
             return new DynamicJsonValue
             {
-                [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.Id,
-                [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
-                [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
-                [nameof(TxInfoResult.CallerName)] = lowLevelTransaction.CallerName,
-                [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
-                [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
-                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
-                [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
-                [nameof(TxInfoResult.IsCloned)] = lowLevelTransaction.IsCloned,
-                [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
-                [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed,
-                [nameof(TxInfoResult.TotalAllocatedSize)] = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
-                [nameof(TxInfoResult.DecompressedBufferSize)] = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
-                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
-                [nameof(TxInfoResult.IsDisposed)] = lowLevelTransaction.IsDisposed,
+                [nameof(TxInfoResult.TransactionId)] = txInfo.TransactionId,
+                [nameof(TxInfoResult.ThreadId)] = txInfo.ThreadId,
+                [nameof(TxInfoResult.ThreadName)] = txInfo.ThreadName,
+                [nameof(TxInfoResult.CallerName)] = txInfo.CallerName,
+                [nameof(TxInfoResult.StartTime)] = txInfo.StartTime,
+                [nameof(TxInfoResult.TotalTime)] = txInfo.TotalTime,
+                [nameof(TxInfoResult.FlushInProgressLockTaken)] = txInfo.FlushInProgressLockTaken,
+                [nameof(TxInfoResult.Flags)] = txInfo.Flags,
+                [nameof(TxInfoResult.IsCloned)] = txInfo.IsCloned,
+                [nameof(TxInfoResult.NumberOfModifiedPages)] = txInfo.NumberOfModifiedPages,
+                [nameof(TxInfoResult.Committed)] = txInfo.Committed,
+                [nameof(TxInfoResult.TotalAllocatedSize)] = txInfo.TotalAllocatedSize,
+                [nameof(TxInfoResult.DecompressedBufferSize)] = txInfo.DecompressedBufferSize,
+                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = txInfo.TotalEncryptionBufferSize,
+                [nameof(TxInfoResult.IsDisposed)] = txInfo.IsDisposed,
             };
         }
     }
 
     internal sealed class TxInfoResult
     {
-        public int TransactionId;
-        public int ThreadId;
+        public long TransactionId;
+        public int? ThreadId;
         public string ThreadName;
         public string CallerName;
-        public int StartTime;
-        public int TotalTime;
+        public string StartTime;
+        public string TotalTime;
         public bool FlushInProgressLockTaken;
         public TransactionFlags Flags;
         public bool IsCloned;

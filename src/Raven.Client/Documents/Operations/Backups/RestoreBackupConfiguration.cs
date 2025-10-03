@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(EncryptionKey)] = EncryptionKey,
                 [nameof(DisableOngoingTasks)] = DisableOngoingTasks,
                 [nameof(SkipIndexes)] = SkipIndexes,
-                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
+                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
                 [nameof(Type)] = Type,
                 [nameof(ShardRestoreSettings)] = ShardRestoreSettings?.ToJson(),
                 [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond
@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(DataDirectory)] = DataDirectory,
                 [nameof(DisableOngoingTasks)] = DisableOngoingTasks,
                 [nameof(SkipIndexes)] = SkipIndexes,
-                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
+                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToAuditJson(),
                 [nameof(Type)] = Type,
                 [nameof(MaxReadOpsPerSecond)] = MaxReadOpsPerSecond
             };

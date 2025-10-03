@@ -16,7 +16,7 @@ using Voron.Impl.Backup;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.PeriodicBackup;
+namespace StressTests.Server.Documents.PeriodicBackup;
 
 public class MaxReadOpsPerSecOptionTests : ClusterTestBase
 {

@@ -1,5 +1,5 @@
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import AddNewOngoingTask from "../AddNewOngoingTask";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";

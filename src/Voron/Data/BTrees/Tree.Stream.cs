@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
-using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron.Data.Fixed;
@@ -54,10 +53,6 @@ namespace Voron.Data.BTrees
         
         private struct StreamToPageWriter
         {
-            private static readonly int BufferSize = PlatformDetails.Is32Bits == false
-                ? 512 * Constants.Size.Kilobyte
-                : 16 * Constants.Size.Kilobyte;
-            
             private int _chunkNumber;
 
             private byte* _writePos;
@@ -84,13 +79,14 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                using (_parent._tx.Allocator.Allocate(BufferSize, out Span<byte> localBuffer))
                 {
                     AllocateNextPage();
 
                     ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
 
-                    fixed (byte* pBuffer = localBuffer)
+                    var buffer = stream != Stream.Null ? _parent.Llt.Transaction.StreamBuffer : StreamBufferAllocator.Buffer.Null;
+                    var localBuffer = buffer.AsSpan();
+
                     {
                         while (true)
                         {
@@ -101,7 +97,7 @@ namespace Voron.Data.BTrees
                             var toWrite = 0L;
                             while (true)
                             {
-                                toWrite += WriteBufferToPage(pBuffer + toWrite, read - toWrite);
+                                toWrite += WriteBufferToPage(buffer.Pointer + toWrite, read - toWrite);
                                 if (toWrite == read)
                                     break;
 

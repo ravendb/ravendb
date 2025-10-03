@@ -143,7 +143,7 @@ public static class SettingsZipFileHelper
                     }
                 }
 
-                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath ?? certificateFileName;
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = Path.GetFileName(certPath) ?? certificateFileName;
                 if (string.IsNullOrEmpty(parameters.SetupInfo.Password) == false)
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = parameters.SetupInfo.Password;
 

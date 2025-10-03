@@ -1246,6 +1246,7 @@ more responsive application.
             {
                 foreach (var entity in DocumentsByEntity)
                 {
+                    UpdateMetadataModifications(entity.Value.MetadataInstance, entity.Value.Metadata);
                     using (var document = JsonConverter.ToBlittable(entity.Key, entity.Value))
                     {
                         if (EntityChanged(document, entity.Value, null))
@@ -1271,6 +1272,8 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
                 return false;
+
+            UpdateMetadataModifications(documentInfo.MetadataInstance, documentInfo.Metadata);
             using (var document = JsonConverter.ToBlittable(entity, documentInfo))
                 return EntityChanged(document, documentInfo, null);
         }

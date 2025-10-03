@@ -1,6 +1,6 @@
 import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import React from "react";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./IndexCleanup.stories";
 
 const { EmptyView, CleanupSuggestions, LicenseRestricted } = composeStories(stories);
