@@ -57,7 +57,7 @@ namespace Raven.Server.Utils
         [DoesNotReturn]
         public static void ThrowMediaIsWriteProtected(Exception inner)
         {
-            throw new IOException($"{inner.Message}. {Sparrow.Server.Platform.PalHelper.ErrorMediaIsWriteProtectedHintMessage}", inner);
+            throw new IOException($"{inner.Message}. {Sparrow.Server.Platform.PalHelper.ErrorCodes.Windows.ErrorMediaIsWriteProtectedHintMessage}", inner);
         }
 
         [DoesNotReturn]
