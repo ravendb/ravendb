@@ -25,6 +25,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
@@ -1175,14 +1176,37 @@ namespace Raven.Server.Documents.Patch
                     }
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk, removeSpecialMetadata: true);
 
-                    var putResult = _database.DocumentsStorage.Put(
-                        _docsCtx,
-                        id,
-                        _docsCtx.GetLazyString(changeVector),
-                        reader,
-                        //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
-                        nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
-                    );
+                    DocumentsStorage.PutOperationResults putResult;
+
+                    while (true)
+                    {
+                        try
+                        {
+                            putResult = _database.DocumentsStorage.Put(
+                                _docsCtx,
+                                id,
+                                _docsCtx.GetLazyString(changeVector),
+                                reader,
+                                //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
+                                nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
+                            );
+
+                            break;
+                        }
+                        catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                        {
+                            // RavenDB-21091 / RavenDB-10581 - If we have a concurrency error on "doc-id/"
+                            // this means that we have existing values under the current etag
+                            // we'll generate a new (random) id for them.
+                            if (id?.EndsWith(_database.IdentityPartsSeparator) == true)
+                            {
+                                id = MergedPutCommand.GenerateNonConflictingId(_database, id);
+                                continue;
+                            }
+
+                            throw;
+                        }
+                    }
 
                     _database.HugeDocuments.AddIfDocIsHuge(putResult.Id, reader.Size);
 
