@@ -297,12 +297,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
         {
-            var schemaValidators = Current.Index._schemaValidatorCache;
-            if (schemaValidators == null)
+            var schemaValidator = Current.Index._schemaValidator.validator;
+            if (schemaValidator == null)
                 throw new InvalidOperationException("Schema validation was not configured for this index.");
 
-            var collection = _documentsStorage.ExtractCollectionName(QueryContext.Documents, doc);
-            return schemaValidators.Validate(QueryContext.Documents, collection.Name, doc, errorBuilder);
+            if(Current.Source is not DynamicBlittableJson dynamicBlittableJson || !ReferenceEquals(dynamicBlittableJson.BlittableJson, doc))
+                throw new InvalidOperationException("Schema validation can only be performed on the source document.");
+            
+            return schemaValidator.Validate(doc, errorBuilder);
         }
 
         private Slice GetIdSlice(LazyStringValue id)

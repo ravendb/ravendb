@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Operations.SchemaValidation;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -50,14 +48,11 @@ public class SchemaValidationIndexingTests : RavenTestBase
                     "schema-validation-configuration").ToString();
         }
 
-        var indexDefinition = new IndexDefinition()
+        var indexDefinition = new IndexDefinition
         {
             Name = "MyCounterIndex",
             Maps = { map },
-            SchemaValidationConfiguration = new SchemaValidationConfiguration
-            {
-                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition> { { "TestObjs", new SchemaDefinition { Schema = schemaDefinition } } }
-            }
+            SchemaValidation = schemaDefinition
         };
         await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
 
@@ -103,14 +98,11 @@ public class SchemaValidationIndexingTests : RavenTestBase
                     "schema-validation-configuration").ToString();
         }
 
-        var indexDefinition = new IndexDefinition()
+        var indexDefinition = new IndexDefinition
         {
             Name = "MyCounterIndex",
             Maps = { map },
-            SchemaValidationConfiguration = new SchemaValidationConfiguration
-            {
-                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition> { { "TestObjs", new SchemaDefinition { Schema = schemaDefinition } } }
-            }
+            SchemaValidation = schemaDefinition
         };
         await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
 
@@ -154,14 +146,11 @@ public class SchemaValidationIndexingTests : RavenTestBase
                     "schema-validation-configuration").ToString();
         }
 
-        var indexDefinition = new IndexDefinition()
+        var indexDefinition = new IndexDefinition
         {
             Name = "MyCounterIndex",
             Maps = { map },
-            SchemaValidationConfiguration = new SchemaValidationConfiguration
-            {
-                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition> { { "TestObjs", new SchemaDefinition { Schema = schemaDefinition } } }
-            },
+            SchemaValidation = schemaDefinition,
             Fields = new Dictionary<string, IndexFieldOptions>{{"Error", new IndexFieldOptions{Storage = FieldStorage.Yes}}}
         };
         await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));

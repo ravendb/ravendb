@@ -6,6 +6,7 @@ using System.Linq;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SchemaValidation;
 
@@ -219,5 +220,37 @@ public static class SchemaValidationHelper
             throw new InvalidOperationException($"'{rule}' must to convertable to {nameof(T)} here. Should not happen");
 
         return true;
+    }
+    
+    public static void EnsureMetadataIsValid(JsonOperationContext context, ref BlittableJsonReaderObject blittable)
+    {
+        if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) == false 
+            || additionalProperties is true)
+            //If additional properties are allowed, no problematic restriction on metadata is can be.
+            return;
+
+        if (blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties)
+            && properties.Contains(Client.Constants.Documents.Metadata.Key))
+            //If explicit restriction on metadata is configured we don't verify it in this point.
+            return;
+        
+        
+        object newProperties;
+        if (properties == null)
+        {
+            newProperties = new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
+        }
+        else
+        {
+            properties.Modifications = new DynamicJsonValue(properties) { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
+            newProperties = properties;
+        }
+        
+        blittable.Modifications = new DynamicJsonValue(blittable) { [SchemaValidatorConstants.Properties] = newProperties };
+
+        using (_ = blittable)
+        {
+            blittable = context.ReadObject(blittable, "modified-schema-validation");
+        }
     }
 }

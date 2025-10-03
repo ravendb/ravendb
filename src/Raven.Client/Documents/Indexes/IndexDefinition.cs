@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Indexes
 
         public virtual ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
         
-        public SchemaValidationConfiguration SchemaValidationConfiguration { get; set; }
+        public string SchemaValidation { get; set; }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
@@ -226,7 +226,9 @@ namespace Raven.Client.Documents.Indexes
                     }
                 }
             }
-            
+
+            if (string.Equals(SchemaValidation, other.SchemaValidation) == false)
+                result |= IndexDefinitionCompareDifferences.SchemaValidationConfiguration;
             
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
             {
@@ -554,7 +556,7 @@ namespace Raven.Client.Documents.Indexes
 
             definition.LockMode = LockMode;
             definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
-            definition.SchemaValidationConfiguration = SchemaValidationConfiguration;
+            definition.SchemaValidation = SchemaValidation;
             definition.Fields = fields;
             definition.Name = Name;
             definition.Priority = Priority;
@@ -641,7 +643,8 @@ namespace Raven.Client.Documents.Indexes
         DeploymentMode = 1 << 12,
         CompoundFields = 1 << 13,
         ArchivedDataProcessingBehavior = 1 << 14,
+        SchemaValidationConfiguration = 1 << 15,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior | SchemaValidationConfiguration,
     }
 }

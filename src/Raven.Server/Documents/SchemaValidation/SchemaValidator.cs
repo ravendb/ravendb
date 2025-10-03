@@ -13,9 +13,6 @@ public class SchemaValidator
     public readonly bool Disabled;
 
     private ElementSchemaRuleValidator _root;
-    //The context is only written during the initialization phase. During validation, it is used for reading only and can be used in parallel.
-    private readonly SingleUseFlag _disposing = new SingleUseFlag();
-    
     public string SchemaDefinition { get; set; }
 
     public SchemaValidator(bool disabled = false)
@@ -23,7 +20,7 @@ public class SchemaValidator
         Disabled = disabled;
     }
     
-    // TODO: add a comment about the blittable lifetime
+    // The caller (holder) is responsible for keeping the underlying Blittable / context alive (and disposing it) for as long as this SchemaValidator is used.
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {
         var refSchemas = new RefSchemas();
@@ -34,8 +31,6 @@ public class SchemaValidator
 
     public bool Validate(BlittableJsonReaderObject obj, ErrorBuilder errorBuilder)
     {
-        ObjectDisposedException.ThrowIf(_disposing.IsRaised(), nameof(SchemaValidator));
-
         return _root.Validate(obj, errorBuilder);
     }
 }

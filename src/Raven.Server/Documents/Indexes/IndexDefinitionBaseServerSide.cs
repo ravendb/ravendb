@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes
         // fieldName, string
         public Dictionary<string, string> VectorFieldToEmbeddingGenerationTask;
 
-        public SchemaValidationConfiguration SchemaValidationConfiguration { get; protected set; }
+        public string SchemaValidation { get; protected set; }
         
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {

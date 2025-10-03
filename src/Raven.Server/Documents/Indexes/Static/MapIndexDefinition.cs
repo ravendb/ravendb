@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _hasDynamicFields = hasDynamicFields;
             _hasCompareExchange = hasCompareExchange;
             IndexDefinition = definition;
-            SchemaValidationConfiguration = definition.SchemaValidationConfiguration;
+            SchemaValidation = definition.SchemaValidation;
         }
 
         public override bool HasDynamicFields => _hasDynamicFields;

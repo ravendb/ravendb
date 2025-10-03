@@ -1500,8 +1500,8 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.SchemaValidationConfiguration));
-            writer.WriteSchemaValidationConfiguration(indexDefinition.SchemaValidationConfiguration);
+            writer.WritePropertyName(nameof(indexDefinition.SchemaValidation));
+            writer.WriteString(indexDefinition.SchemaValidation);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Priority));

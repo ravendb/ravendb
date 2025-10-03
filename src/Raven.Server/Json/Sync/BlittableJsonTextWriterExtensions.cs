@@ -34,8 +34,8 @@ namespace Raven.Server.Json.Sync
                 writer.WriteNull();
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.SchemaValidationConfiguration));
-            writer.WriteSchemaValidationConfiguration(indexDefinition.SchemaValidationConfiguration);
+            writer.WritePropertyName(nameof(indexDefinition.SchemaValidation));
+            writer.WriteString(indexDefinition.SchemaValidation);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));
@@ -440,47 +440,5 @@ namespace Raven.Server.Json.Sync
             }
             writer.WriteEndObject();
         }
-        
-        public static void WriteSchemaValidationConfiguration(this AbstractBlittableJsonTextWriter writer, SchemaValidationConfiguration configuration)
-        {
-            if (configuration == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-            
-            writer.WriteStartObject();
-            {
-                writer.WritePropertyName(nameof(SchemaValidationConfiguration.ValidatorsPerCollection));
-                writer.WriteStartArray();
-                {
-                    var isFirst = true;
-                    foreach (var keyValue in configuration.ValidatorsPerCollection)
-                    {
-                        if(isFirst == false)
-                            writer.WriteComma();
-
-                        isFirst = false;
-                        writer.WriteStartObject();
-                        {
-                            writer.WritePropertyName(nameof(keyValue.Key));
-                            writer.WriteString(keyValue.Key);
-                            writer.WriteComma();
-                            writer.WritePropertyName(nameof(keyValue.Value));
-                            writer.WriteStartObject();
-                            {
-                                writer.WritePropertyName(nameof(keyValue.Value.Schema));
-                                writer.WriteString(keyValue.Value.Schema);
-                            }
-                            writer.WriteEndObject();
-                        }
-                        writer.WriteEndObject();
-                    }
-                }
-                writer.WriteEndArray();
-            }
-            writer.WriteEndObject();
-        }
-
     }
 }

@@ -84,6 +84,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using Raven.Server.Documents.SchemaValidation;
+using Sparrow.Json.Sync;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
@@ -287,7 +288,7 @@ namespace Raven.Server.Documents.Indexes
         public bool IsOnBeforeExecuteIndexing { get; private set; }
 
         public TestIndexRun TestRun;
-        internal SchemaValidatorCache _schemaValidatorCache;
+        internal (SchemaValidator validator, IDisposable retrunCtx) _schemaValidator;
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
@@ -407,7 +408,7 @@ namespace Raven.Server.Documents.Indexes
 
             exceptionAggregator.Execute(() => { _mre?.Dispose(); });
             
-            exceptionAggregator.Execute(() => { _schemaValidatorCache?.Dispose(); });
+            exceptionAggregator.Execute(() =>_schemaValidator.retrunCtx?.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -872,10 +873,13 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
-                if (Definition.SchemaValidationConfiguration != null)
+                if (Definition.SchemaValidation != null)
                 {
-                    _schemaValidatorCache = SchemaValidatorCache.Create(_contextPool, _logger);
-                    _schemaValidatorCache.Update(Definition.SchemaValidationConfiguration);
+                    _schemaValidator.retrunCtx = _contextPool.AllocateOperationContext(out TransactionOperationContext context);
+                    _schemaValidator.validator = new SchemaValidator { SchemaDefinition = Definition.SchemaValidation };
+                    var blittable = context.Sync.ReadForMemory(Definition.SchemaValidation, "schema-validation");
+                    SchemaValidationHelper.EnsureMetadataIsValid(context, ref blittable);
+                    _schemaValidator.validator.Init(blittable);
                 }
                 
                 OnInitialization();

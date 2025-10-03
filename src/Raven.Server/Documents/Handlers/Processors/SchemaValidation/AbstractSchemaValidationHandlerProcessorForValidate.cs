@@ -43,25 +43,26 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
 
     private void ValidateParameters()
     {
-        if (string.IsNullOrWhiteSpace(Parameters.Collection) == false &&
-            string.IsNullOrWhiteSpace(Parameters.Schema) == false &&
-            Parameters.MaxErrorsMsg is >= 0 &&
-            Parameters.MaxTimeInMinutes is > 0 &&
-            Parameters.MaxReadTrxTimeInSeconds is > 0) return;
+        if (string.IsNullOrWhiteSpace(Parameters.Collection) == false 
+            && string.IsNullOrWhiteSpace(Parameters.Schema) == false 
+            && (Parameters.MaxErrorsMsg.HasValue == false || Parameters.MaxErrorsMsg.Value >= 0) 
+            && (Parameters.MaxTimeInMinutes.HasValue == false || Parameters.MaxTimeInMinutes.Value > 0 )
+            && (Parameters.MaxReadTrxTimeInSeconds.HasValue == false || Parameters.MaxReadTrxTimeInSeconds.Value > 0)) 
+            return;
         
         var errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(Parameters.Collection))
-            errors.Add($"Missing required parameter '{Parameters.Collection}'.");
+            errors.Add($"Missing required parameter '{nameof(Parameters.Collection)}'.");
         if (string.IsNullOrWhiteSpace(Parameters.Schema))
-            errors.Add($"Missing required parameter '{Parameters.Schema}'.");
+            errors.Add($"Missing required parameter '{nameof(Parameters.Schema)}'.");
 
-        if (Parameters.MaxErrorsMsg is <= 0)
-            errors.Add($"Parameter '{Parameters.MaxErrorsMsg}' must be greater than 0.");
+        if (Parameters.MaxErrorsMsg is < 0)
+            errors.Add($"Parameter '{nameof(Parameters.MaxErrorsMsg)}' must be non-negative.");
         if (Parameters.MaxTimeInMinutes is <= 0)
-            errors.Add($"Parameter '{Parameters.MaxTimeInMinutes}' must be greater than 0.");
+            errors.Add($"Parameter '{nameof(Parameters.MaxTimeInMinutes)}' must be greater than 0.");
         if (Parameters.MaxReadTrxTimeInSeconds is <= 0)
-            errors.Add($"Parameter '{Parameters.MaxReadTrxTimeInSeconds}' must be greater than 0.");
+            errors.Add($"Parameter '{nameof(Parameters.MaxReadTrxTimeInSeconds)}' must be greater than 0.");
 
         throw new BadRequestException("Invalid schema validation parameters:" + string.Join(", ", errors));
     }
