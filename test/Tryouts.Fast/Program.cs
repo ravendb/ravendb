@@ -1,15 +1,13 @@
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 using System;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Raven.Server.Utils;
-using Xunit;
 using FastTests;
 using FastTests.Client;
-using Raven.Client.Documents.Operations.AI;
 
 namespace Tryouts.Fast;
 
@@ -29,7 +27,7 @@ public static class Program
         for (int i = 0; i < 1; i++)
         {
             Console.WriteLine($"Starting to run {i}");
-            
+
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
