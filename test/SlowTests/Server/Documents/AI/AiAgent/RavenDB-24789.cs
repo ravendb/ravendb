@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldRaiseServerAlertOnExceededActionToolResponse(Options options, GenAiConfiguration config)
         {
             options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldRaiseServerAlertOnExceededQueryToolResponse(Options options, GenAiConfiguration config)
         {
             options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";
@@ -104,7 +104,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldRaiseServerAlertWhenBothToolTypesAreCalled(Options options, GenAiConfiguration config)
         {
             options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";
@@ -153,7 +153,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldNotRaiseAlertWhenUserMessageExceedsTokenLimitAfterToolCall(Options options, GenAiConfiguration config)
         {
             options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";

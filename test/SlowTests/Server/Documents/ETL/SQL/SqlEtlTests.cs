@@ -32,7 +32,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
-    public class SqlEtlTests(ITestOutputHelper output) : RavenTestBase(output)
+    public class SqlEtlTests(ITestOutputHelper output) : SqlAwareTestBase(output)
     {
         private readonly List<string> _dbNames = new List<string>();
 
@@ -62,7 +62,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
                     int testCount = 5000;
@@ -155,7 +155,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -201,7 +201,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -255,7 +255,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -321,7 +321,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -372,7 +372,7 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -424,7 +424,7 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -478,7 +478,7 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -524,7 +524,7 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -567,7 +567,7 @@ loadToOrders(orderData);");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
                     using (var session = store.OpenAsyncSession())
@@ -615,7 +615,7 @@ loadToOrders(orderData);");
             using (var client = new ClientWebSocket())
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
                     using (var session = store.OpenAsyncSession())
@@ -689,7 +689,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
                     const string docId = "orders/1-A";
@@ -772,7 +772,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -850,7 +850,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
@@ -921,7 +921,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
@@ -996,7 +996,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Attachments]
@@ -1073,7 +1073,7 @@ for (var i = 0; i < attachments.length; i++)
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
@@ -1132,7 +1132,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString);
 
@@ -1179,7 +1179,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     SqlDatabaseWriter.TestConnection("Microsoft.Data.SqlClient", connectionString);
                 }
@@ -1191,7 +1191,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     SqlDatabaseWriter.TestConnection("Npgsql", connectionString);
                 }
@@ -1203,7 +1203,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.Oracle, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.Oracle, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     SqlDatabaseWriter.TestConnection("Oracle.ManagedDataAccess.Client", connectionString);
                 }
@@ -1215,7 +1215,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore())
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MySQL_MySqlConnector, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MySQL_MySqlConnector, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     SqlDatabaseWriter.TestConnection("MySqlConnector.MySqlConnectorFactory", connectionString);
                 }
@@ -1229,7 +1229,7 @@ loadToOrders(orderData);
         {
             using (var store = GetDocumentStore(Options.ForMode(databaseMode)))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Users]
@@ -1299,7 +1299,7 @@ loadToUsers(
         {
             using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
             {
-                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]

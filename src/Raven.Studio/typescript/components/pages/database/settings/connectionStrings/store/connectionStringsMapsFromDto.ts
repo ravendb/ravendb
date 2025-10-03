@@ -359,6 +359,9 @@ export function mapAiConnectionsFromDto(
         if (connection.MistralAiSettings) {
             return "mistralAiSettings";
         }
+        if (connection.VertexSettings) {
+            return "vertexSettings";
+        }
         return null;
     };
 
@@ -421,6 +424,13 @@ export function mapAiConnectionsFromDto(
                     endpoint: connection.MistralAiSettings?.Endpoint,
                     model: connection.MistralAiSettings?.Model,
                     embeddingsMaxConcurrentBatches: connection.MistralAiSettings?.EmbeddingsMaxConcurrentBatches,
+                },
+                vertexSettings: {
+                    aiVersion: connection.VertexSettings?.AiVersion,
+                    googleCredentialsJson: connection.VertexSettings?.GoogleCredentialsJson,
+                    location: connection.VertexSettings?.Location,
+                    model: connection.VertexSettings?.Model,
+                    embeddingsMaxConcurrentBatches: connection.VertexSettings?.EmbeddingsMaxConcurrentBatches,
                 },
             }) satisfies AiConnection
     );

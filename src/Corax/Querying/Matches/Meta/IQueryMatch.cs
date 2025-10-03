@@ -69,6 +69,8 @@ public interface IQueryMatch
     QueryInspectionNode Inspect();
 
     string DebugView => Inspect().ToString();
+    
+    DuplicatesOccurrence DuplicatesOccurrenceStatus { get; }
 }
 
 public enum SkipSortingResult
@@ -76,4 +78,10 @@ public enum SkipSortingResult
     ResultsNativelySorted,
     WillSkipSorting,
     SortingIsRequired
+}
+
+public enum DuplicatesOccurrence
+{
+    Possible,
+    NotPossible
 }

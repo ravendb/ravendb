@@ -1,8 +1,8 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { mockServices } from "test/mocks/services/MockServices";
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import { TasksStubs } from "test/stubs/TasksStubs";
-import { userEvent, within } from "@storybook/test";
+import { userEvent, within } from "storybook/test";
 import React from "react";
 import {
     commonInit,

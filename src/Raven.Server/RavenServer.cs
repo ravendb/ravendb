@@ -454,11 +454,9 @@ namespace Raven.Server
 
         private void StartOpenTelemetry()
         {
-            if (_openTelemetryInitialized == false)
-                return; // since we're not exposing there is no reason to initialize meters itself.
-
-            MetricsManager = new MetricsManager(ServerStore.Server);
-            MetricsManager.Execute();
+            MetricsManager = new MetricsManager(ServerStore.Server, _openTelemetryInitialized); 
+            if (_openTelemetryInitialized)
+                MetricsManager.Execute(); // initialize only when OpenTelemetry is configured in `Initialize()`
         }
 
         private void ConfigureOpenTelemetry(IServiceCollection services)
@@ -2822,6 +2820,7 @@ namespace Raven.Server
             switch (header.Operation)
             {
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                    // tcp ownership - properly scoped by SubscriptionBinder method
                     CreateSubscriptionConnection(ServerStore, result, tcp, bufferToCopy);
                     break;
 
@@ -2842,9 +2841,9 @@ namespace Raven.Server
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
             }
 
-            //since the responses to TCP connections mostly continue to run
-            //beyond this point, no sense to dispose the connection now, so set it to null.
-            //this way the responders are responsible to dispose the connection and the context
+            // Since the responses to TCP connections mostly continue to run beyond this point,
+            // there's no sense to dispose the connection now, so set it to null.
+            // This way the responders are responsible to dispose the connection and the context.
             // ReSharper disable once RedundantAssignment
             tcp = null;
             return false;

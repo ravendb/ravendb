@@ -1,4 +1,4 @@
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import { exportedForTesting } from "./PathSelector";
 import * as stories from "./PathSelector.stories";
 import { rtlRender } from "test/rtlTestUtils";

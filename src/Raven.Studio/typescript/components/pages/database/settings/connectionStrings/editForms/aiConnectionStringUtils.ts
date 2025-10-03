@@ -5,37 +5,32 @@ import { connectionStringsUtils } from "../connectionStringsUtils";
 import * as yup from "yup";
 import _ from "lodash";
 
-const getConnectorType = (
-    connection: Raven.Client.Documents.Operations.AI.AiConnectionString
-): Raven.Client.Documents.Operations.AI.AiConnectorType => {
-    if (connection.AzureOpenAiSettings) {
-        return "AzureOpenAi";
-    }
-    if (connection.GoogleSettings) {
-        return "Google";
-    }
-    if (connection.HuggingFaceSettings) {
-        return "HuggingFace";
-    }
-    if (connection.OllamaSettings) {
-        return "Ollama";
-    }
-    if (connection.EmbeddedSettings) {
-        return "Embedded";
-    }
-    if (connection.OpenAiSettings) {
-        return "OpenAi";
-    }
-    if (connection.MistralAiSettings) {
-        return "MistralAi";
+type AiConnectionString = Raven.Client.Documents.Operations.AI.AiConnectionString;
+type AiConnectorType = Raven.Client.Documents.Operations.AI.AiConnectorType;
+type AiConnectionSetting = Exclude<keyof AiConnectionString, "Type" | "Identifier" | "ModelType" | "Name">;
+
+const getConnectorType = (connection: AiConnectionString): AiConnectorType => {
+    const mapping: Record<AiConnectionSetting, AiConnectorType> = {
+        AzureOpenAiSettings: "AzureOpenAi",
+        GoogleSettings: "Google",
+        HuggingFaceSettings: "HuggingFace",
+        OllamaSettings: "Ollama",
+        EmbeddedSettings: "Embedded",
+        OpenAiSettings: "OpenAi",
+        MistralAiSettings: "MistralAi",
+        VertexSettings: "Vertex",
+    };
+
+    for (const key of Object.keys(mapping) as AiConnectionSetting[]) {
+        if (connection[key]) {
+            return mapping[key];
+        }
     }
 
     throw new Error("No connector type found. Please check the connection string.");
 };
 
-function mapAiConnectionStringToSettingsDto(
-    connection: Raven.Client.Documents.Operations.AI.AiConnectionString
-): AiConnectionStringsSettings {
+function mapAiConnectionStringToSettingsDto(connection: AiConnectionString): AiConnectionStringsSettings {
     const settings = [
         connection.AzureOpenAiSettings,
         connection.GoogleSettings,
@@ -44,6 +39,7 @@ function mapAiConnectionStringToSettingsDto(
         connection.EmbeddedSettings,
         connection.OpenAiSettings,
         connection.MistralAiSettings,
+        connection.VertexSettings,
     ].find(Boolean);
 
     if (!settings) {
@@ -65,6 +61,7 @@ function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWith
         { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
         { label: "OpenAI", value: "openAiSettings", icon: "openai" },
         { label: "Mistral AI", value: "mistralAiSettings", icon: "mistralai" },
+        { label: "Vertex AI", value: "vertexSettings", icon: "vertex-ai" },
         { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
     ];
 
@@ -245,6 +242,31 @@ const schema = yupObjectSchema<FormData>({
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("openAiSettings"),
     }),
+    vertexSettings: yupObjectSchema<FormData["vertexSettings"]>({
+        aiVersion: yup.string<Raven.Client.Documents.Operations.AI.VertexAIVersion>().nullable(),
+        googleCredentialsJson: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "vertexSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "vertexSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        location: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "vertexSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("vertexSettings"),
+    }),
     mistralAiSettings: yupObjectSchema<FormData["mistralAiSettings"]>({
         apiKey: yup
             .string()
@@ -323,6 +345,13 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 isSetTemperature: false,
                 temperature: null,
             } satisfies Required<FormData["openAiSettings"]>,
+            vertexSettings: {
+                aiVersion: null,
+                googleCredentialsJson: null,
+                location: null,
+                model: null,
+                embeddingsMaxConcurrentBatches: null,
+            } satisfies Required<FormData["vertexSettings"]>,
             mistralAiSettings: {
                 apiKey: null,
                 endpoint: null,

@@ -20,7 +20,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -579,7 +578,7 @@ namespace SlowTests.Sharding.Backup
 
         private static Stream GetDump(string name)
         {
-            var assembly = typeof(RavenDB_9912).Assembly;
+            var assembly = typeof(ShardedSmugglerTests).Assembly;
             return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
 

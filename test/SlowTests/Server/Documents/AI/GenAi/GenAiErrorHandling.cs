@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.AI.GenAi;
 public class GenAiErrorHandling(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_ShouldRaiseAlertOnInvalidContextExtractionScript(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -79,7 +79,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_ShouldRaiseAlertOnInvalidUpdateScript(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -137,7 +137,7 @@ if($output.Blocked)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_UpdateScriptErrorsShouldBeHandledPerContext(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -210,7 +210,7 @@ if($output.Blocked)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_LoadError_ModelRefusedToAnswer(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -240,7 +240,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
             Assert.NotNull(etlProcess);
 
-            var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+            var chatCompletionClient = etlProcess.GetChatCompletionClient();
             chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
             {
                 if (ctx.Contains("win $$$$"))
@@ -299,7 +299,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_ShouldRespectRateLimitErrorAndFallback(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -320,9 +320,12 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         Assert.NotNull(etlProcess);
 
         int triggerOn = 2;
-        var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+        var chatCompletionClient = etlProcess.GetChatCompletionClient();
         chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
         {
+            if (ctx.Contains(config.Prompt))
+                return Task.CompletedTask;
+
             if (Interlocked.Decrement(ref triggerOn) <= 0)
                 throw new RateLimitException("rate limit") { RetryAfter = TimeSpan.FromMinutes(10), RequestId = "test" };
 
@@ -404,7 +407,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_LoadError_AuthFailure_ShouldOnlyTrackSuccess(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore();
@@ -432,7 +435,7 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
         Assert.NotNull(etlProcess);
 
-        var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+        var chatCompletionClient = etlProcess.GetChatCompletionClient();
         var enteredOnce = 0;
         var blockEtlMre = new AsyncManualResetEvent();
 

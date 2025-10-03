@@ -228,6 +228,13 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
                               The options below apply to the search term used in the query.
                           </small>`
             });
+
+        popoverUtils.longWithHover($(".overlap-tokens"),
+            {
+                content: `<small class="margin-top-xs no-padding-left">
+                              This value will be used as the default when no specific value is set in the script.
+                          </small>`
+            });
     }    
 
     toggleIsNewConnectionStringOpen() {

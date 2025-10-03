@@ -21,6 +21,8 @@ namespace Corax.Querying.Matches.SortingMatches;
 public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
+    
     private interface IEntryComparer : IComparer<int>, IComparer<UnmanagedSpan>
     {
         Slice GetSortFieldName(ref SortingMultiMatch<TInner> match);

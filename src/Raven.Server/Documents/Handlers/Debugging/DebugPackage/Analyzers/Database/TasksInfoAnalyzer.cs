@@ -125,6 +125,15 @@ public class TasksInfoAnalyzer(
                 case OngoingTaskType.Subscription:
                     taskCounts.SubscriptionCount++;
                     break;
+                case OngoingTaskType.SnowflakeEtl:
+                    taskCounts.SnowflakeEtlCount++;
+                    break;
+                case OngoingTaskType.EmbeddingsGeneration:
+                    taskCounts.EmbeddingsGenerationCount++;
+                    break;
+                case OngoingTaskType.GenAi:
+                    taskCounts.GenAiCount++;
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown task type: {ongoingTask.TaskType}");
             }

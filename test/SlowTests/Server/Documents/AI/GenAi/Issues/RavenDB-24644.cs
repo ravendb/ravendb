@@ -46,9 +46,9 @@ ai.genContext({}).withPdf(pdf);
         private const string ThirdItemId = "Doc/3"; //different collection to test that it won't be processed
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false,
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
             Data = new object[] { true })]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false,
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
             Data = new object[] { false })]
 
         public async Task SelectivePdfDescriptionTransformWhenSomeAttachmentsAreMissing(Options options, GenAiConfiguration config, bool withNullAttachments)

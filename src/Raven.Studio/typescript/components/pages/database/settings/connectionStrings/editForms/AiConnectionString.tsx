@@ -15,6 +15,7 @@ import OllamaSettings from "components/pages/database/settings/connectionStrings
 import OpenAiSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/OpenAiSettings";
 import EmbeddedSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/EmbeddedSettings";
 import MistralAiSettings from "./aiFields/MistralAiSettings";
+import VertexSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/VertexSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -171,6 +172,9 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "embeddedSettings" && <EmbeddedSettings />}
                 {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "mistralAiSettings" && <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "vertexSettings" && (
+                    <VertexSettings isUsedByAnyTask={isUsedByAnyTask} isForNewConnection={isForNewConnection} />
+                )}
 
                 {isUsedByAnyTask && (
                     <RichAlert variant="info">

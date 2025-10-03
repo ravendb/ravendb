@@ -38,6 +38,17 @@ public class AiUsage : IDynamicJsonValueConvertible
         };
     }
 
+    internal static AiUsage GetUsageDifference(AiUsage usage2, AiUsage usage1)
+    {
+        return new AiUsage
+        {
+            PromptTokens = usage2.PromptTokens - usage1.PromptTokens,
+            TotalTokens = usage2.TotalTokens - usage1.TotalTokens,
+            CachedTokens = usage2.CachedTokens, // we don't want to subtract cached tokens, as they are only for the last response
+            CompletionTokens = usage2.CompletionTokens, // we don't want to subtract completion tokens, as they are only for the last response
+        };
+    }
+
     internal void Write(AsyncBlittableJsonTextWriter writer)
     {
         writer.WriteStartObject();

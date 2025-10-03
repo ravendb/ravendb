@@ -1,4 +1,4 @@
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import React, { useState } from "react";
 import { SingleDatabaseLocationSelector } from "./SingleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";

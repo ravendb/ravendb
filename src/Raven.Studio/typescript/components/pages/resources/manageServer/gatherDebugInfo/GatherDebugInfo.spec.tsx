@@ -1,7 +1,7 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
 import * as Stories from "./GatherDebugInfo.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { DefaultGatherDebugInfo } = composeStories(Stories);
 

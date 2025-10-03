@@ -68,6 +68,11 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                         var googleSettings = JsonDeserializationServer.GoogleSettings(json);
                         aiConnectionString.GoogleSettings = googleSettings;
                         break;
+                    
+                    case AiConnectorType.Vertex:
+                        var vertexSettings = JsonDeserializationServer.VertexSettings(json);
+                        aiConnectionString.VertexSettings = vertexSettings;
+                        break;
 
                     case AiConnectorType.HuggingFace:
                         var huggingFace = JsonDeserializationServer.HuggingFaceSettings(json);
@@ -98,7 +103,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                         using (var client = ChatCompletionClient.CreateChatCompletionClient( ServerStore.ContextPool, aiConnectionString))
                         {
                             var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
-                            await client.CompleteAsync("foo", "bar", schema, null, HttpContext.RequestAborted);
+                            await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, HttpContext.RequestAborted);
                         }
 
                         break;

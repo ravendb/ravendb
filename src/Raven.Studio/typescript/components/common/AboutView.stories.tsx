@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5, licenseArgType } from "test/storybookTestUtils";
 import { AboutViewFloating, AboutViewAnchored, AccordionItemWrapper, AboutViewHeading } from "./AboutView";
 import Row from "react-bootstrap/Row";

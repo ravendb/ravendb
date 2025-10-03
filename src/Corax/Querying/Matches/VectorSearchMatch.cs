@@ -257,4 +257,14 @@ public struct VectorSearchMatch : IQueryMatch
     }
 
     public string DebugView => Inspect().ToString();
+    
+    // We have to perform deduplication in two cases:
+    // a) when vector search is the only condition in the WHERE statement, we do not fulfill the IQueryMatch.Fill guarantee
+    // about deduplication and sorted IDs on purpose to return results ordered by score without additional sorting, since
+    // HNSW returns results ordered by distance.
+    // b) when the query field explicitly has no boost, then we stream the results in bulks (instead of memoizing them), so
+    // we need to track previously returned IDs to avoid duplicates.
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => _singleVectorSearchDoNotSort || IsBoosting == false
+        ? DuplicatesOccurrence.Possible 
+        : DuplicatesOccurrence.NotPossible;
 }

@@ -280,6 +280,16 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
+        VertexSettings:
+            connection.connectorType === "vertexSettings"
+                ? {
+                      GoogleCredentialsJson: connection.vertexSettings.googleCredentialsJson,
+                      Location: connection.vertexSettings.location,
+                      Model: connection.vertexSettings.model,
+                      AiVersion: connection.vertexSettings.aiVersion,
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
+                  }
+                : null,
     };
 }
 

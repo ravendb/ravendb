@@ -30,6 +30,8 @@ namespace Corax.Querying.Matches
             _bufferCurrentIdx = 0;
         }
 
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
+        
         public Span<long> FillAndRetrieve() => _inner.FillAndRetrieve();
         
         public int Fill(Span<long> matches)

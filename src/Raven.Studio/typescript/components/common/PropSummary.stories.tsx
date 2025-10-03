@@ -1,4 +1,4 @@
-﻿import { Meta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react-webpack5";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "./PropSummary";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";

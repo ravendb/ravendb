@@ -1793,27 +1793,30 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
         }
 
-        public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool startUp)
+        public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool metersRegistered)
         {
             if (IsValid(out _) == false)
                 return false;
 
-            if (LicenseStatus.HasMonitoringEndpoints)
+            switch (MetersRegistered: metersRegistered, LicenceHasMonitoringEndpoints: LicenseStatus.HasMonitoringEndpoints)
             {
-                if (startUp)
+                case (MetersRegistered: true, LicenceHasMonitoringEndpoints: true):
+                {
+                    DismissLicenseLimit(LimitType.MonitoringEndpoints);
                     return true;
-                const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
-                throw GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
-            }
-
-            {
-                const string details = "Your current license doesn't include the OpenTelemetry feature.";
-                var exception = GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
-
-                if (startUp)
+                }
+                case (MetersRegistered: false, LicenceHasMonitoringEndpoints: true):
+                {
+                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
+                    GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
                     return false;
-                
-                throw exception;
+                }
+                case (MetersRegistered: _, LicenceHasMonitoringEndpoints: false):
+                {
+                    const string details = "Your current license doesn't include the OpenTelemetry feature.";
+                    GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
+                    return false;
+                }
             }
         }
 

@@ -34,7 +34,9 @@ namespace Corax.Querying.Matches
         private ByteStringContext _ctx;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
-
+        
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
+        
 #if DEBUG
         public string Term;
 #endif

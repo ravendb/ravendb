@@ -7,8 +7,8 @@ import {
     mockExternalReplicationProgress,
 } from "components/pages/database/tasks/ongoingTasks/stories/common";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
+import { userEvent, within } from "storybook/test";
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;

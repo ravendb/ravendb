@@ -10,6 +10,11 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public const string AllDatabases = "*";
 
+        protected Notification()
+        {
+            // for deserialization
+        }
+        
         protected Notification(NotificationType type, string database, DateTime? createdAt = null)
         {
             CreatedAt = createdAt ?? SystemTime.UtcNow;

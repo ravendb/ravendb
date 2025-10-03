@@ -1,5 +1,5 @@
 import { rtlRender } from "test/rtlTestUtils";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import * as Stories from "./AllRevisions.stories";
 
 const { AllRevisionsStory } = composeStories(Stories);

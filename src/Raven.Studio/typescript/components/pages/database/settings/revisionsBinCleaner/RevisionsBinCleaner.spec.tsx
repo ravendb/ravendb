@@ -1,8 +1,7 @@
 import React from "react";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as stories from "./RevisionsBinCleaner.stories";
-import userEvent from "@testing-library/user-event";
 import { queryAllByClassName } from "test/byClassNameQueries";
 
 const { DefaultRevisionsBinCleaner } = composeStories(stories);
@@ -19,9 +18,8 @@ describe("RevisionsBinCleaner", () => {
 
     it("can disable 'set minimum entries age to keep' after disabling 'enable revisions bin cleaner'", async () => {
         const durationPickerValues = [0, 0, 1];
-        const user = userEvent.setup();
 
-        const { screen } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
+        const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
         const durationPickerBefore = await screen.findByTestId("durationPicker");
         const durationPickerInputsBefore = queryAllByClassName(durationPickerBefore, "form-control");
@@ -49,8 +47,7 @@ describe("RevisionsBinCleaner", () => {
     });
 
     it("can disable 'set custom refresh frequency' after disabling 'enable revisions bin cleaner'", async () => {
-        const user = userEvent.setup();
-        const { screen } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
+        const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
         const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
 
@@ -101,8 +98,7 @@ describe("RevisionsBinCleaner", () => {
     });
 
     it("can remove value from 'refresh frequency' when disabling checkbox", async () => {
-        const user = userEvent.setup();
-        const { screen } = await rtlRender_WithWaitForLoad(
+        const { screen, user } = await rtlRender_WithWaitForLoad(
             <DefaultRevisionsBinCleaner
                 revisionsBinCleanerDto={{
                     Disabled: false,

@@ -12,7 +12,6 @@ using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using Index = SlowTests.Issues.Index;
 
 namespace SlowTests.Cluster
 {
@@ -151,6 +150,37 @@ namespace SlowTests.Cluster
                     select new
                     {
                         user.AddressId
+                    };
+            }
+        }
+        
+        public class MyEntity
+        {
+            public string Id { get; set; }
+            public string AuthorId { get; set; }
+            public string Title { get; set; }
+            public string Language { get; set; }
+        }
+
+        public class Index : AbstractIndexCreationTask<MyEntity>
+        {
+            private readonly string _indexName;
+
+            public override string IndexName => _indexName ?? base.IndexName;
+
+            public Index(string name):this()
+            {
+                _indexName = name;
+            }
+
+            public Index()
+            {
+                Map = entities => from e in entities
+                    select new
+                    {
+                        e.AuthorId,
+                        e.Title,
+                        e.Language,
                     };
             }
         }
