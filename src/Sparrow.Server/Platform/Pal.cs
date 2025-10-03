@@ -72,7 +72,8 @@ namespace Sparrow.Server.Platform
 
             if (PalConfiguration.WriteMode != cfg.write_mode)
             {
-                throw new InvalidOperationException($"Requested write mode '{PalConfiguration.WriteMode}', actual write mode was set to '{cfg.write_mode}'");
+                throw new InvalidOperationException($"Requested write mode '{PalConfiguration.WriteMode}', actual write mode was set to '{cfg.write_mode}'" +
+                                                    $"Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}");
             }
 
             if (rcGetSysInfo != PalFlags.FailCodes.Success)

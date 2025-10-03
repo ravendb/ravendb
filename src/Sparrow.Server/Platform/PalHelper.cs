@@ -2,17 +2,29 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 
 namespace Sparrow.Server.Platform
 {
     public static class PalHelper
     {
-        private const int ERROR_WRITE_PROTECT = 19; 
-        public const string ErrorMediaIsWriteProtectedHintMessage =
-            "This might indicate a hardware or OS issue. If you are running in the cloud, please consider contacting your provider since your volume's data might be inconsistent.";
+        public static class ErrorCodes
+        {
+            public static class Windows
+            {
+                public const int ERROR_WRITE_PROTECT = 19; 
+                public const string ErrorMediaIsWriteProtectedHintMessage =
+                    "This might indicate a hardware or OS issue. If you are running in the cloud, please consider contacting your provider since your volume's data might be inconsistent.";
 
-        private const int ERROR_NOT_SUPPORTED = 50;
+                public const int ERROR_NOT_SUPPORTED = 50;
+            }
+
+            public class Posix
+            {
+                public const int ENOTSUP = 95;
+            }
+        }
 
         [DoesNotReturn]
         public static void ThrowLastError(PalFlags.FailCodes rc, int lastError, string msg)
@@ -28,11 +40,20 @@ namespace Sparrow.Server.Platform
             if ((specialErrnoCodes & PalFlags.ErrnoSpecialCodes.NoSpc) != 0)
                 throw new DiskFullException(txt);
 
-            if (lastError is ERROR_NOT_SUPPORTED)
-                throw new NotSupportedException(txt);
+            if (PlatformDetails.RunningOnWindows)
+            {
+                if (lastError is ErrorCodes.Windows.ERROR_NOT_SUPPORTED)
+                    throw new NotSupportedException(txt);
 
-            if (lastError is ERROR_WRITE_PROTECT)
-                txt += $"{Environment.NewLine}{ErrorMediaIsWriteProtectedHintMessage}";
+                if (lastError is ErrorCodes.Windows.ERROR_WRITE_PROTECT)
+                    txt += $"{Environment.NewLine}{ErrorCodes.Windows.ErrorMediaIsWriteProtectedHintMessage}";
+            }
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                if (lastError is ErrorCodes.Posix.ENOTSUP)
+                    throw new NotSupportedException(txt);
+            }
 
             throw new InvalidOperationException(txt);
         }
@@ -62,7 +83,7 @@ namespace Sparrow.Server.Platform
             var nativeMsg = size >= 0 ? Encoding.UTF8.GetString(buf, size) : lastError.ToString();
 
             errnoSpecialCodes = (PalFlags.ErrnoSpecialCodes)specialErrnoCodes;
-            return $"Errno: {lastError}='{nativeMsg}' (rc={specialErrnoCodes}) - '{msg}'";
+            return $"{msg}. Errno: {lastError}='{nativeMsg}' (rc={specialErrnoCodes})";
         }
     }
 }
