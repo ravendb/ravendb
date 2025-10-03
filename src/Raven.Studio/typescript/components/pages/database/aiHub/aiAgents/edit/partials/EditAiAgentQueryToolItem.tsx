@@ -69,10 +69,11 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
         let queryText = "";
 
         const regexToFind$: RegExp = /\$\w+/g;
-        const matches = queryItem.query.match(regexToFind$) || [];
+        const allMatches = queryItem.query.match(regexToFind$) || [];
+        const uniqueMatches = [...new Set(allMatches)];
 
-        if (matches.length > 0) {
-            queryText += matches.map((x) => `${x} = null`).join("\n");
+        if (uniqueMatches.length > 0) {
+            queryText += uniqueMatches.map((x) => `${x} = null`).join("\n");
             queryText += "\n\n";
         }
 
