@@ -49,7 +49,9 @@ internal static class CertificateLoaderUtil
         {
             collection.Add(CertificateHelper.CreateCertificateFromPfx(rawData, password, f));
         }
+#pragma warning disable CS0168 // Variable is declared but never used
         catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
         {
 #if NET9_0_OR_GREATER
             throw;
@@ -101,7 +103,9 @@ internal static class CertificateLoaderUtil
         {
             certificate = creator(f);
         }
+#pragma warning disable CS0168 // Variable is declared but never used
         catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
         {
 #if NET9_0_OR_GREATER
             throw;

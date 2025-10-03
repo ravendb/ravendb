@@ -516,11 +516,11 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
                     return (DocumentsToCreate - MaxReadOpsPerSecToTest) / MaxReadOpsPerSecToTest;
 
                 case BackupType.Snapshot:
-                    // snapshot data requires 10 or 11 buffer iterations for a database with 5 docs, depending on the system environment's bitness (values obtained experimentally)
+                    // snapshot data requires 6 or 7 buffer iterations for a database with 5 docs, depending on the system environment's bitness (values obtained experimentally)
                     return RuntimeInformation.ProcessArchitecture switch
                     {
-                        Architecture.X86 or Architecture.Arm => 10,
-                        Architecture.X64 or Architecture.Arm64 => 11,
+                        Architecture.X86 or Architecture.Arm => 6,
+                        Architecture.X64 or Architecture.Arm64 => 7,
                         _ => throw new ArgumentOutOfRangeException(nameof(RuntimeInformation.ProcessArchitecture), "Unsupported architecture.")
                     };
 
