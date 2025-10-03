@@ -9,8 +9,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Security;
@@ -142,7 +140,7 @@ namespace Raven.Server.Web.Authentication
 
             // this creates a client certificate which is signed by the current server certificate
             var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate.ServerCertificate,
-                serverStore.Server.Certificate.PrivateKey.Key, out var clientCertBytes,
+                serverStore.Server.Certificate.PrivateKey, out var clientCertBytes,
                 certificate.NotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition

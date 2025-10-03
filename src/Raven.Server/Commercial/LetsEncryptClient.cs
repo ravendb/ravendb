@@ -379,7 +379,7 @@ namespace Raven.Server.Commercial
 
         public async Task<(X509Certificate2 Cert, RSA PrivateKey)> GetCertificate(RSA existingKey = null, string acmeProfile = null, CancellationToken token = default(CancellationToken))
         {
-            var key = existingKey ?? new RSACryptoServiceProvider(4096);
+            var key = existingKey?.GetExportableRsaPrivateKey() ?? RSA.Create(4096);
 
             var csr = new CertificateRequest("CN=" + _currentOrder.Identifiers[0].Value,
                 key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);

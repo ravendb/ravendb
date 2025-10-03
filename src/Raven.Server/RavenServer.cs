@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,10 +26,6 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -1532,7 +1529,7 @@ namespace Raven.Server
                 }
 
                 X509Certificate2 serverCertificate = null;
-                AsymmetricKeyEntry privateKey = null;
+                AsymmetricAlgorithm privateKey = null;
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     (serverCertificate, privateKey) = ServerStore.Secrets.LoadCertificateFromPath(
                         Configuration.Security.CertificatePath,

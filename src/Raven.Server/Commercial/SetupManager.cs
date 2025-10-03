@@ -1194,7 +1194,7 @@ namespace Raven.Server.Commercial
 
             // this creates a client certificate which is signed by the current server certificate
             var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate.ServerCertificate,
-                serverStore.Server.Certificate.PrivateKey.Key,
+                serverStore.Server.Certificate.PrivateKey,
                 out var certBytes,
                 setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 

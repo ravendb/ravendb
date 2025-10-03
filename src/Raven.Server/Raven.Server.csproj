@@ -156,7 +156,6 @@
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Storage.Blobs" />
-    <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" />
     <PackageReference Include="CloudNative.CloudEvents" />
     <PackageReference Include="CloudNative.CloudEvents.Amqp" />
