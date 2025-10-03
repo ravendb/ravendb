@@ -61,12 +61,13 @@ public static class CoraxQueryBuilder
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
         public readonly bool HasBoost;
+        public readonly bool DeduplicationDisabled;
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
         {
             IndexSearcher = searcher;
             ServerContext = serverContext;
@@ -94,6 +95,7 @@ public static class CoraxQueryBuilder
                         HasBoostingAsOrderingType(query.Metadata.OrderBy)); 
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
+            DeduplicationDisabled = deduplicationDisabled;
         }
 
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
@@ -309,12 +311,34 @@ public static class CoraxQueryBuilder
                 // optimization, but we have to sort again anyway, this ensure that this happens
                 if (streamingOptimization.SkipOrderByClause == false || sortMetadata.Length > 1)
                     coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
-            } 
+            }
 
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
-            return coraxQuery;
+            if (builderParameters.DeduplicationDisabled || coraxQuery.DuplicatesOccurrenceStatus == DuplicatesOccurrence.NotPossible)
+                return coraxQuery;
+
+            return DeduplicationMatch(builderParameters, coraxQuery);
         }
+    }
+
+    private static IQueryMatch DeduplicationMatch(Parameters parameters, IQueryMatch match)
+    {
+        var type = match.GetType();
+        if (type == typeof(MultiTermMatch))
+            return Build<MultiTermMatch>();
+        if (type == typeof(BinaryMatch))
+            return Build<BinaryMatch>();
+        if (type == typeof(AndNotMatch))
+            return Build<AndNotMatch>();
+        if (type == typeof(BoostingMatch))
+            return Build<BoostingMatch>();
+        if (type == typeof(MultiUnaryMatch))
+            return Build<MultiUnaryMatch>();
+        
+        return Build<IQueryMatch>();
+
+        IQueryMatch Build<TInner>() where TInner : IQueryMatch => parameters.IndexSearcher.DeduplicationMatch((TInner)match);
     }
 
     private static IQueryMatch ToCoraxQuery(Parameters builderParameters, QueryExpression expression, ref StreamingOptimization leftOnlyOptimization, bool exact = false, int? proximity = null)

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.19</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.20</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -123,6 +123,12 @@
     <EmbeddedResource Include="Data\RavenDB_24281\RavenDB_24281.ravendb-snapshot" />
     <None Remove="Data\RavenDB_24649\RavenDB_24649.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24649\RavenDB_24649.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_14548\debug-package - Node [A].zip" />
+    <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Node [A].zip" />
+    <None Remove="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
+    <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
+    <None Remove="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
+    <EmbeddedResource Include="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -156,7 +162,6 @@
     <EmbeddedResource Include="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21957\js_index_with_dates_601.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22498\AutoIndexes.FastTests.json.gz" />
-    <EmbeddedResource Include="Data\RavenDB_22498\AutoIndexes.SlowTests.json.gz" />
     <EmbeddedResource Include="Data\RavenDB_22534\RavenDB_22534.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_23100\2024-11-18-17-16-52-7843589.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-08-30-34-7519596.ravendb-snapshot" />

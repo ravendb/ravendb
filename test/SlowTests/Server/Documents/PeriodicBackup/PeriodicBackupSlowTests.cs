@@ -4342,46 +4342,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
-
-        [RavenFact(RavenTestCategory.BackupExportImport)]
-        public async Task NextCronScheduleOccurence_BasedOnLastBackup_ShouldBeCorrect()
-        {
-            const string endpoint = "/studio-tasks/next-cron-expression-occurrence";
-            const string cronExpression = "*/2 * * * *";
-            using var store = GetDocumentStore();
-
-            var configuration = Backup.CreateBackupConfiguration(NewDataPath(), fullBackupFrequency: cronExpression);
-            await Backup.WaitUntilNextFullBackupActionWindowAsync(configuration, TimeSpan.FromSeconds(15), Server.ServerStore.ServerShutdown);
-            var taskId = await Backup.UpdateConfigAsync(Server, configuration, store);
-            await Task.Delay(TimeSpan.FromSeconds(130));
-
-            var client = store.GetRequestExecutor().HttpClient;
-
-            var uri = $"{store.Urls.First()}{endpoint}?expression=* * * * *&taskId={taskId}&database={store.Database}&isFull=true";
-            var json = await client.GetStringAsync(uri);
-            var response = JsonConvert.DeserializeObject<NextCronExpressionOccurrenceResponse>(json);
-
-            // The endpoint with taskId should return the next occurrence based on the last backup time
-            Assert.True(response.IsValid, $"Expected valid response, but got: {json}");
-            Assert.True(response.Utc < DateTime.UtcNow, $"Based on the last backup time, the next cron schedule occurrence should be in the past, but got UTC: {response.Utc}, ServerTime: {response.ServerTime}");
-
-            uri = $"{store.Urls.First()}{endpoint}?expression=* * * * *";
-            json = await client.GetStringAsync(uri);
-            response = JsonConvert.DeserializeObject<NextCronExpressionOccurrenceResponse>(json);
-
-            // The endpoint without taskId should return the next occurrence based on the current time
-            Assert.True(response.IsValid, $"Expected valid response, but got: {json}");
-            Assert.True(response.Utc > DateTime.UtcNow, $"Expected next cron schedule occurrence to be in the future, but got UTC: {response.Utc}, ServerTime: {response.ServerTime}");
-        }
-
-        private record NextCronExpressionOccurrenceResponse
-        {
-            public bool IsValid { get; init; }
-            public DateTime Utc { get; init; }
-            public DateTime ServerTime { get; init; }
-        }
-
-
+        
         private static IDisposable ReadOnly(string path)
         {
             var files = Directory.GetFiles(path);

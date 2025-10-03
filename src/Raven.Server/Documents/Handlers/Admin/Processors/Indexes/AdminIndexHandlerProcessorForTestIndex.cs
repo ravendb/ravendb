@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -18,6 +19,10 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminIndexHandlerProcessorForTestIndex<DatabaseRequestHandler, DocumentsOperationContext>
 {
+    private static readonly Regex FromIndexClauseRegex = new Regex(
+        @"from\sindex\s+(['""])(.*?)\1",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
     public AdminIndexHandlerProcessorForTestIndex([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
@@ -39,8 +44,6 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
             const int documentsPerIndexUpperLimit = 10_000;
             const int documentsPerIndexLowerLimit = 1;
             
-            const string defaultTestIndexName = "<TestIndexName>";
-
             if (testIndexParameters.IndexDefinition is null)
                 throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
 
@@ -54,16 +57,12 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
                     throw new UnauthorizedAccessException("Testing C# indexes requires admin privileges.");
             }
 
-            var providedIndexName = testIndexDefinition.Name;
-
-            if (string.IsNullOrEmpty(providedIndexName))
-                providedIndexName = defaultTestIndexName;
-            
-            query ??= $"from index \"{providedIndexName}\"";
-            
             var testIndexName = Guid.NewGuid().ToString("N");
-            
-            query = query.Replace(providedIndexName, testIndexName);
+
+            var fromClause = $"from index '{testIndexName}'";
+            query = query == null 
+                ? fromClause 
+                : FromIndexClauseRegex.Replace(query, m => fromClause);
             
             testIndexDefinition.Name = testIndexName;
 
@@ -77,9 +76,6 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
                 
             var indexQueryServerSide = IndexQueryServerSide.Create(HttpContext, queryAsBlittable, RequestHandler.Database.QueryMetadataCache, tracker);
 
-            if (indexQueryServerSide.Metadata.IndexName != testIndexName)
-                throw new BadRequestException($"Expected {providedIndexName} as index name in query, but could not find it.");
-                
             using (var index = RequestHandler.Database.IndexStore.CreateTestIndexFromDefinition(testIndexDefinition, context.DocumentDatabase, context, maxDocumentsPerIndex))
             {
                 index.Start();

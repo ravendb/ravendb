@@ -1,6 +1,6 @@
 import { rtlRender } from "test/rtlTestUtils";
 import * as Stories from "./DatabaseCustomAnalyzers.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import React from "react";
 
 const { DatabaseCustomAnalyzersStory } = composeStories(Stories);

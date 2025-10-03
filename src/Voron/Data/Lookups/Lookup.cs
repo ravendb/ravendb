@@ -1413,7 +1413,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     /// Optimized to reduce the cost of traversing the tree
     /// Assumes that matches are sorted 
     /// </summary>
-    public void GetFor(Span<long> keys, Span<long> terms, long missingValue)
+    public void GetFor(ReadOnlySpan<long> keys, Span<long> terms, long missingValue)
     {
         if (typeof(TLookupKey) != typeof(Int64LookupKey))
         {

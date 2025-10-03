@@ -420,26 +420,26 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
                 var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
                 {
-                    ["Id"] = x.UnmanagedThreadId,
-                    ["ManagedThreadId"] = x.ManagedThreadId,
-                    ["Allocations"] = x.TotalAllocated,
-                    ["HumaneAllocations"] = Size.Humane(x.TotalAllocated)
+                    [nameof(ThreadAllocation.Id)] = x.UnmanagedThreadId,
+                    [nameof(ThreadAllocation.ManagedThreadId)] = x.ManagedThreadId,
+                    [nameof(ThreadAllocation.Allocations)] = x.TotalAllocated,
+                    [nameof(ThreadAllocation.HumaneAllocations)] = Size.Humane(x.TotalAllocated)
                 }));
                 var groupStats = new DynamicJsonValue
                 {
-                    ["Name"] = stats.Key,
-                    ["Allocations"] = unmanagedAllocations,
-                    ["HumaneAllocations"] = Size.Humane(unmanagedAllocations)
+                    [nameof(ThreadAllocation.Name)] = stats.Key,
+                    [nameof(ThreadAllocation.Allocations)] = unmanagedAllocations,
+                    [nameof(ThreadAllocation.HumaneAllocations)] = Size.Humane(unmanagedAllocations)
                 };
                 if (ids.Count == 1)
                 {
                     var threadStats = stats.First();
-                    groupStats["Id"] = threadStats.UnmanagedThreadId;
-                    groupStats["ManagedThreadId"] = threadStats.ManagedThreadId;
+                    groupStats[nameof(ThreadAllocation.Id)] = threadStats.UnmanagedThreadId;
+                    groupStats[nameof(ThreadAllocation.ManagedThreadId)] = threadStats.ManagedThreadId;
                 }
                 else
                 {
-                    groupStats["Ids"] = ids;
+                    groupStats[nameof(ThreadAllocations.Ids)] = ids;
                 }
 
                 if (isFirst == false)
@@ -451,6 +451,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
+        internal class ThreadAllocation
+        {
+            public string Name { get; set; }
+            public long Allocations { get; set; }
+            public string HumaneAllocations { get; set; }
+            public int? Id { get; set; }
+            public int? ManagedThreadId { get; set; }
+        }
+        
+        internal class ThreadAllocations : ThreadAllocation
+        {
+            public List<ThreadAllocation> Ids { get; set; }
+        }
+        
         private static void WriteMappings<TWriter>(bool includeMappings, TWriter writer, JsonOperationContext context,
             Dictionary<string, long> fileMappingSizesByDir, Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>> fileMappingByDir)
             where TWriter : IBlittableJsonTextWriter

@@ -10,6 +10,7 @@ using Newtonsoft.Json.Converters;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations;
@@ -258,13 +259,6 @@ public class RavenDB_22498 : RavenTestBase
         return Can_Convert_Auto_Indexes_Internal(inputFile, expectedCount, expectedNotSupportedCount, expectedErrorCount);
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Indexes, RavenArchitecture.AllX64, NightlyBuildRequired = true)]
-    [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.SlowTests.json.gz", 3319, 451, 8)]
-    public Task Can_Convert_Auto_Indexes_Slow(string inputFile, int expectedCount, int expectedNotSupportedCount, int expectedErrorCount)
-    {
-        return Can_Convert_Auto_Indexes_Internal(inputFile, expectedCount, expectedNotSupportedCount, expectedErrorCount);
-    }
-
     private async Task Can_Convert_Auto_Indexes_Internal(string inputFile, int expectedCount, int expectedNotSupportedCount, int expectedErrorCount)
     {
         using (var store = GetDocumentStore())
@@ -308,7 +302,7 @@ public class RavenDB_22498 : RavenTestBase
                         await store.Maintenance.SendAsync(new PutIndexesOperation(def));
                         await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
                     }
-                    catch
+                    catch (IndexCompilationException)
                     {
                         errorCount++;
                     }

@@ -1,6 +1,6 @@
 import { RtlScreen, rtlRender } from "test/rtlTestUtils";
 import * as stories from "./RevertRevisions.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import React from "react";
 
 const { DefaultRevertRevisions } = composeStories(stories);

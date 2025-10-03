@@ -354,7 +354,11 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ResponsibleNode = new NodeId { NodeTag = responsibleNodeTag, NodeUrl = clusterTopology.GetUrlFromTag(responsibleNodeTag) },
             BackupDestinations = backupDestinations,
             RetentionPolicy = backupConfiguration.RetentionPolicy,
-            IsEncrypted = isEncrypted
+            IsEncrypted = isEncrypted,
+            FullBackupFrequency = backupConfiguration.FullBackupFrequency,
+            IncrementalBackupFrequency = backupConfiguration.IncrementalBackupFrequency,
+            BackupUploadMode = backupConfiguration.BackupUploadMode,
+            HasCloudBackup = backupConfiguration.HasCloudBackup()
         };
     }
 

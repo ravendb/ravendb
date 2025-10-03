@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
@@ -240,6 +241,7 @@ public abstract partial class RachisConsensus
         public long SizeInBytes { get; set; }
         public string CommandType { get; set; }
         public DateTime? CreateAt { get; set; }
+        [JsonIgnore]
         public BlittableJsonReaderObject Entry { get; set; }
         public RachisEntryFlags Flags { get; set; }
         public DynamicJsonValue ToJson()

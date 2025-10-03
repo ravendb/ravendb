@@ -6,41 +6,28 @@ namespace Raven.Server.Monitoring.OpenTelemetry;
 public class MetricsManager
 {
     private readonly RavenServer _server;
+    private readonly bool _metersRegisteredOnInitialize;
     private readonly SemaphoreSlim _locker = new(1, 1);
     private ServerMetrics _serverMetrics;
     private bool _metricsActivated;
     
-    public MetricsManager(RavenServer server)
+    public MetricsManager(RavenServer server, bool metersRegisteredOnInitialize)
     {
         _server = server;
+        _metersRegisteredOnInitialize = metersRegisteredOnInitialize;
         _server.ServerStore.LicenseManager.LicenseChanged += OnLicenseChanged;
     }
 
     private void OnLicenseChanged()
     {
-        if (_server.Configuration.Monitoring.OpenTelemetry.Enabled == false)
-            return;
-
-        _locker.Wait();
         try
         {
-            if (_metricsActivated)
-                return;
-            
-            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, startUp: false);
-            if (activate)
-            {
-                Execute();
-            }
+            Execute();
         }
         catch (ObjectDisposedException)
         {
             // ignore
             // we are shutting down the server
-        }
-        finally
-        {
-            _locker.Release();
         }
     }
 
@@ -56,7 +43,7 @@ public class MetricsManager
             if (_metricsActivated)
                 return;
             
-            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, startUp: true);
+            var activate = _server.ServerStore.LicenseManager.CanUseOpenTelemetryMonitoring(withNotification: true, metersRegistered: _metersRegisteredOnInitialize);
             if (activate)
             {
                 if (_serverMetrics != null)

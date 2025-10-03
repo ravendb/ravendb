@@ -21,7 +21,6 @@ using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
 using Raven.Client;
 using Raven.Client.Util;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;

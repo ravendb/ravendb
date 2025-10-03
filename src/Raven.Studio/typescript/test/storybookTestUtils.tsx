@@ -5,7 +5,7 @@ import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
-import { ReactRenderer } from "@storybook/react";
+import { ReactRenderer } from "@storybook/react-webpack5";
 import { PartialStoryFn } from "storybook/internal/types";
 import { DialogProvider } from "components/common/Dialog";
 
@@ -53,13 +53,20 @@ export function withStorybookContexts(Story: StoryFunction) {
     );
 }
 
+const storyTopBarHeight = 40;
+
 export function withBootstrap5(Story: StoryFunction) {
     return (
         <React.Fragment key="bs5">
             <div
                 id="page-host"
                 className="bs5"
-                style={{ padding: "30px", minHeight: "100vh", display: "flex", flexDirection: "column" }}
+                style={{
+                    padding: "30px",
+                    height: `calc(100vh - ${storyTopBarHeight}px)`,
+                    display: "flex",
+                    flexDirection: "column",
+                }}
             >
                 <Story />
             </div>

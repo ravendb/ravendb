@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import DocumentRefresh from "./DocumentRefresh";
 import { mockServices } from "test/mocks/services/MockServices";

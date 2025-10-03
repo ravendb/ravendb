@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryFn, StoryObj } from "@storybook/react";
+import { Meta, StoryFn, StoryObj } from "@storybook/react-webpack5";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";

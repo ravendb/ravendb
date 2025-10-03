@@ -3,12 +3,12 @@ import { TasksStubs } from "test/stubs/TasksStubs";
 import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
 import React from "react";
 import { commonInit, mockEtlProgress } from "components/pages/database/tasks/ongoingTasks/stories/common";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
-import { userEvent, within } from "@storybook/test";
+import { userEvent, within } from "storybook/test";
 
 export default {
     title: "Pages/Tasks/Ongoing tasks/RabbitMQ",

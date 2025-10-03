@@ -1,4 +1,4 @@
-import { FormLabel, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import React, { useEffect } from "react";
@@ -19,13 +19,14 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AuthenticationOffMessage from "components/pages/resources/databases/partials/create/shared/AuthenticationOffMessage";
 import EncryptionUnavailableMessage from "components/pages/resources/databases/partials/create/shared/EncryptionUnavailableMessage";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 const backupSourceImg = require("Content/img/createDatabase/backup-source.svg");
 
 export default function CreateDatabaseFromBackupStepSource() {
     const { control, setValue } = useFormContext<FormData>();
     const {
-        sourceStep: { sourceData, sourceType },
+        sourceStep: { sourceData, sourceType, isSetMaxReadOpsPerSecond },
     } = useWatch({
         control,
     });
@@ -90,6 +91,23 @@ export default function CreateDatabaseFromBackupStepSource() {
                         <Icon icon="index" />
                         Skip indexes
                     </FormSwitch>
+                    <FormSwitch control={control} name="sourceStep.isSetMaxReadOpsPerSecond" color="primary">
+                        <Icon icon="traffic-watch" />
+                        Set max read operations per second
+                        <PopoverWithHoverWrapper message="This setting is used to limit the impact of restore operations on the database performance.">
+                            <Icon icon="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormSwitch>
+                    {isSetMaxReadOpsPerSecond && (
+                        <FormInput
+                            type="number"
+                            control={control}
+                            name="sourceStep.maxReadOpsPerSecond"
+                            placeholder="Enter the max read operations per second"
+                            min={1}
+                            className="mb-2"
+                        />
+                    )}
                     <IsEncryptedField
                         isRestorePointSnapshot={isRestorePointSnapshot}
                         isRestorePointEncrypted={isRestorePointEncrypted}

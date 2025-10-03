@@ -44,6 +44,8 @@ namespace Raven.Server.Dashboard
         public long KafkaSinkCount { get; set; }
 
         public long RabbitMqSinkCount { get; set; }
+        
+        public long Total { get; set; }
 
         public DynamicJsonValue ToJson()
         {

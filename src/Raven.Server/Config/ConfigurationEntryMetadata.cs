@@ -16,11 +16,11 @@ namespace Raven.Server.Config
     {
         public readonly string Category;
 
-        public readonly string[] Keys;
+        public string[] Keys;
 
         public ConfigurationEntryScope Scope;
 
-        public readonly string DefaultValue;
+        public string DefaultValue;
 
         public readonly bool IsDefaultValueDynamic;
 
@@ -42,6 +42,11 @@ namespace Raven.Server.Config
 
         public string[] AvailableValues { get; private set; }
 
+        public ConfigurationEntryMetadata()
+        {
+            // for deserialization
+        }
+        
         public ConfigurationEntryMetadata(PropertyInfo configurationCategoryProperty, PropertyInfo configurationProperty, RavenConfiguration configuration)
         {
             if (configurationCategoryProperty is null)

@@ -1,4 +1,4 @@
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import * as Stories from "./DatabaseRecord.stories";
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";

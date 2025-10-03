@@ -41,6 +41,9 @@ class importDatabaseModel {
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
     itemsToWarnAbout: KnockoutComputed<string>;
+
+    isSetMaxReadOpsPerSecond = ko.observable<boolean>(false);
+    maxReadOpsPerSecond = ko.observable<number>(null);
     
     constructor() {
         this.initValidation();
@@ -190,6 +193,7 @@ class importDatabaseModel {
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
             OperateOnDatabaseRecordTypes: recordTypes,
             Collections: this.includeAllCollections() ? null : this.includedCollections(),
+            MaxReadOpsPerSecond: this.isSetMaxReadOpsPerSecond() ? this.maxReadOpsPerSecond() : null
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
     }
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./ClientGlobalConfiguration.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { ClientConfiguration, LicenseRestricted } = composeStories(stories);
 
