@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class PutDatabaseStudioConfigurationCommand : UpdateDatabaseCommand
+    public sealed class PutDatabaseStudioConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public StudioConfiguration Configuration;
 
@@ -28,5 +28,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             record.Studio = Configuration;
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

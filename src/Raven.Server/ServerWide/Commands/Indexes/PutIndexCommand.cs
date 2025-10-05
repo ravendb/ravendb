@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
-    public sealed class PutIndexCommand : UpdateDatabaseCommand
+    public sealed class PutIndexCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public IndexDefinition Definition;
 
@@ -114,5 +114,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 }
             }
         }
+
+        public override bool Disabled => Definition.State == IndexState.Disabled;
     }
 }

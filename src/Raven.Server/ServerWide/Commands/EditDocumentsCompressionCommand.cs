@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class EditDocumentsCompressionCommand : UpdateDatabaseCommand
+    public sealed class EditDocumentsCompressionCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public DocumentsCompressionConfiguration Configuration;
         
@@ -38,5 +38,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
+
+        public override bool Disabled => Configuration.CompressAllCollections == false && Configuration.CompressRevisions == false && Configuration.Collections?.Length == 0;
     }
 }
