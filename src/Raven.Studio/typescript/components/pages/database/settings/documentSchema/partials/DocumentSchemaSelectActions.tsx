@@ -35,6 +35,10 @@ export default function DocumentSchemaSelectActions() {
     const { reportEvent } = useEventsCollector();
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
     const { value: isTogglingStatus, setTrue: setTogglingStatus, setFalse: unsetTogglingStatus } = useBoolean(false);
+    const {
+        setTrue: setTogglingGlobalStatus,
+        setFalse: unsetTogglingGlobalStatus,
+    } = useBoolean(false);
     const [operationConfirm, setOperationConfirm] = React.useState<OperationConfirm>(null);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -42,6 +46,7 @@ export default function DocumentSchemaSelectActions() {
     const allValidators = useAppSelector(documentSchemaSelectors.allValidators);
     const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
+    const globalDisabled = useAppSelector(documentSchemaSelectors.globalDisabled);
 
     if (allCollectionNames.length === 0) {
         return null;
@@ -76,7 +81,7 @@ export default function DocumentSchemaSelectActions() {
 
             await databasesService.saveSchemaValidation(
                 databaseName,
-                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allUpdatedValidators)
+                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allUpdatedValidators, globalDisabled)
             );
 
             dispatch(documentSchemaActions.validatorsSaved());
@@ -95,58 +100,101 @@ export default function DocumentSchemaSelectActions() {
         });
     };
 
+    const handleGlobalStatusToggle = async (disabled: boolean) => {
+        try {
+            setTogglingGlobalStatus();
+            reportEvent("document-schema", disabled ? "global-disable" : "global-enable");
+
+            dispatch(documentSchemaActions.globalDisabledToggled(disabled));
+
+            await databasesService.saveSchemaValidation(
+                databaseName,
+                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allValidators, disabled)
+            );
+
+            dispatch(documentSchemaActions.validatorsSaved());
+        } finally {
+            unsetTogglingGlobalStatus();
+        }
+    };
+
+    const handleGlobalStatusOperation = (type: DocumentSchemaOperationConfirmType) => {
+        setOperationConfirm({
+            type,
+            onConfirm: () => handleGlobalStatusToggle(type === "disable"),
+            validators: allValidators,
+        });
+    };
+
     return (
-        <div className="position-relative">
-            <Checkbox
-                selected={selectionState === "AllSelected"}
-                indeterminate={selectionState === "SomeSelected"}
-                toggleSelection={toggleAll}
-                color="primary"
-                title="Select all or none"
-                size="lg"
-            >
-                <span className="small-label">Select All</span>
-            </Checkbox>
-
-            <SelectionActions active={selectionState !== "Empty"}>
-                <div className="d-flex align-items-center justify-content-center flex-wrap gap-2">
-                    <div className="lead text-nowrap">
-                        <strong className="text-emphasis me-1">{selectedCollectionNames.length}</strong> selected
-                    </div>
-                    <ButtonGroup className="gap-2 flex-wrap justify-content-center">
-                        <Dropdown>
-                            <Dropdown.Toggle
-                                variant="secondary"
-                                disabled={selectionState === "Empty" || isTogglingStatus}
-                                title="Set the status (enabled/disabled) of selected document schemas"
-                                className="rounded-pill"
-                            >
-                                {isTogglingStatus ? <Spinner size="sm" /> : <Icon icon="play" />} Set state
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                <Dropdown.Item title="Enable" onClick={() => handleStatusOperation("enable")}>
-                                    <Icon icon="play" color="success" />
-                                    <span>Enable</span>
-                                </Dropdown.Item>
-                                <Dropdown.Item title="Disable" onClick={() => handleStatusOperation("disable")}>
-                                    <Icon icon="stop" color="danger" />
-                                    <span>Disable</span>
-                                </Dropdown.Item>
-                            </Dropdown.Menu>
-                        </Dropdown>
-
-                        <Button variant="danger" onClick={toggleDeleteModal} className="rounded-pill flex-grow-0">
-                            <Icon icon="trash" /> Delete
-                        </Button>
-                    </ButtonGroup>
-                    <Button
-                        onClick={() => dispatch(documentSchemaActions.allSelectedCollectionNamesToggled())}
-                        variant="link"
+        <>
+            <div className="position-relative d-flex w-100 justify-content-between align-items-center gap-2">
+                <div>
+                    <Checkbox
+                        selected={selectionState === "AllSelected"}
+                        indeterminate={selectionState === "SomeSelected"}
+                        toggleSelection={toggleAll}
+                        color="primary"
+                        title="Select all or none"
+                        size="lg"
                     >
-                        Cancel
-                    </Button>
+                        <span className="small-label">Select All</span>
+                    </Checkbox>
+                    <SelectionActions active={selectionState !== "Empty"}>
+                        <div className="d-flex align-items-center justify-content-center flex-wrap gap-2">
+                            <div className="lead text-nowrap">
+                                <strong className="text-emphasis me-1">{selectedCollectionNames.length}</strong>{" "}
+                                selected
+                            </div>
+                            <ButtonGroup className="gap-2 flex-wrap justify-content-center">
+                                <Dropdown>
+                                    <Dropdown.Toggle
+                                        variant="secondary"
+                                        disabled={selectionState === "Empty" || isTogglingStatus}
+                                        title="Set the status (enabled/disabled) of selected document schemas"
+                                        className="rounded-pill"
+                                    >
+                                        {isTogglingStatus ? <Spinner size="sm" /> : <Icon icon="play" />} Set state
+                                    </Dropdown.Toggle>
+                                    <Dropdown.Menu>
+                                        <Dropdown.Item title="Enable" onClick={() => handleStatusOperation("enable")}>
+                                            <Icon icon="play" color="success" />
+                                            <span>Enable</span>
+                                        </Dropdown.Item>
+                                        <Dropdown.Item title="Disable" onClick={() => handleStatusOperation("disable")}>
+                                            <Icon icon="stop" color="danger" />
+                                            <span>Disable</span>
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
+
+                                <Button
+                                    variant="danger"
+                                    onClick={toggleDeleteModal}
+                                    className="rounded-pill flex-grow-0"
+                                >
+                                    <Icon icon="trash" /> Delete
+                                </Button>
+                            </ButtonGroup>
+                            <Button
+                                onClick={() => dispatch(documentSchemaActions.allSelectedCollectionNamesToggled())}
+                                variant="link"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </SelectionActions>
                 </div>
-            </SelectionActions>
+                {globalDisabled ? (
+                    <Button variant="success" onClick={() => handleGlobalStatusOperation("enable")}>
+                        Enable Schema Validation for All Collections
+                    </Button>
+                ) : (
+                    <Button variant="secondary" onClick={() => handleGlobalStatusOperation("disable")}>
+                        Disable Schema Validation for All Collections
+                    </Button>
+                )}
+            </div>
             {isDeleteModalOpen && (
                 <DocumentSchemaDeleteModal
                     selectedCollectionNames={selectedCollectionNames}
@@ -156,6 +204,6 @@ export default function DocumentSchemaSelectActions() {
             {operationConfirm && (
                 <DocumentSchemaOperationConfirm {...operationConfirm} toggle={() => setOperationConfirm(null)} />
             )}
-        </div>
+        </>
     );
 }

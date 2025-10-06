@@ -21,6 +21,7 @@ export const useDocumentSchema = () => {
     const validators = useAppSelector(documentSchemaSelectors.allValidators);
     const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
     const draftIds = useAppSelector(documentSchemaSelectors.newDraftIds);
+    const globalDisabled = useAppSelector(documentSchemaSelectors.globalDisabled);
     const [selectedCollections, setSelectedCollections] = useState<SelectOption[]>([]);
     const [selectedStatuses, setSelectedStatuses] = useState<DocumentSchemaStatus[]>([]);
 
@@ -58,7 +59,7 @@ export const useDocumentSchema = () => {
     const asyncSaveValidators = useAsyncCallback(async (items: DocumentSchemaValidatorConfig[]) => {
         await databasesService.saveSchemaValidation(
             databaseName,
-            documentSchemaUtils.mapToSchemaValidationConfigurationDto(items)
+            documentSchemaUtils.mapToSchemaValidationConfigurationDto(items, globalDisabled)
         );
         dispatch(documentSchemaActions.validatorsSaved());
     });

@@ -4,10 +4,11 @@ import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaV
 import genUtils from "common/generalUtils";
 
 const mapToSchemaValidationConfigurationDto = (
-    formData: DocumentSchemaValidatorConfig[]
+    formData: DocumentSchemaValidatorConfig[],
+    globalDisabled?: boolean
 ): SchemaValidationConfiguration => {
     return {
-        Disabled: false,
+        Disabled: globalDisabled,
         ValidatorsPerCollection: Object.fromEntries(
             formData.map((x) => [
                 x.Name,
