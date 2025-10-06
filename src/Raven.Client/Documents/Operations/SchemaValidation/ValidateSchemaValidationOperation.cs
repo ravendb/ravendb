@@ -10,10 +10,8 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Operations.SchemaValidation;
 
 /// <summary>
-/// Starts a server-side background operation that validates documents of the specified collection
-/// against the provided JSON schema. Returns an operation id for status tracking.
-/// When optional limits are not supplied the server applies defaults:
-/// MaxErrorsMsg = 1024, MaxTimeInMinutes = 16, MaxReadTrxTimeInSeconds = 960.
+/// Starts a background operation that validates documents in the specified collection against the given JSON schema.
+/// Server defaults when optional limits are omitted: MaxErrorMessages=1024, MaxDurationInMinutes=16, MaxReadBatchDurationInSeconds=960.
 /// </summary>
 public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<OperationIdResult<StartValidateSchemaValidationOperationResult>>
 {
@@ -27,17 +25,17 @@ public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<Op
         /// <summary>JSON schema definition text. (Required)</summary>
         public string Schema { get; set; }
 
-        /// <summary> Maximum collected validation error messages. (Optional, default 1024, must be > 0 when specified) </summary>
-        public int? MaxErrorsMsg { get; set; }
+        /// <summary>Maximum collected validation error messages. (Optional, default 1024, must be >= 0 when specified)</summary>
+        public int? MaxErrorMessages { get; set; }
 
         /// <summary>Target collection to validate. (Required)</summary>
         public string Collection { get; set; }
 
         /// <summary>Total time limit in minutes. (Optional, default 16, must be > 0 when specified)</summary>
-        public int? MaxTimeInMinutes { get; set; }
+        public int? MaxDurationInMinutes { get; set; }
 
-        /// <summary>Per read transaction time limit in seconds. (Optional, default 960, must be > 0 when specified)</summary>
-        public int? MaxReadTrxTimeInSeconds { get; set; }
+        /// <summary>Maximum duration per read batch in seconds. (Optional, default 960, must be > 0 when specified)</summary>
+        public int? MaxReadBatchDurationInSeconds { get; set; }
     }
 
     /// <summary>
@@ -52,12 +50,12 @@ public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<Op
         if (string.IsNullOrWhiteSpace(_parameters.Collection))
             throw new ArgumentException("Collection must be provided.", nameof(parameters));
 
-        if (_parameters.MaxErrorsMsg is < 0)
-            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxErrorsMsg)} must be >= 0.");
-        if (_parameters.MaxTimeInMinutes is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxTimeInMinutes)} must be > 0.");
-        if (_parameters.MaxReadTrxTimeInSeconds is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxReadTrxTimeInSeconds)} must be > 0.");
+        if (_parameters.MaxErrorMessages is < 0)
+            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxErrorMessages)} must be >= 0.");
+        if (_parameters.MaxDurationInMinutes is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxDurationInMinutes)} must be > 0.");
+        if (_parameters.MaxReadBatchDurationInSeconds is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxReadBatchDurationInSeconds)} must be > 0.");
     }
 
     public RavenCommand<OperationIdResult<StartValidateSchemaValidationOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)

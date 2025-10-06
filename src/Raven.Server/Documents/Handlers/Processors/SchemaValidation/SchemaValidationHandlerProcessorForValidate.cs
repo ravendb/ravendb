@@ -32,9 +32,9 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
 
     private Task<IOperationResult> StartValidation(Action<IOperationProgress> onProgress)
     {
-        var maxErrorsMsg = Parameters.MaxErrorsMsg ?? 1024;
-        var maxTime = TimeSpan.FromMinutes(Parameters.MaxTimeInMinutes ?? 16);
-        var maxReadTrxTime = TimeSpan.FromSeconds(Parameters.MaxReadTrxTimeInSeconds ?? 16 * 60);
+        var maxErrorsMsg = Parameters.MaxErrorMessages ?? 1024;
+        var maxTime = TimeSpan.FromMinutes(Parameters.MaxDurationInMinutes ?? 16);
+        var maxReadTrxTime = TimeSpan.FromSeconds(Parameters.MaxReadBatchDurationInSeconds ?? 16 * 60);
         
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {

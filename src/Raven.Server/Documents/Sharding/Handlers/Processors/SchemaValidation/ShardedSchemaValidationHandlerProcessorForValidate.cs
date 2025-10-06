@@ -17,8 +17,8 @@ internal sealed class ShardedSchemaValidationHandlerProcessorForValidate : Abstr
 
     protected override void StartValidationOperation(long operationId, OperationCancelToken token)
     {
-        Parameters.MaxErrorsMsg = Parameters.MaxErrorsMsg.HasValue 
-            ? Math.Max(1, Parameters.MaxErrorsMsg.Value / RequestHandler.DatabaseContext.ShardCount) 
+        Parameters.MaxErrorMessages = Parameters.MaxErrorMessages.HasValue 
+            ? Math.Max(1, Parameters.MaxErrorMessages.Value / RequestHandler.DatabaseContext.ShardCount) 
             : null;
         
         _ = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartValidateSchemaValidationOperationResult>, ValidateSchemaValidationResult, ValidateSchemaValidationProgress>(
