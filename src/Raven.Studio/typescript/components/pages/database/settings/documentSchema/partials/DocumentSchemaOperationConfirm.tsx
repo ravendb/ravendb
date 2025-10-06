@@ -3,12 +3,11 @@ import { DocumentSchemaValidatorConfig } from "components/pages/database/setting
 import assertUnreachable from "components/utils/assertUnreachable";
 import { capitalize } from "lodash";
 import { Icon } from "components/common/Icon";
-import IconName from "typings/server/icons";
 import { ThemeColor } from "components/models/common";
-import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
 import classNames from "classnames";
+import IconName from "../../../../../../../typings/server/icons";
 
 export type DocumentSchemaOperationConfirmType = "enable" | "disable";
 
@@ -60,38 +59,44 @@ export default function DocumentSchemaOperationConfirm({
             <Modal.Body className="vstack gap-4">
                 {schemaGroups.map((schemaGroup, idx) => (
                     <div key={"schema-group-" + idx}>
-                        <div className="text-center lead">{schemaGroup.title}</div>
-                        <div className="vstack gap-1 my-4">
-                            {schemaGroup.schemas.map((schema) => (
-                                <div key={schema.Name} className="d-flex">
-                                    <div
-                                        className={classNames(
-                                            "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
-                                        )}
-                                    >
-                                        <Icon
-                                            icon={getStatusIcon(schema.Disabled)}
-                                            color={getStatusColor(schema.Disabled)}
-                                            margin="m-0"
-                                        />
-                                        {schemaGroup.destinationStatus && (
-                                            <>
-                                                <Icon
-                                                    icon="arrow-thin-right"
-                                                    margin="mx-1"
-                                                    className="fs-6 align-self-center"
-                                                />
-                                                <Icon
-                                                    icon={getStatusIcon(schemaGroup.destinationStatus === "Disabled")}
-                                                    color={getStatusColor(schemaGroup.destinationStatus === "Disabled")}
-                                                    margin="m-0"
-                                                />
-                                            </>
-                                        )}
+                        <div className="text-center lead mb-3">{schemaGroup.title}</div>
+                        <div style={{ maxHeight: "45vh", overflow: "auto" }}>
+                            <div className="vstack gap-1 my-4">
+                                {schemaGroup.schemas.map((schema) => (
+                                    <div key={schema.Name} className="d-flex">
+                                        <div
+                                            className={classNames(
+                                                "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                            )}
+                                        >
+                                            <Icon
+                                                icon={getStatusIcon(schema.Disabled)}
+                                                color={getStatusColor(schema.Disabled)}
+                                                margin="m-0"
+                                            />
+                                            {schemaGroup.destinationStatus && (
+                                                <>
+                                                    <Icon
+                                                        icon="arrow-thin-right"
+                                                        margin="mx-1"
+                                                        className="fs-6 align-self-center"
+                                                    />
+                                                    <Icon
+                                                        icon={getStatusIcon(
+                                                            schemaGroup.destinationStatus === "Disabled"
+                                                        )}
+                                                        color={getStatusColor(
+                                                            schemaGroup.destinationStatus === "Disabled"
+                                                        )}
+                                                        margin="m-0"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="word-break align-self-center">{schema.Name}</div>
                                     </div>
-                                    <div className="word-break align-self-center">{schema.Name}</div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                         {idx < schemaGroups.length - 1 && <hr className="m-0" />}
                     </div>

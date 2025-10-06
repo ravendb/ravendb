@@ -194,23 +194,24 @@ const DocumentSchemaBody = ({ asyncLoadValidators, filteredValidators }: Documen
 
 interface DocumentSchemaStatusProps {
     validator: DocumentSchemaValidatorConfig;
-    canEdit: boolean;
+    isEditing: boolean;
     onStatusToggle: (disabled: boolean) => void;
     isTogglingState: boolean;
 }
 
 export function DocumentSchemaStatus({
     validator,
-    canEdit,
+    isEditing,
     onStatusToggle,
     isTogglingState,
 }: DocumentSchemaStatusProps) {
+    if (isEditing) {
+        return null;
+    }
+
     return (
         <Dropdown>
-            <Dropdown.Toggle
-                disabled={!canEdit || isTogglingState}
-                variant={validator.Disabled ? "warning" : "success"}
-            >
+            <Dropdown.Toggle disabled={isTogglingState} variant={validator.Disabled ? "warning" : "success"}>
                 {isTogglingState && <Spinner size="sm" />} {validator.Disabled ? "Disabled" : "Enabled"}
             </Dropdown.Toggle>
             <Dropdown.Menu>
@@ -310,7 +311,7 @@ const CollectionSchemaRichPanel = ({
                 <RichPanel>
                     <RichPanelHeader>
                         <RichPanelInfo>
-                            {hasDatabaseAdminAccess && (
+                            {(isEditingSchema || hasDatabaseAdminAccess) && (
                                 <RichPanelSelect>
                                     <Checkbox
                                         toggleSelection={() =>
@@ -328,7 +329,7 @@ const CollectionSchemaRichPanel = ({
                             <RichPanelActions>
                                 <DocumentSchemaStatus
                                     validator={validator}
-                                    canEdit={hasDatabaseAdminAccess}
+                                    isEditing={isEditingSchema}
                                     onStatusToggle={handleStatusToggle}
                                     isTogglingState={isTogglingStatus}
                                 />
@@ -514,9 +515,14 @@ const RichPanelDetailsEditSchema = ({
                         options={collectionOptions}
                     />
                 </FormGroup>
-                <FormLabel title={`Edit the JSON schema for documents in the collection`}>
-                    Document schema <Icon icon="info" color="info" margin="m-0" />
+
+                <FormLabel>
+                    Document schema{" "}
+                    <PopoverWithHoverWrapper message="Edit the JSON schema for documents in the collection">
+                        <Icon icon="info" color="info" margin="m-0" />
+                    </PopoverWithHoverWrapper>
                 </FormLabel>
+
                 <FormAceEditor
                     control={control}
                     name="schema"

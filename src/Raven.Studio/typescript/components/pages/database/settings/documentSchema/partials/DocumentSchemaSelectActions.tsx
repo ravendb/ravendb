@@ -23,6 +23,7 @@ import DocumentSchemaOperationConfirm, {
 import { useServices } from "hooks/useServices";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
+import useConfirm from "components/common/ConfirmDialog";
 
 interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
@@ -36,10 +37,12 @@ export default function DocumentSchemaSelectActions() {
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
     const { value: isTogglingStatus, setTrue: setTogglingStatus, setFalse: unsetTogglingStatus } = useBoolean(false);
     const {
+        value: isTogglingGlobalStatus,
         setTrue: setTogglingGlobalStatus,
         setFalse: unsetTogglingGlobalStatus,
     } = useBoolean(false);
     const [operationConfirm, setOperationConfirm] = React.useState<OperationConfirm>(null);
+    const confirm = useConfirm();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -100,7 +103,33 @@ export default function DocumentSchemaSelectActions() {
         });
     };
 
-    const handleGlobalStatusToggle = async (disabled: boolean) => {
+    const handleGlobalStatusOperation = async (disabled: boolean) => {
+        const isConfirmed = await confirm({
+            title: disabled
+                ? "Do you want to disable schema validation globally?"
+                : "Do you want to enable schema validation globally?",
+            message: disabled ? (
+                <p>
+                    This will disable schema validation for all collections in the database. Documents will no longer be
+                    validated against their schemas.
+                </p>
+            ) : (
+                <p>
+                    This will <b>enable schema validation globally</b> for all collections in the database. Documents
+                    will be validated against their defined schemas. If a schema has validation{" "}
+                    <b>disabled individually</b>, you’ll need to <b>enable it manually</b>. The global setting does not
+                    override per-schema configurations.
+                </p>
+            ),
+            icon: disabled ? "stop" : "play",
+            confirmText: disabled ? "Disable" : "Enable",
+            actionColor: disabled ? "danger" : "success",
+        });
+
+        if (!isConfirmed) {
+            return;
+        }
+
         try {
             setTogglingGlobalStatus();
             reportEvent("document-schema", disabled ? "global-disable" : "global-enable");
@@ -116,14 +145,6 @@ export default function DocumentSchemaSelectActions() {
         } finally {
             unsetTogglingGlobalStatus();
         }
-    };
-
-    const handleGlobalStatusOperation = (type: DocumentSchemaOperationConfirmType) => {
-        setOperationConfirm({
-            type,
-            onConfirm: () => handleGlobalStatusToggle(type === "disable"),
-            validators: allValidators,
-        });
     };
 
     return (
@@ -186,12 +207,24 @@ export default function DocumentSchemaSelectActions() {
                     </SelectionActions>
                 </div>
                 {globalDisabled ? (
-                    <Button variant="success" onClick={() => handleGlobalStatusOperation("enable")}>
-                        Enable Schema Validation for All Collections
+                    <Button
+                        variant="success"
+                        onClick={() => handleGlobalStatusOperation(false)}
+                        disabled={isTogglingGlobalStatus}
+                    >
+                        {isTogglingGlobalStatus && <Spinner size="sm" />}
+                        <Icon icon="play" />
+                        Enable Schema Validation
                     </Button>
                 ) : (
-                    <Button variant="secondary" onClick={() => handleGlobalStatusOperation("disable")}>
-                        Disable Schema Validation for All Collections
+                    <Button
+                        variant="secondary"
+                        onClick={() => handleGlobalStatusOperation(true)}
+                        disabled={isTogglingGlobalStatus}
+                    >
+                        {isTogglingGlobalStatus && <Spinner size="sm" />}
+                        <Icon icon="stop" />
+                        Disable Schema Validation
                     </Button>
                 )}
             </div>
