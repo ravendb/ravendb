@@ -3,7 +3,8 @@ param(
     $ArtifactsDir = "..\artifacts",
     $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.posix.json",
     $Arch = "x64",
-    $DockerfileDir = "./ravendb-ubuntu")
+    $DockerfileDir = "./ravendb-ubuntu",
+    [switch]$UseVersionTagsOnly)
 
 $ErrorActionPreference = "Stop"
 
@@ -43,7 +44,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
     Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
     write-host "Build docker image: $version"
-    $tags = GetUbuntuImageTags $repo $version $arch
+    [string[]]$tags = GetUbuntuImageTags $repo $version $arch $UseVersionTagsOnly
     write-host "Tags: $tags"
 
     $fullNameTag = $tags[0]

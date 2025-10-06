@@ -1,19 +1,21 @@
 param(
-    $Repo = "ravendb/ravendb",
-    $ArtifactsDir = "..\artifacts",
-    $WinVer = "1809",
+    [string]$Repo = "ravendb/ravendb",
+    [string]$ArtifactsDir = "..\artifacts",
+    [string]$WinVer = "1809",
     [switch]$DryRun = $False,
-    [switch]$RemoveImages = $False)
+    [switch]$RemoveImages = $False,
+    [switch]$UseVersionTagsOnly
+)
 
 $ErrorActionPreference = "Stop"
 
 . ".\common.ps1"
 
 if ($env:DRY_RUN) {
-    $DryRun=$True
+    $DryRun = $True
 }
 
-function PushImagesToDockerHub($imageTags) {
+function PushImagesToDockerHub([string[]]$imageTags) {
     write-host "Pushing images to Docker Hub."
     foreach ($tag in $imageTags) {
         write-host "Push $tag"
@@ -31,14 +33,14 @@ function RemoveImages($imageTags) {
     }
 }
 
-function PushImagesDryRun($imageTags) {
+function PushImagesDryRun([string[]]$imageTags) {
     write-host "DRY RUN: Pushing images."
     foreach ($tag in $imageTags) {
         write-host "DRY RUN: docker push $tag"
     }
 }
 
-function PushImages($imageTags) {
+function PushImages([string[]]$imageTags) {
     if ($DryRun -eq $False) {
         PushImagesToDockerHub $imageTags
     } else {
@@ -47,7 +49,7 @@ function PushImages($imageTags) {
 }
 
 $version = GetVersionFromArtifactName
-$tags = GetWindowsImageTags $Repo $version $WinVer
+[string[]]$tags = GetWindowsImageTags $Repo $version $WinVer $UseVersionTagsOnly
 PushImages $tags
 
 if ($RemoveImages) {
