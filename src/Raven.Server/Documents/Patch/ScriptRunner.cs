@@ -1193,14 +1193,11 @@ namespace Raven.Server.Documents.Patch
 
                             break;
                         }
-                        catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                        catch (Voron.Exceptions.VoronConcurrencyErrorException e)
                         {
-                            // RavenDB-21091 / RavenDB-10581 - If we have a concurrency error on "doc-id/"
-                            // this means that we have existing values under the current etag
-                            // we'll generate a new (random) id for them.
-                            if (id?.EndsWith(_database.IdentityPartsSeparator) == true)
+                            if (DocumentPutAction.TryHandleVoronConcurrencyError(e, _database, id, out var newId))
                             {
-                                id = MergedPutCommand.GenerateNonConflictingId(_database, id);
+                                id = newId;
                                 continue;
                             }
 
