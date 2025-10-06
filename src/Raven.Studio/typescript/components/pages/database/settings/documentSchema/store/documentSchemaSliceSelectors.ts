@@ -14,10 +14,13 @@ const isSelectedCollectionName = (name: string) => (store: RootState) =>
 
 const newDraftIds = (store: RootState) => store.documentSchema.newDraftIds;
 
+const globalDisabled = (store: RootState) => store.documentSchema.globalDisabled;
+
 export const documentSchemaSelectors = {
     allValidators,
     allCollectionNames,
     selectedCollectionNames,
     isSelectedCollectionName,
     newDraftIds,
+    globalDisabled,
 };

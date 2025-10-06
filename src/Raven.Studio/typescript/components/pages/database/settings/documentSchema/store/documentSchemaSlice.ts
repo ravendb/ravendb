@@ -12,6 +12,7 @@ export interface DocumentSchemaState {
     validators: EntityState<DocumentSchemaValidatorConfig, string>;
     originalValidators: EntityState<DocumentSchemaValidatorConfig, string>;
     newDraftIds: string[];
+    globalDisabled: boolean;
 }
 
 const validatorsAdapter = createEntityAdapter<DocumentSchemaValidatorConfig, string>({
@@ -25,6 +26,7 @@ const initialState: DocumentSchemaState = {
     validators: validatorsAdapter.getInitialState(),
     originalValidators: validatorsAdapter.getInitialState(),
     newDraftIds: [],
+    globalDisabled: false,
 };
 
 export const documentSchemaSlice = createSlice({
@@ -43,6 +45,7 @@ export const documentSchemaSlice = createSlice({
 
             validatorsAdapter.setAll(state.originalValidators, items);
             validatorsAdapter.setAll(state.validators, items);
+            state.globalDisabled = payload?.Disabled ?? false;
         },
         validatorAdded: (state, { payload }: PayloadAction<DocumentSchemaValidatorConfig>) => {
             validatorsAdapter.addOne(state.validators, payload);
@@ -90,6 +93,9 @@ export const documentSchemaSlice = createSlice({
         },
         validatorsSaved: (state) => {
             validatorsAdapter.setAll(state.originalValidators, validatorsSelectors.selectAll(state.validators));
+        },
+        globalDisabledToggled: (state, { payload: disabled }: PayloadAction<boolean>) => {
+            state.globalDisabled = disabled;
         },
         reset: () => initialState,
     },
