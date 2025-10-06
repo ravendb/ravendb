@@ -287,10 +287,24 @@ namespace Raven.Server.Utils
         private static void ValidateNoPrivateKeyInServerCert(byte[] serverCertBytes)
         {
             var collection = new X509Certificate2Collection();
-            // without the server private key here
-            CertificateLoaderUtil.Import(collection, serverCertBytes);
+
+            try
+            {
+                // without the server private key here
+                CertificateLoaderUtil.Import(collection, serverCertBytes);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
 
             if (new X509Certificate2Collection(collection).OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
+                throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
+        }
+        
+        private static void ValidateNoPrivateKeyInServerCert(X509Certificate2 certificate)
+        {
+            if (certificate.HasPrivateKey)
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
         }
 
@@ -505,26 +519,73 @@ namespace Raven.Server.Utils
             var flags = X509KeyStorageFlags.PersistKeySet;
             return new X509Certificate2(clientCertBytes, string.Empty, flags);
         }
-        
+
         public static X509Certificate2 ExtractServerCertificateFromExtension(X509Certificate2 clientCert)
         {
-            // Find the custom extension by its OID.
-            var extension = clientCert.Extensions
-                .FirstOrDefault(ext => ext.Oid?.Value == Constants.Certificates.ServerCertExtensionOid);
-
-            if (extension == null)
+            X509Certificate2 serverCertificateFromExtension = null;
+            try
             {
-                return null; // No server certificate found
-            }
-            
-            // Validate that the server certificate does not have a private key.
-            ValidateNoPrivateKeyInServerCert(extension.RawData);
-            
-            // The RawData property of the extension contains the DER-encoded certificate bytes.
-            // The native .NET X509Certificate2 constructor can directly create a certificate from these bytes.
-            var certificateFromExtension = new X509Certificate2(extension.RawData);
+                // Find the custom extension by its OID.
+                var extension = clientCert.Extensions
+                    .FirstOrDefault(ext => ext.Oid?.Value == Constants.Certificates.ServerCertExtensionOid);
 
-            return certificateFromExtension;
+                if (extension == null)
+                    return null; // No server certificate found
+
+                // Try standard .NET method first
+                try
+                {
+                    // The RawData property of the extension contains the DER-encoded certificate bytes.
+                    // The native .NET X509Certificate2 constructor can directly create a certificate from these bytes.
+                    serverCertificateFromExtension = new X509Certificate2(extension.RawData);
+                }
+                catch (CryptographicException)
+                {
+                    // If that fails, try alternative approach for BouncyCastle certs
+
+                    // Get the raw data and try to find a certificate structure
+                    var rawData = extension.RawData;
+
+                    // Try to extract certificate from ASN.1 structure
+
+                    // Skip any header/metadata that might be present
+                    // Look for the start of a possible X.509 certificate (tag 0x30 for SEQUENCE)
+                    const int asn1SequenceTag = 0x30;
+                    for (int i = 0; i < rawData.Length - 4; i++)
+                    {
+                        if (rawData[i] != asn1SequenceTag)
+                            continue;
+
+                        try
+                        {
+                            // Try to create a certificate from this position
+                            var certBytes = new byte[rawData.Length - i];
+                            Array.Copy(rawData, i, certBytes, 0, certBytes.Length);
+                            serverCertificateFromExtension = new X509Certificate2(certBytes);
+                            break;
+                        }
+                        catch
+                        {
+                            // Keep searching
+                        }
+                    }
+
+                    if (serverCertificateFromExtension == null)
+                        throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to extract server certificate from client certificate extension" +
+                                      " using standard .NET method and BouncyCastle method.", ex);
+
+                return null;
+            }
+
+            ValidateNoPrivateKeyInServerCert(serverCertificateFromExtension);
+
+            return serverCertificateFromExtension;
         }
 
 

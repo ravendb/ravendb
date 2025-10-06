@@ -6,12 +6,13 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Org.BouncyCastle.Security;
 using Raven.Client;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Utils;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Xunit;
@@ -19,10 +20,35 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_24495 : RavenTestBase
+public class RavenDB_24495 : ClusterTestBase
 {
     public RavenDB_24495(ITestOutputHelper output) : base(output)
     {
+    }
+
+    [RavenTheory(RavenTestCategory.Certificates)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanReplaceServerCertificate_WithBouncyCastleGeneratedCertificate(bool with2Eku)
+    {
+        var result = await CreateRaftClusterWithSsl(3, with2Eku: with2Eku);
+        
+        var newCertBytes = CertificateUtils.CreateSelfSignedTestCertificate("server-bc", "replace-server-cert-test", with2Eku: with2Eku);
+        
+        var first = result.Certificates.ServerCertificate.Value.Thumbprint;
+        var certForCommunication = result.Certificates.ServerCertificateForCommunication.Value;
+
+        var mre = new AsyncManualResetEvent();
+        Server.ServerCertificateChanged += (sender, args) => mre.Set();
+        
+        using (var store = GetDocumentStore(new Options { AdminCertificate = certForCommunication, ClientCertificate = certForCommunication }))
+        {
+            var op = new ReplaceClusterCertificateOperation(newCertBytes, replaceImmediately: false);
+            await store.Maintenance.Server.SendAsync(op);
+        }
+
+        await mre.WaitAsync(TimeSpan.FromMinutes(4));
+        Assert.NotEqual(first, Server.Certificate.ServerCertificate.Thumbprint);
     }
 
     [RavenFact(RavenTestCategory.Certificates)]
@@ -144,7 +170,7 @@ public class RavenDB_24495 : RavenTestBase
             Assert.Contains(Constants.Certificates.ClientAuthenticationOid, GetEkus(bcClient));
             Assert.Contains(Constants.Certificates.ClientAuthenticationOid, GetEkus(dnClient));
 
-            var bcExtracted = BouncyCastleCertificateUtils.ExtractServerCertificateFromExtension(bcClient);
+            var bcExtracted = CertificateUtils.ExtractServerCertificateFromExtension(bcClient);
             var dnExtracted = CertificateUtils.ExtractServerCertificateFromExtension(dnClient);
 
             Assert.NotNull(bcExtracted);
