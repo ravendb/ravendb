@@ -12,6 +12,7 @@ import {
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import { DocumentSchemaFormData } from "components/pages/database/settings/documentSchema/DocumentSchema";
 import { tryHandleSubmit } from "components/utils/common";
+import { DocumentSchemaStatus } from "components/pages/database/settings/documentSchema/DocumentSchemaFilter";
 
 export const useDocumentSchema = () => {
     const { databasesService } = useServices();
@@ -21,12 +22,20 @@ export const useDocumentSchema = () => {
     const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
     const draftIds = useAppSelector(documentSchemaSelectors.newDraftIds);
     const [selectedCollections, setSelectedCollections] = useState<SelectOption[]>([]);
+    const [selectedStatuses, setSelectedStatuses] = useState<DocumentSchemaStatus[]>([]);
 
     const options: SelectOption[] = allCollectionNames.map((x) => ({ label: x, value: x }));
 
-    const filteredValidators = selectedCollections.length
-        ? validators.filter((v) => selectedCollections.some((o) => o.value === v.Name))
-        : validators;
+    const filteredValidators = validators.filter((v) => {
+        const matchesCollection =
+            selectedCollections.length === 0 || selectedCollections.some((o) => o.value === v.Name);
+        const matchesStatus =
+            selectedStatuses.length === 0 ||
+            selectedStatuses.length === 2 ||
+            (selectedStatuses.includes("enabled") && !v.Disabled) ||
+            (selectedStatuses.includes("disabled") && v.Disabled);
+        return matchesCollection && matchesStatus;
+    });
 
     useEffect(() => {
         return () => {
@@ -76,5 +85,7 @@ export const useDocumentSchema = () => {
         handleCancelNew,
         handleNewSchemaSubmit,
         hasAnyValidator,
+        selectedStatuses,
+        setSelectedStatuses,
     };
 };
