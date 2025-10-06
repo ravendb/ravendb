@@ -5,7 +5,7 @@ import { Checkbox } from "components/common/Checkbox";
 import React, { useRef } from "react";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
-import Select, { SelectOption } from "components/common/select/Select";
+import { SelectOption } from "components/common/select/Select";
 import { HrHeader } from "components/common/HrHeader";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import {
@@ -49,6 +49,7 @@ import genUtils from "common/generalUtils";
 import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
 import Code from "components/common/Code";
+import DocumentSchemaFilter from "components/pages/database/settings/documentSchema/DocumentSchemaFilter";
 
 export default function DocumentSchema() {
     const dispatch = useAppDispatch();
@@ -69,6 +70,8 @@ export default function DocumentSchema() {
         selectedCollections,
         handleOnSelectCollection,
         handleAddNew,
+        selectedStatuses,
+        setSelectedStatuses,
     } = useDocumentSchema();
 
     return (
@@ -80,18 +83,15 @@ export default function DocumentSchema() {
                         {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
 
                         {hasAnyValidator && (
-                            <div className="mt-3">
-                                <span className="small-label">Filter by collection</span>
-                                <Select
-                                    isLoading={asyncLoadValidators.loading}
-                                    options={options}
-                                    isMulti
-                                    value={selectedCollections}
-                                    onChange={handleOnSelectCollection}
-                                    placeholder="All collections"
-                                    isClearable
-                                />
-                            </div>
+                            <DocumentSchemaFilter
+                                selectedCollections={selectedCollections}
+                                setSelectedCollections={handleOnSelectCollection}
+                                collectionOptions={options}
+                                selectedStatuses={selectedStatuses}
+                                setSelectedStatuses={setSelectedStatuses}
+                                schemasCount={filteredValidators.length}
+                                isLoading={asyncLoadValidators.loading}
+                            />
                         )}
 
                         <div className="mt-4">
