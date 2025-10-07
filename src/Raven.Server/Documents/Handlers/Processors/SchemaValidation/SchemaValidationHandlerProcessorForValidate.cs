@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
@@ -39,10 +40,12 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
             var errors = new Dictionary<string, string>();
+
+            var stop = Stopwatch.StartNew();
             
-            var stopTotalTime = DateTime.UtcNow + maxTime;
+            var stopTotalTime = maxTime;
             var progressReportRate = TimeSpan.FromMinutes(1);
-            var nextProgressReport = DateTime.UtcNow;
+            var nextProgressReport = TimeSpan.Zero;
             
             var etag = 0L;
             var actualErrorCount = 0;
@@ -55,11 +58,11 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
 
             using var errorBuilder = new ErrorBuilder(context);
             
-            while (DateTime.UtcNow < stopTotalTime)
+            while (stop.Elapsed < stopTotalTime)
             {
                 using (context.OpenReadTransaction())
                 {
-                    var stopTrxTime = DateTime.UtcNow + maxReadTrxTime;
+                    var stopTrxTime = stop.Elapsed + maxReadTrxTime;
                     var enumerable = context.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(context, Parameters.Collection, etag, 0, long.MaxValue, DocumentFields.Id | DocumentFields.Data);
                     using var enumerator = enumerable.GetEnumerator();
 
@@ -70,14 +73,14 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
                         if(hasMore == false)
                             break;
                         
-                        if (DateTime.UtcNow > nextProgressReport)
+                        if (stop.Elapsed > nextProgressReport)
                         {
                             onProgress(new ValidateSchemaValidationProgress
                             {
                                 ScannedCount = totalScanned,
                                 ErrorCount = actualErrorCount
                             });
-                            nextProgressReport = DateTime.UtcNow + progressReportRate;
+                            nextProgressReport = stop.Elapsed + progressReportRate;
                         }
                         
                         using var document = enumerator.Current;
@@ -100,7 +103,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
 
                         ++totalScanned;
 
-                        var now = DateTime.UtcNow;
+                        var now = stop.Elapsed;
                         if(now > stopTotalTime || now > stopTrxTime)
                             break;
                     }
