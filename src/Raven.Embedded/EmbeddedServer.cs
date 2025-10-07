@@ -7,9 +7,7 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 
 #if !NET462
-
 using System.Runtime.Loader;
-
 #endif
 
 using System.Text;
@@ -53,11 +51,11 @@ namespace Raven.Embedded
         {
             var existingServerTask = _serverTask;
             if (_serverOptions == null || existingServerTask == null || existingServerTask.IsValueCreated == false)
-                throw new InvalidOperationException("Cannot call RestartServer() before calling Start()");
+                throw new InvalidOperationException($"Cannot call {nameof(RestartServerAsync)}() before calling {nameof(StartServer)}()");
 
             try
             {
-                var (serverUrl, serverProcess) = await existingServerTask.Value.ConfigureAwait(false);
+                var (_, serverProcess) = await existingServerTask.Value.ConfigureAwait(false);
                 ShutdownServerProcess(serverProcess);
             }
             catch
@@ -66,7 +64,7 @@ namespace Raven.Embedded
             }
 
             if (Interlocked.CompareExchange(ref _serverTask, null, existingServerTask) != existingServerTask)
-                throw new InvalidOperationException("The server changed while restarting it. Are you calling RestartServer() concurrently?");
+                throw new InvalidOperationException($"The server changed while restarting it. Are you calling {nameof(RestartServerAsync)}() concurrently?");
 
             await StartServerInternalAsync().ConfigureAwait(false);
         }
@@ -102,6 +100,27 @@ namespace Raven.Embedded
 
             var task = StartServerInternalAsync();
             GC.KeepAlive(task); // make sure that we aren't allowing to elide the call
+        }
+
+        public async Task StopServerAsync(CancellationToken forceServerKillToken = default)
+        {
+            var existingServerTask = _serverTask;
+            if (_serverOptions == null || existingServerTask == null || existingServerTask.IsValueCreated == false)
+                throw new InvalidOperationException($"Cannot call {nameof(StopServerAsync)}() before calling {nameof(StartServer)}()");
+
+            var (_, serverProcess) = await existingServerTask.Value.ConfigureAwait(false);
+
+            if (forceServerKillToken.CanBeCanceled)
+                forceServerKillToken.Register(() => KillServerProcess(serverProcess));
+
+            try
+            {
+                ShutdownServerProcess(serverProcess);
+            }
+            catch
+            {
+                // we will ignore errors here, the process might already be dead, we failed to start, etc
+            }
         }
 
         private Task StartServerInternalAsync()
@@ -222,6 +241,20 @@ namespace Raven.Embedded
                         _logger.Warn($"Failed to shutdown server PID {process.Id} gracefully in {_serverOptions!.GracefulShutdownTimeout.ToString()}", e);
                     }
                 }
+
+                KillServerProcess(process);
+            }
+        }
+
+        private void KillServerProcess(Process process)
+        {
+            if (process == null || process.HasExited)
+                return;
+
+            lock (process)
+            {
+                if (process.HasExited)
+                    return;
 
                 try
                 {
@@ -407,6 +440,7 @@ namespace Raven.Embedded
                     item.Value.Value.Dispose();
                 }
             }
+
             _documentStores.Clear();
         }
     }
