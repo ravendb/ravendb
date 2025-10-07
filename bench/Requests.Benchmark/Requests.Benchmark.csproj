@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+    <StartupObject>Requests.Benchmark.Program</StartupObject>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeFrameworkVersion>8.0.20</RuntimeFrameworkVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Requests.Benchmark</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>Requests.Benchmark</PackageId>
+    <RuntimeIdentifiers>win-x64;win-x86;linux-x64</RuntimeIdentifiers>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+     <NoWarn>$(NoWarn);CS8002</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+   
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.CSharp" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent"  />
+
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\test\Tests.Infrastructure\DocumentStoreExtensions.cs">
+      <Link>DocumentStoreExtensions.cs</Link>
+    </Compile>
+  </ItemGroup>
+</Project>
