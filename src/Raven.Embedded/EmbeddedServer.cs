@@ -262,6 +262,8 @@ namespace Raven.Embedded
                         _logger.Debug($"Killing global server PID {process.Id}.");
 
                     process.Kill();
+                    
+                    _forTestingPurposes?.OnProcessKilled?.Invoke(process);
                 }
                 catch (Exception e)
                 {
@@ -442,6 +444,21 @@ namespace Raven.Embedded
             }
 
             _documentStores.Clear();
+        }
+        
+        private TestingStuff? _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public Action<Process>? OnProcessKilled;
         }
     }
 }

@@ -100,7 +100,7 @@ namespace EmbeddedTests
 
                 try
                 {
-                    Directory.Delete(path);
+                    IOExtensions.DeleteDirectory(path);
                 }
                 catch
                 {
@@ -114,14 +114,14 @@ namespace EmbeddedTests
             // Delete all files in the current directory
             foreach (var p in directoryInfo.GetFiles().Select(x => ToFullPath(x.FullName)))
             {
-                File.Delete(p);
+                IOExtensions.DeleteFile(p);
             }
 
             // Recursively delete all subdirectories
             foreach (var subdirectory in directoryInfo.GetDirectories())
             {
                 DeleteAllFilesAndSubfolders(subdirectory);
-                Directory.Delete(ToFullPath(subdirectory.FullName));
+                IOExtensions.DeleteDirectory(ToFullPath(subdirectory.FullName));
             }
         }
 
