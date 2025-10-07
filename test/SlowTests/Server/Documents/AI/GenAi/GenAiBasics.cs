@@ -60,7 +60,7 @@ for(const comment of this.Comments)
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
-    public void CanProcessDocuments(Options options, GenAiConfiguration config)
+    public async Task CanProcessDocuments(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -103,7 +103,7 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(30)));
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

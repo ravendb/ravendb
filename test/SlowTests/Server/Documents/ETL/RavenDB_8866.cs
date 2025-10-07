@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public void CanResetEtl()
+        public async Task CanResetEtl()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -59,16 +59,16 @@ namespace SlowTests.Server.Documents.ETL
                     Database = dest.Database,
                 });
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
 
-                Assert.True(resetDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await resetDone.WaitAsync(TimeSpan.FromMinutes(1)));
             }
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public void CanResetEtl2()
+        public async Task CanResetEtl2()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -119,7 +119,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 for (int i = 0; i < 10; i++)
                 {
-                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)), $"blah at {i}");
+                    Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)), $"blah at {i}");
 
                     mre.Set();
 

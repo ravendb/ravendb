@@ -76,9 +76,6 @@ namespace Sparrow.Server
             return new FrozenAwaiter(_tcs, this);
         }
 
-        [Obsolete("Do not use it! this is here only to handle tests that are void")]
-        internal bool Wait(TimeSpan timeout) => WaitAsync(timeout).GetAwaiter().GetResult();
-        
         public readonly struct FrozenAwaiter
         {
             private readonly TaskCompletionSource<bool> _tcs;

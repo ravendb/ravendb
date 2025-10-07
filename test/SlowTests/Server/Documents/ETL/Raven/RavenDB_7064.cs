@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron.Util;
 using Raven.Client;
@@ -19,7 +20,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_handle_attachments(Options options)
+        public async Task Should_handle_attachments(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -61,7 +62,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertAttachments(dest, new[]
                 {
@@ -85,7 +86,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -116,7 +117,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -168,7 +169,7 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_use_get_attachments(Options options)
+        public async Task Can_use_get_attachments(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -204,7 +205,7 @@ for (var i = 0; i < attachments.length; i++) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertAttachments(dest, new[]
                 {
@@ -223,7 +224,7 @@ for (var i = 0; i < attachments.length; i++) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_use_has_attachment(Options options)
+        public async Task Can_use_has_attachment(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -262,7 +263,7 @@ if (hasAttachment('photo2.jpg')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertAttachments(dest, new[]
                 {

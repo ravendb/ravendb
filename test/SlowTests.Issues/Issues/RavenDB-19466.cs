@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -15,7 +16,7 @@ public class RavenDB_19466 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Etl)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-    public void CanModifyDocumentMetadataUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction(Options options)
+    public async Task CanModifyDocumentMetadataUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction(Options options)
     {
         using (var src = GetDocumentStore(options))
         using (var dest = GetDocumentStore())
@@ -35,7 +36,7 @@ public class RavenDB_19466 : RavenTestBase
 
                 session.SaveChanges();
             }
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
             using (var session = dest.OpenSession())
             {
@@ -51,7 +52,7 @@ public class RavenDB_19466 : RavenTestBase
             }
 
             etlDone = Etl.WaitForEtlToComplete(src);
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
             
             using (var session = dest.OpenSession())
             {

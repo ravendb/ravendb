@@ -39,7 +39,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanGenerateEmbeddingsForQuerying(Options options)
+    public async Task CanGenerateEmbeddingsForQuerying(Options options)
     {
         const string queriedText = "fruit";
 
@@ -60,8 +60,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", ["apple"], dto1.Id);
@@ -92,7 +92,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanFetchEmbeddingFromCache(Options options)
+    public async Task CanFetchEmbeddingFromCache(Options options)
     {
         const string queriedText = "fruit";
 
@@ -114,8 +114,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [queriedText], dto1.Id);
@@ -135,7 +135,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void DoesIncorrectTaskNameInQueryThrow(Options options)
+    public async Task DoesIncorrectTaskNameInQueryThrow(Options options)
     {
         const string queriedText = "fruit";
 
@@ -164,8 +164,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                     }
                 });
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [queriedText], dto1.Id);
@@ -186,7 +186,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanGenerateEmbeddingsWhenQueryingStaticIndex(Options options)
+    public async Task CanGenerateEmbeddingsWhenQueryingStaticIndex(Options options)
     {
         const string queriedText = "fruit";
 
@@ -207,8 +207,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
@@ -237,7 +237,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanChunkValueInQuery(Options options)
+    public async Task CanChunkValueInQuery(Options options)
     {
         const string queriedText = "computer machine technology tech";
 
@@ -263,8 +263,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 }
             ], chunkingOptionsForQuerying: new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 });
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
@@ -284,7 +284,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void CanSearchByMultipleVectorsByTexts(Options options)
+    public async Task CanSearchByMultipleVectorsByTexts(Options options)
     {
         using var store = GetDocumentStore(options);
 
@@ -304,8 +304,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.Store(dto3);
             session.SaveChanges();
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -399,7 +399,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void WillFindUpdatedEmbeddingValues(Options options)
+    public async Task WillFindUpdatedEmbeddingValues(Options options)
     {
         using var store = GetDocumentStore(options);
 
@@ -411,8 +411,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.Store(new Dto() { TextualValue = "asdsdfsdf" }, "dto/1");
             session.SaveChanges();
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, config, connection, "TextualValue", ["asdsdfsdf"], "dto/1");
@@ -429,7 +429,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.Store(new Dto() { TextualValue = "pizza" }, "dto/1");
             session.SaveChanges();
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             AssertEmbeddingsForPath(store, config, connection, "TextualValue", ["pizza"], "dto/1");
 
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
@@ -441,7 +441,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void MultiVectorSearchSumsDuplicates(Options options)
+    public async Task MultiVectorSearchSumsDuplicates(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -457,8 +457,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Store(dto2);
                 session.SaveChanges();
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);

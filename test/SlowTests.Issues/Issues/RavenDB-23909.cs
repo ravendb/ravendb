@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -15,7 +16,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
 {
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void Auto(Options options)
+    public async Task Auto(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -29,8 +30,8 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Store(new Dto() { Name = "fruit" });
                 session.SaveChanges();
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -49,7 +50,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
     
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void AlreadyQuantizedVectorShouldThrow(Options options)
+    public async Task AlreadyQuantizedVectorShouldThrow(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -63,8 +64,8 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Store(new Dto() { Name = "fruit" });
                 session.SaveChanges();
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -96,7 +97,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void Static(Options options)
+    public async Task Static(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -110,8 +111,8 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Store(new Dto() { Name = "fruit" });
                 session.SaveChanges();
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
 
@@ -133,7 +134,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void StaticJs(Options options)
+    public async Task StaticJs(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -147,8 +148,8 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Store(new Dto() { Name = "fruit" });
                 session.SaveChanges();
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
 

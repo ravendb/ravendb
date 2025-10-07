@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL
       return true;
     }
 ")]
-        public void Should_handle_as_empty_script_but_filter_out_deletions(string script)
+        public async Task Should_handle_as_empty_script_but_filter_out_deletions(string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -64,7 +65,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -81,7 +82,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -97,7 +98,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -112,7 +113,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.False(etlDone.Wait(TimeSpan.FromSeconds(3)));
+                Assert.False(await etlDone.WaitAsync(TimeSpan.FromSeconds(3)));
 
                 using (var session = dest.OpenSession())
                 {

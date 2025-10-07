@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.ETL
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void EtlTaskDeletionShouldDeleteItsState(Options options)
+        public async Task EtlTaskDeletionShouldDeleteItsState(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.ETL
                     Database = dest.Database,
                 });
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 src.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.RavenEtl));
 
@@ -64,7 +65,7 @@ namespace SlowTests.Server.Documents.ETL
                     Database = dest.Database,
                 });
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
             }
         }
     }

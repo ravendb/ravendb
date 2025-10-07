@@ -158,7 +158,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Script_defined_for_all_documents(Options options)
+        public async Task Script_defined_for_all_documents(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -192,7 +192,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 DatabaseStatistics stats;
                 using (var session = dest.OpenSession())
@@ -226,7 +226,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 stats = dest.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(3, stats.CountOfDocuments);
@@ -243,7 +243,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -258,7 +258,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs(Options options)
+        public async Task Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -290,7 +290,7 @@ if (this['@metadata']['@collection'] != 'Orders')
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 DatabaseStatistics stats;
                 using (var session = dest.OpenSession())
@@ -318,7 +318,7 @@ if (this['@metadata']['@collection'] != 'Orders')
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 stats = dest.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
@@ -335,7 +335,7 @@ if (this['@metadata']['@collection'] != 'Orders')
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {

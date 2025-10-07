@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues;
 public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Indexes)]
-    public void ReferencedCollectionsShouldWorkWithStalenessHandling()
+    public async Task ReferencedCollectionsShouldWorkWithStalenessHandling()
     {
         const string collectionName = "Dtos";
         var referencedCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName);
@@ -29,8 +30,8 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
 
@@ -123,7 +124,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public void TombstonesAreProcessed()
+    public async Task TombstonesAreProcessed()
     {
         const string collectionName = "Dtos";
         var referencedCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName);
@@ -139,8 +140,8 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -175,7 +176,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public void DeletesAreHandled()
+    public async Task DeletesAreHandled()
     {
         using (var store = GetDocumentStore())
         {
@@ -189,8 +190,8 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 

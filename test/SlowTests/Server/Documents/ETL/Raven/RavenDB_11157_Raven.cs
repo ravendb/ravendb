@@ -35,7 +35,7 @@ function loadCountersOfUsersBehavior(doc, counter)
         [RavenData("Users", null, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(null, null, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData("Users", BasicScript, DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting_internal(Options options, string collection, string script)
+        public async Task Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting_internal(Options options, string collection, string script)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -59,7 +59,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -83,7 +83,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -102,7 +102,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -119,7 +119,7 @@ function loadCountersOfUsersBehavior(doc, counter)
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_not_send_counters_metadata_when_using_script(Options options)
+        public async Task Should_not_send_counters_metadata_when_using_script(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -141,7 +141,7 @@ function loadCountersOfUsersBehavior(doc, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -159,7 +159,7 @@ function loadCountersOfUsersBehavior(doc, counter)
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_handle_counters(Options options)
+        public async Task Should_handle_counters(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -201,7 +201,7 @@ person.addCounter(loadCounter('down'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertCounters(dest, new[]
                 {
@@ -225,7 +225,7 @@ person.addCounter(loadCounter('down'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -255,7 +255,7 @@ person.addCounter(loadCounter('down'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -273,7 +273,7 @@ person.addCounter(loadCounter('down'));
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_use_get_counters(Options options)
+        public async Task Can_use_get_counters(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -309,7 +309,7 @@ for (var i = 0; i < counters.length; i++) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertCounters(dest, new[]
                 {
@@ -328,7 +328,7 @@ for (var i = 0; i < counters.length; i++) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_remove_counter_if_add_counter_gets_null_argument(Options options)
+        public async Task Should_remove_counter_if_add_counter_gets_null_argument(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -364,7 +364,7 @@ doc.addCounter(loadCounter('likes'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -389,7 +389,7 @@ doc.addCounter(loadCounter('likes'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -400,7 +400,7 @@ doc.addCounter(loadCounter('likes'));
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_use_has_counter(Options options)
+        public async Task Can_use_has_counter(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -438,7 +438,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertCounters(dest, new[]
                 {
@@ -455,7 +455,7 @@ if (hasCounter('down')) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Must_not_send_counters_and_counter_tombstones_from_non_relevant_collections(Options options)
+        public async Task Must_not_send_counters_and_counter_tombstones_from_non_relevant_collections(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -484,7 +484,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -509,7 +509,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -521,7 +521,7 @@ if (hasCounter('down')) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_send_counter_even_if_doc_was_updater_later(Options options)
+        public async Task Should_send_counter_even_if_doc_was_updater_later(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -546,7 +546,7 @@ if (hasCounter('down')) {
 
                 Etl.AddEtl(src, dest, "Users", script: null);
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -559,7 +559,7 @@ if (hasCounter('down')) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_send_updated_counter_values(Options options)
+        public async Task Should_send_updated_counter_values(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -577,7 +577,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 etlDone.Reset();
 
@@ -590,7 +590,7 @@ if (hasCounter('down')) {
                         session.SaveChanges();
                     }
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var session = dest.OpenSession())
                     {
@@ -604,7 +604,7 @@ if (hasCounter('down')) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void Should_skip_counter_if_has_lower_etag_than_document(Options options)
+        public async Task Should_skip_counter_if_has_lower_etag_than_document(Options options)
         {
             options.ModifyDatabaseRecord += x => 
                 x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2";
@@ -626,7 +626,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 3);
 
@@ -665,7 +665,7 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -739,7 +739,7 @@ if (hasCounter('down')) {
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_handle_counters_according_to_behavior_defined_in_script(Options options)
+        public async Task Should_handle_counters_according_to_behavior_defined_in_script(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -777,7 +777,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertCounters(dest, new[]
                 {
@@ -794,7 +794,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 AssertCounters(dest, new[]
                 {
@@ -809,7 +809,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -828,7 +828,7 @@ function loadCountersOfUsersBehavior(docId, counter)
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(Options options)
+        public async Task Should_not_send_counters_if_load_counters_behavior_isnt_defined(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -848,7 +848,7 @@ loadToUsers(this);");
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -866,7 +866,7 @@ loadToUsers(this);");
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -968,7 +968,7 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Load_counters_behavior_function_can_use_other_function_defined_in_script(Options options)
+        public async Task Load_counters_behavior_function_can_use_other_function_defined_in_script(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -996,7 +996,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1008,7 +1008,7 @@ function loadCountersOfUsersBehavior(docId, counter)
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_override_counter_value(Options options)
+        public async Task Should_override_counter_value(Options options)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -1026,7 +1026,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1049,7 +1049,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1060,7 +1060,7 @@ function loadCountersOfUsersBehavior(docId, counter)
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_define_multiple_load_counter_behavior_functions(Options options)
+        public async Task Can_define_multiple_load_counter_behavior_functions(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -1107,7 +1107,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -1125,7 +1125,7 @@ function loadCountersOfUsersBehavior(docId, counter)
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {

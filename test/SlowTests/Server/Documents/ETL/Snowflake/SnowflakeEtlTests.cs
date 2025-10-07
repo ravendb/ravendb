@@ -1137,7 +1137,7 @@ loadToOrders(orderData);
     }
     
     [RavenMultiplatformFact(RavenTestCategory.Etl, RavenPlatform.Windows, RavenArchitecture.X64,  SnowflakeRequired = true, NightlyBuildRequired = true)]
-    public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+    public async Task Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
     {
         using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
         {
@@ -1176,7 +1176,7 @@ var orderData = {
 loadToOrders(orderData);
 ");
     
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
 
                 var database = GetDatabase(store.Database).Result;
 
@@ -1188,7 +1188,7 @@ loadToOrders(orderData);
 
                 etlDone = Etl.WaitForEtlToComplete(store, (n, s) => s.LoadSuccesses >= 6);
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
             }
         }
     }

@@ -85,7 +85,7 @@ loadToOrders(orderData);
 ";
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void RavenEtl_Unsharded_Destination()
+        public async Task RavenEtl_Unsharded_Destination()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -108,7 +108,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -127,7 +127,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -139,7 +139,7 @@ loadToOrders(orderData);
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void RavenEtl_Unsharded_Destination2()
+        public async Task RavenEtl_Unsharded_Destination2()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -201,7 +201,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -213,7 +213,7 @@ loadToOrders(orderData);
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void RavenEtl_Sharded_Destination()
+        public async Task RavenEtl_Sharded_Destination()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = Sharding.GetDocumentStore())
@@ -275,7 +275,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -287,7 +287,7 @@ loadToOrders(orderData);
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void RavenEtl_Loading_to_different_collections_with_load_document()
+        public async Task RavenEtl_Loading_to_different_collections_with_load_document()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -371,7 +371,7 @@ loadToAddresses(load(this.AddressId));
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -393,7 +393,7 @@ loadToAddresses(load(this.AddressId));
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void RavenEtl_Loading_to_different_collections()
+        public async Task RavenEtl_Loading_to_different_collections()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -457,7 +457,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -475,7 +475,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Counters | RavenTestCategory.Sharding)]
-        public void RavenEtl_Should_handle_counters()
+        public async Task RavenEtl_Should_handle_counters()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -517,7 +517,7 @@ person.addCounter(loadCounter('down'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 RavenDB_11157_Raven.AssertCounters(dest, new[]
                 {
@@ -541,7 +541,7 @@ person.addCounter(loadCounter('down'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -571,7 +571,7 @@ person.addCounter(loadCounter('down'));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -704,7 +704,7 @@ person.addCounter(loadCounter('down'));
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void CanResetEtl()
+        public async Task CanResetEtl()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -742,16 +742,16 @@ person.addCounter(loadCounter('down'));
                     Database = dest.Database,
                 });
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
 
-                Assert.True(resetDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await resetDone.WaitAsync(TimeSpan.FromMinutes(1)));
             }
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void CanResetEtl2()
+        public async Task CanResetEtl2()
         {
             using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -802,7 +802,7 @@ person.addCounter(loadCounter('down'));
 
                 for (int i = 0; i < 10; i++)
                 {
-                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)), $"blah at {i}");
+                    Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)), $"blah at {i}");
 
                     mre.Set();
 
@@ -1992,7 +1992,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
-        public void RavenDB_20437()
+        public async Task RavenDB_20437()
         {
             using (var src = GetDocumentStore())
             using (var dest = Sharding.GetDocumentStore())
@@ -2018,7 +2018,7 @@ loadToAddresses(this.Address);
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -2051,7 +2051,7 @@ loadToAddresses(this.Address);
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {

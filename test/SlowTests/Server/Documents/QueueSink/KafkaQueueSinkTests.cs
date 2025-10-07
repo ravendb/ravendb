@@ -192,7 +192,7 @@ namespace SlowTests.Server.Documents.QueueSink
         }
         
         [RequiresKafkaRetryFact]
-        public void SimpleScriptMultipleInsertsTwoBatches()
+        public async Task SimpleScriptMultipleInsertsTwoBatches()
         {
             var numberOfUsers = 10;
 
@@ -236,7 +236,7 @@ namespace SlowTests.Server.Documents.QueueSink
                 producer.Produce(UsersQueueName, kafkaMessage);
             }
 
-            etlDone.Wait(TimeSpan.FromSeconds(60));
+            await etlDone.WaitAsync(TimeSpan.FromSeconds(60));
             
             var users2 = session.Query<User>().ToList();
             Assert.Equal(20, users2.Count);

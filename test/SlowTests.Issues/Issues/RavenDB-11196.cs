@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Should_be_James(Options options)
+        public async Task Should_be_James(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -47,7 +48,7 @@ loadToPeople(person);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(100));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(100));
 
                 using (var session = dest.OpenSession())
                 {

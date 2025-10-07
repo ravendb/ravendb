@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_use_metadata_in_transform_script(Options options)
+        public async Task Can_use_metadata_in_transform_script(Options options)
         {
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
@@ -39,7 +40,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {
@@ -52,7 +53,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Null_returned_from_script_means_that_document_is_filtered_out(Options options)
+        public async Task Null_returned_from_script_means_that_document_is_filtered_out(Options options)
         {
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
@@ -81,7 +82,7 @@ loadToUsers(this);");
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {
@@ -104,7 +105,7 @@ loadToUsers(this);");
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Null_script_means_no_transformation_nor_filtering_within_specified_collection(Options options)
+        public async Task Null_script_means_no_transformation_nor_filtering_within_specified_collection(Options options)
         {
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
@@ -128,7 +129,7 @@ loadToUsers(this);");
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {
