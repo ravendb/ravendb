@@ -107,7 +107,7 @@
     <PackageVersion Include="Polly" Version="8.6.3" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.1.2" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.11" />
-    <PackageVersion Include="Raven.Pal" Version="7.0.844" />
+    <PackageVersion Include="Raven.Pal" Version="7.0.845" />
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Snowflake.Data" Version="4.8.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />

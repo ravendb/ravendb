@@ -216,6 +216,13 @@ rvn_init_pager(const char *filename,
         *detailed_error_code = ENOMEM;
         return FAIL_NOMEM;
     }
+
+    rvn_write_mode write_mode = g_cfg.write_mode;
+    if (write_mode == rvn_write_mode_mmap && ((open_flags & OPEN_FILE_READ_ONLY) != OPEN_FILE_READ_ONLY))
+    {
+        open_flags |= OPEN_FILE_WRITABLE_MAP;
+    }
+
     global_state->open_flags = open_flags;
     global_state->ref_count = 1;
     global_state->writes_arena = (struct arena){.eventfd = -1};
