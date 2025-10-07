@@ -432,7 +432,7 @@ rvn_init_pager(const char *filename,
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_READ_ONLY ? FILE_ATTRIBUTE_READONLY : 0;
 
     rvn_write_mode write_mode = g_cfg.write_mode;
-    if (write_mode == rvn_write_mode_mmap)
+    if (write_mode == rvn_write_mode_mmap && ((open_flags & OPEN_FILE_READ_ONLY) != OPEN_FILE_READ_ONLY))
     {
         open_flags |= OPEN_FILE_WRITABLE_MAP;
     }
