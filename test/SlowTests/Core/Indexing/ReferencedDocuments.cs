@@ -532,11 +532,11 @@ namespace SlowTests.Core.Indexing
                     await session.StoreAsync(company);
                     await session.SaveChangesAsync();
 
-                    index.Execute(store);
-                    Indexes.WaitForIndexing(store);
+                    await index.ExecuteAsync(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     //Index disable
-                    store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
+                    await store.Maintenance.SendAsync(new DisableIndexOperation(index.IndexName));
 
                     foreach (var employee in employees)
                     {
@@ -546,10 +546,10 @@ namespace SlowTests.Core.Indexing
                     await session.SaveChangesAsync();
 
                     //Index enable
-                    store.Maintenance.Send(new EnableIndexOperation(index.IndexName));
+                    await store.Maintenance.SendAsync(new EnableIndexOperation(index.IndexName));
                     
                     //Assert
-                    Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
+                    await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromSeconds(10));
                 }
             }
         }
@@ -602,11 +602,11 @@ namespace SlowTests.Core.Indexing
                     await session.StoreAsync(firstCompany);
                     await session.SaveChangesAsync();
                     
-                    index.Execute(store);
-                    Indexes.WaitForIndexing(store);
+                    await index.ExecuteAsync(store);
+                    await Indexes.WaitForIndexingAsync(store);
                     
                     //Index disable
-                    store.Maintenance.Send(new DisableIndexOperation(index.IndexName));
+                    await store.Maintenance.SendAsync(new DisableIndexOperation(index.IndexName));
                     foreach (var (_, employee) in list)
                     {
                         await session.StoreAsync(employee);
@@ -622,8 +622,8 @@ namespace SlowTests.Core.Indexing
                     await session.SaveChangesAsync();
 
                     //Index enable
-                    store.Maintenance.Send(new EnableIndexOperation(index.IndexName));
-                    Indexes.WaitForIndexing(store);
+                    await store.Maintenance.SendAsync(new EnableIndexOperation(index.IndexName));
+                    await Indexes.WaitForIndexingAsync(store);
 
                     //Assert
                     var queryResult = await session

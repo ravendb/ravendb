@@ -29,7 +29,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subsId = store.Subscriptions.Create<User>(x => true);
+                var subsId = await store.Subscriptions.CreateAsync<User>(x => true);
 
                 string cv;
                 
@@ -61,7 +61,7 @@ namespace SlowTests.Client.Subscriptions
 
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
                 {
-                    store.GetRequestExecutor().Execute(new CreateSubscriptionCommand(store.Conventions, new SubscriptionCreationOptions()
+                    await store.GetRequestExecutor().ExecuteAsync(new CreateSubscriptionCommand(store.Conventions, new SubscriptionCreationOptions()
                     {
                         ChangeVector = "DoNotChange",
                         Name = subsId,

@@ -164,7 +164,7 @@ namespace SlowTests.Cluster
 
                 }
 
-                cts.Cancel();
+                await cts.CancelAsync();
                 await checkingTask;
                 await destablizeTask;
 

@@ -365,7 +365,7 @@ update {{
                     await AssertWaitForTrueAsync(() => Task.FromResult(list.Count == 1));
                     
                     //make sure operation throws an error
-                    ctsToFail.Cancel();
+                    await ctsToFail.CancelAsync();
                     await waitForCompletionErrorTask;
 
                     using (var session = store.OpenAsyncSession())

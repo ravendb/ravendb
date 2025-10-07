@@ -90,7 +90,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachmentStream = new MemoryStream(readBuffer))
                         using (var attachment = await session.Advanced.Attachments.GetAsync(user, name))
                         {
-                            attachment.Stream.CopyTo(attachmentStream);
+                            await attachment.Stream.CopyToAsync(attachmentStream);
                             Assert.Contains("A:" + (i + 2), attachment.Details.ChangeVector);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -303,7 +303,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = await session.Advanced.Attachments.GetAsync("users/1", "file1"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
@@ -317,7 +317,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = await session.Advanced.Attachments.GetAsync(user, "file3"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Contains("A:4", attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
@@ -529,7 +529,7 @@ namespace SlowTests.Client.Attachments
             }
 
             foreach (var stream in streams)
-                stream.Dispose();
+                await stream.DisposeAsync();
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]

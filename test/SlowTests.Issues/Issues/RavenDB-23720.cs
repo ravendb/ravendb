@@ -51,7 +51,7 @@ public class RavenDB_23720 : EmbeddingsGenerationTestBase
                 
                 store.Maintenance.Send(putIndexOp);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var textFieldName = staticDefinition.Fields.Single(x => x.Value.Vector.SourceEmbeddingType == VectorEmbeddingType.Text).Key;
                 var floatFieldName = staticDefinition.Fields.Single(x => x.Value.Vector.SourceEmbeddingType == VectorEmbeddingType.Single).Key;

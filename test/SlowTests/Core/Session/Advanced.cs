@@ -551,7 +551,7 @@ namespace SlowTests.Core.Session
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
-                using (store.AggressivelyCacheFor(TimeSpan.FromHours(1)))
+                using (await store.AggressivelyCacheForAsync(TimeSpan.FromHours(1)))
                 using (var changes = await store.Changes().EnsureConnectedNow())
                 {
                     var amre = new AsyncManualResetEvent();

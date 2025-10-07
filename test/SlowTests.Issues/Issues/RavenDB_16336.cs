@@ -84,7 +84,7 @@ namespace SlowTests.Issues
                     stats = aggregator.ToBatchPerformanceStats();
                     amre.Set();
                 };
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeCounter(counter1)

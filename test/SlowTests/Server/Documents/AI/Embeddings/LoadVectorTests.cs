@@ -39,8 +39,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         var index = new TIndex();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -51,7 +51,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Contains("Couldn't find Embeddings Generation task with 'localaitask' identifier", ex.Message);
         }
 
-        store.Maintenance.Send(new StopIndexOperation(index.IndexName));
+        await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store);
         Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
@@ -60,8 +60,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Joe"], id);
 
-        store.Maintenance.Send(new StartIndexOperation(index.IndexName));
-        Indexes.WaitForIndexing(store);
+        await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -89,7 +89,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -126,8 +126,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         var index = new TIndex();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -135,15 +135,15 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Equal(1, nullElements);
         }
 
-        store.Maintenance.Send(new StopIndexOperation(index.IndexName));
+        await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
         Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
         var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
-        store.Maintenance.Send(new StartIndexOperation(index.IndexName));
-        Indexes.WaitForIndexing(store);
+        await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -171,7 +171,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -212,8 +212,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         var index = new TIndex();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -224,7 +224,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Equal(1, nullElements);
         }
 
-        store.Maintenance.Send(new StopIndexOperation(index.IndexName));
+        await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName);
         
@@ -234,8 +234,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
         
-        store.Maintenance.Send(new StartIndexOperation(index.IndexName));
-        Indexes.WaitForIndexing(store);
+        await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -259,7 +259,7 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config2);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector2 == null);

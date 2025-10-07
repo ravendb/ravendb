@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         {
             using var store = GetDocumentStore(options);
 
-            store.Subscriptions.Create(options: new SubscriptionCreationOptions
+            await store.Subscriptions.CreateAsync(options: new SubscriptionCreationOptions
             {
                 Name = "Subs1",
                 Query = "from Users as u where u.'@metadata'.'r' == 1"

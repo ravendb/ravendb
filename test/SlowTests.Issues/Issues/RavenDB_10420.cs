@@ -32,7 +32,7 @@ namespace SlowTests.Issues
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

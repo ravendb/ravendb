@@ -400,7 +400,7 @@ namespace SlowTests.Sharding.Cluster
                         .Statistics(out var stat).ToListAsync();
                 }
                 
-                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database, new Dictionary<string, string>
+                await store.Maintenance.SendAsync(new PutDatabaseSettingsOperation(store.Database, new Dictionary<string, string>
                 {
                     { RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "0" },
                 }));
@@ -456,7 +456,7 @@ namespace SlowTests.Sharding.Cluster
                         .Statistics(out var stat).ToListAsync();
                 }
                 
-                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database,
+                await store.Maintenance.SendAsync(new PutDatabaseSettingsOperation(store.Database,
                     new Dictionary<string, string> {{RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "0"},}));
 
                 var db = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0), cluster.Nodes);
@@ -486,7 +486,7 @@ namespace SlowTests.Sharding.Cluster
                 
                 Assert.True(idleInMem);
 
-                store.Maintenance.Send(new PutDatabaseSettingsOperation(store.Database,
+                await store.Maintenance.SendAsync(new PutDatabaseSettingsOperation(store.Database,
                     new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle), "30" }, }));
 
                 //run index query only on one shard

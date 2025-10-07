@@ -131,12 +131,12 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 await CreateDataAndIndexes(store);
 
                 await store.ExecuteIndexAsync(new Reset.DailyInvoicesIndex());
-                store.Operations.Send(new DeleteByQueryOperation(new IndexQuery {Query = "FROM DailyInvoices"})).WaitForCompletion(TimeSpan.FromSeconds(60));
+                await (await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery {Query = "FROM DailyInvoices"}))).WaitForCompletionAsync(TimeSpan.FromSeconds(60));
                 // We need to wait for the cluster to update the index before overwriting the index again
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -161,7 +161,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 await store.Maintenance.SendAsync(new ResetIndexOperation(new MonthlyInvoicesIndex().IndexName));
                 await store.Maintenance.SendAsync(new ResetIndexOperation(new YearlyInvoicesIndex().IndexName));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -178,7 +178,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new DailyInvoicesIndex());
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
                 var date = new DateTime(2017, 1, 1);
 
@@ -201,9 +201,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -218,7 +218,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             using (var store = GetDocumentStore())
             {
                 var index = new DailyInvoicesIndex();
-                store.ExecuteIndex(index);
+                await store.ExecuteIndexAsync(index);
 
                 var date = new DateTime(2017, 1, 1);
 
@@ -241,9 +241,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 await store.ExecuteIndexAsync(new Replacement_DifferentOutputReduceToCollection.DailyInvoicesIndex());
 
@@ -263,9 +263,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.StartsWith("DailyInvoices/", prefixesOfDocumentsToDelete[0].Key);
                 Assert.StartsWith("MyDailyInvoices/", prefixesOfDocumentsToDelete[1].Key);
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 WaitForUserToContinueTheTest(store);
 
@@ -306,7 +306,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.Maintenance.SendAsync(new StopIndexingOperation());
 
@@ -323,9 +323,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 // new replacement needs to delete docs created by original index
                 Assert.Equal(2, replacement.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().Count);
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -341,7 +341,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new DailyInvoicesIndex());
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
                 var date = new DateTime(2017, 1, 1);
 
@@ -364,11 +364,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.ExecuteIndexAsync(new Replacement_OutputReduceToCollection_Changed.DailyInvoicesIndex());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -411,7 +411,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -435,7 +435,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new DailyInvoicesIndex());
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
                 var date = new DateTime(2017, 1, 1);
 
@@ -458,9 +458,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 await store.ExecuteIndexAsync(new Replacement_DifferentOutputReduceToCollection.DailyInvoicesIndex());
 
@@ -469,7 +469,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 var replacementIndex = (MapReduceIndex)db.IndexStore.GetIndexes().Single(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
                 var replacementIndexReduceOutputIndex = replacementIndex.Definition.ReduceOutputIndex.Value;
 
-                store.Maintenance.Send(new DeleteIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}DailyInvoicesIndex"));
+                await store.Maintenance.SendAsync(new DeleteIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}DailyInvoicesIndex"));
 
                 var indexes = db.IndexStore.GetIndexes().ToList();
 
@@ -511,7 +511,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await AssertNumberOfResults();
                 string lastChangeVector;
 
@@ -534,7 +534,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     lastChangeVector = session.Advanced.GetChangeVectorFor(invoice);
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await AssertNumberOfResults();
 
                 var newChangeVector = store.Maintenance.Send(new GetStatisticsOperation()).DatabaseChangeVector;
@@ -626,7 +626,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             await store.ExecuteIndexAsync(new MonthlyInvoicesIndex());
             await store.ExecuteIndexAsync(new YearlyInvoicesIndex());
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             WaitForValue(() =>
             {

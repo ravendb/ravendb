@@ -147,7 +147,7 @@ namespace SlowTests.Smuggler
                             .ToList();
                     }
 
-                    new Users_ByName().Execute(store1);
+                    await new Users_ByName().ExecuteAsync(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -245,7 +245,7 @@ namespace SlowTests.Smuggler
                             .ToList();
                     }
 
-                    new Users_ByName().Execute(store1);
+                    await new Users_ByName().ExecuteAsync(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -305,7 +305,7 @@ namespace SlowTests.Smuggler
                             .ToList();
                     }
 
-                    new Users_ByName().Execute(store1);
+                    await new Users_ByName().ExecuteAsync(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {

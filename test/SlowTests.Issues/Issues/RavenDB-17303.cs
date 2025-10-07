@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                 int nullNameCount = 4;
                 using (var session = store.OpenAsyncSession())
                 {
-                    new GreatIndex().Execute(store);
+                    await new GreatIndex().ExecuteAsync(store);
                     var document1 = new TestDocument { Document = new TestDocument2() { Name = "EGOR" }, SomeRandomDate = new DateTime(2021, 6, 14) };
                     for (int i = 0; i < nullNameCount; i++)
                     {
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
 
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenAsyncSession())

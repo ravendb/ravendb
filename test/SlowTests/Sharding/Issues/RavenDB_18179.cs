@@ -39,9 +39,9 @@ public class RavenDB_18179 : ClusterTestBase
                 await session.SaveChangesAsync();
             }
 
-            new Users_ByName().Execute(store);
+            await new Users_ByName().ExecuteAsync(store);
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             var bucket = Sharding.GetBucket(record.Sharding, id);
             var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);

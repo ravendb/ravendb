@@ -156,7 +156,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.Maintenance.SendAsync(new StopIndexingOperation());
 
@@ -186,7 +186,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)));
 

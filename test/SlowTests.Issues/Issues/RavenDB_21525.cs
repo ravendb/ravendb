@@ -26,7 +26,7 @@ public class RavenDB_21525 : RavenTestBase
             {
                 for (int i = 0; i < size; ++i)
                 {
-                    bulkInsert.Store(new Person() { Name = $"ItemNo{i}", Age = i % 100, Height = i % 200 });
+                    await bulkInsert.StoreAsync(new Person() { Name = $"ItemNo{i}", Age = i % 100, Height = i % 200 });
                 }
             }
 

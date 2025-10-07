@@ -34,7 +34,7 @@ public class RavenDB_18864 : RavenTestBase
             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
         }
         
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
 
         {

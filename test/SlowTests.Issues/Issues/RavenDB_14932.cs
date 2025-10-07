@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                 await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 2, policies: new List<TimeSeriesPolicy> { p3 });
                 await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 3, policies: new List<TimeSeriesPolicy> { p4 });
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())

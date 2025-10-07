@@ -140,7 +140,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachmentStream = new MemoryStream(readBuffer))
                         using (var attachment = session.Advanced.Attachments.Get("users/1", name))
                         {
-                            attachment.Stream.CopyTo(attachmentStream);
+                            await attachment.Stream.CopyToAsync(attachmentStream);
 
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -220,7 +220,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", name))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Equal(name, attachment.Details.Name);
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                         Assert.Equal(expectedContentType, attachment.Details.ContentType);
@@ -249,7 +249,7 @@ namespace SlowTests.Client.Attachments
                 }
                 await AssertAttachmentCount(store1, 3);
 
-                store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
+                await store1.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file2"));
 
                 await SetupAttachmentReplicationAsync(store1, store2);
                 await AssertAttachmentCount(store2, 2);
@@ -273,7 +273,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "file1"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
@@ -283,7 +283,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "file3"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Contains("A:6", attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
@@ -293,7 +293,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 // Delete document should delete all the attachments
-                store1.Commands().Delete("users/1", null);
+                await store1.Commands().DeleteAsync("users/1", null);
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Marker 2" }, "users/1$marker2");
@@ -347,7 +347,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/3", "file3"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("uuBtr5rVX6NAXzdW2DhuG04MGGyUzFzpS7TelHw3fJQ=", attachment.Details.Hash);
                         Assert.Equal(128 * 1024, attachmentStream.Position);
@@ -358,7 +358,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "big-file"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                         Assert.Equal(999 * 1024, attachmentStream.Position);
@@ -366,16 +366,16 @@ namespace SlowTests.Client.Attachments
                     }
                 }
 
-                store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                await store1.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file1"));
                 await AssertDeleteAsync(store1, store2, "file1", 2, 3);
 
-                store1.Operations.Send(new DeleteAttachmentOperation("users/2", "file2"));
+                await store1.Operations.SendAsync(new DeleteAttachmentOperation("users/2", "file2"));
                 await AssertDeleteAsync(store1, store2, "file2", 2);
 
-                store1.Operations.Send(new DeleteAttachmentOperation("users/3", "file3"));
+                await store1.Operations.SendAsync(new DeleteAttachmentOperation("users/3", "file3"));
                 await AssertDeleteAsync(store1, store2, "file3", 1);
 
-                store1.Operations.Send(new DeleteAttachmentOperation("users/1", "big-file"));
+                await store1.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "big-file"));
                 await AssertDeleteAsync(store1, store2, "big-file", 0);
 
                 for (int i = 1; i <= 3; i++)
@@ -1055,7 +1055,7 @@ namespace SlowTests.Client.Attachments
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a2", a2, "a1/png"));
                     }
-                    store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a2"));
+                    await store2.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "a2"));
 
                     await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
@@ -1316,7 +1316,7 @@ namespace SlowTests.Client.Attachments
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                     }
-                    store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a1"));
+                    await store2.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "a1"));
 
                     await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
@@ -3448,7 +3448,7 @@ namespace SlowTests.Client.Attachments
 
                 await EnsureReplicatingAsync(source, destination);
 
-                conflicts = destination.Commands().GetConflictsFor("users/1");
+                conflicts = await destination.Commands().GetConflictsForAsync("users/1");
                 Assert.Equal(0, conflicts.Length);
 
                 using (var session = destination.OpenAsyncSession())

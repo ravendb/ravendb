@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                 await indexDef.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
 
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(TimeSpan.FromSeconds(1), index._mre.ThrottlingInterval);
                 Assert.NotNull(index._mre._timerTask);
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                 // update index def
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var updatedIndexDef = new Orders_ByOrderedAtAndShippedAt(storeFields: true)
                 {
@@ -76,8 +76,8 @@ namespace SlowTests.Issues
                     mre.WaitOne(TimeSpan.FromMinutes(1));
                 }))
                 {
-                    store.Maintenance.Send(new StartIndexingOperation());
-                    Indexes.WaitForIndexing(store);
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
+                    await Indexes.WaitForIndexingAsync(store);
                 }
 
                 try
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
             }
         }
 

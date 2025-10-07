@@ -100,7 +100,7 @@ namespace SlowTests.Sharding.Subscriptions
             using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -184,7 +184,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 var count = 10;
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
                 var db1 = await Sharding.GetShardsDocumentDatabaseInstancesFor(store).FirstOrDefaultAsync(x => x.ShardNumber == n);
@@ -418,7 +418,7 @@ namespace SlowTests.Sharding.Subscriptions
             using (var store = Sharding.GetDocumentStore(ops))
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -587,7 +587,7 @@ namespace SlowTests.Sharding.Subscriptions
             using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -623,7 +623,7 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.Equal(count / 2, WaitForValue(() => docs.CurrentCount, count / 2));
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
@@ -687,7 +687,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
@@ -852,7 +852,7 @@ namespace SlowTests.Sharding.Subscriptions
                     });
                     session.SaveChanges();
                 }
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"from Dogs include Owner"
                 });
@@ -1215,7 +1215,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -1270,7 +1270,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -1402,7 +1402,7 @@ namespace SlowTests.Sharding.Subscriptions
                     await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User> { Name = "sub2" });
                     await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                    var states = store1.Subscriptions.GetSubscriptions(0, 10);
+                    var states = await store1.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                     Assert.Equal(3, states.Count);
 
@@ -1412,7 +1412,7 @@ namespace SlowTests.Sharding.Subscriptions
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    states = store2.Subscriptions.GetSubscriptions(0, 10, store2.Database);
+                    states = await store2.Subscriptions.GetSubscriptionsAsync(0, 10, store2.Database);
 
                     Assert.Equal(3, states.Count);
                     Assert.True(states.Any(x => x.SubscriptionName.Equals("sub1")));
@@ -1472,11 +1472,11 @@ namespace SlowTests.Sharding.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
-                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
-                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub1" });
+                await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                var states = store1.Subscriptions.GetSubscriptions(0, 10);
+                var states = await store1.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                 Assert.Equal(3, states.Count);
 

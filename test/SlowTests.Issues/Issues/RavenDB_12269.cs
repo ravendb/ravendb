@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     Name = "Users_ByName"
                 }));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var db = await GetDatabase(store.Database);
 
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
 
                 db.IndexStore.StartIndexing();
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
                 replacementIndex.LowMemory(LowMemorySeverity.ExtremelyLow);
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
 
                     await session.SaveChangesAsync();
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     // this will ensure that index isn't in error state
                     try

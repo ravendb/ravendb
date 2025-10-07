@@ -421,9 +421,9 @@ loadToOrders(orderData);");
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1L, dbCommand.ExecuteScalar());
+                        Assert.Equal(1L, await dbCommand.ExecuteScalarAsync());
                         dbCommand.CommandText = " SELECT City FROM Orders";
-                        Assert.Equal(DBNull.Value, dbCommand.ExecuteScalar());
+                        Assert.Equal(DBNull.Value, await dbCommand.ExecuteScalarAsync());
                     }
                 }
             }
@@ -942,19 +942,19 @@ loadToOrders(orderData);
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(3L, dbCommand.ExecuteScalar());
+                        Assert.Equal(3L, await dbCommand.ExecuteScalarAsync());
                     }
 
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/2-A'";
 
-                        var sqlDataReader = dbCommand.ExecuteReader();
+                        var sqlDataReader = await dbCommand.ExecuteReaderAsync();
 
-                        Assert.True(sqlDataReader.Read());
+                        Assert.True(await sqlDataReader.ReadAsync());
                         var stream = sqlDataReader.GetStream(0);
 
-                        var bytes = stream.ReadData();
+                        var bytes = await stream.ReadDataAsync();
 
                         Assert.Equal(attachmentBytes, bytes);
                     }
@@ -1026,7 +1026,7 @@ for (var i = 0; i < attachments.length; i++)
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Attachments";
-                        Assert.Equal(2L, dbCommand.ExecuteScalar());
+                        Assert.Equal(2L, await dbCommand.ExecuteScalarAsync());
                     }
                 }
             }
@@ -1073,13 +1073,13 @@ loadToOrders(orderData);
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(1L, dbCommand.ExecuteScalar());
+                        Assert.Equal(1L, await dbCommand.ExecuteScalarAsync());
 
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
-                        var sqlDataReader = dbCommand.ExecuteReader();
+                        var sqlDataReader = await dbCommand.ExecuteReaderAsync();
 
-                        Assert.True(sqlDataReader.Read());
+                        Assert.True(await sqlDataReader.ReadAsync());
                         Assert.True(sqlDataReader.IsDBNull(0));
                     }
                 }
@@ -1127,9 +1127,9 @@ loadToOrders(orderData);
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-                        Assert.Equal(2L, dbCommand.ExecuteScalar());
+                        Assert.Equal(2L, await dbCommand.ExecuteScalarAsync());
                         dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
-                        Assert.Equal(3L, dbCommand.ExecuteScalar());
+                        Assert.Equal(3L, await dbCommand.ExecuteScalarAsync());
                     }
                 }
             }
@@ -1233,12 +1233,12 @@ loadToOrders(orderData);
                     {
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
-                        var sqlDataReader = dbCommand.ExecuteReader();
+                        var sqlDataReader = await dbCommand.ExecuteReaderAsync();
 
-                        Assert.True(sqlDataReader.Read());
+                        Assert.True(await sqlDataReader.ReadAsync());
                         var stream = sqlDataReader.GetStream(0);
 
-                        var bytes = stream.ReadData();
+                        var bytes = await stream.ReadDataAsync();
 
                         Assert.Equal(attachmentBytes, bytes);
                     }

@@ -31,25 +31,25 @@ namespace SlowTests.Server.Documents
                 Path = path
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 for (int i = 0; i < 3; i++)
                 {
-                    await store.Operations.Send(new PatchByQueryOperation(new IndexQuery
+                    await (await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
                     {
                         Query = @"FROM Orders UPDATE { put(""orders/"", this); } "
-                    })).WaitForCompletionAsync(TimeSpan.FromSeconds(300));
+                    }))).WaitForCompletionAsync(TimeSpan.FromSeconds(300));
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
+                var deleteOperation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                var compactOperation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+                var compactOperation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(new CompactSettings
                 {
                     DatabaseName = store.Database,
                     Documents = true,

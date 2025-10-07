@@ -59,7 +59,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 var stopIndexOp = new StopIndexOperation(stats.IndexName);
                 
-                store.Maintenance.Send(stopIndexOp);
+                await store.Maintenance.SendAsync(stopIndexOp);
                 
                 dto.Name = "strawberry";
                 session.SaveChanges();
@@ -95,9 +95,9 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 }, true);
 
                 var startIndexOp = new StartIndexOperation(stats.IndexName);
-                store.Maintenance.Send(startIndexOp);
+                await store.Maintenance.SendAsync(startIndexOp);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 result = session.Query<Dto>()
                     .Statistics(out stats)
@@ -165,7 +165,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Delete(embeddingDocId);
                 session.SaveChanges();
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
 
@@ -207,7 +207,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 var stopIndexOp = new StopIndexOperation(stats.IndexName);
                 
-                store.Maintenance.Send(stopIndexOp);
+                await store.Maintenance.SendAsync(stopIndexOp);
                 
                 var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
                 
@@ -226,9 +226,9 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still some tombstone references to process from collection '@embeddings/Dtos'")));
                 
                 var startIndexOp = new StartIndexOperation(stats.IndexName);
-                store.Maintenance.Send(startIndexOp);
+                await store.Maintenance.SendAsync(startIndexOp);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 result = session.Query<Dto>()
                     .Customize(c => c.WaitForNonStaleResults())

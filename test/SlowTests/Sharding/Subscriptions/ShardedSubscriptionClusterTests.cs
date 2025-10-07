@@ -33,7 +33,7 @@ namespace SlowTests.Sharding.Subscriptions
             await ShardingCluster.CreateShardedDatabaseInCluster(db, 2, (nodes, leader));
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -84,7 +84,7 @@ namespace SlowTests.Sharding.Subscriptions
 
             using (var store = Sharding.GetDocumentStore(options))
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -215,7 +215,7 @@ namespace SlowTests.Sharding.Subscriptions
 
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -231,7 +231,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 // Wait for documents to replicate
-                Assert.True(ShardingCluster.WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
+                Assert.True(await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(nodes, store.Database, rf));
 
                 var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, nodes);
 

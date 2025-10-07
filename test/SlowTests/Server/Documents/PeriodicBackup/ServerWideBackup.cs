@@ -282,14 +282,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     command = "bash";
                     script = $"#!/bin/bash\r\necho '{localSettingsString}'";
-                    File.WriteAllText(scriptPath, script);
+                    await File.WriteAllTextAsync(scriptPath, script);
                     Process.Start("chmod", $"700 {scriptPath}");
                 }
                 else
                 {
                     command = "powershell";
                     script = $"echo '{localSettingsString}'";
-                    File.WriteAllText(scriptPath, script);
+                    await File.WriteAllTextAsync(scriptPath, script);
                 }
 
                 var putConfiguration = new ServerWideBackupConfiguration
@@ -520,8 +520,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 // new server should have only 0 backups
                 var server = GetNewServer();
@@ -535,8 +535,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Server = server
                 }))
                 {
-                    store2.Maintenance.Server.Send(restoreOperation)
-                        .WaitForCompletion(TimeSpan.FromSeconds(30));
+                    await (await store2.Maintenance.Server.SendAsync(restoreOperation))
+                        .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                     var record2 = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     Assert.Equal(0, record2.PeriodicBackups.Count);
@@ -686,8 +686,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 // old server should have 2: 1 server-wide and 1 regular backup
                 using (var store2 = GetDocumentStore(new Options
@@ -710,8 +710,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Server = server
                 }))
                 {
-                    store3.Maintenance.Server.Send(restoreOperation)
-                        .WaitForCompletion(TimeSpan.FromSeconds(30));
+                    await (await store3.Maintenance.Server.SendAsync(restoreOperation))
+                        .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                     var record3 = await store3.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     Assert.Equal(1, record3.PeriodicBackups.Count);

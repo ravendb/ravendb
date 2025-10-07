@@ -901,12 +901,12 @@ loadToOrders(orderData);
                         {
                             dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
-                            var sqlDataReader = dbCommand.ExecuteReader();
+                            var sqlDataReader = await dbCommand.ExecuteReaderAsync();
 
                             Assert.True(sqlDataReader.Read());
                             var stream = sqlDataReader.GetStream(0);
 
-                            var bytes = stream.ReadData();
+                            var bytes = await stream.ReadDataAsync();
 
                             Assert.Equal(attachmentBytes, bytes);
                         }
@@ -976,12 +976,12 @@ loadToOrders(orderData);
                         {
                             dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/2-A'";
 
-                            var sqlDataReader = dbCommand.ExecuteReader();
+                            var sqlDataReader = await dbCommand.ExecuteReaderAsync();
 
                             Assert.True(sqlDataReader.Read());
                             var stream = sqlDataReader.GetStream(0);
 
-                            var bytes = stream.ReadData();
+                            var bytes = await stream.ReadDataAsync();
 
                             Assert.Equal(attachmentBytes, bytes);
                         }
@@ -1116,7 +1116,7 @@ loadToOrders(orderData);
 
                             dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
-                            var sqlDataReader = dbCommand.ExecuteReader();
+                            var sqlDataReader = await dbCommand.ExecuteReaderAsync();
 
                             Assert.True(sqlDataReader.Read());
                             Assert.True(sqlDataReader.IsDBNull(0));

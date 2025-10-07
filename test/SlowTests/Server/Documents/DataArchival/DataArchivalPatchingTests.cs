@@ -286,7 +286,7 @@ public class DataArchivalPatchingTests : RavenTestBase
                     returnDebugInformation: false,
                     test: true);
 
-                commands.RequestExecutor.Execute(command, commands.Context);
+                await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
                 var metadata = command.Result.ModifiedDocument[Constants.Documents.Metadata.Key] as BlittableJsonReaderObject;
                 Assert.False(metadata.TryGet(Constants.Documents.Metadata.Archived, out object _));
             }

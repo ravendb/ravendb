@@ -51,9 +51,9 @@ public class RavenDB_17341 : RavenTestBase
             using (var store2 = GetDocumentStore(new Options {ModifyDatabaseName = s => $"{s}_2"}))
             {
                 DeployIndex(store1);
-                Indexes.WaitForIndexing(store1);
+                await Indexes.WaitForIndexingAsync(store1);
                 DeployIndex(store1, isUpdate: true);
-                Indexes.WaitForIndexing(store1);
+                await Indexes.WaitForIndexingAsync(store1);
 
                 var recordToExport = await store1.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store1.Database));
                 Assert.Equal(1, recordToExport.IndexesHistory.Count);

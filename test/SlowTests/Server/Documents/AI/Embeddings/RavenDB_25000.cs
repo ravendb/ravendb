@@ -49,8 +49,8 @@ public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestB
         var (configuration, _) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [cityConfig, countryConfig], collectionName: "Orders");
         await etl.WaitAsync(DefaultEtlTimeout);
         var index = new Index();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
         var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
@@ -62,7 +62,7 @@ public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Query = $@"from index '{index.IndexName}' where vector.search(VectorCity, ""uk"", 0.82, 20)"
             });
 
-            commands.RequestExecutor.Execute(command, commands.Context);
+            await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
             var results = new DynamicArray(command.Result.Results);
             Assert.Equal(1, results.Count());
@@ -75,7 +75,7 @@ public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Query = $@"from index '{index.IndexName}' where vector.search(VectorCity, ""uk"", 0.82, 20)"
             }, indexEntriesOnly: true);
 
-            commands.RequestExecutor.Execute(command, commands.Context);
+            await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
             var results = new DynamicArray(command.Result.Results);
             Assert.Equal(1, results.Count());

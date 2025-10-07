@@ -72,7 +72,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                new Orders_Search().Execute(store);
+                await new Orders_Search().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {

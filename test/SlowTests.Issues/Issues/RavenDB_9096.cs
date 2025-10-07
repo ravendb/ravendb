@@ -55,14 +55,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new DocIndex().Execute(store);
+                await new DocIndex().ExecuteAsync(store);
 
                 if (await ShouldInitData(store))
                 {
                     await InitializeData(store);
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

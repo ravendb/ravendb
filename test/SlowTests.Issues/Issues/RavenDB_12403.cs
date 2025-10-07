@@ -199,13 +199,13 @@ namespace SlowTests.Issues
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\' select __all_stored_fields&format=csv");
                 TextReader tr = new StreamReader(stream);
                 var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
-                csv.Read();
+                await csv.ReadAsync();
                 csv.TryGetField(0, out string value);
                 Assert.Equal("@id", value);
                 csv.TryGetField(1, out value);
                 Assert.Equal("CoolCount", value);
                 var k = 0;
-                while (csv.Read())
+                while (await csv.ReadAsync())
                 {
                     csv.TryGetField(0, out value);
                     Assert.Equal($"user/{k}", value);

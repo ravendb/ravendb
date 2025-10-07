@@ -46,7 +46,7 @@ namespace SlowTests.SlowTests.Issues
         {
             var store = GetDocumentStore(options);
 
-            new UsersAndFiendsIndex().Execute(store);
+            await new UsersAndFiendsIndex().ExecuteAsync(store);
 
             using (var bulk = store.BulkInsert())
             {
@@ -73,7 +73,7 @@ namespace SlowTests.SlowTests.Issues
                     await bulk.StoreAsync(user);
                 }
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             long skippedResults = 0;
             var pagedResults = new List<User>();

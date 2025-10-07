@@ -30,7 +30,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1"
                 });
@@ -83,7 +83,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
                     Query = "from Users as u select {Name:'David'}"

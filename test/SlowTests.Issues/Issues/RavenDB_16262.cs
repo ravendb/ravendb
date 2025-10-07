@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeCounter("Likes")

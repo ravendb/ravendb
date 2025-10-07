@@ -59,8 +59,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(options))
             {
-                store.Subscriptions.Create<User>(x => x.Name == "Marcin");
-                store.Subscriptions.Create<User>();
+                await store.Subscriptions.CreateAsync<User>(x => x.Name == "Marcin");
+                await store.Subscriptions.CreateAsync<User>();
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
                 
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                     })
                     {
                         restoredStore.Initialize();
-                        var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
+                        var subscriptions = await restoredStore.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                         Assert.Equal(2, subscriptions.Count);
 

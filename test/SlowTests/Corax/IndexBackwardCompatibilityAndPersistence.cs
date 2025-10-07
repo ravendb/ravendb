@@ -74,14 +74,14 @@ namespace SlowTests.Corax
             using (var store = GetDocumentStore(new Options {Server = server, RunInMemory = false, Path = _databasePath}))
             {
                 _databaseName = store.Database;
-                _index.Execute(store);
+                await _index.ExecuteAsync(store);
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
                         .Where(x => x.OrderedAt == DateTime.Now).ToList();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 WaitForUserToContinueTheTest(store);
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -99,7 +99,7 @@ namespace SlowTests.Corax
             using (var store = GetDocumentStore(new Options {Server = server, RunInMemory = false, Path = _databasePath, ModifyDatabaseName = _ => _databaseName}))
             {
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var indexInstance1 = database.IndexStore.GetIndex(_index.IndexName);
                 var indexInstance2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");

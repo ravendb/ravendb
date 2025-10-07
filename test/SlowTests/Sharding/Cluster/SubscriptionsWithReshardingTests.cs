@@ -982,7 +982,7 @@ namespace SlowTests.Sharding.Cluster
                 }
                 finally
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                     await fail;
                     await t;
                 }
@@ -1093,7 +1093,7 @@ namespace SlowTests.Sharding.Cluster
                 }
                 finally
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                     await fail;
                     await t;
                 }
@@ -1382,7 +1382,7 @@ namespace SlowTests.Sharding.Cluster
             }
 
 
-            var state = store.Subscriptions.GetSubscriptionState(id);
+            var state = await store.Subscriptions.GetSubscriptionStateAsync(id);
 
             Console.WriteLine("ChangeVectorForNextBatchStartingPointPerShard:");
             foreach (var cv in state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.OrderBy(x => x.Key))

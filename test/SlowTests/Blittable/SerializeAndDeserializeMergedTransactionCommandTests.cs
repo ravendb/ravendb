@@ -183,8 +183,8 @@ namespace SlowTests.Blittable
                     new CustomComparer<AttachmentHandler.MergedPutAttachmentCommand, DocumentsOperationContext, DocumentsTransaction>(context, new[] { typeof(Stream) }));
 
                 stream.Seek(0, SeekOrigin.Begin);
-                var expectedStream = expected.Stream.ReadData();
-                var actualStream = actual.Stream.ReadData();
+                var expectedStream = await expected.Stream.ReadDataAsync();
+                var actualStream = await actual.Stream.ReadDataAsync();
                 Assert.Equal(expectedStream, actualStream);
             }
         }

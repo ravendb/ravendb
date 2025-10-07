@@ -79,7 +79,7 @@ namespace SlowTests.Client.Subscriptions
                 await Assert.ThrowsAsync(typeof(SubscriptionClosedException), () => subscriptionTask);
 
 
-                subscriptionTasks[0].SubscriptionObject.Dispose();
+                await subscriptionTasks[0].SubscriptionObject.DisposeAsync();
 
                 using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())

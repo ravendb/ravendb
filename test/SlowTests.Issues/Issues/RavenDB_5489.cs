@@ -27,7 +27,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                new Users_ByName().Execute(store);
+                await new Users_ByName().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(IndexState.Normal, store.Maintenance.Send(new GetStatisticsOperation()).Indexes[0].State);
 

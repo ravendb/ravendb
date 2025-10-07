@@ -22,14 +22,14 @@ namespace SlowTests.MailingList
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var docLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
                 var doc = await docLazy.Value;
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var requests = session.Advanced.NumberOfRequests;
 
@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var docLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
                 session.Advanced.Lazily.LoadAsync<Doc>("doc-2"); // not used
@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var requests = session.Advanced.NumberOfRequests;
 
@@ -87,7 +87,7 @@ namespace SlowTests.MailingList
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var docLazy = session.Advanced.Lazily.LoadAsync<Doc>(loadedDocId);
                 _ = await docLazy.Value;
@@ -95,7 +95,7 @@ namespace SlowTests.MailingList
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var docLazy = session.Advanced.Lazily.LoadAsync<Doc>(loadedDocId);
                 _ = await docLazy.Value;
@@ -103,7 +103,7 @@ namespace SlowTests.MailingList
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
             {
                 var cachedDocLazy = session.Advanced.Lazily.LoadAsync<Doc>(loadedDocId);
                 session.Advanced.Lazily.LoadAsync<Doc>(unloadedDocId); // not used

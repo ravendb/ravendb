@@ -744,7 +744,7 @@ person.addCounter(loadCounter('down'));
 
                 Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
-                src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
+                await src.Maintenance.SendAsync(new ResetEtlOperation("myConfiguration", "allUsers"));
 
                 Assert.True(await resetDone.WaitAsync(TimeSpan.FromMinutes(1)));
             }

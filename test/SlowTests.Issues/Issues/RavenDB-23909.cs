@@ -86,7 +86,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                     // Expected exception
                 }
                 
-                Indexes.WaitForIndexing(store, allowErrors: true);
+                await Indexes.WaitForIndexingAsync(store, allowErrors: true);
                 var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
                 
                 Assert.Single(indexErrors);
@@ -117,8 +117,8 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.True(indexingWorkerRegistered);
 
                 var index = new DummyIndex();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await index.ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 var result = session.Query<DummyIndex.IndexEntry, DummyIndex>()
                     .VectorSearch(x =>
@@ -154,8 +154,8 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.True(indexingWorkerRegistered);
 
                 var index = new DummyJsIndex();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await index.ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 var result = session.Query<DummyJsIndex.IndexEntry, DummyJsIndex>()
                     .VectorSearch(x =>

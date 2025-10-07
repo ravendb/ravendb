@@ -38,7 +38,7 @@ namespace SlowTests.Cluster
                 Urls = new[] { cluster.Leader.WebUrl }
             }.Initialize())
             {
-                store.Maintenance.Server.Send(new SetDatabaseDynamicDistributionOperation(store.Database, true));
+                await store.Maintenance.Server.SendAsync(new SetDatabaseDynamicDistributionOperation(store.Database, true));
                 await DisposeAndRemoveServer(res.Servers.First());
                 var wait = (moveToRehabGraceTime + replicaTimeout)* 10 * 1000;
                 if (Debugger.IsAttached)

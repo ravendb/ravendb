@@ -32,7 +32,7 @@ namespace SlowTests.Bugs.Errors
                 {
                     for (var i = 0; i < 50; i++)
                     {
-                        commands.Put("item/" + i, null, new { Type = "Car" }, null);
+                        await commands.PutAsync("item/" + i, null, new { Type = "Car" }, null);
                     }
                 }
 

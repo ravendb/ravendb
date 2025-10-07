@@ -38,7 +38,7 @@ public class RavenDB_21960 : RavenTestBase
                 var otherIndex = new OtherDummyIndex();
                 await otherIndex.ExecuteAsync(store);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var commands = store.Commands())
                 {
@@ -118,7 +118,7 @@ public class RavenDB_21960 : RavenTestBase
                 var otherIndex = new OtherDummyIndex();
                 await otherIndex.ExecuteAsync(store);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var commands = store.Commands())
                 {

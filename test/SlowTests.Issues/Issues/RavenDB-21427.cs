@@ -844,7 +844,7 @@ public class MyAnalyzer2 : Analyzer
             {
                 await DisableRevisionCompression(Server, store);
                 await PutLicense(Server, RL_COMM);
-                store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition
+                await store.Maintenance.SendAsync(new PutAnalyzersOperation(new AnalyzerDefinition
                 {
                     Name = "MyAnalyzer2",
                     Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", "MyAnalyzer2")
@@ -859,7 +859,7 @@ public class MyAnalyzer2 : Analyzer
                 Assert.Equal(LimitType.CustomAnalyzers, exception.LimitType);
 
                 await PutLicense(Server, RL_PRO);
-                store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition
+                await store.Maintenance.SendAsync(new PutAnalyzersOperation(new AnalyzerDefinition
                 {
                     Name = "MyAnalyzer",
                     Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", "MyAnalyzer")

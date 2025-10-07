@@ -84,7 +84,7 @@ namespace SlowTests.Server
                 await session.SaveChangesAsync();
             }
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             
             using var tokenSource = new AutoCancellationTokenSource();
             
@@ -101,7 +101,7 @@ namespace SlowTests.Server
                 await session.StoreAsync(new TestObj { Prop = prop}, $"testObjs/1");
                 await session.SaveChangesAsync();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -109,7 +109,7 @@ namespace SlowTests.Server
                 Assert.NotEmpty(await session.Advanced.AsyncRawQuery<object>("from OutputReduceCollection").ToArrayAsync());
             }
             
-            tokenSource.Cancel();
+            await tokenSource.CancelAsync();
             await Task.WhenAll(failingTasks);
         }
 
@@ -136,7 +136,7 @@ namespace SlowTests.Server
             var amre = new AsyncManualResetEvent();
             var failingTasks = RunFailingTasks(store, amre, tokenSource.Token);
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             await amre.WaitAsync();
             var operation = await store.Operations.SendAsync(new PatchByQueryOperation(@"
 from TestObjs as o where o.Prop = null update 
@@ -148,12 +148,12 @@ from TestObjs as o where o.Prop = null update
     }} 
 }}"));
             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-            tokenSource.Cancel();
+            await tokenSource.CancelAsync();
             await Task.WhenAll(failingTasks);
 
             using (var session = store.OpenAsyncSession())
             {
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 var patchCount = await session.Query<TestObj>().Where(o => o.Prop == "Changed").CountAsync();
                 Assert.Equal(docCount, patchCount);
             }

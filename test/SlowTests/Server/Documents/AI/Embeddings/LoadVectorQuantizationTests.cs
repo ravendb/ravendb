@@ -45,8 +45,8 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id, VectorEmbeddingType.Int8);
         
         
-        new Index().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new Index().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -88,8 +88,8 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id);
         
-        new QuantizationInIndex().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new QuantizationInIndex().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -128,8 +128,8 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
 
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id, VectorEmbeddingType.Binary);
 
-        new Index().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new Index().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -177,8 +177,8 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
 
         
         
-        new Index().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new Index().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {

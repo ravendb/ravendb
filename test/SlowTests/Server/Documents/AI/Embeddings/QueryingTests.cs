@@ -217,8 +217,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
             var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
             var index = new SomeIndex();
-            index.Execute(store);
-            Indexes.WaitForIndexing(store);
+            await index.ExecuteAsync(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenSession())
             {
@@ -270,8 +270,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
             
             var index = new SomeIndex();
-            index.Execute(store);
-            Indexes.WaitForIndexing(store);
+            await index.ExecuteAsync(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenSession())
             {
@@ -327,8 +327,8 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
 
-        new VectorStaticIndex().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new VectorStaticIndex().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {

@@ -1020,12 +1020,12 @@ this.Else = a;
                         Name = "TestIndex"
                     }}));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                var operation = store.Operations.Send(new PatchByQueryOperation(
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
                     $"FROM INDEX \'TestIndex\' WHERE Owner = \'Bob\' UPDATE {{ {SampleScript}}}"));
 
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())
                 {

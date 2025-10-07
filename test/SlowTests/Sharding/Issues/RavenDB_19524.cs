@@ -108,7 +108,7 @@ namespace SlowTests.Sharding.Issues
                     Assert.NotNull(att);
                 }
 
-                store.Operations.Send(new DeleteAttachmentOperation("users/1", attName));
+                await store.Operations.SendAsync(new DeleteAttachmentOperation("users/1", attName));
 
                 using (var session = store.OpenAsyncSession())
                 {

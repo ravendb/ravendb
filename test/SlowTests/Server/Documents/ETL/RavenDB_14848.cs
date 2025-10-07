@@ -112,7 +112,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 etlDone.Reset();
 
-                src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allDocs"));
+                await src.Maintenance.SendAsync(new ResetEtlOperation("myConfiguration", "allDocs"));
 
                 await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 

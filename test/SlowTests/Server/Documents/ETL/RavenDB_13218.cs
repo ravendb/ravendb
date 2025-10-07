@@ -51,9 +51,9 @@ function loadCountersOfOrdersBehavior(doc, counter)
                     session.SaveChanges();
                 }
 
-                src.Operations.Send(new PatchByQueryOperation(@"from Orders update{
+                await (await src.Operations.SendAsync(new PatchByQueryOperation(@"from Orders update{
     incrementCounter(this, 'Foo', 1);
-}")).WaitForCompletion(TimeSpan.FromMinutes(5));
+}"))).WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 if (collection == null)
                 {

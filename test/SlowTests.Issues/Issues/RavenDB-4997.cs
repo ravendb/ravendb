@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var conflicts = storeA.Commands().GetConflictsFor("users/1");
+                var conflicts = await storeA.Commands().GetConflictsForAsync("users/1");
                 Assert.Equal(0, conflicts.Length);
             }
         }

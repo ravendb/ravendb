@@ -170,7 +170,7 @@ namespace SlowTests.Issues
                 await Task.Delay(_delay);
                 bulk.Store(new User { Name = "Ido" }, "users/3");
                 await Task.Delay(_delay);
-                bulk.Dispose();
+                await bulk.DisposeAsync();
 
                 using (var session = store.OpenSession())
                 {

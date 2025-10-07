@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Indexes
                 {
                     Conventions = new DocumentConventions()
                 };
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 var indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
@@ -84,7 +84,7 @@ namespace SlowTests.Tests.Indexes
                 {
                     Conventions = new DocumentConventions()
                 };
-                staticIndex.Execute(store);
+                await staticIndex.ExecuteAsync(store);
 
                 var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
                 Assert.Equal(1, indexes.Length);
@@ -94,11 +94,11 @@ namespace SlowTests.Tests.Indexes
                 var stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
 
-                store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore));
+                await store.Maintenance.SendAsync(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore));
                 stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
                 
-                store.Maintenance.Send(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedError));
+                await store.Maintenance.SendAsync(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedError));
                 stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
                 Assert.Equal(IndexLockMode.LockedError, stats.LockMode);
             }
@@ -132,7 +132,7 @@ namespace SlowTests.Tests.Indexes
                 {
                     Conventions = new DocumentConventions()
                 };
-                index.Execute(store);
+                await index.ExecuteAsync(store);
                 
                 var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
                 Assert.Equal(2, indexes.Length);

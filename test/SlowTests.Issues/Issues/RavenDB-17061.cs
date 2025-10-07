@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                     userId = user.Id;
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 QueryStatistics stats;
 
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
                     userId = user.Id;
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var isCorax = options.SearchEngineMode is RavenSearchEngineMode.Corax;
                 var idComparer = isCorax
@@ -217,7 +217,7 @@ namespace SlowTests.Issues
                     userId = user.Id;
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

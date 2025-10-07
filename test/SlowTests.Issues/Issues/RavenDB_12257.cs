@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeDocuments(x => x.Category)
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Order>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Order>
                 {
                     Includes = builder => builder
                         .IncludeDocuments(x => x.Lines.Select(y => y.Product))

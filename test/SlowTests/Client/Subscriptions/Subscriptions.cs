@@ -221,7 +221,7 @@ namespace SlowTests.Client.Subscriptions
 
                         Assert.True(await ackSentAmre.WaitAsync(TimeSpan.FromSeconds(50)));
 
-                        acceptedSubscription.Dispose();
+                        await acceptedSubscription.DisposeAsync();
 
                         await CreateDocuments(store, 5);
 

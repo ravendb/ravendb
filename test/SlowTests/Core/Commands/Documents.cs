@@ -163,17 +163,17 @@ namespace SlowTests.Core.Commands
                         {Constants.Documents.Metadata.Collection, "Items"}
                     });
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
-                    var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'MyIndex' UPDATE { this.NewName = 'NewValue'; } " }));
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'MyIndex' UPDATE { this.NewName = 'NewValue'; } " }));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                     dynamic document = await commands.GetAsync("items/1");
                     Assert.Equal("NewValue", document.NewName.ToString());
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
-                    operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = $"FROM INDEX 'MyIndex'" }));
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    operation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery() { Query = $"FROM INDEX 'MyIndex'" }));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                     var documents = await commands.GetAsync(0, 25);
                     Assert.Equal(0, documents.Count());

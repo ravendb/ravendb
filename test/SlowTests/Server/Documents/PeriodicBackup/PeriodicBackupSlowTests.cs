@@ -1694,8 +1694,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
@@ -3748,7 +3748,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
 
             var lastCv = "";
-            var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+            var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
             using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
             {

@@ -49,7 +49,7 @@ namespace SlowTests.ExtensionPoints
                 customSettings[RavenConfiguration.GetKey(x => x.Storage.OnDirectoryInitializeExecArguments)] = $"{scriptFile} {outputFile}";
 
                 script = "#!/bin/bash\r\necho \"$2 $3 $4 $5 $6\" >> $1";
-                File.WriteAllText(scriptFile, script);
+                await File.WriteAllTextAsync(scriptFile, script);
                 Process.Start("chmod", $"700 {scriptFile}");
             }
             else
@@ -61,7 +61,7 @@ namespace SlowTests.ExtensionPoints
 param([string]$userArg ,[string]$type, [string]$name, [string]$dataPath, [string]$tempPath, [string]$journalPath)
 Add-Content $userArg ""$type $name $dataPath $tempPath $journalPath\r\n""
 exit 0";
-                File.WriteAllText(scriptFile, script);
+                await File.WriteAllTextAsync(scriptFile, script);
             }
 
             UseNewLocalServer(customSettings: customSettings);
@@ -71,12 +71,12 @@ exit 0";
             {
                 using (var store = GetDocumentStore())
                 {
-                    store.Maintenance.Send(new CreateSampleDataOperation(DatabaseItemType.Indexes));
+                    await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Indexes));
 
                     // the database loads after all indexes are loaded
                     var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                    var lines = File.ReadAllLines(outputFile);
+                    var lines = await File.ReadAllLinesAsync(outputFile);
                     Assert.Equal(10, lines.Length);
                     Assert.True(lines[0].Contains($"{DirectoryExecUtils.EnvironmentType.System} {SystemDbName} {options.BasePath} {options.TempPath} {options.JournalPath}"));
                     Assert.True(lines[1].Contains($"{DirectoryExecUtils.EnvironmentType.Database} {store.Database} {options.BasePath} {options.TempPath} {options.JournalPath}"));
@@ -117,7 +117,7 @@ exit 0";
                 customSettings[RavenConfiguration.GetKey(x => x.Storage.OnDirectoryInitializeExecArguments)] = $"{scriptFile} {outputFile}";
 
                 script = "#!/bin/bash\r\necho \"$2 $3 $4 $5 $6\" >> $1";
-                File.WriteAllText(scriptFile, script);
+                await File.WriteAllTextAsync(scriptFile, script);
                 Process.Start("chmod", $"700 {scriptFile}");
             }
             else
@@ -129,7 +129,7 @@ exit 0";
 param([string]$userArg ,[string]$type, [string]$name, [string]$dataPath, [string]$tempPath, [string]$journalPath)
 Add-Content $userArg ""$type $name $dataPath $tempPath $journalPath\r\n""
 exit 0";
-                File.WriteAllText(scriptFile, script);
+                await File.WriteAllTextAsync(scriptFile, script);
             }
 
             UseNewLocalServer(customSettings: customSettings, runInMemory: false);
@@ -140,12 +140,12 @@ exit 0";
                 Path = basePath
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation(DatabaseItemType.Indexes));
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Indexes));
 
                 // The database loads after all indexes are loaded
                 var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var lines = File.ReadAllLines(outputFile);
+                var lines = await File.ReadAllLinesAsync(outputFile);
                 Assert.Equal(10, lines.Length);
 
                 var systemEnvOptions = Server.ServerStore._env.Options;
@@ -268,7 +268,7 @@ exit 129";
             {
                 cryptoRandom.GetBytes(buffer);
             }
-            File.WriteAllBytes(keyPath, buffer);
+            await File.WriteAllBytesAsync(keyPath, buffer);
             var certificates = Certificates.GenerateAndSaveSelfSignedCertificate();
             if (PlatformDetails.RunningOnPosix)
             {
@@ -283,7 +283,7 @@ exit 129";
                 customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
 
                 script = "#!/bin/bash\ncat \"$1\"";
-                File.WriteAllText(scriptPath, script);
+                await File.WriteAllTextAsync(scriptPath, script);
                 Process.Start("chmod", $"700 {scriptPath}");
             }
             else
@@ -310,7 +310,7 @@ catch {
     exit 1
 }
 exit 0";
-                File.WriteAllText(scriptPath, script);
+                await File.WriteAllTextAsync(scriptPath, script);
             }
 
             UseNewLocalServer(customSettings: customSettings, runInMemory: false);

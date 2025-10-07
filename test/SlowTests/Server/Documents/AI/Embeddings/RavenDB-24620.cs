@@ -34,8 +34,8 @@ public class RavenDB_24620(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
         var index = new VectorIndex(source, destination);
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {

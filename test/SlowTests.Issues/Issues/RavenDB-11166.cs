@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"from Dogs include Owner"
                 });
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"from Dogs (Revisions = true) as d include d.Current.Owner, d.Previous.Owner",
                 });
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"declare function f(d) { 
                                 include(d.Current.Owner);
@@ -247,7 +247,7 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"declare function f(d) { 
     include(d.Owner);
@@ -308,7 +308,7 @@ select f(dog)
                     });
                     session.SaveChanges();
                 }
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"from Dogs include Owner"
                 });

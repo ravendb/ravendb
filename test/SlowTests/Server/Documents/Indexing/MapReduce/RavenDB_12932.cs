@@ -249,15 +249,15 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                new Orders_ProfitByProductAndOrderedAt().Execute(store);
+                await new Orders_ProfitByProductAndOrderedAt().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.ExecuteIndexAsync(new Replacement.Orders_ProfitByProductAndOrderedAt());
 
                 WaitForUserToContinueTheTest(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -304,7 +304,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             using (var store = GetDocumentStore())
             {
                 var indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "CustomCollection");
-                indexToCreate.Execute(store);
+                await indexToCreate.ExecuteAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndexes().First();
@@ -369,13 +369,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                new Orders_ProfitByProductAndOrderedAt().Execute(store);
+                await new Orders_ProfitByProductAndOrderedAt().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.ExecuteIndexAsync(new Replacement_DifferentPattern.Orders_ProfitByProductAndOrderedAt());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -409,15 +409,15 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                new Orders_ProfitByProductAndOrderedAt().Execute(store);
+                await new Orders_ProfitByProductAndOrderedAt().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 WaitForUserToContinueTheTest(store);
 
                 await store.ExecuteIndexAsync(new Replacement_PatternFieldUpdate.Orders_ProfitByProductAndOrderedAt());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 WaitForUserToContinueTheTest(store);
 

@@ -53,7 +53,7 @@ namespace SlowTests.Issues
             }))
             {
                 var index = new Person_ByName_1();
-                store.ExecuteIndex(index);
+                await store.ExecuteIndexAsync(index);
 
                 var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
                 Assert.True(indexes.Length > 0);

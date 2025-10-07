@@ -59,7 +59,7 @@ public class RavenDB_14806 : RavenTestBase
         }
         var index = new DataIndex();
         await index.ExecuteAsync(store);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         {
             using var session = store.OpenAsyncSession();

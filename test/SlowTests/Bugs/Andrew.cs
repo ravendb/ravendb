@@ -42,11 +42,11 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                new MyIndex().Execute(store);
+                await new MyIndex().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                var firstQueryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
+                var firstQueryResult = await store.Commands().QueryAsync(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 
                 Assert.Equal(1, firstQueryResult.TotalResults);
 
@@ -76,17 +76,17 @@ namespace SlowTests.Bugs
 
                 for (int i = 0; i < 100; i++)
                 {
-                    QueryResult queryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
+                    QueryResult queryResult = await store.Commands().QueryAsync(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 
                     Assert.Equal(1, queryResult.TotalResults);
                 }
 
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 await car1.WaitAsync(TimeSpan.FromMinutes(1));
                 await car2.WaitAsync(TimeSpan.FromMinutes(1));
 
-                QueryResult finalQueryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
+                QueryResult finalQueryResult = await store.Commands().QueryAsync(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 
                 Assert.Equal(1, finalQueryResult.TotalResults);
             }

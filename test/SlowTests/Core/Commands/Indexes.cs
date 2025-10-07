@@ -195,8 +195,8 @@ namespace SlowTests.Core.Commands
             var index2 = new Posts_ByTitleAndContent();
             using (var store = GetDocumentStore(options))
             {
-                index1.Execute(store);
-                index2.Execute(store);
+                await index1.ExecuteAsync(store);
+                await index2.ExecuteAsync(store);
 
                 var indexes = await store.Maintenance.SendAsync(new GetIndexNamesOperation(0, 10));
                 Assert.Equal(2, indexes.Length);
@@ -212,7 +212,7 @@ namespace SlowTests.Core.Commands
             var index = new Users_ByName();
             using (var store = GetDocumentStore(options))
             {
-                index.Execute(store);
+                await index.ExecuteAsync(store);
                 using (var session = store.OpenSession())
                 {
                     for (var i = 0; i < 20; i++)
@@ -223,7 +223,7 @@ namespace SlowTests.Core.Commands
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.StaleIndexes.Length);

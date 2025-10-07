@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                     definition.Name = index.IndexName;
                     store.Maintenance.Send(new PutIndexesOperation(new[] { definition }));
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     // we might have other notifications like StatsChanged
                     Assert.True(WaitForValue(() => notificationsQueue.Count > 0, true, interval: 100));

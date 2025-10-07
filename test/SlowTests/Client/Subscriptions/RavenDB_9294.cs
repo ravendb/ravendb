@@ -31,7 +31,7 @@ namespace SlowTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var sn = store.Subscriptions.Create<User>();
+                var sn = await store.Subscriptions.CreateAsync<User>();
                 var worker = store.Subscriptions.GetSubscriptionWorker<User>(sn);
 
                 var firstBatchHappened = new AsyncManualResetEvent();
@@ -44,7 +44,7 @@ namespace SlowTests.Client.Subscriptions
 
                 _ = worker.Run(x => { });
                 Assert.True(await firstBatchHappened.WaitAsync(_reasonableWaitTime));
-                worker.Dispose();
+                await worker.DisposeAsync();
                 worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
                 {
                     Strategy = SubscriptionOpeningStrategy.WaitForFree,

@@ -34,7 +34,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
@@ -69,7 +69,7 @@ namespace SlowTests.Client.Subscriptions
             {
                 Cluster.SuspendObserver(Server);
 
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
 
                 const int numberOfClients = 2;
 
@@ -185,7 +185,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
 
                 var userId = 0;
 
@@ -253,7 +253,7 @@ namespace SlowTests.Client.Subscriptions
 
                     Assert.True(await activeSubscriptionMre.WaitAsync(_reasonableWaitTime));
 
-                    activeSubscription.Dispose(); // disconnect the active client, the pending one should be notified the the subscription is free and retry to open it
+                    await activeSubscription.DisposeAsync(); // disconnect the active client, the pending one should be notified the the subscription is free and retry to open it
 
                     using (var s = store.OpenSession())
                     {
@@ -273,7 +273,7 @@ namespace SlowTests.Client.Subscriptions
                     
                     Assert.True(await pendingBatchAcknowledgedMre.WaitAsync(_reasonableWaitTime)); // let it acknowledge the processed batch before we open another subscription
 
-                    pendingSubscription.Dispose();
+                    await pendingSubscription.DisposeAsync();
                 }
             }
         }
