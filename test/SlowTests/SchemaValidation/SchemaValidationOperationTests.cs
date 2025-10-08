@@ -43,7 +43,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
         
         var operation = await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
         {
-            Schema = schemaDefinition,
+            SchemaDefinition = schemaDefinition,
             Collection = "TestObjs"
         }));
         var result = await operation.WaitForCompletionAsync<ValidateSchemaValidationResult>(TimeSpan.FromMinutes(1));
@@ -82,7 +82,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
         
         var operation = await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
         {
-            Schema = schemaDefinition,
+            SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
             MaxErrorMessages = maxErrorsMsg,
             

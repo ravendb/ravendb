@@ -22,8 +22,8 @@ public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<Op
     /// </summary>
     public sealed class Parameters
     {
-        /// <summary>JSON schema definition text. (Required)</summary>
-        public string Schema { get; set; }
+        /// <summary>JSON schema definition. (Required)</summary>
+        public string SchemaDefinition { get; set; }
 
         /// <summary>Maximum collected validation error messages. (Optional, default 1024, must be >= 0 when specified)</summary>
         public int? MaxErrorMessages { get; set; }
@@ -45,7 +45,7 @@ public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<Op
     {
         _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
 
-        if (string.IsNullOrWhiteSpace(_parameters.Schema))
+        if (string.IsNullOrWhiteSpace(_parameters.SchemaDefinition))
             throw new ArgumentException("Schema must be provided.", nameof(parameters));
         if (string.IsNullOrWhiteSpace(_parameters.Collection))
             throw new ArgumentException("Collection must be provided.", nameof(parameters));

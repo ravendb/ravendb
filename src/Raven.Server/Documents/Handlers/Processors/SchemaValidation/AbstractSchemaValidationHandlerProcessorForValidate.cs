@@ -44,7 +44,7 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
     private void ValidateParameters()
     {
         if (string.IsNullOrWhiteSpace(Parameters.Collection) == false 
-            && string.IsNullOrWhiteSpace(Parameters.Schema) == false 
+            && string.IsNullOrWhiteSpace(Parameters.SchemaDefinition) == false 
             && (Parameters.MaxErrorMessages.HasValue == false || Parameters.MaxErrorMessages.Value >= 0) 
             && (Parameters.MaxDurationInMinutes.HasValue == false || Parameters.MaxDurationInMinutes.Value > 0 )
             // Optional per-read-batch duration limit in seconds.
@@ -55,8 +55,8 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
 
         if (string.IsNullOrWhiteSpace(Parameters.Collection))
             errors.Add($"Missing required parameter '{nameof(Parameters.Collection)}'.");
-        if (string.IsNullOrWhiteSpace(Parameters.Schema))
-            errors.Add($"Missing required parameter '{nameof(Parameters.Schema)}'.");
+        if (string.IsNullOrWhiteSpace(Parameters.SchemaDefinition))
+            errors.Add($"Missing required parameter '{nameof(Parameters.SchemaDefinition)}'.");
 
         if (Parameters.MaxErrorMessages is < 0)
             errors.Add($"Parameter '{nameof(Parameters.MaxErrorMessages)}' must be non-negative.");
