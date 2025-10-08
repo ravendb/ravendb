@@ -40,6 +40,7 @@ type FormInputProps = Omit<OmitIndexSignature<RavenFormControlProps>, "addon"> &
         type: InputType;
         passwordPreview?: boolean;
         rows?: number | string;
+        isHideErrorMessage?: boolean;
     };
 
 export interface FormCheckboxesOption<T extends string | number = string> {
@@ -498,8 +499,19 @@ function FormInputGeneral<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & Omit<FormInputProps, "size">) {
-    const { name, control, defaultValue, rules, shouldUnregister, children, type, addon, passwordPreview, ...rest } =
-        props;
+    const {
+        name,
+        control,
+        defaultValue,
+        rules,
+        shouldUnregister,
+        children,
+        type,
+        addon,
+        passwordPreview,
+        isHideErrorMessage,
+        ...rest
+    } = props;
 
     const {
         field: { onChange, onBlur, value, ref },
@@ -564,7 +576,7 @@ function FormInputGeneral<
                     </InputGroup>
                 </div>
             </div>
-            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
+            {!isHideErrorMessage && error && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </>
     );
 }

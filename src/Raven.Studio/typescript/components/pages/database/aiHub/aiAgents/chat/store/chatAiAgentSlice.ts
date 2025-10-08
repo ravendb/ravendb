@@ -7,6 +7,7 @@ import { createSuccessState, createIdleState, createFailureState } from "compone
 import document from "models/database/documents/document";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
+import { RunAiAgentRequestDto } from "commands/database/aiAgents/runAiAgentCommand";
 
 interface EditAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
@@ -20,6 +21,7 @@ interface EditAiAgentState {
     isDocumentExpirationEnabled: loadableData<boolean>;
     isDocumentDeleted: boolean;
     isDocumentChanged: boolean;
+    activePromptIndex: number;
 }
 
 const initialState: EditAiAgentState = {
@@ -34,6 +36,7 @@ const initialState: EditAiAgentState = {
     isDocumentExpirationEnabled: createIdleState(),
     isDocumentDeleted: false,
     isDocumentChanged: false,
+    activePromptIndex: 0,
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -63,6 +66,9 @@ export const chatAiAgentSlice = createSlice({
         },
         isDocumentChangedSet: (state, action: PayloadAction<boolean>) => {
             state.isDocumentChanged = action.payload;
+        },
+        activePromptIndexSet: (state, action: PayloadAction<number>) => {
+            state.activePromptIndex = action.payload;
         },
         reset: () => initialState,
     },
@@ -157,10 +163,11 @@ const runChat = createAsyncThunk(
         const conversationId = state.chatAiAgent.conversationId;
         const config = state.chatAiAgent.config;
         const changeVector = state.chatAiAgent.document.data?.["@metadata"]?.["@change-vector"] ?? "";
+
         const result = await services.aiAgentService.runAiAgent(
             databaseName,
             {
-                UserPrompt: toolCallParameters?.length > 0 ? null : formValues.prompt,
+                UserPrompt: getUserPrompt(toolCallParameters?.length ?? 0, formValues.prompts),
                 ActionResponses: toolCallParameters?.map((x) => ({
                     ToolId: x.id,
                     Content: x.arguments,
@@ -181,10 +188,30 @@ const runChat = createAsyncThunk(
             conversationId != null ? conversationId : formValues.persistenceConversationIdPrefix,
             changeVector
         );
+        dispatch(chatAiAgentActions.activePromptIndexSet(0));
         dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
         await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();
     }
 );
+
+function getUserPrompt(
+    toolCallParametersCount: number,
+    prompts: ChatAiAgentFormData["prompts"]
+): RunAiAgentRequestDto["UserPrompt"] {
+    if (toolCallParametersCount > 0) {
+        return null;
+    }
+
+    if (!prompts?.length) {
+        throw new Error("Prompt is required");
+    }
+
+    if (prompts.length > 1) {
+        return prompts.map((x) => ({ type: "text", text: x.text }));
+    }
+
+    return prompts[0].text;
+}
 
 const getIsDocumentExpirationEnabled = createAsyncThunk(
     chatAiAgentSlice.name + "/getIsDocumentExpirationEnabled",
@@ -221,4 +248,5 @@ export const chatAiAgentSelectors = {
     isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
     isDocumentDeleted: (state: RootState) => state.chatAiAgent.isDocumentDeleted,
     isDocumentChanged: (state: RootState) => state.chatAiAgent.isDocumentChanged,
+    activePromptIndex: (state: RootState) => state.chatAiAgent.activePromptIndex,
 };

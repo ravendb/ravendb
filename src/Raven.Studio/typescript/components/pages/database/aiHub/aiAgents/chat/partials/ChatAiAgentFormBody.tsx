@@ -1,11 +1,10 @@
 import classNames from "classnames";
 import AceEditor from "components/common/ace/AceEditor";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormInput } from "components/common/Form";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useRef, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch, UseFieldArrayReturn } from "react-hook-form";
 import AiAgentMessages from "../../partials/AiAgentMessages";
 import AiAgentParametersField from "../../partials/AiAgentParametersField";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
@@ -17,15 +16,23 @@ import Button from "react-bootstrap/Button";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import "./ChatAiAgentFormBody.scss";
+import ChatAiAgentPromptActions from "./ChatAiAgentPromptActions";
 
 interface ChatAiAgentFormBodyProps {
     height: number;
     handleSend: () => Promise<void>;
     runChat: (toolCallParameters?: AiAgentToolCall[]) => Promise<void>;
     isHistory: boolean;
+    promptsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "prompts", "id">;
 }
 
-export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHistory }: ChatAiAgentFormBodyProps) {
+export default function ChatAiAgentFormBody({
+    height,
+    handleSend,
+    runChat,
+    isHistory,
+    promptsFieldsArray,
+}: ChatAiAgentFormBodyProps) {
     const dispatch = useAppDispatch();
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
@@ -41,6 +48,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
     const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
     const isDocumentDeleted = useAppSelector(chatAiAgentSelectors.isDocumentDeleted);
     const isDocumentChanged = useAppSelector(chatAiAgentSelectors.isDocumentChanged);
+    const activePromptIndex = useAppSelector(chatAiAgentSelectors.activePromptIndex);
 
     const { appUrl } = useAppUrls();
 
@@ -128,7 +136,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                 </div>
             </div>
             {!isHistory && (
-                <div className="d-flex justify-content-center ps-2 pe-3 pb-4">
+                <div className="d-flex justify-content-center pb-4">
                     <div className="w-100" style={{ maxWidth: "800px" }}>
                         {isDocumentChanged && !isDocumentDeleted && (
                             <RichAlert variant="warning" className="p-1 mb-2">
@@ -156,10 +164,10 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                 type="textarea"
                                 as="textarea"
                                 control={control}
-                                name="prompt"
+                                name={`prompts.${activePromptIndex}.text`}
                                 placeholder="Ask the agent anything"
                                 className="rounded-2"
-                                rows={3}
+                                rows={4}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
@@ -168,18 +176,14 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                 }}
                                 disabled={isPromptDisabled}
                                 style={{ zIndex: 5 }}
+                                key={promptsFieldsArray.fields[activePromptIndex].id}
+                                isHideErrorMessage
                             />
-                            {formValues.prompt && (
-                                <ButtonWithSpinner
-                                    type="submit"
-                                    variant="secondary"
-                                    icon="arrow-up"
-                                    isSpinning={isLoading}
-                                    disabled={isPromptDisabled}
-                                    className="position-absolute rounded-pill"
-                                    style={{ right: "10px", bottom: "10px", zIndex: 5 }}
-                                />
-                            )}
+                            <ChatAiAgentPromptActions
+                                promptsFieldsArray={promptsFieldsArray}
+                                isPromptDisabled={isPromptDisabled}
+                                isLoading={isLoading}
+                            />
                         </div>
                     </div>
                 </div>
