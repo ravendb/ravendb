@@ -1,26 +1,25 @@
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
-using Microsoft.AspNetCore.Http;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Web;
-using Sparrow;
 
 namespace Requests.Benchmark;
 
+[InvocationCount(1024)]
 public class QueriesPostHandlerBenchmark
 {
     private string PathToRequests = @"D:\search.reqs";
     private RavenDBInstance _connector;
     private RavenServer _server;
     private DocumentDatabase _database;
-    private MemoryStream _outputStream;
     private EndpointBenchmarkContext _context;
+    
+    [Params(1, 4, 16)]
+    public int Threads { get; set; }
     
     [GlobalSetup]
     public void Setup()
@@ -29,23 +28,32 @@ public class QueriesPostHandlerBenchmark
         _connector.InitializeDatabase();
         _server = _connector.Server;
         _database = _connector.Database;
-        _outputStream = new MemoryStream(capacity: (int)new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes));
-        _context = new EndpointBenchmarkContext(PathToRequests, 512, _server, _database);
+        _context = new EndpointBenchmarkContext(PathToRequests, 128, _server, _database, maxParallelism: 16);
     }
 
     [GlobalCleanup]
     public void Cleanup()
     {
-        _outputStream?.Dispose();
         _connector.Dispose();
         _context.Dispose();
     }
-    
+
     [Benchmark]
-    public async Task Query()
+    [IterationCount(50)]
+    public async Task QueryBenchmark()
+    {
+        var tasks = new List<Task>(Threads);
+        for (int i = 0; i < Threads; i++)
+        {
+            tasks.Add(Query(i));
+        }
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task Query(int threadIdx)
     {
         var queriesHandler = new QueriesHandler();
-        var requestContext = _context.GetsRequestContext(0);
+        var requestContext = _context.GetsRequestContext(0, threadIdx);
         queriesHandler.Init(requestContext);
         await queriesHandler.Post();
         Debug.Assert(requestContext.HttpContext.Response.StatusCode == (int)HttpStatusCode.OK);

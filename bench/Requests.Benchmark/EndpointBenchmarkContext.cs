@@ -14,14 +14,17 @@ public class EndpointBenchmarkContext : IDisposable, IAsyncDisposable
 {
     private readonly RavenServer _server;
     private readonly DocumentDatabase _database;
-    private readonly MemoryStream _responseStream;
+    private readonly List<MemoryStream> _responseStreams;
     private readonly List<MemoryStream> _inputStreams;
 
-    public EndpointBenchmarkContext(string pathToRequests, int responseInitialCapacityInMegabytes, RavenServer server, DocumentDatabase database)
+    public EndpointBenchmarkContext(string pathToRequests, int responseInitialCapacityInMegabytes, RavenServer server, DocumentDatabase database, int maxParallelism = 1)
     {
         _server = server;
         _database = database;
-        _responseStream = new MemoryStream(capacity: (int)new Size(responseInitialCapacityInMegabytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes));
+        _responseStreams = new List<MemoryStream>(maxParallelism);
+        for (int i = 0; i < maxParallelism; i++)
+            _responseStreams.Add(new MemoryStream(capacity: (int)new Size(responseInitialCapacityInMegabytes, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes)));
+
         var requests = File.ReadAllLines(pathToRequests);
         _inputStreams = new();
         foreach (var json in requests)
@@ -31,14 +34,14 @@ public class EndpointBenchmarkContext : IDisposable, IAsyncDisposable
         }
     }
 
-    public RequestHandlerContext GetsRequestContext(int inputIdx)
+    public RequestHandlerContext GetsRequestContext(int inputIdx, int parallelIdx)
     {
         var inputStream = _inputStreams[inputIdx];
         inputStream.Seek(0, SeekOrigin.Begin);
-        
-        _responseStream.Seek(0, SeekOrigin.Begin);
+        var responseStream = _responseStreams[parallelIdx];
+        responseStream.Seek(0, SeekOrigin.Begin);
         var httpContext = new DefaultHttpContext();
-        httpContext.Response.Body = _responseStream;
+        httpContext.Response.Body = responseStream;
         httpContext.Request.Method = "POST";
         httpContext.Request.Body = inputStream;
         var context = new RequestHandlerContext()
@@ -47,21 +50,25 @@ public class EndpointBenchmarkContext : IDisposable, IAsyncDisposable
             RavenServer = _server,
             HttpContext = httpContext,
         };
-        
+
         return context;
     }
 
     public void Dispose()
     {
-        _responseStream?.Dispose();
+        foreach (var responseStream in _responseStreams)
+            responseStream?.Dispose();
         foreach (var inputStream in _inputStreams)
             inputStream?.Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_responseStream != null)
-            await _responseStream.DisposeAsync();
+        foreach (var responseStream in _responseStreams)
+        {
+            if (responseStream != null)
+                await responseStream.DisposeAsync();
+        }
 
         foreach (var inputStream in _inputStreams)
         {

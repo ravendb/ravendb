@@ -14,9 +14,12 @@ class Program
         Main(string[] args)
     {
 #if DEBUG
-        var benchmark = new QueriesPostHandlerBenchmark();
+        var benchmark = new QueriesPostHandlerBenchmark()
+        {
+            Threads = 1
+        };
         benchmark.Setup();
-        await benchmark.Query();
+        await benchmark.QueryBenchmark();
         benchmark.Cleanup();
 #else
         BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args, new Config());
