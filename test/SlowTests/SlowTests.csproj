@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RuntimeFrameworkVersion>8.0.20</RuntimeFrameworkVersion>
@@ -135,6 +135,8 @@
     <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Node [A].zip" />
     <None Remove="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
     <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
+    <None Remove="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
