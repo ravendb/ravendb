@@ -50,6 +50,12 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
 import Code from "components/common/Code";
 import DocumentSchemaFilter from "components/pages/database/settings/documentSchema/DocumentSchemaFilter";
+import Ajv from "ajv";
+
+const ajv = new Ajv({
+    allErrors: true,
+    strictTypes: true,
+});
 
 export default function DocumentSchema() {
     const dispatch = useAppDispatch();
@@ -604,7 +610,29 @@ const formSchema = yup.object({
     schema: yup
         .string()
         .required()
-        .test("is-json", "Invalid JSON", (value) => !!value && jsonUtil.isValidJson(value)),
+        .test("is-json", "Invalid JSON", (value) => !!value && jsonUtil.isValidJson(value))
+        .test("is-valid-schema", "JSON does not match the JSON Schema specification", function (value) {
+            if (!value || !jsonUtil.isValidJson(value)) {
+                return false;
+            }
+
+            try {
+                const parsed = JSON.parse(value);
+
+                const isValid = ajv.validateSchema(parsed);
+                if (!isValid) {
+                    return this.createError({ message: ajv.errorsText() });
+                }
+
+                if (!parsed.properties && !parsed.type) {
+                    return this.createError({ message: "Schema must define 'properties' or 'type'" });
+                }
+
+                return true;
+            } catch (e) {
+                return this.createError({ message: `Invalid JSON Schema: ${e.message}` });
+            }
+        }),
 });
 
 export type DocumentSchemaFormData = yup.InferType<typeof formSchema>;
