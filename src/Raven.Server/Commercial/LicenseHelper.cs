@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Properties;
-using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;

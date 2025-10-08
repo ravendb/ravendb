@@ -25,6 +25,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\Usings.Server.cs">
+      <Link>Properties\Usings.Server.cs</Link>
+    </Compile>
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_3.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4.csv" />
     <EmbeddedResource Include="Integrations\PostgreSQL\Npgsql\npgsql_types_4_0_0.csv" />
