@@ -7,10 +7,11 @@ using Amazon;
 using Amazon.Glacier;
 using Amazon.Glacier.Model;
 using Amazon.Runtime;
-using Amazon.Runtime.Internal.Util;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Binary;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
