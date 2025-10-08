@@ -1,5 +1,5 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { UseFieldArrayReturn, useFormContext } from "react-hook-form";
+import { UseFieldArrayReturn } from "react-hook-form";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 import Button from "react-bootstrap/Button";
 import "./ChatAiAgentFormBody.scss";
@@ -14,27 +14,27 @@ interface ChatAiAgentPromptActionsProps {
     promptsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "prompts", "id">;
     isPromptDisabled: boolean;
     isLoading: boolean;
+    hasPromptErrors: boolean;
 }
 
 export default function ChatAiAgentPromptActions({
     promptsFieldsArray,
     isPromptDisabled,
     isLoading,
+    hasPromptErrors,
 }: ChatAiAgentPromptActionsProps) {
     const dispatch = useAppDispatch();
-    const { formState } = useFormContext<ChatAiAgentFormData>();
     const activePromptIndex = useAppSelector(chatAiAgentSelectors.activePromptIndex);
 
     const setActivePromptIndex = (index: number) => {
         dispatch(chatAiAgentActions.activePromptIndexSet(index));
     };
 
-    const promptsErrors = formState.errors.prompts;
     const promptsCount = promptsFieldsArray.fields.length;
 
     return (
-        <div className="position-absolute hstack gap-1" style={{ right: "10px", bottom: "10px", zIndex: 10 }}>
-            {promptsErrors?.length > 0 && (
+        <div className="hstack gap-1 justify-content-end prompt-actions">
+            {hasPromptErrors && (
                 <PopoverWithHoverWrapper message={promptsCount > 1 ? "Prompts are required" : "Prompt is required"}>
                     <Icon icon="warning" color="danger" margin="m-0" />
                 </PopoverWithHoverWrapper>
@@ -45,7 +45,7 @@ export default function ChatAiAgentPromptActions({
                         variant="link"
                         onClick={() => setActivePromptIndex(activePromptIndex - 1)}
                         disabled={activePromptIndex === 0}
-                        className="text-reset ps-0"
+                        className="ps-0"
                     >
                         <Icon icon="chevron-left" margin="m-0" />
                     </Button>
@@ -56,20 +56,14 @@ export default function ChatAiAgentPromptActions({
                         variant="link"
                         onClick={() => setActivePromptIndex(activePromptIndex + 1)}
                         disabled={activePromptIndex === promptsCount - 1}
-                        className="text-reset pe-0"
+                        className="pe-0"
                     >
                         <Icon icon="chevron-right" margin="m-0" />
                     </Button>
                 </div>
             )}
             <Dropdown>
-                <Dropdown.Toggle
-                    as={CustomDropdownToggle}
-                    isCaretHidden
-                    variant="link"
-                    className="text-reset"
-                    disabled={isPromptDisabled}
-                >
+                <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="link" disabled={isPromptDisabled}>
                     <Icon icon="more" margin="m-0" />
                 </Dropdown.Toggle>
                 <Dropdown.Menu>

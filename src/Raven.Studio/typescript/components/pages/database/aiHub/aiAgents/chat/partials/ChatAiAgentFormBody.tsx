@@ -52,7 +52,7 @@ export default function ChatAiAgentFormBody({
 
     const { appUrl } = useAppUrls();
 
-    const { control, handleSubmit } = useFormContext<ChatAiAgentFormData>();
+    const { control, handleSubmit, formState } = useFormContext<ChatAiAgentFormData>();
 
     const formValues = useWatch({
         control,
@@ -84,6 +84,7 @@ export default function ChatAiAgentFormBody({
     };
 
     const isPromptDisabled = isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged;
+    const hasPromptErrors = formState.errors.prompts?.length > 0;
 
     return (
         <>
@@ -136,7 +137,7 @@ export default function ChatAiAgentFormBody({
                 </div>
             </div>
             {!isHistory && (
-                <div className="d-flex justify-content-center pb-4">
+                <div className="d-flex justify-content-center pb-4 chat-ai-agent-bottom-section">
                     <div className="w-100" style={{ maxWidth: "800px" }}>
                         {isDocumentChanged && !isDocumentDeleted && (
                             <RichAlert variant="warning" className="p-1 mb-2">
@@ -159,15 +160,18 @@ export default function ChatAiAgentFormBody({
                                 .
                             </RichAlert>
                         )}
-                        <div className="position-relative gradient-top">
+                        <div
+                            className={classNames("prompt-wrapper", {
+                                "border-danger": hasPromptErrors,
+                            })}
+                        >
                             <FormInput
                                 type="textarea"
                                 as="textarea"
                                 control={control}
                                 name={`prompts.${activePromptIndex}.text`}
                                 placeholder="Ask the agent anything"
-                                className="rounded-2"
-                                rows={4}
+                                className="prompt-textarea"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
@@ -175,14 +179,13 @@ export default function ChatAiAgentFormBody({
                                     }
                                 }}
                                 disabled={isPromptDisabled}
-                                style={{ zIndex: 5 }}
                                 key={promptsFieldsArray.fields[activePromptIndex].id}
-                                isHideErrorMessage
                             />
                             <ChatAiAgentPromptActions
                                 promptsFieldsArray={promptsFieldsArray}
                                 isPromptDisabled={isPromptDisabled}
                                 isLoading={isLoading}
+                                hasPromptErrors={hasPromptErrors}
                             />
                         </div>
                     </div>
