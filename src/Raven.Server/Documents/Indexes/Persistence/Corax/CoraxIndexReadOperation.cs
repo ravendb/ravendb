@@ -102,10 +102,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes) 
             };
-            if (index.Type.IsMap())
-            {
-                _documentIdReader = IndexSearcher.TermsReaderFor(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
-            }
+            
+            var primaryKey = index.Type.IsMap() 
+                ? Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                : Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName; // map reduce
+            _documentIdReader = IndexSearcher.TermsReaderFor(primaryKey);
             _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
         }
 
