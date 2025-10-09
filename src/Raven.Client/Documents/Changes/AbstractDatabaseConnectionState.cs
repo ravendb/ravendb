@@ -14,7 +14,7 @@ internal abstract class AbstractDatabaseConnectionState
     private int _value;
     public Exception LastException;
 
-    private readonly TaskCompletionSource<object> _firstSet = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _firstSet = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task _connected;
 
     protected AbstractDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
@@ -32,14 +32,14 @@ internal abstract class AbstractDatabaseConnectionState
 
             connection.ContinueWith(static (t, firstSet) =>
             {
-                var tcs = (TaskCompletionSource<object>)firstSet;
+                var tcs = (TaskCompletionSource)firstSet;
 
                 if (t.IsFaulted)
                     tcs.TrySetException(t.Exception);
                 else if (t.IsCanceled)
                     tcs.TrySetCanceled();
                 else
-                    tcs.TrySetResult(null);
+                    tcs.TrySetResult();
             }, _firstSet);
         }
         _connected = connection;

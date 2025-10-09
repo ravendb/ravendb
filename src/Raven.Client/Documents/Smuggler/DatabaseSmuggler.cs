@@ -56,14 +56,14 @@ namespace Raven.Client.Documents.Smuggler
 
         internal Task<Operation> ExportToStreamAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             return ExportAsync(options, async stream =>
             {
                 try
                 {
                     await handleStreamResponse(stream).ConfigureAwait(false);
 
-                    tcs.TrySetResult(null);
+                    tcs.TrySetResult();
                 }
                 catch (Exception e)
                 {
@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, string toFile, CancellationToken token = default)
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             return ExportAsync(options, async stream =>
             {
                 try
@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Smuggler
                     using (var fileStream = fileInfo.OpenWrite())
                         await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
 
-                    tcs.TrySetResult(null);
+                    tcs.TrySetResult();
                 }
                 catch (Exception e)
                 {
@@ -106,14 +106,14 @@ namespace Raven.Client.Documents.Smuggler
 
         public Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Stream toStream, CancellationToken token = default)
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
             return ExportAsync(options, async stream =>
             {
                 try
                 {
                     await stream.CopyToAsync(toStream, 8192, token).ConfigureAwait(false);
-                    tcs.TrySetResult(null);
+                    tcs.TrySetResult();
                 }
                 catch (Exception e)
                 {
@@ -143,7 +143,7 @@ namespace Raven.Client.Documents.Smuggler
                 await RequestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
 
-                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
 
@@ -205,14 +205,14 @@ namespace Raven.Client.Documents.Smuggler
             Operation operation = null;
             var importOptions = new DatabaseSmugglerImportOptions(options);
 
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
             await ExportAsync(options, async stream =>
             {
                 try
                 {
                     operation = await toDatabase.ImportAsync(importOptions, stream, token).ConfigureAwait(false);
-                    tcs.TrySetResult(null);
+                    tcs.TrySetResult();
                 }
                 catch (Exception e)
                 {
@@ -293,7 +293,7 @@ namespace Raven.Client.Documents.Smuggler
                 await RequestExecutor.ExecuteAsync(getOperationIdCommand, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var operationId = getOperationIdCommand.Result;
 
-                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
 
                 var command = new ImportCommand(RequestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
@@ -348,9 +348,9 @@ namespace Raven.Client.Documents.Smuggler
             private readonly DocumentConventions _conventions;
             private readonly Func<Stream, Task> _handleStreamResponse;
             private readonly long _operationId;
-            private readonly TaskCompletionSource<object> _tcs;
+            private readonly TaskCompletionSource _tcs;
 
-            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -379,7 +379,7 @@ namespace Raven.Client.Documents.Smuggler
                     Content = new BlittableJsonContent(async stream =>
                     {
                         await ctx.WriteAsync(stream, _options).ConfigureAwait(false);
-                        _tcs.TrySetResult(null);
+                        _tcs.TrySetResult();
                     }, _conventions)
                 };
             }
@@ -401,12 +401,12 @@ namespace Raven.Client.Documents.Smuggler
             private readonly DocumentConventions _conventions;
             private readonly Stream _stream;
             private readonly long _operationId;
-            private readonly TaskCompletionSource<object> _tcs;
+            private readonly TaskCompletionSource _tcs;
             private readonly DatabaseSmuggler _parent;
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
+            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource tcs, DatabaseSmuggler parent, string nodeTag)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
@@ -450,10 +450,10 @@ namespace Raven.Client.Documents.Smuggler
 
         internal sealed class StreamContentWithConfirmation : StreamContent
         {
-            private readonly TaskCompletionSource<object> _tcs;
+            private readonly TaskCompletionSource _tcs;
             private readonly DatabaseSmuggler _parent;
 
-            public StreamContentWithConfirmation(Stream content, TaskCompletionSource<object> tcs, DatabaseSmuggler parent = null) : base(content)
+            public StreamContentWithConfirmation(Stream content, TaskCompletionSource tcs, DatabaseSmuggler parent = null) : base(content)
             {
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
                 _parent = parent;
@@ -469,7 +469,7 @@ namespace Raven.Client.Documents.Smuggler
                 await stream.FlushAsync().ConfigureAwait(false);
 
                 await base.SerializeToStreamAsync(stream, context).ConfigureAwait(false);
-                _tcs.TrySetResult(null);
+                _tcs.TrySetResult();
             }
         }
 

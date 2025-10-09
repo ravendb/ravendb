@@ -11,7 +11,7 @@ namespace Raven.Client.Util
     {
         public readonly Task<Stream> OutputStream;
         private readonly TaskCompletionSource<Stream> _outputStreamTcs;
-        protected readonly TaskCompletionSource<object> _done;
+        protected readonly TaskCompletionSource _done;
 
         public bool IsDone => _done.Task.IsCompleted;
 
@@ -19,10 +19,10 @@ namespace Raven.Client.Util
         {
             _outputStreamTcs = new TaskCompletionSource<Stream>(TaskCreationOptions.RunContinuationsAsynchronously);
             OutputStream = _outputStreamTcs.Task;
-            _done = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        public bool Complete() => _done.TrySetResult(null);
+        public bool Complete() => _done.TrySetResult();
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {

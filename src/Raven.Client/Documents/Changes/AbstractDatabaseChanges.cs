@@ -39,7 +39,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
     private readonly CancellationTokenSource _cts;
     private TaskCompletionSource<AbstractDatabaseChanges<TDatabaseConnectionState>> _tcs;
 
-    private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new();
+    private readonly ConcurrentDictionary<int, TaskCompletionSource> _confirmations = new();
 
     protected readonly ConcurrentDictionary<DatabaseChangesOptions, TDatabaseConnectionState> States = new();
     private int _immediateConnection;
@@ -251,7 +251,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
 
     private async Task SendAsync(string command, string value, string[] values)
     {
-        var taskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         int currentCommandId;
         await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
         try
@@ -533,7 +533,7 @@ internal abstract class AbstractDatabaseChanges<TDatabaseConnectionState> : IDis
         if (json.TryGet("CommandId", out int commandId) &&
             _confirmations.TryRemove(commandId, out var tcs))
         {
-            tcs.TrySetResult(null);
+            tcs.TrySetResult();
         }
     }
 
