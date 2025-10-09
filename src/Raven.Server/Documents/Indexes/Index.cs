@@ -797,7 +797,7 @@ namespace Raven.Server.Documents.Indexes
                     if (configurationTree != null)
                     {
                         var result = configurationTree.Read(IndexStorage.IndexSchema.SearchEngineType);
-                        if (result != null)
+                        if (result.HasValue)
                             if (Enum.TryParse(result.Reader.ToStringValue(), out searchEngineTypeFromSchema) == false)
                                 searchEngineTypeFromSchema = SearchEngineType.None;
                     }
@@ -1004,11 +1004,11 @@ namespace Raven.Server.Documents.Indexes
             using (var tx = context.OpenReadTransaction())
             {
                 var now = DocumentDatabase.Time.GetUtcNow();
-                State = _indexStorage.ReadState(tx);
-                var persistedElapsedTimeFromLastQuery = _indexStorage.ReadElapsedTimeFromLastQuery(tx) ?? TimeSpan.Zero;
+                State = IndexStorage.ReadState(tx);
+                var persistedElapsedTimeFromLastQuery = IndexStorage.ReadElapsedTimeFromLastQuery(tx) ?? TimeSpan.Zero;
                 _lastQueriedTimeTracker = new LastQueriedTimeTracker(now, persistedElapsedTimeFromLastQuery.Ticks);
                 
-                LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
+                LastIndexingTime = IndexStorage.ReadLastIndexingTime(tx);
                 MaxNumberOfOutputsPerDocument = _indexStorage.ReadMaxNumberOfOutputsPerDocument(tx);
                 ArchivedDataProcessingBehavior = _indexStorage.ReadArchivedDataProcessingBehavior(tx);
                 CoraxComplexFieldIndexingBehavior = _indexStorage.ReadCoraxComplexFieldIndexingBehavior(tx);

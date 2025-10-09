@@ -48,10 +48,9 @@ namespace Voron.Benchmark.BTree
         public double GenerationDeletionProbability { get; set; } = 0.1;
 
         /// <summary>
-        /// Random seed used to generate values. If -1, uses time for seeding.
+        /// Random seed used to generate values.
         /// </summary>
-        [Params(-1)]
-        public int RandomSeed { get; set; } = -1;
+        public const int RandomSeed = 13;
 
         [Params(1, 2)]
         public int ReadParallelism { get; set; } = 1;
@@ -68,7 +67,6 @@ namespace Voron.Benchmark.BTree
         public override void Setup()
         {
             base.Setup();
-            var randomSeed = RandomSeed == -1 ? null : RandomSeed as int?;
 
             var treeKeys = Utils.GenerateWornoutTree(
                 Env,
@@ -77,7 +75,7 @@ namespace Voron.Benchmark.BTree
                 GenerationBatchSize,
                 KeyLength,
                 GenerationDeletionProbability,
-                randomSeed);
+                RandomSeed);
 
             // Distribute work amount, each one of the buckets is sorted
             for (var i = 0; i < ReadParallelism; i++)

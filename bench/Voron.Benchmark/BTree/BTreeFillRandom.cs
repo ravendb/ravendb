@@ -27,10 +27,9 @@ namespace Voron.Benchmark.BTree
         public int KeyLength { get; set; } = 100;
 
         /// <summary>
-        /// Random seed. If -1, uses time for seeding.
+        /// Random seed.
         /// </summary>
-        [Params(-1)]
-        public int RandomSeed { get; set; } = -1;
+        public const int RandomSeed = 42;
 
         static BTreeFillRandom()
         {
@@ -51,7 +50,7 @@ namespace Voron.Benchmark.BTree
             var totalPairs = Utils.GenerateUniqueRandomSlicePairs(
                 NumberOfTransactions * NumberOfRecordsPerTransaction,
                 KeyLength,
-                RandomSeed == -1 ? null as int? : RandomSeed);
+                RandomSeed);
 
             _pairs = new List<Tuple<Slice, Slice>>[NumberOfTransactions];
 

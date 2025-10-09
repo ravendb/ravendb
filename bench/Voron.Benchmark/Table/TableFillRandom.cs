@@ -64,7 +64,7 @@ namespace Voron.Benchmark.Table
             var totalPairs = Utils.GenerateUniqueRandomSlicePairs(
                 NumberOfTransactions * NumberOfRecordsPerTransaction,
                 KeyLength,
-                RandomSeed == -1 ? null as int? : RandomSeed);
+                RandomSeed);
 
             _valueBuilders = new List<TableValueBuilder>[NumberOfTransactions];
 

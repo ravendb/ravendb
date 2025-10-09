@@ -41,7 +41,7 @@ namespace FastTests.Voron.Journal
                 using (var tx = Env.ReadTransaction())
                 {
                     var tree = tx.CreateTree("foo");
-                    Assert.NotNull(tree.Read("item/" + i));
+                    Assert.True(tree.Read("item/" + i).HasValue);
                 }
             }
         }
@@ -64,7 +64,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                Assert.Null(tree.Read("items/1"));
+                Assert.False(tree.Read("items/1").HasValue);
             }
         }
 

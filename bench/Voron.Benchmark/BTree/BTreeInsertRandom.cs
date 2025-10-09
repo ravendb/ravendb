@@ -45,10 +45,9 @@ namespace Voron.Benchmark.BTree
         public double GenerationDeletionProbability { get; set; } = 0.1;
 
         /// <summary>
-        /// Random seed used to generate values. If -1, uses time for seeding.
+        /// Random seed used to generate values.
         /// </summary>
-        [Params(-1)]
-        public int RandomSeed { get; set; } = -1;
+        public const int RandomSeed = 42;
 
         static BTreeInsertRandom()
         {
@@ -60,8 +59,6 @@ namespace Voron.Benchmark.BTree
         {
             base.Setup();
 
-            var randomSeed = RandomSeed == -1 ? null : RandomSeed as int?;
-
             Utils.GenerateWornoutTree(
                 Env,
                 TreeNameSlice,
@@ -69,12 +66,12 @@ namespace Voron.Benchmark.BTree
                 GenerationBatchSize,
                 KeyLength,
                 GenerationDeletionProbability,
-                randomSeed);
+                RandomSeed);
 
             var totalPairs = Utils.GenerateUniqueRandomSlicePairs(
                 NumberOfTransactions * NumberOfRecordsPerTransaction,
                 KeyLength,
-                randomSeed);
+                RandomSeed * 13);
 
             _pairs = new List<Tuple<Slice, Slice>>[NumberOfTransactions];
 

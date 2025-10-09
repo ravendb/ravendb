@@ -628,7 +628,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             LoadSpecialTermMarkers(_nonExistingPostingListsTree, out _nonExistingTermsMarkers);
         }
 
-        _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+        _vectorFieldsMarkers = _metadataTree == null ? [] : _metadataTree.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice).ToArrayEmptyOnNull<long>();
     }
 
     public bool IsVectorField(string fieldName)
@@ -682,10 +682,18 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
     {
-        var result = _fieldsTree?.Read(fieldName);
-        if (result is null)
+        const long notFound = -1;
+
+        if (_fieldsTree == null)
         {
-            rootPage = -1;
+            rootPage = notFound;
+            return false;
+        }
+        
+        var result = _fieldsTree.Read(fieldName);
+        if (result.HasValue == false)
+        {
+            rootPage = notFound;
             return false;
         }
         

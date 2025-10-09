@@ -390,7 +390,6 @@ public sealed partial class CompactTree : IPrepareForCommit
     public static bool HasDictionary(LowLevelTransaction llt)
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
-
         return llt.RootObjects.TryRead(dictionarySlice, out _);
     }
     

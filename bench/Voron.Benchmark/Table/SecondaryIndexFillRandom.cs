@@ -32,10 +32,9 @@ namespace Voron.Benchmark.Table
         public int KeyLength { get; set; } = 100;
 
         /// <summary>
-        /// Random seed. If -1, uses time for seeding.
+        /// Random seed.
         /// </summary>
-        [Params(12345)]
-        public int RandomSeed { get; set; } = -1;
+        public const int RandomSeed = 42;
 
         static SecondaryIndexFillRandom()
         {
@@ -74,7 +73,7 @@ namespace Voron.Benchmark.Table
             var totalPairs = Utils.GenerateUniqueRandomSlicePairs(
                 NumberOfTransactions * NumberOfRecordsPerTransaction,
                 KeyLength,
-                RandomSeed == -1 ? null as int? : RandomSeed);
+                RandomSeed);
 
             _valueBuilders = new List<TableValueBuilder>[NumberOfTransactions];
 

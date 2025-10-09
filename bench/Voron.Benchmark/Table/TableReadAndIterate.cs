@@ -52,10 +52,9 @@ namespace Voron.Benchmark.Table
         public double GenerationDeletionProbability { get; set; } = 0.5;
 
         /// <summary>
-        /// Random seed used to generate values. If -1, uses time for seeding.
+        /// Random seed used to generate values.
         /// </summary>
-        [Params(-1)]
-        public int RandomSeed { get; set; } = -1;
+        public const int RandomSeed = 42;
 
         [Params(1, 2)]
         public int ReadParallelism { get; set; } = 1;
@@ -88,7 +87,7 @@ namespace Voron.Benchmark.Table
                 GenerationBatchSize,
                 KeyLength,
                 GenerationDeletionProbability,
-                RandomSeed == -1 ? null : RandomSeed as int?
+                RandomSeed
             );
 
             // Distribute work amount, each one of the buckets is sorted

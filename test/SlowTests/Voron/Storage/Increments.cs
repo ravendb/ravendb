@@ -39,12 +39,11 @@ namespace SlowTests.Voron.Storage
             using (var tx = Env.ReadTransaction())
             {
                 var read = tx.ReadTree("tree0").Read("key/1");
-
-                Assert.NotNull(read);
+                
+                Assert.True(read.HasValue);
                 Assert.Equal(12, read.Reader.Read<long>());
             }
         }
-
 
         [RavenFact(RavenTestCategory.Voron)]
         public void SimpleIncrementEntriesCountShouldStayCorrectAfterCommit()

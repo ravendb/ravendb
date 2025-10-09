@@ -82,9 +82,9 @@ namespace SlowTests.Voron
 
                             for (int i = 0; i < recordCount; i++)
                             {
-                                var readResult = tree.Read(string.Format("{0}/items/{1}", treeName, i));
+                                var readResult = tree.Read($"{treeName}/items/{i}");
 
-                                Assert.NotNull(readResult);
+                                Assert.True(readResult.HasValue);
 
                                 if (i % 2 == 0)
                                 {

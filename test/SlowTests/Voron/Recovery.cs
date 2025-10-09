@@ -64,7 +64,7 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 100; i++)
                     {
-                        Assert.NotNull(tree.Read("key" + i));
+                        Assert.True(tree.Read("key" + i).HasValue);
                     }
                 }
             }
@@ -174,22 +174,20 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 1000; i++)
                     {
-                        Assert.NotNull(aTree.Read("key" + i));
+                        Assert.True(aTree.Read("key" + i).HasValue);
                     }
 
                     for (var i = 0; i < 1; i++)
                     {
-                        Assert.NotNull(bTree.Read("key" + i));
+                        Assert.True(bTree.Read("key" + i).HasValue);
                     }
                 }
             }
-
         }
 
         [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions2()
         {
-
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
             {
                 using (var tx = env.WriteTransaction())
@@ -234,16 +232,15 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 1000; i++)
                     {
-                        Assert.NotNull(aTree.Read("key" + i));
+                        Assert.True(aTree.Read("key" + i).HasValue);
                     }
 
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.NotNull(bTree.Read("key" + i));
+                        Assert.True(bTree.Read("key" + i).HasValue);
                     }
                 }
             }
-
         }
 
         [RavenFact(RavenTestCategory.Voron)]
@@ -304,9 +301,9 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < count; i++)
                     {
-                        var read = aTree.Read("a" + i);
-                        Assert.NotNull(read);
-                        Assert.Equal(expectedString, read.Reader.ToStringValue());
+                        var readResult = aTree.Read("a" + i);
+                        Assert.True(readResult.HasValue);
+                        Assert.Equal(expectedString, readResult.Reader.ToStringValue());
                     }
 
                     using (var iterator = bTree.MultiRead("a"))

@@ -878,8 +878,8 @@ namespace Voron.Data.Tables
                 var dictionariesTree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
                 var rev = Bits.SwapBytes(id);
                 using var _ = Slice.From(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-                var readResult = dictionariesTree?.Read(slice);
-                if (readResult == null)
+                ReadResult readResult;
+                if (dictionariesTree == null || (readResult = dictionariesTree.Read(slice)).HasValue == false)
                 {
                     // we may be checking an empty section, so let's return an empty
                     // dictionary there

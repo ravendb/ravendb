@@ -66,7 +66,7 @@ namespace SlowTests.Voron.Backups
                     for (int i = 0; i < 500; i++)
                     {
                         var readResult = tree.Read("items/" + i);
-                        Assert.NotNull(readResult);
+                        Assert.True(readResult.HasValue);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
@@ -143,7 +143,7 @@ namespace SlowTests.Voron.Backups
                     for (int i = 0; i < 1000; i++)
                     {
                         var readResult = tree.Read("items/" + i);
-                        Assert.NotNull(readResult);
+                        Assert.True(readResult.HasValue);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
@@ -213,7 +213,7 @@ namespace SlowTests.Voron.Backups
                     for (int i = 0; i < 10; i++)
                     {
                         var readResult = tree.Read("items/" + i);
-                        Assert.NotNull(readResult);
+                        Assert.True(readResult.HasValue);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
@@ -277,7 +277,7 @@ namespace SlowTests.Voron.Backups
                     for (int i = 0; i < 5; i++)
                     {
                         var readResult = tree.Read("items/" + i);
-                        Assert.NotNull(readResult);
+                        Assert.True(readResult.HasValue);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
@@ -525,7 +525,7 @@ namespace SlowTests.Voron.Backups
                     for (int i = 0; i < 500; i++)
                     {
                         var readResult = tree.Read("items/" + i);
-                        Assert.NotNull(readResult);
+                        Assert.True(readResult.HasValue);
                         var memoryStream = new MemoryStream();
                         readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);

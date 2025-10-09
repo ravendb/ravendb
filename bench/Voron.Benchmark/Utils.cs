@@ -8,13 +8,13 @@ namespace Voron.Benchmark
 {
     public class Utils
     {
-        public static List<Tuple<Slice, Slice>> GenerateUniqueRandomSlicePairs(int amount, int keyLength, int? randomSeed = null)
+        public static List<Tuple<Slice, Slice>> GenerateUniqueRandomSlicePairs(int amount, int keyLength, int randomSeed)
         {
             Debug.Assert(amount > 0);
             Debug.Assert(keyLength > 0);
 
             // Generate random key value pairs
-            var generator = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
+            var generator = new Random(randomSeed);
             var keyBuffer = new byte[keyLength];
 
             // This serves to ensure the uniqueness of keys globally (that way
@@ -68,12 +68,12 @@ namespace Voron.Benchmark
             int generationBatchSize,
             int keyLength,
             double generationDeletionProbability,
-            int? randomSeed
+            int randomSeed
             )
         {
-            List<Slice> treeKeys = new List<Slice>();
-            var generator = randomSeed.HasValue ? new Random(randomSeed.Value): new Random();
-            bool hasTree = false;
+            List<Slice> treeKeys = new();
+            var generator = new Random(randomSeed);
+            bool hasTree;
 
             using (var tx = env.ReadTransaction())
             {
@@ -122,7 +122,7 @@ namespace Voron.Benchmark
                                 values = GenerateUniqueRandomSlicePairs(
                                     generationTreeSize,
                                     keyLength,
-                                    randomSeed);
+                                    generator.Next());
                             }
 
                             var pair = values[0];
@@ -181,11 +181,11 @@ namespace Voron.Benchmark
             int generationBatchSize,
             int keyLength,
             double generationDeletionProbability,
-            int? randomSeed
+            int randomSeed
             )
         {
             var tableKeys = new List<Slice>();
-            var generator = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
+            var generator = new Random(randomSeed);
             bool hasTable;
 
             using (var tx = env.ReadTransaction())

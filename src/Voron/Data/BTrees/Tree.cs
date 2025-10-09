@@ -224,7 +224,7 @@ namespace Voron.Data.BTrees
             Debug.Assert((_header.Flags & TreeFlags.MultiValue) == TreeFlags.None, "(State.Flags & TreeFlags.MultiValue) == TreeFlags.None");
 
             long currentValue = 0;
-
+            
             if (TryRead(key, out var reader))
                 currentValue = reader.Read<long>();
 
@@ -257,7 +257,6 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(reader.Length == sizeof(int));
             return *(int*)reader.Base;
-
         }
 
         /// <summary>
@@ -271,7 +270,6 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(reader.Length == sizeof(T));
             return *(T*)reader.Base;
-
         }
 
         public void Add(Slice key, byte value)
@@ -1108,10 +1106,7 @@ namespace Voron.Data.BTrees
 
             var p = FindPageFor(key, out TreeNodeHeader* node);
 
-            if (p.LastMatch != 0)
-                return null;
-
-            return new ReadResult(GetValueReaderFromHeader(node));
+            return p.LastMatch != 0 ? ReadResult.Null : new ReadResult(GetValueReaderFromHeader(node));
         }
 
         public bool TryRead(Slice key, out ValueReader reader)

@@ -105,18 +105,16 @@ namespace SlowTests.Voron.Bugs
                         Assert.Equal(inMemoryKey, key);
 
                         var docReadResult = docsTree.Read(key);
+                        Assert.True(docReadResult.HasValue);
 
-                        Assert.NotNull(docReadResult);
-
-                        var metadataReader = metadataTree.Read(key).Reader;
-
-                        Assert.NotNull(metadataReader);
+                        ReadResult metaResult = metadataTree.Read(key);
+                        Assert.True(metaResult.HasValue);
+                        var metadataReader = metaResult.Reader;
 
                         var etagFromMetadata = new byte[16];
                         metadataReader.Read(etagFromMetadata, 0, 16);
 
                         var readEtag = new Guid(etagFromMetadata);
-
 
                         Assert.Equal(etag, readEtag);
 

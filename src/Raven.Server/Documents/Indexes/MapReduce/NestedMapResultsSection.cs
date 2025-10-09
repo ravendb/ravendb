@@ -33,7 +33,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             else
             {
-                IsNew = true;
+                _dataSize = reader.Length;
+                IsNew = false;
             }
         }
 
@@ -82,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
                     }
-
+                    
                     if (isValidReader)
                     {
                         Memory.Copy(tmpPtr, reader.Base, reader.Length);

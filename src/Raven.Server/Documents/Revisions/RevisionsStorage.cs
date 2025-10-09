@@ -1751,7 +1751,7 @@ namespace Raven.Server.Documents.Revisions
         private static long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            return numbers.Read(prefix)?.Reader.Read<long>() ?? 0;
+            return numbers.Read(prefix).ReadLittleEndianInt64OrDefault(0);
         }
 
         public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
@@ -1762,7 +1762,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 // Here we assume a reasonable number of revisions and scan the entire history
                 // This is because we want to handle out of order revisions from multiple nodes so the local etag
-                // order is different than the last modified order
+                // order is different from the last modified order
                 Document result = null;
                 var table = context.RevisionsTable(this);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
@@ -2788,15 +2788,11 @@ namespace Raven.Server.Documents.Revisions
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(DocumentsStorage.GlobalTreeSlice);
             var readResult = tree.Read(DocumentsStorage.RevisionsBinCleanerLastEtag);
-            if (readResult == null)
-            {
-                // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
-                // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
-                // so we start from etag (key) 1.
-                return 1;
-            }
 
-            return readResult.Reader.Read<long>();
+            // When we start passing the revisions (forward - from the oldest) on DeleteRevisionEtagSlice index,
+            // we want to skip the revisions with key 0, because they are not relevant (not 'Delete Revisions').
+            // so we start from etag (key) 1.
+            return readResult.ReadLittleEndianInt64OrDefault(1);
         }
 
         public static unsafe void SetLastRevisionsBinCleanerLastEtag(DocumentsOperationContext context, long etag)

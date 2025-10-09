@@ -516,7 +516,7 @@ namespace Tests.Infrastructure
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree("values");
                 var read = tree.Read(name);
-                return read?.Reader.ToStringValue();
+                return read.HasValue ? read.Reader.ToStringValue() : null;
             }
 
             protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -534,7 +534,7 @@ namespace Tests.Infrastructure
                         Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name0));
                         Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val0));
                         var tree0 = context.Transaction.InnerTransaction.CreateTree("values");
-                        var current0 = tree0.Read(name0)?.Reader.ToStringValue();
+                        var current0 = tree0.Read(name0).ToStringValueOrDefault(null);
                         tree0.Add(name0, current0 + val0);
                         break;
 
@@ -549,7 +549,7 @@ namespace Tests.Infrastructure
                         Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Name), out string name2));
                         Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Value), out int val2));
                         var tree2 = context.Transaction.InnerTransaction.CreateTree("values");
-                        var current2 = tree2.Read(name2)?.Reader.ToStringValue();
+                        var current2 = tree2.Read(name2).ToStringValueOrDefault(null);
                         tree2.Add(name2, current2 + val2);
                         break;
                 }

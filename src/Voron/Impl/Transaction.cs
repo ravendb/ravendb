@@ -653,7 +653,7 @@ namespace Voron.Impl
             {
                 if (indexDef.IsGlobal) // must not delete global indexes
                     continue;
-
+                
                 if (tableTree.TryRead(indexDef.Name, out _) == false)
                     continue;
 
@@ -668,7 +668,7 @@ namespace Voron.Impl
             {
                 if (indexDef.IsGlobal)  // must not delete global indexes
                     continue;
-
+                
                 if (tableTree.TryRead(indexDef.Name, out _) == false)
                     continue;
 
@@ -682,7 +682,7 @@ namespace Voron.Impl
             // raw data sections
 
             table.ActiveDataSmallSection.FreeRawDataSectionPages();
-
+            
             if (tableTree.TryRead(TableSchema.ActiveCandidateSectionSlice, out _))
             {
                 using (var it = table.ActiveCandidateSection.Iterate())
@@ -698,7 +698,7 @@ namespace Voron.Impl
 
                 DeleteFixedTree(table.ActiveCandidateSection, isInRoot: false);
             }
-
+            
             if (tableTree.TryRead(TableSchema.InactiveSectionSlice, out _))
                 DeleteFixedTree(table.InactiveSections, isInRoot: false);
 
