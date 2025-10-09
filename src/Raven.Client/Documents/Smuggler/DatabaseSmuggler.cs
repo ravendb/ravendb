@@ -145,7 +145,10 @@ namespace Raven.Client.Documents.Smuggler
 
                 var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
+                var cancellationTokenRegistration = token.Register(static (state, t) =>
+                {
+                    ((TaskCompletionSource)state).TrySetCanceled(t);
+                }, tcs);
 
                 var command = new ExportCommand(RequestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
 
@@ -294,7 +297,10 @@ namespace Raven.Client.Documents.Smuggler
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
+                var cancellationTokenRegistration = token.Register(static (state, t) =>
+                {
+                    ((TaskCompletionSource)state).TrySetCanceled(t);
+                }, tcs);
 
                 var command = new ImportCommand(RequestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 

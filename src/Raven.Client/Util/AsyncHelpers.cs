@@ -276,24 +276,15 @@ namespace Raven.Client.Util
             }
         }
 
-        /// <summary>
-        /// Registers <paramref name="tcs"/> <see cref="TaskCompletionSource.TrySetCanceled"/> on <paramref name="token"/> cancellation.
-        /// </summary>
-        internal static CancellationTokenRegistration RegisterTryCancelOnToken(this TaskCompletionSource tcs, CancellationToken token)
+        // NETSTANDARD polyfills
+#if !NET6_0_OR_GREATER
+#pragma warning disable RDB0007
+        internal static CancellationTokenRegistration Register(this CancellationToken token, Action<object, CancellationToken> callback, object state)
         {
-            #if NETSTANDARD
-
-            return token.Register(() => tcs.TrySetCanceled(token));
-
-            #else
-
-            // Pass the tcs via the state
-            return token.Register(static (state, t) =>
-            {
-                ((TaskCompletionSource)state).TrySetCanceled(t);
-            }, tcs);
-
-            #endif
+            // Captures the token as there's no overload for it. The state is passed without a closure, but the token needs to be passed with the captured one.
+            return token.Register(s => callback(s, token), state);
         }
+#pragma warning restore RDB0007
+#endif
     }
 }
