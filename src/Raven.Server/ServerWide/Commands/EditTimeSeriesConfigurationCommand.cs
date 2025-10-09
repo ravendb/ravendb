@@ -1,10 +1,11 @@
-﻿using Raven.Client.Documents.Operations.TimeSeries;
+﻿using System.Linq;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class EditTimeSeriesConfigurationCommand : UpdateDatabaseCommand
+    public sealed class EditTimeSeriesConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public TimeSeriesConfiguration Configuration { get; private set; }
 
@@ -28,5 +29,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(Configuration)] = Configuration.ToJson();
         }
+
+        public override bool Disabled => Configuration.Collections != null && Configuration.Collections.All(collection => collection.Value.Disabled);
     }
 }

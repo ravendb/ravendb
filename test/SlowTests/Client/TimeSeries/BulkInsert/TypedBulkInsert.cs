@@ -937,7 +937,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                         // insert Time Series
                         using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor<HeartRateMeasure>(bulk.Key, "HeartRate"))
                         {
-                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), new HeartRateMeasure { HeartRate = 59 }, "watches/fitBit");
+                            await timeSeriesBulkInsert.AppendAsync(baseline.AddMinutes(1), new HeartRateMeasure { HeartRate = 59 }, "watches/fitBit");
                         }
                     }
                 }

@@ -584,14 +584,14 @@ namespace FastTests.Client.Subscriptions
                     Strategy = SubscriptionOpeningStrategy.OpenIfFree,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 PutUserDoc(store);
                 var t = subscriptionWorker.Run(x =>
                 {
-                    mre.Set();
+                    amre.Set();
                 });
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
-                mre.Reset();
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                amre.Reset();
 
                 throwingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
@@ -612,12 +612,12 @@ namespace FastTests.Client.Subscriptions
 
                 t = notThrowingSubscriptionWorker.Run(x =>
                 {
-                    mre.Set();
+                    amre.Set();
                 });
 
                 PutUserDoc(store);
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
             }
             finally
             {
@@ -1294,16 +1294,16 @@ namespace FastTests.Client.Subscriptions
 
             await using (var sub = store.Subscriptions.GetSubscriptionWorker<ProjectionObject>(name))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var subscriptionTask = sub.Run(batch =>
                 {
                     Assert.NotEmpty(batch.Items);
                     var projectionObject = batch.Items.First().Result;
                     Assert.Equal("SomeValue", projectionObject.SomeProp);
-                    mre.Set();
+                    amre.Set();
                 });
                 var timeout = TimeSpan.FromSeconds(30);
-                if (await mre.WaitAsync(timeout) == false)
+                if (await amre.WaitAsync(timeout) == false)
                 {
                     if (subscriptionTask.IsFaulted)
                         await subscriptionTask;
@@ -1337,16 +1337,16 @@ namespace FastTests.Client.Subscriptions
 
             await using (var sub = store.Subscriptions.GetSubscriptionWorker<ProjectionObject>(name))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var subscriptionTask = sub.Run(batch =>
                 {
                     Assert.NotEmpty(batch.Items);
                     string resultOrderId = batch.Items.First().Result.ProjectionId;
                     Assert.Equal(entity.Id, resultOrderId);
-                    mre.Set();
+                    amre.Set();
                 });
                 var timeout = TimeSpan.FromSeconds(30);
-                if (await mre.WaitAsync(timeout) == false)
+                if (await amre.WaitAsync(timeout) == false)
                 {
                     if (subscriptionTask.IsFaulted)
                         await subscriptionTask;
@@ -1373,13 +1373,13 @@ namespace FastTests.Client.Subscriptions
             var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
             await using (var sub = store.Subscriptions.GetSubscriptionWorker<ProjectionObject>(name))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var subscriptionTask = sub.Run(batch =>
                 {
-                    mre.Set();
+                    amre.Set();
                 });
                 var timeout = TimeSpan.FromSeconds(30);
-                Assert.True(await mre.WaitAsync(timeout));
+                Assert.True(await amre.WaitAsync(timeout));
                 var taskInfoById = store.Maintenance.Send(new GetOngoingTaskInfoOperation(state.SubscriptionId, OngoingTaskType.Subscription));
                 Assert.NotNull(taskInfoById);
                 Assert.Equal(OngoingTaskState.Enabled, taskInfoById.TaskState);

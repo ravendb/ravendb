@@ -396,6 +396,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
         using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
         using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext clone))
         {
             await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
             memoryStream.Position = 0;
@@ -417,16 +418,39 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 if (queryResponseResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                     throw new InvalidOperationException("Missing Results from query output");
 
+                RemoveNonEssentialFieldsFromMetadata(queryResult);
+
                 _document.AddMessage(context, context.ReadObject(
                     new DynamicJsonValue
                     {
                         ["tool_call_id"] = toolCallsIds[i],
                         ["role"] = "tool",
-                        ["content"] = queryResult.ToString()
+                        ["content"] = queryResult.Clone(clone).ToString()
                     }, "tool-call/response"), usage: null);
             }
         }
     }
+
+    private static void RemoveNonEssentialFieldsFromMetadata(BlittableJsonReaderArray queryResult)
+    {
+        foreach (BlittableJsonReaderObject doc in queryResult)
+        {
+            if (doc.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+            {
+                var modifications = metadata.Modifications = new DynamicJsonValue(metadata);
+                modifications.Remove(Client.Constants.Documents.Metadata.ChangeVector);
+                modifications.Remove(Client.Constants.Documents.Metadata.IndexScore);
+                modifications.Remove(Client.Constants.Documents.Metadata.Counters);
+                modifications.Remove(Client.Constants.Documents.Metadata.TimeSeries);
+                modifications.Remove(Client.Constants.Documents.Metadata.Attachments);
+                modifications.Remove(Client.Constants.Documents.Metadata.Flags);
+                modifications.Remove(Client.Constants.Documents.Metadata.Projection);
+                modifications.Remove(Client.Constants.Documents.Metadata.RavenClrType);
+                modifications.Remove(Client.Constants.Documents.Metadata.Collection);
+            }
+        }
+    }
+
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         if (_conversationId[^1] == '|')
@@ -441,6 +465,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         _document.ChangeVector = cmd.PutResult.ChangeVector;
         return cmd.PutResult.Id;
     }
+
 
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {

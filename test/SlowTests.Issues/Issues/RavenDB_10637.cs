@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new Doc());
                     await session.SaveChangesAsync();
                 }
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

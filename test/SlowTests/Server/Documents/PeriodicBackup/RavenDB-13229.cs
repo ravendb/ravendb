@@ -88,8 +88,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }))
             {
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store2.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store2.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
                 using (var session = store2.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide

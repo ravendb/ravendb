@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -147,7 +147,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -170,7 +170,7 @@ namespace SlowTests.Issues
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -189,7 +189,7 @@ namespace SlowTests.Issues
                         // when we update the references, this will clean the leftovers
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -248,7 +248,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -267,7 +267,7 @@ namespace SlowTests.Issues
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -286,7 +286,7 @@ namespace SlowTests.Issues
                         // when we update the references, this will clean the leftovers
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -324,7 +324,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
@@ -344,7 +344,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -361,7 +361,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -419,7 +419,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -442,7 +442,7 @@ namespace SlowTests.Issues
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -461,7 +461,7 @@ namespace SlowTests.Issues
                         // when we update the references, this will clean the leftovers
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -519,7 +519,7 @@ namespace SlowTests.Issues
                         await session.SaveChangesAsync();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -536,7 +536,7 @@ namespace SlowTests.Issues
                         // deleting the documents won't change the internal references tree like in new indexes
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -555,7 +555,7 @@ namespace SlowTests.Issues
                         // when we update the references, this will clean the leftovers
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
@@ -593,7 +593,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
@@ -613,7 +613,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -630,7 +630,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -668,7 +668,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
@@ -693,7 +693,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -715,7 +715,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())

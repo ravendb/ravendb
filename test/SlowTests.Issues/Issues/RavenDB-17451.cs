@@ -135,11 +135,11 @@ namespace SlowTests.Issues
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 }))
                 {
-                     var mre = new AsyncManualResetEvent();
+                     var amre = new AsyncManualResetEvent();
 
                      subscription.OnEstablishedSubscriptionConnection += () =>
                      {
-                         mre.Set();
+                         amre.Set();
                      };
 
                     var list = new BlockingCollection<User>();
@@ -151,7 +151,7 @@ namespace SlowTests.Issues
                         }
                     }));
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "await mre.WaitAsync(TimeSpan.FromSeconds(15))");
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)), "await amre.WaitAsync(TimeSpan.FromSeconds(15))");
 
                     User user;
                     for (var i = 0; i < 10; i++)

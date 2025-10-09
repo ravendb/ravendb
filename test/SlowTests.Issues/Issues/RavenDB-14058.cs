@@ -48,8 +48,8 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                new OrdersMapReduceIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new OrdersMapReduceIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                     Assert.Equal(2, list[0].Count);
                 }
 
-                store.Maintenance.Send(new StopIndexOperation(nameof(OrdersMapReduceIndex)));
+                await store.Maintenance.SendAsync(new StopIndexOperation(nameof(OrdersMapReduceIndex)));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -70,8 +70,8 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(store.Database);
                 await database.TombstoneCleaner.ExecuteCleanup();
 
-                store.Maintenance.Send(new StartIndexOperation(nameof(OrdersMapReduceIndex)));
-                Indexes.WaitForIndexing(store);
+                await store.Maintenance.SendAsync(new StartIndexOperation(nameof(OrdersMapReduceIndex)));
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {

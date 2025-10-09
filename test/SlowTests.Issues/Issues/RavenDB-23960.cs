@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.OngoingTasks;
+﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -9,12 +10,12 @@ public class RavenDB_23960(ITestOutputHelper output) : EmbeddingsGenerationTestB
 {
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void DisabledTaskDoesntImpactCreationOfOtherTasks(Options options)
+    public async Task DisabledTaskDoesntImpactCreationOfOtherTasks(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
             var (configuration, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "Task1");
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -24,7 +25,7 @@ public class RavenDB_23960(ITestOutputHelper output) : EmbeddingsGenerationTestB
             store.Maintenance.Send(new ToggleOngoingTaskStateOperation(taskInfo.TaskId, OngoingTaskType.EmbeddingsGeneration, true));
                 
             var (configuration2, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "Task2");
-            (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration2);
+            (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration2);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             

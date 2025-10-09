@@ -1188,8 +1188,8 @@ namespace SlowTests.Tests.Linq
         {
             using (var store = GetDocumentStore(options))
             {
-                new NameIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new NameIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 const string id = "users/rhino";
 
@@ -1249,7 +1249,7 @@ select Foo(u)"
             using (var store = GetDocumentStore(options))
             {
                 await new NameIndex().ExecuteAsync(store);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 const string id = "users/rhino";
 
                 await RevisionsHelper.SetupRevisionsAsync(store);
@@ -1262,7 +1262,7 @@ select Foo(u)"
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 string changeVector;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1582,8 +1582,8 @@ select Foo(u)"
         {
             using (var store = GetDocumentStore(options))
             {
-                new NameIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new NameIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 const string id = "users/Rhino";
                 var cvList = new List<string>();

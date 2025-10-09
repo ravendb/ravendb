@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         private const string TsName = "HeartRate";
 
         [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Etl)]
-        public void TimeSeriesEtlShouldSkipIncrementalTsBasingOnUpperCasedIncPrefix()
+        public async Task TimeSeriesEtlShouldSkipIncrementalTsBasingOnUpperCasedIncPrefix()
         {
             var collections = new List<string> { "Users" };
 
@@ -50,7 +51,7 @@ namespace SlowTests.Issues
                 session.SaveChanges();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
             using (var session = dest.OpenSession())
             {

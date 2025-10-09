@@ -41,7 +41,7 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
             new List<string>() { UsersQueueName });
 
         var etlDone = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 1);
-        AssertQueueSinkDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertQueueSinkDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
         using (var session = store.OpenSession())
         {
@@ -81,7 +81,7 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 
         var etlDone2 = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 1);
 
-        AssertQueueSinkDone(etlDone2, TimeSpan.FromMinutes(1), store.Database, config);
+        await AssertQueueSinkDoneAsync(etlDone2, TimeSpan.FromMinutes(1), store.Database, config);
 
         using (var session = store.OpenSession())
         {

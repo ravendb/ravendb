@@ -41,16 +41,16 @@ namespace SlowTests.SlowTests.Issues
                     }
                 }
 
-                Indexes.WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
+                await Indexes.WaitForIndexingAsync(store,timeout: TimeSpan.FromMinutes(2));
                 var queryToDelete = new IndexQuery()
                 {
                     Query = $"FROM INDEX '{stats.IndexName}'"
                 };
 
-                var operation = store.Operations.Send(new DeleteByQueryOperation(queryToDelete));
-                operation.WaitForCompletion(TimeSpan.FromMinutes(2));
+                var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(queryToDelete));
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(2));
 
-                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));
+                await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(2));
 
                 using (var session = store.OpenSession())
                 {

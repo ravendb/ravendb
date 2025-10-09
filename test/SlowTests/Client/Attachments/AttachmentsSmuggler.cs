@@ -51,7 +51,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
 
-                    store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                    await store.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file1"));
 
                     stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
@@ -131,7 +131,7 @@ namespace SlowTests.Client.Attachments
                 var getPeriodicBackupResult = store.Maintenance.Send(operation);
                 var etagForBackups = getPeriodicBackupResult.Status.LastEtag;
 
-                store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                await store.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file1"));
                 using (var stream = new MemoryStream(new byte[] { 4, 5, 6 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
@@ -199,7 +199,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
 
-                    store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                    await store.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file1"));
 
                     stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
@@ -389,7 +389,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachmentStream = new MemoryStream(readBuffer))
                         using (var attachment = session.Advanced.Attachments.Get(documentId, attachmentName))
                         {
-                            attachment.Stream.CopyTo(attachmentStream);
+                            await attachment.Stream.CopyToAsync(attachmentStream);
                             Assert.Equal(new byte[0], readBuffer.Take((int)attachmentStream.Position));
 
                             var attachmentCv = attachment.Details.ChangeVector;
@@ -496,7 +496,7 @@ namespace SlowTests.Client.Attachments
                             using (var attachmentStream = new MemoryStream(readBuffer))
                             using (var attachment = session.Advanced.Attachments.Get("users/1", "big-file"))
                             {
-                                attachment.Stream.CopyTo(attachmentStream);
+                                await attachment.Stream.CopyToAsync(attachmentStream);
                                 Assert.Equal("big-file", attachment.Details.Name);
                                 Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                                 Assert.Equal(999 * 1024, attachmentStream.Position);

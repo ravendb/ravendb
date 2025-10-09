@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class EditRevisionsForConflictsConfigurationCommand : UpdateDatabaseCommand
+    public sealed class EditRevisionsForConflictsConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public RevisionsCollectionConfiguration Configuration { get; private set; }
 
@@ -27,5 +27,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Data.SqlClient;
 using Raven.Client.Documents;
@@ -29,7 +30,7 @@ public class RavenDB_22426 : SqlAwareTestBase
     }
 
     [RavenFact(RavenTestCategory.Etl, Requires = RavenServiceRequirement.MsSql)]
-    public void TestOldFactoryName()
+    public async Task TestOldFactoryName()
     {
         using (var store = GetDocumentStore())
         {
@@ -50,7 +51,7 @@ public class RavenDB_22426 : SqlAwareTestBase
                 
                 SetupSqlEtl(store, connectionString, EtlScript);
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 Assert.Equal(1, GetDtosCount(connectionString));
             }

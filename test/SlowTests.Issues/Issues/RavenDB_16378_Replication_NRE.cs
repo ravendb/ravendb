@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
                 using (var stream = typeof(RavenDB_16378).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_16378.RavenDB-16401-NRE.ravendb-snapshot"))
                 {
-                    stream.CopyTo(file);
+                    await stream.CopyToAsync(file);
                 }
             }
 

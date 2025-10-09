@@ -38,9 +38,9 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new FakeIndex().Execute(store);
+                await new FakeIndex().ExecuteAsync(store);
 
-                store.Maintenance.Send(new DisableIndexOperation("FakeIndex", false));
+                await store.Maintenance.SendAsync(new DisableIndexOperation("FakeIndex", false));
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = db.IndexStore.GetIndex("FakeIndex");
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                 Assert.Equal(IndexState.Disabled, indexInstance.State);
                 Assert.Equal(IndexRunningStatus.Disabled, indexInstance.Status);
 
-                store.Maintenance.Send(new EnableIndexOperation("FakeIndex", false));
+                await store.Maintenance.SendAsync(new EnableIndexOperation("FakeIndex", false));
 
                 indexInstance = db.IndexStore.GetIndex("FakeIndex");
 

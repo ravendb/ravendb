@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Sparrow.Server;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,9 +16,9 @@ public abstract class QueueEtlTestBase : RavenTestBase
     {
     }
 
-    protected async Task AssertEtlDoneAsync(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, QueueEtlConfiguration config)
+    protected async Task AssertEtlDoneAsync(AsyncManualResetEvent etlDone, TimeSpan timeout, string databaseName, QueueEtlConfiguration config)
     {
-        if (etlDone.Wait(timeout) == false)
+        if (await etlDone.WaitAsync(timeout) == false)
         {
             var loadError = await Etl.TryGetLoadErrorAsync(databaseName, config);
             var transformationError = await Etl.TryGetTransformationErrorAsync(databaseName, config);

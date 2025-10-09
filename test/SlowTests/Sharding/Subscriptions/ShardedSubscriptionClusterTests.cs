@@ -33,7 +33,7 @@ namespace SlowTests.Sharding.Subscriptions
             await ShardingCluster.CreateShardedDatabaseInCluster(db, 2, (nodes, leader));
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -50,7 +50,7 @@ namespace SlowTests.Sharding.Subscriptions
                     session.SaveChanges();
                 }
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
                     var c = 0;
@@ -61,12 +61,12 @@ namespace SlowTests.Sharding.Subscriptions
                             names.Remove(item.Result.Name);
                             if (++c == 3)
                             {
-                                mre.Set();
+                                amre.Set();
                             }
                         }
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     Assert.Empty(names);
                 }
             }
@@ -84,7 +84,7 @@ namespace SlowTests.Sharding.Subscriptions
 
             using (var store = Sharding.GetDocumentStore(options))
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -170,7 +170,7 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.NotEmpty(expectedIds);
                 Assert.NotEmpty(expectedIds2);
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
                 ConcurrentSet<string> results = new ConcurrentSet<string>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
@@ -183,13 +183,13 @@ namespace SlowTests.Sharding.Subscriptions
                         }
 
                         if (results.Count == expectedIds.Count)
-                            mre.Set();
+                            amre.Set();
 
                         if (results.Count == expectedIds.Count + expectedIds2.Count)
                             mre2.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime),$"error: {t.Exception}");
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime),$"error: {t.Exception}");
 
                     Assert.All(expectedIds, s => Assert.Contains(s, results));
 
@@ -215,7 +215,7 @@ namespace SlowTests.Sharding.Subscriptions
 
             using (var store = new DocumentStore { Database = db, Urls = new[] { leader.WebUrl } }.Initialize())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -231,7 +231,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 // Wait for documents to replicate
-                Assert.True(ShardingCluster.WaitForShardedChangeVectorInCluster(nodes, store.Database, rf));
+                Assert.True(await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(nodes, store.Database, rf));
 
                 var servers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(store, nodes);
 
@@ -260,7 +260,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 int docs = 3;
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 List<string> results = new List<string>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
@@ -275,10 +275,10 @@ namespace SlowTests.Sharding.Subscriptions
                         }
 
                         if (c == docs)
-                            mre.Set();
+                            amre.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                     foreach (var item in nodesWithIds.SelectMany(kvp => kvp.Value))
                     {

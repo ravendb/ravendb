@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
@@ -26,7 +27,7 @@ function loadCountersOfOrdersBehavior(doc, counter)
     return true;
 }
 ")]
-        public void MustNotIterateCountersTooFar(string collection, string script)
+        public async Task MustNotIterateCountersTooFar(string collection, string script)
         {
             using (var src = GetDocumentStore(new Options()
             {
@@ -50,9 +51,9 @@ function loadCountersOfOrdersBehavior(doc, counter)
                     session.SaveChanges();
                 }
 
-                src.Operations.Send(new PatchByQueryOperation(@"from Orders update{
+                await (await src.Operations.SendAsync(new PatchByQueryOperation(@"from Orders update{
     incrementCounter(this, 'Foo', 1);
-}")).WaitForCompletion(TimeSpan.FromMinutes(5));
+}"))).WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
                 if (collection == null)
                 {
@@ -65,7 +66,7 @@ function loadCountersOfOrdersBehavior(doc, counter)
 
                 var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 2);
 
-                etlDone.Wait(TimeSpan.FromSeconds(60));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(60));
 
                 var destStats = dest.Maintenance.Send(new GetStatisticsOperation());
 

@@ -66,7 +66,7 @@ namespace SlowTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var id = store.Subscriptions.Create(
+                var id = await store.Subscriptions.CreateAsync(
                     new SubscriptionCreationOptions<PersonWithAddress>
                     {
                         Filter = p => p.Name == "James" && p.Address.ZipCode != 54321

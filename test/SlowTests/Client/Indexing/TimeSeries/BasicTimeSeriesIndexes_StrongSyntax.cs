@@ -501,28 +501,28 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var timeSeriesIndex = new MyTsIndex_Load();
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
                 RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    ts = ts,\r\n    entry = entry\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    employee = this.LoadDocument(this0.entry.Tag, \"Employees\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.entry.Value,\r\n    Date = this1.this0.entry.Timestamp.Date,\r\n    User = this1.this0.ts.DocumentId,\r\n    Employee = this1.employee.FirstName\r\n})", indexDefinition.Maps.First());
 
-                timeSeriesIndex.Execute(store);
+                await timeSeriesIndex.ExecuteAsync(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -543,14 +543,14 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -570,9 +570,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -581,7 +581,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 // delete source document
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -595,9 +595,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex(indexName);
@@ -618,7 +618,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 0));
 
@@ -844,7 +844,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                         session.SaveChanges();
                     }
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     var timeSeriesIndex = new AverageHeartRateDaily_ByDateAndCity();
                     var indexName = timeSeriesIndex.IndexName;
@@ -852,16 +852,16 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Users.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    ts = ts,\r\n    entry = entry\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    address = this.LoadDocument(this0.entry.Tag, \"Addresses\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.entry.Value,\r\n    Date = new DateTime((int) this1.this0.entry.Timestamp.Date.Year, (int) this1.this0.entry.Timestamp.Date.Month, (int) this1.this0.entry.Timestamp.Date.Day),\r\n    City = this1.address.City,\r\n    Count = 1\r\n})", indexDefinition.Maps.First());
                     RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => new {\r\n    Date = r.Date,\r\n    City = r.City\r\n}).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    Date = this1.this0.g.Key.Date,\r\n    City = this1.this0.g.Key.City,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
 
-                    timeSeriesIndex.Execute(store);
+                    await timeSeriesIndex.ExecuteAsync(store);
 
                     var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.True(staleness.IsStale);
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.False(staleness.IsStale);
@@ -882,7 +882,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.Equal(1, terms.Length);
                     Assert.Equal("10", terms[0]);
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     using (var session = store.OpenSession())
                     {
@@ -897,9 +897,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.False(staleness.IsStale);
@@ -908,7 +908,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.Equal(1, terms.Length);
                     Assert.Contains("la", terms);
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     using (var session = store.OpenSession())
                     {
@@ -922,9 +922,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                     Assert.Equal(1, terms.Length);
@@ -932,7 +932,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     // delete source document
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     using (var session = store.OpenSession())
                     {
@@ -946,9 +946,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     var database = await GetDatabase(store.Database);
                     var index = database.IndexStore.GetIndex(indexName);
@@ -1330,7 +1330,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1609,7 +1609,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
@@ -1634,7 +1634,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -1656,7 +1656,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -1779,7 +1779,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 session.TimeSeriesFor(user.Id, timeSeries).Append(time, 12);
                 await session.SaveChangesAsync();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             await store.Maintenance.SendAsync(new StopIndexingOperation());
             var baseTime = new DateTime(2020, 11, 9);
@@ -1798,7 +1798,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
 
             await store.Maintenance.SendAsync(new StartIndexingOperation());
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             await store.Maintenance.SendAsync(new StopIndexingOperation());
             using (var session = store.OpenAsyncSession())
             {

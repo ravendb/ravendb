@@ -97,7 +97,7 @@ namespace SlowTests.Issues
 
                         using (var sr = new StreamReader(attachment.Stream))
                         {
-                            var value = sr.ReadToEnd();
+                            var value = await sr.ReadToEndAsync();
                             Assert.Equal("123", value);
                         }
                     }
@@ -125,7 +125,7 @@ namespace SlowTests.Issues
 
                         using (var sr = new StreamReader(attachment.Stream))
                         {
-                            var value = sr.ReadToEnd();
+                            var value = await sr.ReadToEndAsync();
                             Assert.Equal("123", value);
                         }
                     }

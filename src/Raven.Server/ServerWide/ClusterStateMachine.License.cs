@@ -68,6 +68,9 @@ public sealed partial class ClusterStateMachine
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
     {
+        if (updateDatabaseCommand is UpdateDatabaseRecordFeaturesCommand { Disabled: true })
+            return;
+
         switch (type)
         {
             case nameof(AddDatabaseCommand):

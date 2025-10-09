@@ -28,7 +28,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var documentsStorage = documentDatabase.DocumentsStorage;
@@ -107,7 +107,7 @@ namespace SlowTests.Issues
                 CreateDatabase = false
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 const int timeout = 60_000;
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));

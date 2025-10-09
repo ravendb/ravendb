@@ -44,7 +44,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new DocumentIndex().Execute(store);
+                await new DocumentIndex().ExecuteAsync(store);
 
                 var doc = new Document
                 {

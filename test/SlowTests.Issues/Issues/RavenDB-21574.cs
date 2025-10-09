@@ -90,7 +90,7 @@ public class RavenDB_21574 : RavenTestBase
     {
         var index = new T();
         await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { index }, store);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         var indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
         var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
@@ -101,7 +101,7 @@ public class RavenDB_21574 : RavenTestBase
         index.SearchEngineType = SearchEngineType.Lucene;
 
         await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { index }, store);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
         indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
@@ -110,8 +110,8 @@ public class RavenDB_21574 : RavenTestBase
         Assert.Equal(SearchEngineType.Lucene, indexStats.SearchEngineType);
 
         index.SearchEngineType = SearchEngineType.Corax;
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
         indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
@@ -120,8 +120,8 @@ public class RavenDB_21574 : RavenTestBase
         Assert.Equal(SearchEngineType.Corax, indexStats.SearchEngineType);
 
         index.SearchEngineType = SearchEngineType.Lucene;
-        store.ExecuteIndex(index);
-        Indexes.WaitForIndexing(store);
+        await store.ExecuteIndexAsync(index);
+        await Indexes.WaitForIndexingAsync(store);
 
         indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
         indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
@@ -132,7 +132,7 @@ public class RavenDB_21574 : RavenTestBase
         index = new T();
         indexDefinition = index.CreateIndexDefinition();
         await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
         indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));

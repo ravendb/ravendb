@@ -580,7 +580,7 @@ namespace SlowTests.Sharding.Cluster
                              MaxDocsPerBatch = 5, TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250),
                          }))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var t = subscription.Run(batch =>
                 {
                     foreach (var item in batch.Items)
@@ -592,7 +592,7 @@ namespace SlowTests.Sharding.Cluster
 
                         if (users.Count == numberOfDocs + 1)
                         {
-                            mre.Set();
+                            amre.Set();
                         }
                     }
                 });
@@ -615,7 +615,7 @@ namespace SlowTests.Sharding.Cluster
                     // expected, means the worker is still alive  
                 }
 
-                if (await mre.WaitAsync(TimeSpan.FromSeconds(3)) == false)
+                if (await amre.WaitAsync(TimeSpan.FromSeconds(3)) == false)
                 {
                     await subscription.DisposeAsync(true);
                 }
@@ -982,7 +982,7 @@ namespace SlowTests.Sharding.Cluster
                 }
                 finally
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                     await fail;
                     await t;
                 }
@@ -1093,7 +1093,7 @@ namespace SlowTests.Sharding.Cluster
                 }
                 finally
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                     await fail;
                     await t;
                 }
@@ -1382,7 +1382,7 @@ namespace SlowTests.Sharding.Cluster
             }
 
 
-            var state = store.Subscriptions.GetSubscriptionState(id);
+            var state = await store.Subscriptions.GetSubscriptionStateAsync(id);
 
             Console.WriteLine("ChangeVectorForNextBatchStartingPointPerShard:");
             foreach (var cv in state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.OrderBy(x => x.Key))

@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                 {
                     for (var i = 0; i < 20; i++)
                     {
-                        bulk.Store(new Company
+                        await bulk.StoreAsync(new Company
                         {
                             Id = "company/" + i,
                             Name = Convert.ToBase64String(Sodium.GenerateRandomBuffer(128 * 8))

@@ -30,7 +30,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
+                await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1"
                 });
@@ -56,17 +56,17 @@ namespace SlowTests.Client.Subscriptions
                     }
                 });
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 subscription.AfterAcknowledgment += batch =>
                 {
                     if (names.Count != 0 && names.Count % 30 == 0)
-                        mre.Set();
+                        amre.Set();
                     return Task.CompletedTask;
                 };
               
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
-                mre.Reset();
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                amre.Reset();
 
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
@@ -99,7 +99,7 @@ namespace SlowTests.Client.Subscriptions
                 subscription.AfterAcknowledgment += batch =>
                 {
                     if (names.Count != 0 && names.Count % 30 == 0)
-                        mre.Set();
+                        amre.Set();
                     return Task.CompletedTask;
                 };
 
@@ -120,7 +120,7 @@ namespace SlowTests.Client.Subscriptions
                
                 try
                 {
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 }
                 catch (Exception e)
                 {

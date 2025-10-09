@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(15));
+            await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromSeconds(15));
 
             await store.Maintenance.SendAsync(new StopIndexingOperation());
 

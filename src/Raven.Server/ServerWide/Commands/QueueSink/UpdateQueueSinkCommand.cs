@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.QueueSink
 {
-    public class UpdateQueueSinkCommand : UpdateDatabaseCommand
+    public class UpdateQueueSinkCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public long TaskId { get; protected set; }
 
@@ -36,5 +36,7 @@ namespace Raven.Server.ServerWide.Commands.QueueSink
             json[nameof(TaskId)] = TaskId;
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

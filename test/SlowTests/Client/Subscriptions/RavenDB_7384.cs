@@ -30,7 +30,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1"
                 });
@@ -41,7 +41,7 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var results = new List<User>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 using (var session = store.OpenSession())
                 {
@@ -56,11 +56,11 @@ namespace SlowTests.Client.Subscriptions
 
                 subscription.AfterAcknowledgment += x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 var currentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -83,7 +83,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
                     Query = "from Users as u select {Name:'David'}"
@@ -95,7 +95,7 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var results = new List<User>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 using (var session = store.OpenSession())
                 {
@@ -110,12 +110,12 @@ namespace SlowTests.Client.Subscriptions
 
                 subscription.AfterAcknowledgment += x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
-                mre.Reset();
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
+                amre.Reset();
                 Assert.Equal("David", results[0].Name);
                 results.Clear();
                 var currentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -166,7 +166,7 @@ namespace SlowTests.Client.Subscriptions
 
                 subscription.AfterAcknowledgment += x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
 
@@ -177,7 +177,7 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 Assert.Equal("Jorgen", results[0].Name);
             }
         }

@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await (await GetDatabase(store.Database)).TombstoneCleaner.ExecuteCleanup(); // will delete users/1 tombstone
 
@@ -65,11 +65,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query(new IndexQuery { Query = $"from index '{indexName}'" }, indexEntriesOnly: true);
+                    var result = await commands.QueryAsync(new IndexQuery { Query = $"from index '{indexName}'" }, indexEntriesOnly: true);
 
                     Assert.Equal(0, result.Results.Length);
                 }

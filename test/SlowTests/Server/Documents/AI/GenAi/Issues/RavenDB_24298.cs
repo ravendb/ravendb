@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents.AI;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,7 +49,7 @@ public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
             session.SaveChanges();
         }
 
-        Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
         var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
         var taskId = taskInfo.TaskId;

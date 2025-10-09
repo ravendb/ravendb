@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     Projection = company => new { Name = company.Name }
                 });
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 using (var worker = store.Subscriptions.GetSubscriptionWorker(name))
                 {
@@ -59,15 +59,15 @@ namespace SlowTests.Issues
                             Assert.Equal(1, s.Advanced.NumberOfRequests);
                         }
 
-                        mre.Set();
+                        amre.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(10)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(10)));
                     await worker.DisposeAsync();
                     await r;// no error
                 }
 
-                mre.Reset();
+                amre.Reset();
 
                 name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Company>());
 
@@ -90,10 +90,10 @@ namespace SlowTests.Issues
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
 
-                        mre.Set();
+                        amre.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(10)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(10)));
                     await worker.DisposeAsync();
                     await r;// no error
                 }

@@ -139,8 +139,8 @@ namespace SlowTests.Issues
                 // Wait for indexing in first node
 
                 var index = new Index_ItemsByNum();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await index.ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
                 WaitForUserToContinueTheTest(store);
 
                 var database = await GetDatabase(server, store.Database);
@@ -178,11 +178,11 @@ namespace SlowTests.Issues
 
                 // Wait for indexing in first node
 
-                new Index_ItemsByNum().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new Index_ItemsByNum().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
                 if (stopIndex)
                 {
-                    store.Maintenance.Send(new StopIndexOperation("Items/ByNum"));
+                    await store.Maintenance.SendAsync(new StopIndexOperation("Items/ByNum"));
                 }
 
 
@@ -190,7 +190,7 @@ namespace SlowTests.Issues
                 await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
                     await new Index_ItemsByNum2().ExecuteAsync(store);
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
                 });
                 var indexNames1 = store.Maintenance.Send(new GetIndexNamesOperation(0, 10));
                 Assert.NotNull(indexNames1);

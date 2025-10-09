@@ -38,7 +38,7 @@ namespace SlowTests.Core.Indexing
                 }
 
                 await new Index().ExecuteAsync(store);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -74,7 +74,7 @@ namespace SlowTests.Core.Indexing
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var context = new TransactionOperationContext(index._environment, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
                 {
@@ -96,7 +96,7 @@ namespace SlowTests.Core.Indexing
             using (var store = GetDocumentStore())
             {
                 await new Index().ExecuteAsync(store);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -108,7 +108,7 @@ namespace SlowTests.Core.Indexing
                 }
 
                 await new Index().ExecuteAsync(store);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -125,7 +125,7 @@ namespace SlowTests.Core.Indexing
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

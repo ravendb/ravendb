@@ -71,7 +71,7 @@ ai.genContext({})
             session.Advanced.Attachments.Store("items/1", "image.png", new MemoryStream(Convert.FromBase64String(HeartPngBase64)));
             await session.SaveChangesAsync();
         }
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120 )));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120 )));
         using (var session = store.OpenAsyncSession())
         {
             var item = await session.LoadAsync<Item>("items/1");
@@ -128,7 +128,7 @@ ai.genContext({
             session.Advanced.Attachments.Store("txs/2025-01-01", "transactions.csv", new MemoryStream(Csv.ToArray()));
             await session.SaveChangesAsync();
         }
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120 )));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120 )));
         using (var session = store.OpenAsyncSession())
         {
             Transaction tx = await session.LoadAsync<Transaction>("txs/2025-01-01");

@@ -553,10 +553,11 @@ function ToolDetailsQuery({
 
     const getQueryWithParameters = (): string => {
         const regexToFind$: RegExp = /\$\w+/g;
-        const matches = queryText.match(regexToFind$)?.map((x) => x.replace("$", "")) || [];
+        const allMatches = queryText.match(regexToFind$)?.map((x) => x.replace("$", "")) || [];
+        const uniqueMatches = [...new Set(allMatches)];
 
-        const llmParametersForQuery = getLlmParametersForQuery(matches);
-        const agentParametersForQuery = getAgentParametersForQuery(matches);
+        const llmParametersForQuery = getLlmParametersForQuery(uniqueMatches);
+        const agentParametersForQuery = getAgentParametersForQuery(uniqueMatches);
 
         let resultQuery = "";
 

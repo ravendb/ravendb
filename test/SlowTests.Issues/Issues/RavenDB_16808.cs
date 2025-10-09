@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
             using (IAsyncDocumentSession session = store.OpenAsyncSession())
             {
-                using (store.AggressivelyCacheFor(TimeSpan.MaxValue, AggressiveCacheMode.DoNotTrackChanges))
+                using (await store.AggressivelyCacheForAsync(TimeSpan.MaxValue, AggressiveCacheMode.DoNotTrackChanges))
                 {
                     long reBefore = requestExecutor.NumberOfServerRequests;
                     int sessionBefore = session.Advanced.NumberOfRequests;

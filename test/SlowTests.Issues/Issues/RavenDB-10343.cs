@@ -1318,7 +1318,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new LatestBuildsIndex().Execute(store);
+                await new LatestBuildsIndex().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1372,7 +1372,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

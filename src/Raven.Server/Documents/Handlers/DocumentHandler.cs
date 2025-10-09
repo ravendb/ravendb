@@ -95,12 +95,7 @@ namespace Raven.Server.Documents.Handlers
         private readonly DocumentDatabase _database;
         private readonly bool _shouldValidateAttachments;
         public DocumentsStorage.PutOperationResults PutResult;
-
-        public static string GenerateNonConflictingId(DocumentDatabase database, string prefix)
-        {
-            return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded();
-        }
-
+        
         public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database, bool shouldValidateAttachments = false)
         {
             _document = doc;
@@ -124,19 +119,15 @@ namespace Raven.Server.Documents.Handlers
             {
                 PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
             }
-            catch (Voron.Exceptions.VoronConcurrencyErrorException)
+            catch (Voron.Exceptions.VoronConcurrencyErrorException e)
             {
-                // RavenDB-10581 - If we have a concurrency error on "doc-id/"
-                // this means that we have existing values under the current etag
-                // we'll generate a new (random) id for them.
-
-                // The TransactionMerger will re-run us when we ask it to as a
-                // separate transaction
-                if (_id?.EndsWith(_database.IdentityPartsSeparator) == true)
+                if (DocumentPutAction.TryHandleVoronConcurrencyError(e, _database, _id, out var newId))
                 {
-                    _id = GenerateNonConflictingId(_database, _id);
+                    _id = newId;
+                    // The TransactionMerger will re-run us when we ask it to as a separate transaction
                     RetryOnError = true;
                 }
+                
                 throw;
             }
             return 1;

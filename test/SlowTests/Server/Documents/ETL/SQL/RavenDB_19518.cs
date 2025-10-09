@@ -16,6 +16,8 @@ using Npgsql;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
+using Sparrow.Server;
+using Tests.Infrastructure.Extensions;
 
 namespace SlowTests.Server.Documents.ETL.SQL;
 
@@ -152,7 +154,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 
                 store.Maintenance.Send(operation);
 
-                var etlDone = new ManualResetEventSlim();
+                var etlDone = new AsyncManualResetEvent();
                 var configuration = new SqlEtlConfiguration
                 {
                     Name = sqlEtlConfigurationName,
@@ -197,7 +199,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
                 Assert.Equal(0, errors);
 
                 AssertCounts(connectionString, 1, 2, new[] { 3, 2 }, new[] { "Milk", "Bear" });

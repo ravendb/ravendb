@@ -299,7 +299,7 @@ namespace SlowTests.Client.Attachments
                 }
                 AssertAttachmentCount(store, 3);
 
-                store.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
+                await store.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "file2"));
                 AssertAttachmentCount(store, 2);
 
                 using (var session = store.OpenSession())
@@ -321,7 +321,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "file1"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
@@ -331,7 +331,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "file3"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Contains("A:6", attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
@@ -341,7 +341,7 @@ namespace SlowTests.Client.Attachments
                 }
 
                 // Delete document should delete all the attachments
-                store.Commands().Delete("users/1", null);
+                await store.Commands().DeleteAsync("users/1", null);
                 AssertAttachmentCount(store, 0, documentsCount: 0);
             }
         }

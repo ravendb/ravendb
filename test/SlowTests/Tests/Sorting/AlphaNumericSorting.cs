@@ -380,8 +380,8 @@ namespace SlowTests.Tests.Sorting
                     }
                 }
 
-                new TracksIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new TracksIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -435,8 +435,8 @@ namespace SlowTests.Tests.Sorting
                     }
                 }
 
-                new TracksIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new TracksIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -491,8 +491,8 @@ namespace SlowTests.Tests.Sorting
                     }
                 }
 
-                new TracksIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new TracksIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

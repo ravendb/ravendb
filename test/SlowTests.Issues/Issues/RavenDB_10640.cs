@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new DocsIndex().Execute(store);
+                await new DocsIndex().ExecuteAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     QueryStatistics stats;

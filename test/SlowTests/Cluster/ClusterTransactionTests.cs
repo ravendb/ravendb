@@ -1842,7 +1842,7 @@ namespace SlowTests.Cluster
                 await session.StoreAsync(new TestObj(), id1);
                 await session.SaveChangesAsync();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using var mre = new ManualResetEvent(false);
             try
@@ -1908,7 +1908,7 @@ select incl(c)"
                 session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id1, "some-value");
                 await session.SaveChangesAsync();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using var mre = new ManualResetEvent(false);
             try
@@ -2040,7 +2040,7 @@ select incl(c)"
                 await session.StoreAsync(new TestObj());
                 await session.SaveChangesAsync();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {

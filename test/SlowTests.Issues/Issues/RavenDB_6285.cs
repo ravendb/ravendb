@@ -20,11 +20,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 var changes = await store.Changes().EnsureConnectedNow();
                 var observable = changes.ForAllDocuments();
-                observable.Subscribe(x => mre.Set());
+                observable.Subscribe(x => amre.Set());
                 await observable.EnsureSubscribedNow();
 
                 using (var session = store.OpenSession())
@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(45)));
+                Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(45)));
             }
         }
     }

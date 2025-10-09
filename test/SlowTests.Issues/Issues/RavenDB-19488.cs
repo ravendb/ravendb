@@ -27,7 +27,7 @@ namespace SlowTests.Issues
             }
             var index = new DataIndex();
             await index.ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             {
                 using var session = store.OpenAsyncSession();
 

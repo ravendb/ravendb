@@ -19,6 +19,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Raven.Client.Util;
+using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Documents;
 using Constants = Raven.Client.Constants;
@@ -772,6 +773,29 @@ namespace Raven.Server.Documents
             {
                 data.NoCache = originalNoCacheValue;
             }
+        }
+        
+        public static bool TryHandleVoronConcurrencyError(VoronConcurrencyErrorException e, DocumentDatabase database, string id, out string newId)
+        {
+            Debug.Assert(e != null, "It must be called only in handling of VoronConcurrencyErrorException");
+            
+            // RavenDB-10581 / RavenDB-21091 - If we have a concurrency error on "doc-id/"
+            // this means that we have existing values under the current etag
+            // we'll generate a new (random) id for them
+            
+            if (id?.EndsWith(database.IdentityPartsSeparator) == true)
+            {
+                newId = GenerateNonConflictingId(database, id);
+                return true;
+            }
+
+            newId = null;
+            return false;
+        }
+        
+        private static string GenerateNonConflictingId(DocumentDatabase database, string prefix)
+        {
+            return prefix + database.DocumentsStorage.GenerateNextEtag().ToString("D19") + "-" + Guid.NewGuid().ToBase64Unpadded();
         }
     }
 }

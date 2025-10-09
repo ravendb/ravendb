@@ -30,7 +30,7 @@ namespace SlowTests.Client.Subscriptions
                 ModifyDatabaseName = x => x + "store2"
             }))
             {
-                var subscriptionId = store1.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
+                var subscriptionId = await store1.Subscriptions.CreateAsync<User>(new SubscriptionCreationOptions<User>()
                 {
                     Name = "Foo"
                 });

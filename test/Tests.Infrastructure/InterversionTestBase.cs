@@ -15,13 +15,11 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
 using Xunit.Abstractions;
-using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace Tests.Infrastructure
 {

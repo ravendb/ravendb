@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                 var mre = new ManualResetEventSlim();
                 string changeVector;
-                using (documentStore.AggressivelyCache())
+                using (await documentStore.AggressivelyCacheAsync())
                 using (var session = documentStore.OpenSession())
                 {
                     var forAllDocuments = documentStore.Changes().ForAllDocuments();
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 string updateChangeVector = null;
                 for (int i = 0; i < 15; i++)
                 {
-                    using (documentStore.AggressivelyCache())
+                    using (await documentStore.AggressivelyCacheAsync())
                     using (var session = documentStore.OpenSession())
                     {
                         var user = session.Load<User>("users/1");

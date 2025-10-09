@@ -56,7 +56,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -88,7 +88,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -108,7 +108,7 @@ select new
                         session.SaveChanges();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var tx = context.OpenReadTransaction())
                     {
@@ -135,7 +135,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -156,7 +156,7 @@ select new
                         session.SaveChanges();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var tx = context.OpenReadTransaction())
                     {
@@ -197,7 +197,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -225,7 +225,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -252,7 +252,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -280,7 +280,7 @@ select new
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("test");
@@ -295,10 +295,10 @@ select new
 
                     using (var commands = store.Commands())
                     {
-                        commands.Delete("items/1", null);
+                        await commands.DeleteAsync("items/1", null);
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var tx = context.OpenReadTransaction())
                     {

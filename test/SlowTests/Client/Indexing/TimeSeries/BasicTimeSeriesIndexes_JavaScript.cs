@@ -394,27 +394,27 @@ return ({
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var timeSeriesIndex = new MyTsIndex_Load();
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
 
-                timeSeriesIndex.Execute(store);
+                await timeSeriesIndex.ExecuteAsync(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -435,14 +435,14 @@ return ({
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -462,9 +462,9 @@ return ({
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
@@ -473,7 +473,7 @@ return ({
 
                 // delete source document
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -487,9 +487,9 @@ return ({
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex(indexName);
@@ -510,7 +510,7 @@ return ({
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(0, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 0));
 
@@ -734,22 +734,22 @@ return ({
                         session.SaveChanges();
                     }
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     var timeSeriesIndex = new AverageHeartRateDaily_ByDateAndCity();
                     var indexName = timeSeriesIndex.IndexName;
                     var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
 
-                    timeSeriesIndex.Execute(store);
+                    await timeSeriesIndex.ExecuteAsync(store);
 
                     var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.True(staleness.IsStale);
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.False(staleness.IsStale);
@@ -770,7 +770,7 @@ return ({
                     Assert.Equal(1, terms.Length);
                     Assert.Equal("10", terms[0]);
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     using (var session = store.OpenSession())
                     {
@@ -785,9 +785,9 @@ return ({
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                     Assert.False(staleness.IsStale);
@@ -796,7 +796,7 @@ return ({
                     Assert.Equal(1, terms.Length);
                     Assert.Contains("la", terms);
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     using (var session = store.OpenSession())
                     {
@@ -810,9 +810,9 @@ return ({
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                     Assert.Equal(1, terms.Length);
@@ -820,7 +820,7 @@ return ({
 
                     // delete source document
 
-                    store.Maintenance.Send(new StopIndexingOperation());
+                    await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                     using (var session = store.OpenSession())
                     {
@@ -834,9 +834,9 @@ return ({
                     Assert.Equal(1, staleness.StalenessReasons.Count);
                     Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                    store.Maintenance.Send(new StartIndexingOperation());
+                    await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     var database = await GetDatabase(store.Database);
                     var index = database.IndexStore.GetIndex(indexName);

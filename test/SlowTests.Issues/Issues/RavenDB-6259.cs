@@ -41,7 +41,7 @@ namespace SlowTests.Issues
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore(options))
             {
-                slave.ExecuteIndex(new PersonAndAddressIndex());
+                await slave.ExecuteIndexAsync(new PersonAndAddressIndex());
                 var res = await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())

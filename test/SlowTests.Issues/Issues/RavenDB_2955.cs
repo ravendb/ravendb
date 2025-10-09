@@ -69,7 +69,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, autoIndexes.Count);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {

@@ -64,14 +64,14 @@
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     
 
                     subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
 
                     GC.KeepAlive(subscription.Run(x => { }));
 
-                    await mre.WaitAsync(TimeSpan.FromSeconds(20));
+                    await amre.WaitAsync(TimeSpan.FromSeconds(20));
                 }
             }
         }
@@ -133,13 +133,13 @@
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                     });
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
 
                     subscription.AfterAcknowledgment += b => { mre.Set(); return Task.CompletedTask; };
 
                     GC.KeepAlive(subscription.Run(x => { }));
 
-                    await mre.WaitAsync(TimeSpan.FromSeconds(20));
+                    await amre.WaitAsync(TimeSpan.FromSeconds(20));
                 }
             }
         }

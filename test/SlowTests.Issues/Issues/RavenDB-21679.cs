@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                 var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *");
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration));
 
-                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration
+                await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration
                 {
                     ReadBalanceBehavior = ReadBalanceBehavior.None, LoadBalanceBehavior = LoadBalanceBehavior.None, LoadBalancerContextSeed = 0, Disabled = false
                 }));

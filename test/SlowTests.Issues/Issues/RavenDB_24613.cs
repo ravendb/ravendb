@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents.ETL.Providers.AI;
+﻿using System.Threading.Tasks;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
@@ -9,7 +10,7 @@ namespace SlowTests.Issues;
 public class RavenDB_24613_MultipleEmbeddingsGenerateCalls(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Ai)]
-    public void MultipleEmbeddingsGenerateCallsShouldCreateAllEmbeddings()
+    public async Task MultipleEmbeddingsGenerateCallsShouldCreateAllEmbeddings()
     {
         using var store = GetDocumentStore();
 
@@ -49,7 +50,7 @@ public class RavenDB_24613_MultipleEmbeddingsGenerateCalls(ITestOutputHelper out
 
         var (config, connection) = AddEmbeddingsGenerationTask(store, script: script, collectionName: "TestDocuments");
 
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
         var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
         var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connection.Identifier);

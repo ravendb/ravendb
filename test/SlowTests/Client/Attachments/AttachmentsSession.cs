@@ -93,7 +93,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachmentStream = new MemoryStream(readBuffer))
                         using (var attachment = session.Advanced.Attachments.Get(user, name))
                         {
-                            attachment.Stream.CopyTo(attachmentStream);
+                            await attachment.Stream.CopyToAsync(attachmentStream);
                             var expected = "A:" + (2 + i);
                             Assert.Equal(expected, attachment.Details.ChangeVector.Substring(0, expected.Length));
                             Assert.Equal(name, attachment.Details.Name);
@@ -308,7 +308,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get("users/1", "file1"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Equal("A:2", attachment.Details.ChangeVector.Substring(0, 3));
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
@@ -322,7 +322,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.Attachments.Get(user, "file3"))
                     {
-                        attachment.Stream.CopyTo(attachmentStream);
+                        await attachment.Stream.CopyToAsync(attachmentStream);
                         Assert.Equal("A:4", attachment.Details.ChangeVector.Substring(0, 3));
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);

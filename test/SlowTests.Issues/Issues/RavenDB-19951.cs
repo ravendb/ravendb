@@ -104,7 +104,7 @@ public class RavenDB_19951 : RavenTestBase
         TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
-        store.Maintenance.Server.Send(
+        await store.Maintenance.Server.SendAsync(
             new PutClientCertificateOperation("test",
                 certificates.ClientCertificate1.Value,
                 new(),

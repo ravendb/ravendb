@@ -706,9 +706,9 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new Companies_ByName_Reduce().Execute(store);
-                new Companies_ByName_Counters().Execute(store);
-                new Companies_ByName_TimeSeries().Execute(store);
+                await new Companies_ByName_Reduce().ExecuteAsync(store);
+                await new Companies_ByName_Counters().ExecuteAsync(store);
+                await new Companies_ByName_TimeSeries().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {

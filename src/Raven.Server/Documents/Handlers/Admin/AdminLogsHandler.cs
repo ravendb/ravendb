@@ -140,28 +140,33 @@ namespace Raven.Server.Documents.Handlers.Admin
                 throw new ArgumentException($"End Date '{endUtc:yyyy-MM-ddTHH:mm:ss.fffffff} UTC' must be greater than Start Date '{startUtc:yyyy-MM-ddTHH:mm:ss.fffffff} UTC'");
 
             await using (var stream = SafeFileStream.Create(adminLogsFilePath.FullPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096,
-                       FileOptions.DeleteOnClose | FileOptions.SequentialScan))
+                             FileOptions.DeleteOnClose | FileOptions.SequentialScan))
             {
                 using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, true))
                 {
                     bool isEmptyArchive = true;
 
+                    var fileTargetFileName = RavenLogManager.Instance.FindDefaultFileTargetFileName();
+                    
                     foreach (var file in RavenLogManager.Instance.GetLogFiles(Server, startUtc, endUtc))
                     {
-                        // Skip this file if either the last write time or the creation time could not be determined
-                        if (RavenLogManager.Instance.TryGetLastWriteTimeUtc(file, out var logLastWriteTimeUtc) == false ||
-                            RavenLogManager.Instance.TryGetCreationTimeUtc(file, out var logCreationTimeUtc) == false)
-                            continue;
+                        if (file.Name != fileTargetFileName?.Name)
+                        {
+                            // Skip this file if either the last write time or the creation time could not be determined
+                            if (RavenLogManager.Instance.TryGetLastWriteTimeUtc(file, out var logLastWriteTimeUtc) == false ||
+                                RavenLogManager.Instance.TryGetCreationTimeUtc(file, out var logCreationTimeUtc) == false)
+                                continue;
 
-                        bool isWithinDateRange =
-                            // Check if the file was created before the end date.
-                            (endUtc.HasValue == false || logCreationTimeUtc < endUtc.Value) &&
-                            // Check if the file was last modified after the start date.
-                            (startUtc.HasValue == false || logLastWriteTimeUtc > startUtc.Value);
+                            bool isWithinDateRange =
+                                // Check if the file was created before the end date.
+                                (endUtc.HasValue == false || logCreationTimeUtc < endUtc.Value) &&
+                                // Check if the file was last modified after the start date.
+                                (startUtc.HasValue == false || logLastWriteTimeUtc > startUtc.Value);
 
-                        // Skip this file if it does not fall within the specified date range
-                        if (isWithinDateRange == false)
-                            continue;
+                            // Skip this file if it does not fall within the specified date range
+                            if (isWithinDateRange == false)
+                                continue;
+                        }
 
                         try
                         {

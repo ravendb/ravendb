@@ -23,7 +23,7 @@ public class RavenDB_22750 : RavenTestBase
         {
             await new Companies_ByEmployeeLastName().ExecuteAsync(store);
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenAsyncSession())
             {

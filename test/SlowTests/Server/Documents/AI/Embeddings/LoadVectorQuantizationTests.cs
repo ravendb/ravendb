@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Vector)]
-    public void CanIndexAlreadyQuantizedVectorAndQueryItProperly_Int8()
+    public async Task CanIndexAlreadyQuantizedVectorAndQueryItProperly_Int8()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         string id;
@@ -37,15 +38,15 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
             nameConfig
         }, targetQuantization: VectorEmbeddingType.Int8);
         
-        etl.Wait(DefaultEtlTimeout);
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        await etl.WaitAsync(DefaultEtlTimeout);
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id, VectorEmbeddingType.Int8);
         
         
-        new Index().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new Index().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -65,7 +66,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
     }
     
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Vector)]
-    public void CanPerformQuantizationInIndexFromEtl()
+    public async Task CanPerformQuantizationInIndexFromEtl()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         var id = "dtos/1";
@@ -80,15 +81,15 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         {
             new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
         }, targetQuantization: VectorEmbeddingType.Single);
-        Assert.True(etl.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        Assert.True(await etl.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id);
         
-        new QuantizationInIndex().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new QuantizationInIndex().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -108,7 +109,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
     }
     
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Vector)]
-    public void CanIndexAlreadyQuantizedVectorAndQueryItProperly_Int1()
+    public async Task CanIndexAlreadyQuantizedVectorAndQueryItProperly_Int1()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         var id = "dtos/1";
@@ -120,15 +121,15 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
 
         var etl = Etl.WaitForEtlToComplete(store);
         var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Binary);
-        Assert.True(etl.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        Assert.True(await etl.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
 
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id, VectorEmbeddingType.Binary);
 
-        new Index().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new Index().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -148,7 +149,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
     }
     
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Vector)]
-    public void QuantizedValuesInCacheAreSeparated()
+    public async Task QuantizedValuesInCacheAreSeparated()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         string id = "Dtos/1";
@@ -160,24 +161,24 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
 
         var etl = Etl.WaitForEtlToComplete(store);
         var (configurationSingle, connectionStringSingle) = AddEmbeddingsGenerationTask(embeddingsGenerationTaskName: "secondEtl", store: store, targetQuantization: VectorEmbeddingType.Single);
-        Assert.True(etl.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configurationSingle);
+        Assert.True(await etl.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configurationSingle);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configurationSingle, connectionStringSingle, "Name", ["car"], id, VectorEmbeddingType.Single);
         etl.Reset();
         
         var (configurationInt8, connectionStringInt8) = AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Int8);
-        Assert.True(etl.Wait(DefaultEtlTimeout));
-        (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configurationInt8);
+        Assert.True(await etl.WaitAsync(DefaultEtlTimeout));
+        (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configurationInt8);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configurationInt8, connectionStringInt8, "Name", ["car"], id, VectorEmbeddingType.Int8);
 
         
         
-        new Index().Execute(store);
-        Indexes.WaitForIndexing(store);
+        await new Index().ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {

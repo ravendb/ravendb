@@ -31,29 +31,44 @@ CALLSTACK:$(Get-PSCallStack | Out-String)
     }
 }
 
-function GetUbuntuImageTags($repo, $version, $arch) {
+function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = $false) {
     switch ($arch) {
         "x64" { 
-            return @(
+            $versionTags = @(
+                "$($repo):$($version)-ubuntu.22.04-x64"
+            )
+            if ($useVersionTagsOnly) {
+                return $versionTags
+            }
+            return $versionTags + @(
                 "$($repo):ubuntu-latest",
-                "$($repo):8.0-ubuntu-latest",
-                "$($repo):$($version)-ubuntu.24.04-x64"
+                "$($repo):8.0-ubuntu-latest"
             )
             break;
         }
         "arm32v7" {
-            return @(
+            $versionTags = @(
+                "$($repo):$($version)-ubuntu.22.04-arm32v7"
+            )
+            if ($useVersionTagsOnly) {
+                return $versionTags
+            }
+            return $versionTags + @(
                 "$($repo):ubuntu-arm32v7-latest",
-                "$($repo):8.0-ubuntu-arm32v7-latest",
-                "$($repo):$($version)-ubuntu.24.04-arm32v7"
+                "$($repo):8.0-ubuntu-arm32v7-latest"
             )
             break;
         }
         "arm64v8" {
-            return @(
+            $versionTags = @(
+                "$($repo):$($version)-ubuntu.22.04-arm64v8"
+                )
+            if ($useVersionTagsOnly) {
+                return $versionTags
+            }
+            return $versionTags + @(
                 "$($repo):ubuntu-arm64v8-latest",
-                "$($repo):8.0-ubuntu-arm64v8-latest",
-                "$($repo):$($version)-ubuntu.24.04-arm64v8"
+                "$($repo):8.0-ubuntu-arm64v8-latest"
                 )
                 break;
         }
@@ -61,24 +76,31 @@ function GetUbuntuImageTags($repo, $version, $arch) {
             throw "Arch not supported."
         }
     }
-        
 }
 
-function GetWindowsImageTags($repo, $version, $WinVer) {
+function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly = $false) {
     switch ($winver) {
         "1809" {
-            return @(
-                "$($repo):windows-1809-latest",
-                "$($repo):$($version)-windows-1809",
+            $versionTags = @(
+                "$($repo):$($version)-windows-1809"
+            )
+            if ($useVersionTagsOnly) {
+                return $versionTags
+            }
+            return $versionTags + @(
 #                "$($repo):windows-1809-latest",
                 "$($repo):8.0-windows-1809-latest"
             )
             break;
         }
         "ltsc2022" {
-             return @(
-                "$($repo):windows-ltsc2022-latest",
-                "$($repo):$($version)-windows-ltsc2022",
+            $versionTags = @(
+                "$($repo):$($version)-windows-ltsc2022"
+            )
+            if ($useVersionTagsOnly) {
+                return $versionTags
+            }
+            return $versionTags + @(
 #                "$($repo):windows-ltsc2022-latest",
                 "$($repo):8.0-windows-ltsc2022-latest"
             )
@@ -88,7 +110,6 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
             throw "Windows Version not supported. There are 'ltsc2022' and '1809' avaliable."
         }        
     }
-
 }
 
 function GetManifestTags {

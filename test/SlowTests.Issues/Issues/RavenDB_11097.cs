@@ -1290,7 +1290,7 @@ public class RavenDB_11097 : RavenTestBase
                     };
 
                     var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: shardNumber);
-                    commands.Execute(cmd);
+                    await commands.ExecuteAsync(cmd);
                     var res = cmd.Result as BlittableJsonReaderObject;
                     
                     Assert.NotNull(res);
@@ -1353,7 +1353,7 @@ public class RavenDB_11097 : RavenTestBase
                     };
 
                     var cmd = new PutTestIndexCommand(payload, isSharded: true, shardNumber: nextShard);
-                    commands.Execute(cmd);
+                    await commands.ExecuteAsync(cmd);
                     var res = cmd.Result as BlittableJsonReaderObject;
                     
                     Assert.NotNull(res);

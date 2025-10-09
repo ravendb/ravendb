@@ -24,8 +24,10 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -348,7 +350,7 @@ namespace SlowTests.Sharding.ETL
 
                 var databases = Sharding.GetShardsDocumentDatabaseInstancesFor(srcDb, srcNodes.Servers);
 
-                var etlDone = new ManualResetEventSlim();
+                var etlDone = new AsyncManualResetEvent();
                 await foreach (var db in databases)
                 {
                     db.EtlLoader.BatchCompleted += x =>
@@ -367,7 +369,7 @@ namespace SlowTests.Sharding.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
 
                 // BEFORE THE FIX: this will change the database record and restart the ETL, which would fail the test.
@@ -402,7 +404,7 @@ namespace SlowTests.Sharding.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
             }
         }
@@ -792,6 +794,7 @@ loadToOrders(partitionBy(key),
 
             var timeout = TimeSpan.FromMinutes(2);
             var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
+
             Assert.True(WaitHandle.WaitAll(waitHandles, timeout), await Etl.GetEtlDebugInfo(store.Database, timeout, RavenDatabaseMode.Sharded));
 
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);

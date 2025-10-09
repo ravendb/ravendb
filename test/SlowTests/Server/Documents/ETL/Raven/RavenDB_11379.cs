@@ -46,7 +46,7 @@ for (var i = 0; i < attachments.length; i++) {
 }
 ", false, "photo.png", "photo.png", DatabaseMode = RavenDatabaseMode.All)]
 
-        public void Should_remove_attachment(Options options, string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName)
+        public async Task Should_remove_attachment(Options options, string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -67,7 +67,7 @@ for (var i = 0; i < attachments.length; i++) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -86,7 +86,7 @@ for (var i = 0; i < attachments.length; i++) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {

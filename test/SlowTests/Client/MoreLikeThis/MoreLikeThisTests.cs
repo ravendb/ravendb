@@ -204,14 +204,14 @@ namespace SlowTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    new DataIndex(true, false).Execute(store);
+                    await new DataIndex(true, false).ExecuteAsync(store);
 
                     var list = GetDataList();
                     list.ForEach(session.Store);
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
                 }
 
                 await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(store, id);

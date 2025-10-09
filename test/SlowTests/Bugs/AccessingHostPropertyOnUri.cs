@@ -64,7 +64,7 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore(options))
             {
-                new WebActivityIndex().Execute(store);
+                await new WebActivityIndex().ExecuteAsync(store);
 
                 var activities1 = new WebItems()
                 {
@@ -95,7 +95,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());

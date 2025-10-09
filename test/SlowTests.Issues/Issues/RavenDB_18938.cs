@@ -36,7 +36,7 @@ public class RavenDB_18938 : RavenTestBase
 
         var index = new TIndex();
         await index.ExecuteAsync(store);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         Tuple<bool, DynamicJsonValue> performanceHint;
 

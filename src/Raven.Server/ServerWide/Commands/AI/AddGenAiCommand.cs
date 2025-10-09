@@ -85,4 +85,6 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
 
     public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
         => UpdateGenAiCommand.UpdateGenAiState(ctx, items, DatabaseName, Configuration, StartingPointChangeVector.From(ChangeVectorForStartingPoint), Index);
+
+    public override bool Disabled => Configuration.Disabled;
 }

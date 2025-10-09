@@ -36,7 +36,7 @@ namespace SlowTests.Bugs.Indexing
             using (var store = GetDocumentStore(options))
             {
                 var indexCreationTask = new Companies_ByTurnover();
-                indexCreationTask.Execute(store);
+                await indexCreationTask.ExecuteAsync(store);
 
                 using (var s = store.OpenSession())
                 {

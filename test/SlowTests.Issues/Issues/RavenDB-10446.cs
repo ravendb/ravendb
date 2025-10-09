@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                 Color = Colors.Brown
             };
 
-            var subsId = store.Subscriptions.Create(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<Shirt>
+            var subsId = await store.Subscriptions.CreateAsync(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<Shirt>
             {
                 Filter = x => x.ShirtType == tunicaType.FullName && x.Color == shirtWithValue.Color && x.ManufactureDate >= shirtWithValue.ManufactureDate && x.Price > shirtWithValue.Price
             });

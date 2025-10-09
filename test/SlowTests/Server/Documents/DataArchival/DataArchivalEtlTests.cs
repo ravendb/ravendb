@@ -11,6 +11,7 @@ using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -76,7 +77,7 @@ public class DataArchivalEtlTests : RavenTestBase
             }
             
             
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
                 
             // Make sure that the company has been skipped from ETL
             using (var session = dest.OpenAsyncSession())
@@ -105,7 +106,7 @@ public class DataArchivalEtlTests : RavenTestBase
                 Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
             }
             
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
             
             // Make sure that the company has been propagated to the destination upon archival 
             using (var session = dest.OpenAsyncSession())
@@ -180,7 +181,7 @@ public class DataArchivalEtlTests : RavenTestBase
             });
             
             var etlDone = Etl.WaitForEtlToComplete(src);
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
                 
             // Make sure that the company has been skipped from ETL
             using (var session = dest.OpenAsyncSession())
@@ -198,7 +199,7 @@ public class DataArchivalEtlTests : RavenTestBase
             }
 
             
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
             
             // Make sure that the company has been propagated to the destination upon archival 
             using (var session = dest.OpenAsyncSession())

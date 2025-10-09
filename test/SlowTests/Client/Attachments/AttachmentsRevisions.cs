@@ -315,7 +315,7 @@ namespace SlowTests.Client.Attachments
                 }, 9, shardNumber: shardNumber);
 
                 // Delete document should delete all the attachments
-                store.Commands().Delete("users/1", null);
+                await store.Commands().DeleteAsync("users/1", null);
                 AssertRevisions(store, names, (session, revisions) =>
                 {
                     AssertNoRevisionAttachment(revisions[0], session, true);

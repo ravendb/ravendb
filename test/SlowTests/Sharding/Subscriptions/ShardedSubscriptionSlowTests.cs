@@ -100,7 +100,7 @@ namespace SlowTests.Sharding.Subscriptions
             using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -184,7 +184,7 @@ namespace SlowTests.Sharding.Subscriptions
                 }
 
                 var count = 10;
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
                 var db1 = await Sharding.GetShardsDocumentDatabaseInstancesFor(store).FirstOrDefaultAsync(x => x.ShardNumber == n);
@@ -214,7 +214,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     using var first = new CountdownEvent(count);
                     using var second = new CountdownEvent(count / 2);
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var mre2 = new ManualResetEventSlim();
                     var t = subscription.Run(async x =>
                     {
@@ -227,7 +227,7 @@ namespace SlowTests.Sharding.Subscriptions
                             first.Signal(x.NumberOfItemsInBatch);
                             if (first.IsSet)
                             {
-                                await mre.WaitAsync();
+                                await amre.WaitAsync();
                             }
                         }
                     });
@@ -276,7 +276,7 @@ namespace SlowTests.Sharding.Subscriptions
                     try
                     {
                         // advance subscription worker
-                        mre.Set();
+                        amre.Set();
 
                         await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                         {
@@ -418,7 +418,7 @@ namespace SlowTests.Sharding.Subscriptions
             using (var store = Sharding.GetDocumentStore(ops))
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -442,7 +442,7 @@ namespace SlowTests.Sharding.Subscriptions
                 });
 
                 var ackDocs = new List<string>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
                 var f = true;
                 subscription.AfterAcknowledgment += async batch =>
@@ -460,7 +460,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     if (f)
                     {
-                        mre.Set();
+                        amre.Set();
                         Assert.True(await mre2.WaitAsync(_reasonableWaitTime));
                     }
                 };
@@ -506,7 +506,7 @@ namespace SlowTests.Sharding.Subscriptions
                     session.SaveChanges();
                 }
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 var f1 = addedDocs.First();
                 var f2 = ackDocs.First();
@@ -587,7 +587,7 @@ namespace SlowTests.Sharding.Subscriptions
             using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -623,7 +623,7 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.Equal(count / 2, WaitForValue(() => docs.CurrentCount, count / 2));
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
@@ -687,7 +687,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
@@ -852,13 +852,13 @@ namespace SlowTests.Sharding.Subscriptions
                     });
                     session.SaveChanges();
                 }
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                 {
                     Query = @"from Dogs include Owner"
                 });
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Dog>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -872,9 +872,9 @@ namespace SlowTests.Sharding.Subscriptions
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -1215,7 +1215,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -1270,7 +1270,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -1402,7 +1402,7 @@ namespace SlowTests.Sharding.Subscriptions
                     await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User> { Name = "sub2" });
                     await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                    var states = store1.Subscriptions.GetSubscriptions(0, 10);
+                    var states = await store1.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                     Assert.Equal(3, states.Count);
 
@@ -1412,7 +1412,7 @@ namespace SlowTests.Sharding.Subscriptions
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    states = store2.Subscriptions.GetSubscriptions(0, 10, store2.Database);
+                    states = await store2.Subscriptions.GetSubscriptionsAsync(0, 10, store2.Database);
 
                     Assert.Equal(3, states.Count);
                     Assert.True(states.Any(x => x.SubscriptionName.Equals("sub1")));
@@ -1424,7 +1424,7 @@ namespace SlowTests.Sharding.Subscriptions
                         await session.SaveChangesAsync();
                     }
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                     {
                         MaxDocsPerBatch = 5,
@@ -1433,10 +1433,10 @@ namespace SlowTests.Sharding.Subscriptions
                     {
                         var t = worker.Run(_ =>
                         {
-                            mre.Set();
+                            amre.Set();
                         });
 
-                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                        Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     }
                 }
             }
@@ -1472,11 +1472,11 @@ namespace SlowTests.Sharding.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
-                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
-                store1.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub1" });
+                await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                var states = store1.Subscriptions.GetSubscriptions(0, 10);
+                var states = await store1.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                 Assert.Equal(3, states.Count);
 
@@ -1527,7 +1527,7 @@ namespace SlowTests.Sharding.Subscriptions
                 Assert.True(states.Any(x => x.SubscriptionName.Equals("sub1")));
                 Assert.True(states.Any(x => x.SubscriptionName.Equals("sub2")));
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                 {
                     MaxDocsPerBatch = 5,
@@ -1536,10 +1536,10 @@ namespace SlowTests.Sharding.Subscriptions
                 {
                     var t = worker.Run(_ =>
                     {
-                        mre.Set();
+                        amre.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 }
             }
         }
@@ -1712,7 +1712,7 @@ namespace SlowTests.Sharding.Subscriptions
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
                 });
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var mre2 = new AsyncManualResetEvent();
                 var exceptions = new List<Exception>();
                 subscription.OnUnexpectedSubscriptionError += exception =>
@@ -1721,12 +1721,12 @@ namespace SlowTests.Sharding.Subscriptions
                 };
                 var t = subscription.Run(async x =>
                 {
-                    mre.Set();
+                    amre.Set();
                     Assert.True(await mre2.WaitAsync(_reasonableWaitTime), "await mre2.WaitAsync(_reasonableWaitTime)");
                 });
 
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime), "await mre.WaitAsync(_reasonableWaitTime)");
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime), "await amre.WaitAsync(_reasonableWaitTime)");
                 await subscription.DisposeAsync(false);
                 try
                 {
@@ -1813,7 +1813,7 @@ namespace SlowTests.Sharding.Subscriptions
                 });
                 try
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     worker1.AfterAcknowledgment += batch =>
                     {
                         foreach (var x in batch.Items)
@@ -1839,13 +1839,13 @@ namespace SlowTests.Sharding.Subscriptions
                     {
                         if (ids.Count == 3)
                         {
-                            mre.Set();
+                            amre.Set();
                             Assert.True(await mre2.WaitAsync(_reasonableWaitTime), "mre2");
                         }
 
                         await Task.Delay(16);
                     });
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime), "mre" + Environment.NewLine +
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime), "mre" + Environment.NewLine +
                                                                           PrintException(exceptions1));
                 }
                 finally

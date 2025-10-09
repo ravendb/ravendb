@@ -1,5 +1,5 @@
-﻿using Raven.Client.Documents.Operations.AI;
-using Raven.Server.Documents.AI;
+﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
@@ -10,7 +10,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 public class RemovalTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Ai | RavenTestCategory.Etl)]
-    public void TaskRemoveEmbeddingsDocumentOfRemovedDocument()
+    public async Task TaskRemoveEmbeddingsDocumentOfRemovedDocument()
     {
         using var store = GetDocumentStore();
         string id0;
@@ -28,8 +28,8 @@ public class RemovalTests(ITestOutputHelper output) : EmbeddingsGenerationTestBa
         
         var etlWait = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: "eg");
-        Assert.True(etlWait.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await etlWait.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Maciej"], id0);
@@ -42,7 +42,7 @@ public class RemovalTests(ITestOutputHelper output) : EmbeddingsGenerationTestBa
         }
         
         etlWait.Reset();
-        Assert.True(etlWait.Wait(DefaultEtlTimeout));
+        Assert.True(await etlWait.WaitAsync(DefaultEtlTimeout));
         using (var session = store.OpenSession())
         {
             var removedDocumentEmbeddings = EmbeddingsHelper.GetEmbeddingDocumentId(id0);

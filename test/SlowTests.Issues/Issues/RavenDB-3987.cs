@@ -108,15 +108,15 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                new Person_ByName().Execute(store);
-                new Person_ByAge().Execute(store);
+                await new Person_ByName().ExecuteAsync(store);
+                await new Person_ByAge().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var operation1 = await store.Operations.SendAsync(new DeleteByQueryOperation<Person>("Person/ByName", x => x.Name == "Bob"));
                 await operation1.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var operation2 = await store.Operations.SendAsync(new DeleteByQueryOperation<Person, Person_ByAge>(x => x.Age < 35));
                 await operation2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));

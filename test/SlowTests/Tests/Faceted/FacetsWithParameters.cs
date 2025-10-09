@@ -315,11 +315,11 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore(options))
             {
-                new FooIndex().Execute(store);
+                await new FooIndex().ExecuteAsync(store);
 
                 var now = DateTime.Now;
                 StoreSampleData(store, now);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

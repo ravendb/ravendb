@@ -551,13 +551,13 @@ namespace SlowTests.Core.Session
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
-                using (store.AggressivelyCacheFor(TimeSpan.FromHours(1)))
+                using (await store.AggressivelyCacheForAsync(TimeSpan.FromHours(1)))
                 using (var changes = await store.Changes().EnsureConnectedNow())
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
 
                     var observable = changes.ForAllDocuments();
-                    var documentSubscription = observable.Subscribe(x => mre.Set());
+                    var documentSubscription = observable.Subscribe(x => amre.Set());
                     await observable.EnsureSubscribedNow();
 
                     using (var session = store.OpenAsyncSession())
@@ -570,7 +570,7 @@ namespace SlowTests.Core.Session
                         await session.SaveChangesAsync();
                     }
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
                     documentSubscription.Dispose();
 
                     var requestExecutor = store.GetRequestExecutor();

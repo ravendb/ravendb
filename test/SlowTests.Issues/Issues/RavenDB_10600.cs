@@ -28,7 +28,7 @@ namespace SlowTests.Issues
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | DatabaseItemType.Attachments | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 initialStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 

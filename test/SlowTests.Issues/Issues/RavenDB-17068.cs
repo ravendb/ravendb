@@ -55,7 +55,7 @@ public sealed class RavenDB_17068: RavenDB_17068_Base
             var index = new DummyIndex();
             
             await index.ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             Tuple<bool, DynamicJsonValue> alertRaised;
 
             do
@@ -91,7 +91,7 @@ public sealed class RavenDB_17068: RavenDB_17068_Base
             var index = new DummyIndex();
             
             await index.ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             Tuple<bool, DynamicJsonValue> alertRaised = await notificationsQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
             
             while (alertRaised.Item1)

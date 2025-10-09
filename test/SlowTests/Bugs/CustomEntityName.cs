@@ -150,7 +150,7 @@ namespace SlowTests.Bugs
 
             var index = new T();
             await index.ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -168,7 +168,7 @@ namespace SlowTests.Bugs
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenSubscribeToApiChanges(char c)
         {
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
             using var store = GetDocumentStore(new Options
             {
@@ -179,7 +179,7 @@ namespace SlowTests.Bugs
             await subscription.EnsureConnectedNow();
             var observableWithTask = subscription
                 .ForDocumentsInCollection<User>();
-            observableWithTask.Subscribe(change => mre.Set());
+            observableWithTask.Subscribe(change => amre.Set());
             await observableWithTask.EnsureSubscribedNow();
 
             using (var session = store.OpenAsyncSession())
@@ -188,7 +188,7 @@ namespace SlowTests.Bugs
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
+            Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)));
         }
 
         private class MultiMapIndex : AbstractMultiMapIndexCreationTask<IndexResult>
@@ -317,7 +317,7 @@ namespace SlowTests.Bugs
 
             await using (var sub = store.Subscriptions.GetSubscriptionWorker<User>(name))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var r = sub.Run(batch =>
                 {
                     Assert.NotEmpty(batch.Items);
@@ -329,9 +329,9 @@ namespace SlowTests.Bugs
                         }
                         Assert.Equal(0, s.Advanced.NumberOfRequests);
                     }
-                    mre.Set();
+                    amre.Set();
                 });
-                var isSet = await mre.WaitAsync(TimeSpan.FromSeconds(30));
+                var isSet = await amre.WaitAsync(TimeSpan.FromSeconds(30));
 
                 await sub.DisposeAsync();
                 await r;// no error

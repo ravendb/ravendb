@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.Maintenance
                     .ForTesting(() => new StopIndexOperation(index.IndexName))
@@ -124,9 +124,9 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store1);
-                Indexes.WaitForIndexing(store2);
-                Indexes.WaitForIndexing(store3);
+                await Indexes.WaitForIndexingAsync(store1);
+                await Indexes.WaitForIndexingAsync(store2);
+                await Indexes.WaitForIndexingAsync(store3);
 
                 await store1.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
                 await store2.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));

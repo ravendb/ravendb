@@ -165,8 +165,8 @@ namespace SlowTests.Issues
                     };
 
                     dbs.Add(name);
-                    var restoreBackupTask = store.Maintenance.Server.Send(new RestoreBackupOperation(restoreConfig, myBackup.NodeTag));
-                    restoreBackupTask.WaitForCompletion(TimeSpan.FromSeconds(30));
+                    var restoreBackupTask = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(restoreConfig, myBackup.NodeTag));
+                    await restoreBackupTask.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
                 }
                 var dbNames = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, int.MaxValue));
                 Assert.Equal(clusterSize + 1, dbNames.Length);

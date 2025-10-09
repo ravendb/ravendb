@@ -52,14 +52,14 @@ namespace SlowTests.Issues
                         OperateOnTypes = DatabaseItemType.Documents
                     }, file);
 
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                     var fileInfo = new FileInfo(file);
                     Assert.True(fileInfo.Exists);
                     Assert.True(file.Length < 500);
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                     using (var session = store2.OpenSession())
                     {
@@ -128,13 +128,13 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
                 var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
             }
             // all data import
             using (var store2 = GetDocumentStore())
             {
                 var operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store2.OpenAsyncSession())
                 {
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
                 importOptions.OperateOnTypes -= DatabaseItemType.Attachments;
 
                 var operation = await store3.Smuggler.ImportAsync(importOptions, file);
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store3.OpenAsyncSession())
                 {
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
                 importOptions.OperateOnTypes -= DatabaseItemType.Attachments;
 
                 var operation = await store4.Smuggler.ImportAsync(importOptions, file);
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
                 using (var session = store4.OpenAsyncSession())
                 {
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));

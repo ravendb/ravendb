@@ -13,6 +13,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -84,7 +85,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
             string srcHash;
             using (var session = store.OpenSession())

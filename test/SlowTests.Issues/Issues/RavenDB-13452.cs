@@ -279,7 +279,7 @@ namespace SlowTests.Issues
                 }
                 using (var commands = store.Commands())
                 {
-                    var item = commands.Get("items/1").BlittableJson;
+                    var item = (await commands.GetAsync("items/1")).BlittableJson;
                     Assert.True(item.TryGet(nameof(Item.Values), out BlittableJsonReaderObject values));
                     Assert.Equal(3, values.Count);
 
@@ -318,7 +318,7 @@ namespace SlowTests.Issues
                 }
                 using (var commands = store.Commands())
                 {
-                    var item = commands.Get("items/1").BlittableJson;
+                    var item = (await commands.GetAsync("items/1")).BlittableJson;
                     Assert.True(item.TryGet(nameof(Item.Values), out BlittableJsonReaderObject values));
                     Assert.Equal(3, values.Count);
 
@@ -439,7 +439,7 @@ namespace SlowTests.Issues
                 }
                 using (var commands = store.Commands())
                 {
-                    var item = commands.Get("items/1").BlittableJson;
+                    var item = (await commands.GetAsync("items/1")).BlittableJson;
                     Assert.True(item.TryGet(nameof(Item.Values), out BlittableJsonReaderObject values));
                     Assert.Equal(2, values.Count);
 
