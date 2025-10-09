@@ -2,17 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "Debug test-linux",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/test-runner",
+            "program": "${workspaceFolder}/test-linux",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build-test-linux",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -20,6 +20,18 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "Debug test-win",
+            "type": "cppvsdbg",  // For MSVC build
+            "request": "launch",
+            "program": "${workspaceFolder}/test-win.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "integratedTerminal",
+            "preLaunchTask": "build-test-win-msvc",
         }
     ]
 }

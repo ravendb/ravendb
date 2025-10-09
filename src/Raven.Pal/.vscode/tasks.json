@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build-test-linux",
             "type": "shell",
             "command": "~/zig/zig",
             "args": [
@@ -16,7 +16,7 @@
                 "x86_64-linux-gnu",
                 "../../libs/liburing/liburing-2.8.1-x64.a",
                 "-o",
-                "test-runner",
+                "test-linux",
                 "src/shared_all.c",
                 "src/rvngetpalver.c",
                 "src/posix/fileutils.c",
@@ -37,6 +37,44 @@
                 "isDefault": true
             },
             "problemMatcher": []
+        },
+        {
+            "label": "build-test-win-msvc",
+            "type": "shell",
+            "command": "cl",
+            "args": [
+                "/Zi",
+                "/Od",
+                "/Fe:test-win.exe",
+                "-I",
+                "inc",
+                "test-win.c",
+                "src/shared_all.c",
+                "src/rvngetpalver.c",
+                "src/win/fileutils.c",
+                "src/win/getcurrentthreadid.c",
+                "src/win/geterrorstring.c",
+                "src/win/getsysteminformation.c",
+                "src/win/journal.c",
+                "src/win/mapping.c",
+                "src/win/ioring.c",
+                "src/win/pager.c",
+                "src/win/virtualmemory.c",
+                "src/win/writefileheader.c"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "options": {
+                "shell": {
+                    "executable": "cmd.exe",
+                    "args": [
+                        "/C",
+                        "\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat\"",
+                        "&&"
+                    ]
+                }
+            }
         }
     ]
 }
