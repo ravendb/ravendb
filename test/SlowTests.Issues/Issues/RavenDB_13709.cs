@@ -34,13 +34,13 @@ namespace SlowTests.Issues
                     include Company").ToListAsync();
 
                     var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                     var fileInfo = new FileInfo(file);
                     Assert.True(fileInfo.Exists);
 
                     operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
                 }
             }
         }

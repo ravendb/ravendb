@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -18,7 +19,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Docs_from_two_collections_loaded_to_single_one(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Docs_from_two_collections_loaded_to_single_one(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -42,7 +43,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -76,7 +77,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -115,7 +116,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {

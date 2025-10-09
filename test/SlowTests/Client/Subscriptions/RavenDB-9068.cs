@@ -34,7 +34,7 @@ namespace SlowTests.Client.Subscriptions
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionId);
                 var cts = new CancellationTokenSource();
                 var subscriptionTask = subscription.Run(x => { }, cts.Token);
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 var task = Assert.ThrowsAnyAsync<Exception>(() => subscriptionTask);
                 Assert.True(await task.WaitWithoutExceptionAsync(_reasonableWaitTime), "1. await task.WaitWithoutExceptionAsync(_reasonableWaitTime)");
@@ -44,7 +44,7 @@ namespace SlowTests.Client.Subscriptions
                 subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionId);
                 cts = new CancellationTokenSource();
                 subscriptionTask = subscription.Run(x => Task.CompletedTask, cts.Token);
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 var task2 = Assert.ThrowsAnyAsync<Exception>(() => subscriptionTask);
                 Assert.True(await task2.WaitWithoutExceptionAsync(_reasonableWaitTime), "2. await task.WaitWithoutExceptionAsync(_reasonableWaitTime)");

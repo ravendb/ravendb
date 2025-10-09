@@ -1,13 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Net.Http;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
-using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
@@ -20,7 +16,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanUseEmbeddingGenerationTaskInIndexEntriesQuery()
+    public async Task CanUseEmbeddingGenerationTaskInIndexEntriesQuery()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         var etl = Etl.WaitForEtlToComplete(store);
@@ -51,11 +47,11 @@ public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
 
         var (configuration, _) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [cityConfig, countryConfig], collectionName: "Orders");
-        etl.Wait(DefaultEtlTimeout);
+        await etl.WaitAsync(DefaultEtlTimeout);
         var index = new Index();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
 
@@ -66,7 +62,7 @@ public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Query = $@"from index '{index.IndexName}' where vector.search(VectorCity, ""uk"", 0.82, 20)"
             });
 
-            commands.RequestExecutor.Execute(command, commands.Context);
+            await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
             var results = new DynamicArray(command.Result.Results);
             Assert.Equal(1, results.Count());
@@ -79,7 +75,7 @@ public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Query = $@"from index '{index.IndexName}' where vector.search(VectorCity, ""uk"", 0.82, 20)"
             }, indexEntriesOnly: true);
 
-            commands.RequestExecutor.Execute(command, commands.Context);
+            await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
             var results = new DynamicArray(command.Result.Results);
             Assert.Equal(1, results.Count());

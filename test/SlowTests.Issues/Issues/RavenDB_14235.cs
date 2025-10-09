@@ -151,7 +151,7 @@ namespace SlowTests.Issues
                 str += new string(Enumerable.Repeat(abc, partialSize).Select(s => s[random.Next(s.Length)]).ToArray());
 
                 using var store = GetDocumentStore();
-                store.Commands().Put(str, null, new { WeirdName = str }, new Dictionary<string, object>
+                await store.Commands().PutAsync(str, null, new { WeirdName = str }, new Dictionary<string, object>
                 {
                     { "@collection", str }
                 });

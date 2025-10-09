@@ -9,6 +9,9 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
+    // NOTE: For commands that represent license-limited features,
+    //       inherit from UpdateDatabaseRecordFeaturesCommand instead.
+
     public abstract class UpdateDatabaseCommand : CommandBase
     {
         public string DatabaseName;

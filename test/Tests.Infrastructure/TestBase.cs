@@ -48,7 +48,6 @@ using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
 using Xunit.Abstractions;
 using XunitLogger;
-using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace FastTests
 {
@@ -872,12 +871,12 @@ namespace FastTests
             var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
 
             using (await DebugHelper.GatherVerboseDatabaseDisposeInformationAsync(server, timeoutInMs))
-            using (var mre = new AsyncManualResetEvent())
+            using (var amre = new AsyncManualResetEvent())
             {
-                server.AfterDisposal += () => mre.Set();
+                server.AfterDisposal += () => amre.Set();
                 var task = Task.Run(server.Dispose);
 
-                if (await mre.WaitAsync(timeout) == false)
+                if (await amre.WaitAsync(timeout) == false)
                     await ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout);
 
                 await task;

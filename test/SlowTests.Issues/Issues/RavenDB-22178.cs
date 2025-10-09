@@ -33,7 +33,7 @@ public class RavenDB_22178 : RavenTestBase
             await secondIndex.ExecuteAsync(store);
             await thirdIndex.ExecuteAsync(store);
             
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             
             var database = await GetDatabase(store.Database);
 
@@ -66,7 +66,7 @@ public class RavenDB_22178 : RavenTestBase
             await secondIndex.ExecuteAsync(store);
             await thirdIndex.ExecuteAsync(store);
             
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             
             var database = await GetDatabase(store.Database);
 
@@ -100,7 +100,7 @@ public class RavenDB_22178 : RavenTestBase
             await secondIndex.ExecuteAsync(store);
             await thirdIndex.ExecuteAsync(store);
             
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             
             var database = await GetDatabase(store.Database);
 
@@ -135,7 +135,7 @@ public class RavenDB_22178 : RavenTestBase
             await secondIndex.ExecuteAsync(store);
             await thirdIndex.ExecuteAsync(store);
             
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             
             var database = await GetDatabase(store.Database);
 
@@ -171,7 +171,7 @@ public class RavenDB_22178 : RavenTestBase
             await secondFailingIndex.ExecuteAsync(store);
             await workingIndex.ExecuteAsync(store);
             
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             
             var database = await GetDatabase(store.Database);
 

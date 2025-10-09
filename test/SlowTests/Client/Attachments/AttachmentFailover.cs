@@ -49,7 +49,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
-                    session.Store(new User
+                    await session.StoreAsync(new User
                     {
                         Name = "Fitzchak"
                     }, "users/1");
@@ -75,7 +75,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(currentNode.ClusterTag, leader.ServerStore.NodeTag);
                         var currentServer = Servers.Single(x => x.ServerStore.NodeTag == currentNode.ClusterTag);
                         stream.Position++; // simulating that we already started to call this and we need to reset
-                        DisposeServerAndWaitForFinishOfDisposal(currentServer);
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(currentServer);
                         var task = session.RequestExecutor.ExecuteAsync(currentNode, currentIndex, session.Context, command);
                         await task;
                         saveChangesOperation.SetResult(command.Result);
@@ -85,7 +85,7 @@ namespace SlowTests.Client.Attachments
                 using (var dummyStream = new BigDummyStream(size))
                 using (var attachment = session.Advanced.Attachments.Get("users/1", "File"))
                 {
-                    attachment.Stream.CopyTo(dummyStream);
+                    await attachment.Stream.CopyToAsync(dummyStream);
                     Assert.Equal("File", attachment.Details.Name);
                     Assert.Equal(size, dummyStream.Position);
                     Assert.Equal(size, attachment.Details.Size);
@@ -131,7 +131,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var session = (DocumentSession)store.OpenSession())
                 {
-                    session.Store(new User
+                    await session.StoreAsync(new User
                     {
                         Name = "Fitzchak"
                     }, "users/1");
@@ -157,7 +157,7 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(currentNode.ClusterTag, leader.ServerStore.NodeTag);
 
                     stream.Position++; // simulating that we already started to call this and we need to reset
-                    DisposeServerAndWaitForFinishOfDisposal(currentServer);
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(currentServer);
                     var task = requestExecutor.ExecuteAsync(currentNode, currentIndex, context, command);
 
                     await task;
@@ -173,7 +173,7 @@ namespace SlowTests.Client.Attachments
                 using (var dummyStream = new BigDummyStream(size))
                 using (var attachment = session.Advanced.Attachments.Get("users/1", "File"))
                 {
-                    attachment.Stream.CopyTo(dummyStream);
+                    await attachment.Stream.CopyToAsync(dummyStream);
                     Assert.Equal("File", attachment.Details.Name);
                     Assert.Equal(size, dummyStream.Position);
                     Assert.Equal(size, attachment.Details.Size);

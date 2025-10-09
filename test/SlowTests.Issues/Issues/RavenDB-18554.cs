@@ -41,8 +41,8 @@ namespace SlowTests.Issues
                 }
                 
                 var index = new Categoroies_Details();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await index.ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 // Test
                 CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = new[]{ index.IndexName } };
@@ -69,8 +69,8 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(store.Database);
                 database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = d;
 
-                var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(settings));
-                operation.WaitForCompletion();
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                await operation.WaitForCompletionAsync();
 
                 Assert.NotNull(exception);
                 Assert.True(exception is DatabaseDisabledException);
@@ -105,8 +105,8 @@ namespace SlowTests.Issues
                 }
 
                 var index = new Categoroies_Details();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await index.ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 // Test
                 CompactSettings settings = new CompactSettings { DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
@@ -140,8 +140,8 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(responsibleNode, store.Database);
                 database.ForTestingPurposesOnly().CompactionAfterDatabaseUnload = d;
 
-                var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(settings));
-                operation.WaitForCompletion();
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(settings));
+                await operation.WaitForCompletionAsync();
 
                 // Check if failover succeeded
                 Assert.Null(exception);
@@ -170,8 +170,8 @@ namespace SlowTests.Issues
 
                 // Wait for indexing in first node
                 var index = new Categoroies_Details();
-                index.Execute(store);
-                Indexes.WaitForIndexing(store);
+                await index.ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 // Test
                 CompactSettings settings = new CompactSettings {DatabaseName = store.Database, Documents = true, Indexes = new[] { index.IndexName } };
@@ -238,7 +238,7 @@ namespace SlowTests.Issues
                 {
                     // wait for indexing to finish on the current node
                     var nodeTag = n.ServerStore.NodeTag;
-                    Indexes.WaitForIndexing(store,
+                    await Indexes.WaitForIndexingAsync(store,
                         databaseName: store.Database,
                         timeout: TimeSpan.FromMinutes(2),
                         nodeTag: nodeTag);

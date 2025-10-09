@@ -32,16 +32,16 @@ public class RavenDB_17807 : RavenTestBase
                 await commands.PutAsync("items/1", null, new { Name = "testname" },
                     new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Items" } });
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 var ids = new[] { "testname12", "testname1", "testname" };
-                var operation = store.Operations.Send(
+                var operation = await store.Operations.SendAsync(
                     new PatchByQueryOperation(
                         new IndexQuery
                         {
                             Query = $"FROM INDEX 'MyIndex' where Name in ($p0) UPDATE {{ this.NewName = 'NewValue'; this.IsActive = false; }} ",
                             QueryParameters = new Parameters { { "p0", ids } }
                         }, new QueryOperationOptions { AllowStale = true }));
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 dynamic document = await commands.GetAsync("items/1");
                 Assert.Equal("NewValue", document.NewName.ToString());
@@ -64,14 +64,14 @@ public class RavenDB_17807 : RavenTestBase
                 await commands.PutAsync("items/1", null, new { Name = "testname" },
                     new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Items" } });
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var ids = new[] { "testname12", "testname1", "testname" };
 
-                var operation = store.Operations.Send(new DeleteByQueryOperation(
+                var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(
                     new IndexQuery() { Query = $"FROM INDEX 'MyIndex'  where Name in ($p0)", QueryParameters = new Parameters { { "p0", ids } } },
                     new QueryOperationOptions { AllowStale = true }));
-                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 var documents = await commands.GetAsync(0, 25);
                 Assert.Equal(0, documents.Count());
@@ -93,12 +93,12 @@ public class RavenDB_17807 : RavenTestBase
                 await commands.PutAsync("items/1", null, new { Name = "testname" },
                     new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Items" } });
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var ids = new[] { "testname12", "testname1", "testname" };
 
 
-                var result = commands.Query(new IndexQuery()
+                var result = await commands.QueryAsync(new IndexQuery()
                 {
                     Query = $"FROM INDEX 'MyIndex'  where Name in ($p0)", QueryParameters = new Parameters { { "p0", ids } }
                 });

@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.ETL;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -68,7 +69,7 @@ public class RavenDB_19696 : RavenTestBase
             
             Etl.AddEtl(store, configuration, connectionString);
 
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            await etlDone.WaitAsync(TimeSpan.FromSeconds(10));
             
             using (var session = replica.OpenSession())
             {
@@ -135,7 +136,7 @@ public class RavenDB_19696 : RavenTestBase
 
             Etl.AddEtl(store, configuration, connectionString);
             
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            await etlDone.WaitAsync(TimeSpan.FromSeconds(10));
             
             using (var session = replica.OpenSession())
             {
@@ -202,7 +203,7 @@ public class RavenDB_19696 : RavenTestBase
 
             Etl.AddEtl(store, configuration, connectionString);
             
-            etlDone.Wait(TimeSpan.FromSeconds(10));
+            await etlDone.WaitAsync(TimeSpan.FromSeconds(10));
             
             using (var session = replica.OpenSession())
             {

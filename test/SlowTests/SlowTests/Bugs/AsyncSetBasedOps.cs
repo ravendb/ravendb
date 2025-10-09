@@ -60,7 +60,7 @@ namespace SlowTests.SlowTests.Bugs
                     }
                 }
 
-                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+                await Indexes.WaitForIndexingAsync(store, timeout: TimeSpan.FromMinutes(5));
 
                 await (await store.Operations.SendAsync(new PatchByQueryOperation(
                     new IndexQuery { Query = $"FROM INDEX '{stats.IndexName}' UPDATE {{ this.FullName = this.FirstName + ' ' + this.LastName; }}" }

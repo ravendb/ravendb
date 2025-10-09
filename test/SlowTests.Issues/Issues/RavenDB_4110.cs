@@ -67,11 +67,11 @@ namespace SlowTests.Issues
                 var index = new People_ByName();
                 await index.ExecuteAsync(store);
 
-                store.Maintenance.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.LockedError));
+                await store.Maintenance.SendAsync(new SetIndexesLockOperation(index.IndexName, IndexLockMode.LockedError));
 
                 await index.ExecuteAsync(store);
 
-                store.Maintenance.Send(new SetIndexesLockOperation(index.IndexName, IndexLockMode.Unlock));
+                await store.Maintenance.SendAsync(new SetIndexesLockOperation(index.IndexName, IndexLockMode.Unlock));
 
                 var definition = index.CreateIndexDefinition();
                 definition.LockMode = IndexLockMode.LockedError;
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                 };
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var c = await Assert.ThrowsAsync<IndexCreationException>(() => index.ExecuteAsync(store));
                 Assert.Contains("IndexAlreadyExistException", c.Message);

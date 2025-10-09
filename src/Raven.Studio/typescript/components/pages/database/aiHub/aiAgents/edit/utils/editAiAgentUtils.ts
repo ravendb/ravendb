@@ -3,7 +3,7 @@ import { AiAgentTrimmingMethod, EditAiAgentFormData } from "./editAiAgentValidat
 function mapFromDto(
     dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
     isClone?: boolean
-): EditAiAgentFormData {
+): Required<EditAiAgentFormData> {
     if (!dto) {
         return {
             name: "",
@@ -12,6 +12,7 @@ function mapFromDto(
             systemPrompt: "",
             sampleObject: "",
             outputSchema: "",
+            canRegenerateSchema: false,
             parameters: [],
             queries: [],
             actions: [],
@@ -35,6 +36,7 @@ function mapFromDto(
         systemPrompt: dto.SystemPrompt,
         sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
+        canRegenerateSchema: false,
         parameters:
             dto.Parameters?.map((x) => ({
                 name: x.Name,
@@ -45,11 +47,13 @@ function mapFromDto(
                 name: x.Name,
                 description: x.Description,
                 isAllowModelQueries: x.Options?.AllowModelQueries ?? null,
+                isAllowModelQueriesOverride: x.Options?.AllowModelQueries != null,
                 isAddToInitialContext: x.Options?.AddToInitialContext ?? null,
+                isAddToInitialContextOverride: x.Options?.AddToInitialContext != null,
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
-                isSaved: true,
+                canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
         actions:
@@ -58,7 +62,7 @@ function mapFromDto(
                 description: x.Description,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
-                isSaved: true,
+                canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
         trimming: {
@@ -107,8 +111,8 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
                 Options: {
-                    AddToInitialContext: x.isAddToInitialContext,
-                    AllowModelQueries: x.isAllowModelQueries,
+                    AddToInitialContext: x.isAddToInitialContextOverride ? x.isAddToInitialContext : null,
+                    AllowModelQueries: x.isAllowModelQueriesOverride ? x.isAllowModelQueries : null,
                 },
             })) ?? [],
         Actions:

@@ -30,7 +30,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new Users_ByName_Count().Execute(store);
+                await new Users_ByName_Count().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
 
                 using (var session = store.OpenSession())
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath);
@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                 };
 
                 RestoreBackupOperation restoreOperation = new RestoreBackupOperation(config2);
-                await store.Maintenance.Server.Send(restoreOperation)
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 using (var storeOfRestoredDb = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
                 };
 
                 RestoreBackupOperation restoreOperation = new RestoreBackupOperation(config2);
-                await store.Maintenance.Server.Send(restoreOperation)
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 using (var storeOfRestoredDb = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))

@@ -24,8 +24,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new UsersByName());
-                Indexes.WaitForIndexing(store);
+                await store.ExecuteIndexAsync(new UsersByName());
+                await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenSession())
                 {
                     var counter = 0;
@@ -124,8 +124,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new UsersByName());
-                Indexes.WaitForIndexing(store);
+                await store.ExecuteIndexAsync(new UsersByName());
+                await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenSession())
                 {
                     var counter = 0;
@@ -309,7 +309,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new UsersByName());
+                await store.ExecuteIndexAsync(new UsersByName());
 
                 using (var session = store.OpenSession())
                 {
@@ -404,7 +404,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new UsersByName());
+                await store.ExecuteIndexAsync(new UsersByName());
 
                 using (var session = store.OpenSession())
                 {
@@ -501,7 +501,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new UsersByName());
+                await store.ExecuteIndexAsync(new UsersByName());
 
                 using (var session = store.OpenSession())
                 {
@@ -561,7 +561,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new UsersByName());
+                await store.ExecuteIndexAsync(new UsersByName());
 
                 using (var session = store.OpenSession())
                 {

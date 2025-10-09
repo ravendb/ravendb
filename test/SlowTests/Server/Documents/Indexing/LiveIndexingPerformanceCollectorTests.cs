@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.Indexing
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                new UsersByName().Execute(store);
+                await new UsersByName().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -61,7 +61,7 @@ namespace SlowTests.Server.Documents.Indexing
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("Users/ByName");
@@ -88,7 +88,7 @@ namespace SlowTests.Server.Documents.Indexing
                 store.Initialize();
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-                new UsersByName().Execute(store);
+                await new UsersByName().ExecuteAsync(store);
                 
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
@@ -109,7 +109,7 @@ namespace SlowTests.Server.Documents.Indexing
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var dequeueCount = 0;
 

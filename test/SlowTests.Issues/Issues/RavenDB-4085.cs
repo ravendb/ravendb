@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                     {
                         for (var i = 0; i < 1000; i++)
                         {
-                            commands.Put("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, object>
+                            await commands.PutAsync("users/" + (i + 1), null, new { Name = "test #" + i }, new Dictionary<string, object>
                             {
                                 { Constants.Documents.Metadata.Collection, "Users" }
                             });

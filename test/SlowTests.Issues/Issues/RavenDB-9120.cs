@@ -88,11 +88,11 @@ namespace SlowTests.Issues
                 await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
                 var backupDirectory = Directory.GetDirectories(backupPath).First(); // get the temp folder created for backups
 
-                store.Maintenance.Server.Send(new RestoreBackupOperation(new RestoreBackupConfiguration()
+                await (await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreBackupConfiguration()
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = restoredDbMane
-                })).WaitForCompletion(TimeSpan.FromSeconds(30));
+                }))).WaitForCompletionAsync(TimeSpan.FromSeconds(30));
             }
 
             using (var store2 = GetDocumentStore(new Options()

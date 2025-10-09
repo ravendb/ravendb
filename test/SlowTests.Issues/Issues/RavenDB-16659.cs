@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         public async Task DeleteDatabaseDuringRestore()
         {
             DoNotReuseServer();
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
             var mre2 = new ManualResetEvent(false);
             var backupPath = NewDataPath();
 
@@ -55,12 +55,12 @@ namespace SlowTests.Issues
                         new RestoreBackupOperation(new RestoreBackupConfiguration
                         { BackupLocation = Path.Combine(backupPath, result.LocalBackup.BackupDirectory), DatabaseName = databaseName });
                     Server.ServerStore.ForTestingPurposesOnly().RestoreDatabaseAfterSavingDatabaseRecord += () => {
-                        mre.Set();
+                        amre.Set();
                         mre2.WaitOne(); // Wait to ensure the restore process doesn't finish until we intentionally cancel it.
                     };
 
                     var op  = await store.Maintenance.Server.SendAsync(restoreOperation);
-                    var res = await mre.WaitAsync(TimeSpan.FromSeconds(30));
+                    var res = await amre.WaitAsync(TimeSpan.FromSeconds(30));
                     Assert.True(res);
 
                     var val = await WaitForValueAsync(async () => await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName)) != null, true, 30_000);

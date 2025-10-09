@@ -38,7 +38,7 @@ public class RavenDB_21107 : RavenTestBase
                 new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration(compressRevisions: true, compressAllCollections: true)));
 
             await store.Maintenance.SendAsync(new CreateSampleDataOperation());
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             await AssertCompressionRecoveryFiles(store, path, expectedNumberOfDictionaries: 2);
 

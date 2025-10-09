@@ -61,7 +61,7 @@ namespace SlowTests.Issues
 
                 WaitForChangesApiOnAllNodes(blockingCollections,1);
                 WaitForDocumentOnAllNodes(stores, docId);
-                using(stores[1].AggressivelyCache(db))
+                using(await stores[1].AggressivelyCacheAsync(db))
                 using (var session = stores[1].OpenSession())
                 {
                     var user = session.Load<User>(docId);

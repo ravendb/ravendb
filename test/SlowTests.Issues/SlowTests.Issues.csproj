@@ -19,6 +19,11 @@
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\src\Usings.Server.cs">
+      <Link>Properties\Usings.Server.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Data\RavenDB-12785.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-13937.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-23409.rec" />

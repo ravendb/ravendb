@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new AdviceSearch().Execute(store);
+                await new AdviceSearch().ExecuteAsync(store);
                 using (var session = store.OpenSession())
                 {
                     SetupFacets(session);
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

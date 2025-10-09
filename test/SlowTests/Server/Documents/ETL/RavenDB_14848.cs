@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -63,7 +64,7 @@ namespace SlowTests.Server.Documents.ETL
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldResetEtl(Options options)
+        public async Task ShouldResetEtl(Options options)
         {
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore())
@@ -92,7 +93,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var etlDone = Etl.WaitForEtlToComplete(src);
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 var configuration2 = new RavenEtlConfiguration()
                 {
@@ -111,9 +112,9 @@ namespace SlowTests.Server.Documents.ETL
 
                 etlDone.Reset();
 
-                src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allDocs"));
+                await src.Maintenance.SendAsync(new ResetEtlOperation("myConfiguration", "allDocs"));
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {

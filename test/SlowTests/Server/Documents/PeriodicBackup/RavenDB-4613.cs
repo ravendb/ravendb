@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var readBuffer = new char[buffer.Length];
 
                     long read, totalRead = 0;
-                    while ((read = reader.Read(readBuffer, 0, readBuffer.Length)) > 0)
+                    while ((read = await reader.ReadAsync(readBuffer, 0, readBuffer.Length)) > 0)
                     {
                         for (var i = 0; i < read; i++)
                             Assert.Equal(buffer[i], (byte)readBuffer[i]);

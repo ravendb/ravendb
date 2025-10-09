@@ -441,14 +441,14 @@ namespace SlowTests.Server.Replication
                 }
 
                 var userIndex = new UserIndex();
-                store2.ExecuteIndex(userIndex);
+                await store2.ExecuteIndexAsync(userIndex);
 
                 using (var s2 = store2.OpenSession())
                 {
                     s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
-                Indexes.WaitForIndexing(store2);
+                await Indexes.WaitForIndexingAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
@@ -501,19 +501,19 @@ namespace SlowTests.Server.Replication
                 }
 
                 var userIndex = new UserIndex();
-                store2.ExecuteIndex(userIndex);
+                await store2.ExecuteIndexAsync(userIndex);
 
                 using (var s2 = store2.OpenSession())
                 {
                     s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
-                Indexes.WaitForIndexing(store2);
+                await Indexes.WaitForIndexingAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var operation = store2.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
+                var operation = await store2.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
 
                 Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
@@ -558,20 +558,20 @@ namespace SlowTests.Server.Replication
                 }
 
                 var userIndex = new UserIndex();
-                store2.ExecuteIndex(userIndex);
+                await store2.ExecuteIndexAsync(userIndex);
 
                 using (var s2 = store2.OpenSession())
                 {
                     s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
-                Indexes.WaitForIndexing(store2);
+                await Indexes.WaitForIndexingAsync(store2);
                 await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
                 // /indexes/Raven/DocumentsByEntityName
-                var operation = store2.Operations.Send(new PatchByQueryOperation(new IndexQuery
+                var operation = await store2.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
                 {
                     Query = $"FROM INDEX '{userIndex.IndexName}' UPDATE {{ }}"
                 }));

@@ -42,7 +42,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<dynamic>(subscriptionName);
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 int resultsCount = 0;
 
                 using (var session = store.OpenAsyncSession())
@@ -65,10 +65,10 @@ namespace SlowTests.Client.Subscriptions
                 {
                     foo = x.Items.First().Result.Foo;
                     resultsCount = x.Items.Count;
-                    mre.Set();
+                    amre.Set();
                 });
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 Assert.Equal("Bar", foo);
                 Assert.Equal(1, resultsCount);
 

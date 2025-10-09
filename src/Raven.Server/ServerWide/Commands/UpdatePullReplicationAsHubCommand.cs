@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class UpdatePullReplicationAsHubCommand : UpdateDatabaseCommand
+    public sealed class UpdatePullReplicationAsHubCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public PullReplicationDefinition Definition;
 
@@ -39,5 +39,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(Definition)] = Definition.ToJson();
         }
+
+        public override bool Disabled => Definition.Disabled;
     }
 }

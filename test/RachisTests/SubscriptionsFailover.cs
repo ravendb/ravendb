@@ -682,7 +682,7 @@ namespace RachisTests
             {
                 Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
                     var reqEx = store.GetRequestExecutor();
@@ -723,11 +723,11 @@ namespace RachisTests
                             return;
 
                         redirects[subscription.CurrentNodeTag] = ex.ToString();
-                        mre.Set();
+                        amre.Set();
                     };
                     var expectedTag = onlineServer.NodeTag;
                     _ = subscription.Run(x => { });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)), $"Could not redirect to alive node in time{Environment.NewLine}Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)), $"Could not redirect to alive node in time{Environment.NewLine}Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
 
                     Assert.True(redirects.Keys.Contains(expectedTag), $"Could not find '{expectedTag}' in Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
                     Assert.False(redirects.Keys.Contains(disposedTag), $"Found disposed '{disposedTag}' in Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
@@ -750,7 +750,7 @@ namespace RachisTests
             {
                 Servers.ForEach(x => x.ForTestingPurposesOnly().GatherVerboseDatabaseDisposeInformation = true);
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
                     var name = await subscriptionManager.CreateAsync(new SubscriptionCreationOptions<User>());
@@ -777,7 +777,7 @@ namespace RachisTests
 
                     subscription.OnEstablishedSubscriptionConnection += () =>
                     {
-                        mre.Set();
+                        amre.Set();
                     };
                     subscription.AfterAcknowledgment += batch =>
                     {
@@ -789,7 +789,7 @@ namespace RachisTests
                     };
                     _ = subscription.Run(x => { });
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)), $"Could not connect subscription in time{Environment.NewLine}Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)), $"Could not connect subscription in time{Environment.NewLine}Redirects:{Environment.NewLine}{string.Join(Environment.NewLine, redirects.Select(x => $"Tag: {x.Key}, Exception: {x.Value}").ToList())}");
 
                     subscription.OnSubscriptionConnectionRetry += ex =>
                     {

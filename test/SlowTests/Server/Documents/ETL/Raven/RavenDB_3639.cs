@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Docs_are_transformed_according_to_provided_collection_specific_scripts(Options options)
+        public async Task Docs_are_transformed_according_to_provided_collection_specific_scripts(Options options)
         {
             using (var master = GetDocumentStore(options))
             using (var slave = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = slave.OpenSession())
                 {

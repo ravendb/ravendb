@@ -229,7 +229,7 @@ namespace SlowTests.Issues
                     }
 
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     var facets = new List<Facet>
                     {
@@ -271,7 +271,7 @@ namespace SlowTests.Issues
                         new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets },
                         null);
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     using (var session = store.OpenAsyncSession())
                     {
@@ -396,7 +396,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new CameraCost();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var commands = store.Commands())
                 {
@@ -433,7 +433,7 @@ namespace SlowTests.Issues
                         }
                     };
 
-                    commands.Put(
+                    await commands.PutAsync(
                         "facets/CameraFacets",
                         null,
                         new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets },

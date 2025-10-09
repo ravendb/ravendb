@@ -10,7 +10,9 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.SqlMigration;
+using Sparrow.Server;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,7 +49,7 @@ namespace SlowTests.Issues
 
                     await store.Maintenance.SendAsync(operation);
 
-                    var etlDone = new ManualResetEventSlim();
+                    var etlDone = new AsyncManualResetEvent();
                     var configuration = new SqlEtlConfiguration
                     {
                         Name = sqlEtlConfigurationName,
@@ -91,7 +93,7 @@ loadToTestGuidEtls(item);"
                         await session.SaveChangesAsync();
                     }
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                     Assert.Equal(0, errors);
 
                     CheckCount(provider, connectionString, 1);
@@ -125,7 +127,7 @@ loadToTestGuidEtls(item);"
 
                     await store.Maintenance.SendAsync(operation);
 
-                    var etlDone = new ManualResetEventSlim();
+                    var etlDone = new AsyncManualResetEvent();
                     var configuration = new SqlEtlConfiguration
                     {
                         Name = sqlEtlConfigurationName,
@@ -170,7 +172,7 @@ loadToTestGuidEtls(item);"
                         session.SaveChanges();
                     }
 
-                    etlDone.Wait(TimeSpan.FromMinutes(5));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
                     Assert.Equal(0, errors);
 
                     CheckCount(provider, connectionString, 1);

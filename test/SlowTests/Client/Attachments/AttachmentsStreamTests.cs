@@ -563,7 +563,7 @@ namespace SlowTests.Client.Attachments
             }
 
             foreach (var stream in attachmentDictionary.Values)
-                stream.Dispose();
+                await stream.DisposeAsync();
         }
 
         [RavenTheory(RavenTestCategory.Attachments)]

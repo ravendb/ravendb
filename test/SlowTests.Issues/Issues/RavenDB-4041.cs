@@ -60,7 +60,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(options))
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -144,7 +144,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -210,7 +210,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -218,7 +218,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -277,7 +277,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -285,7 +285,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -353,7 +353,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
                 var id = new string('a', 130);
 
                 using (var session = store.OpenSession())
@@ -362,7 +362,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var commands = store.Commands())
                 {
@@ -468,7 +468,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -476,7 +476,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -544,7 +544,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -552,7 +552,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var commands = store.Commands())
                 {

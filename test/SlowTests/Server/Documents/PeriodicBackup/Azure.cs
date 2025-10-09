@@ -88,7 +88,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 holder.Client.DeleteBlobs(blobs);
 
-                var listBlobs = holder.Client.ListBlobs(prefix, null, listFolders: false);
+                var listBlobs = await holder.Client.ListBlobsAsync(prefix, null, listFolders: false);
                 var blobNames = listBlobs.List.Select(b => b.Name).ToList();
                 Assert.Equal(0, blobNames.Count);
             }
@@ -111,7 +111,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(blob.Size.GetValue(SizeUnit.Bytes) > 0);
 
                 using (var reader = new StreamReader(blob.Data))
-                    Assert.Equal("123", reader.ReadToEnd());
+                    Assert.Equal("123", await reader.ReadToEndAsync());
 
                 var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
                 var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
@@ -135,7 +135,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(blob);
 
                 using (var reader = new StreamReader(blob.Data))
-                    Assert.Equal("123", reader.ReadToEnd());
+                    Assert.Equal("123", await reader.ReadToEndAsync());
 
                 var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
                 var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
@@ -174,7 +174,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
-                        Assert.Equal("123", reader.ReadToEnd());
+                        Assert.Equal("123", await reader.ReadToEndAsync());
 
                     var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
                     var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal("value2", blob.Metadata[property2]);
                 }
 
-                var listBlobs = holder.Client.ListBlobs(prefix, null, listFolders: false);
+                var listBlobs = await holder.Client.ListBlobsAsync(prefix, null, listFolders: false);
                 Assert.Equal(blobsCount, listBlobs.List.Count());
             }
         }

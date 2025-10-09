@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new DocsIndex().Execute(store);
+                await new DocsIndex().ExecuteAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 0; i < 10; i++)
@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     }
                     await session.SaveChangesAsync();
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     var query = session.Query<Doc, DocsIndex>()
                         .Where(x => x.Id == "doc-1")

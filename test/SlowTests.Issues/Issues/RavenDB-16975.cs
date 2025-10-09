@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 });
                 await using (var sub = store.Subscriptions.GetSubscriptionWorker<Person>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -47,10 +47,10 @@ namespace SlowTests.Issues
                             Assert.Equal(0, batch.NumberOfIncludes);
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
                     
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -85,7 +85,7 @@ select f(people)
 
                 await using (var sub = store.Subscriptions.GetSubscriptionWorker<Person>(id))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -94,9 +94,9 @@ select f(people)
                             Assert.Equal(0, batch.NumberOfIncludes);
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }

@@ -160,8 +160,8 @@ namespace SlowTests.Blittable
                     using (var builder =
                         new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "some tag", parser, state))
                     {
-                        UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer);
-                        UnmanagedJsonParserHelper.ReadObject(builder, peepingTomStream, parser, buffer);
+                        await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer);
+                        await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer);
 
                         fromStream = builder.CreateReader();
                     }

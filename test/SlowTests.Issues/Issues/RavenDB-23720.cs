@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Indexes;
@@ -17,7 +18,7 @@ public class RavenDB_23720 : EmbeddingsGenerationTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
-    public void AutoIndexWithVectorSearchShouldBeConvertibleToStatic()
+    public async Task AutoIndexWithVectorSearchShouldBeConvertibleToStatic()
     {
         using (var store = GetDocumentStore())
         {
@@ -29,8 +30,8 @@ public class RavenDB_23720 : EmbeddingsGenerationTestBase
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -50,7 +51,7 @@ public class RavenDB_23720 : EmbeddingsGenerationTestBase
                 
                 store.Maintenance.Send(putIndexOp);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var textFieldName = staticDefinition.Fields.Single(x => x.Value.Vector.SourceEmbeddingType == VectorEmbeddingType.Text).Key;
                 var floatFieldName = staticDefinition.Fields.Single(x => x.Value.Vector.SourceEmbeddingType == VectorEmbeddingType.Single).Key;

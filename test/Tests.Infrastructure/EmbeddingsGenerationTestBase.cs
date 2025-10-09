@@ -83,12 +83,6 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         
         return (configuration, connectionString);
     }
-
-    protected (bool QueriesWorkerRegistered, bool IndexingWorkerRegistered) WaitForEmbeddingsGenerationWorkerToRegister(IDocumentStore store, EmbeddingsGenerationConfiguration embeddingsGenerationConfigurationTask,
-        string database = null)
-    {
-        return AsyncHelpers.RunSync(() => WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, embeddingsGenerationConfigurationTask, database));
-    }
     
     protected async Task<(bool QueriesWorkerRegistered, bool IndexingWorkerRegistered)> WaitForEmbeddingsGenerationWorkerToRegisterAsync(IDocumentStore store, EmbeddingsGenerationConfiguration embeddingsGenerationConfigurationTask, string databaseName = null)
     {

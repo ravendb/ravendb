@@ -251,7 +251,7 @@ namespace SlowTests.Issues
                 }
                 finally
                 {
-                    cts.Cancel();
+                    await cts.CancelAsync();
                 }
 
                 await Task.WhenAll(t1, t2, t3);

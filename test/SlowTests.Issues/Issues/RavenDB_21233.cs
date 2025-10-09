@@ -102,13 +102,13 @@ select new
                  */
 
                 await store.Maintenance.SendAsync(new PutIndexesOperation(_indexDefinition));
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 options.IgnoreMaxStepsForScript = true;
                 operation = await store.Operations.SendAsync(new PatchByQueryOperation(q2, options));
                 await operation.WaitForCompletionAsync();
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 /*
                  * Execute the script q2 (static index query) with a greater number of steps than the default configuration

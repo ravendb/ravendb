@@ -23,8 +23,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new MyTsIndex().Execute(store);
-                new MyCounterIndex().Execute(store);
+                await new MyTsIndex().ExecuteAsync(store);
+                await new MyCounterIndex().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 state = tombstoneCleaner.GetState().Tombstones;
 
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 WaitForValue(() =>
                 {

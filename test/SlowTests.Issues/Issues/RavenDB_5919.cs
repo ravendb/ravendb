@@ -115,18 +115,18 @@ namespace SlowTests.Issues
         {
             using (var documentStore = GetDocumentStore())
             {
-                new Entity_ById_V1().Execute(documentStore);
+                await new Entity_ById_V1().ExecuteAsync(documentStore);
 
-                documentStore.Maintenance.Send(new StopIndexingOperation());
+                await documentStore.Maintenance.SendAsync(new StopIndexingOperation());
 
-                new Entity_ById_V2().Execute(documentStore);
+                await new Entity_ById_V2().ExecuteAsync(documentStore);
 
                 var index = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById";
                 var index1 = documentStore.Maintenance.Send(new GetIndexOperation(index));
 
                 var indexInstance1 = (await Databases.GetDocumentDatabaseInstanceFor(documentStore)).IndexStore.GetIndex(index);
 
-                new Entity_ById_V2().Execute(documentStore);
+                await new Entity_ById_V2().ExecuteAsync(documentStore);
 
                 var indexInstance2 = (await Databases.GetDocumentDatabaseInstanceFor(documentStore)).IndexStore.GetIndex(index);
 

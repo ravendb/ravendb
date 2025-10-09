@@ -534,7 +534,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
             });
 
 
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
             var mre2 = new AsyncManualResetEvent();
 
             var exceptions = new List<Exception>();
@@ -546,12 +546,12 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
             // fetch all docs from storage to the received subscription batch, then wait on mre2
             var fetchFromStorageTask = subscription.Run(async x =>
             {
-                mre.Set();
+                amre.Set();
                 Assert.True(await mre2.WaitAsync(reasonableWaitTime), "await mre2.WaitAsync(_reasonableWaitTime)");
             });
 
             // wait for setting mre above
-            Assert.True(await mre.WaitAsync(reasonableWaitTime), "await mre.WaitAsync(_reasonableWaitTime)");
+            Assert.True(await amre.WaitAsync(reasonableWaitTime), "await amre.WaitAsync(_reasonableWaitTime)");
 
 
             // drop subscription

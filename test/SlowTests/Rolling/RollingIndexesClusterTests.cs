@@ -125,7 +125,7 @@ namespace SlowTests.Rolling
                     {
                         try
                         {
-                            cts.Cancel();
+                            await cts.CancelAsync();
                             await t;
                         }
                         catch
@@ -200,7 +200,7 @@ namespace SlowTests.Rolling
                     {
                         try
                         {
-                            cts.Cancel();
+                            await cts.CancelAsync();
                             await t;
                         }
                         catch
@@ -306,7 +306,7 @@ namespace SlowTests.Rolling
                     {
                         try
                         {
-                            cts.Cancel();
+                            await cts.CancelAsync();
                             await t;
                         }
                         catch
@@ -383,7 +383,7 @@ namespace SlowTests.Rolling
                 }
                 finally
                 {
-                    source.Cancel();
+                    await source.CancelAsync();
                 }
             }
         }

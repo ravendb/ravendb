@@ -101,7 +101,7 @@ namespace SlowTests.Issues
 
 
                 // now, we modify the values and make sure that we received them
-                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration
+                await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(new ClientConfiguration
                 {
                     MaxNumberOfRequestsPerSession = 10, ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.None
                 }));
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
 
                 // now we want to disable the client configuration and use the "default" ones
 
-                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration
+                await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(new ClientConfiguration
                 {
                     MaxNumberOfRequestsPerSession = 10, ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.None, Disabled = true
                 }));

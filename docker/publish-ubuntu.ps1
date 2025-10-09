@@ -1,19 +1,21 @@
 param(
-    $Repo = "ravendb/ravendb", 
-    $ArtifactsDir = "..\artifacts",
-    $Arch = "x64",
+    [string]$Repo = "ravendb/ravendb",
+    [string]$ArtifactsDir = "..\artifacts",
+    [string]$Arch = "x64",
     [switch]$DryRun = $False,
-    [switch]$RemoveImages = $False)
+    [switch]$RemoveImages = $False,
+    [switch]$UseVersionTagsOnly
+)
 
 $ErrorActionPreference = "Stop"
 
 . ".\common.ps1"
 
 if ($env:DRY_RUN) {
-    $DryRun=$True
+    $DryRun = $True
 }
 
-function PushImagesToDockerHub($imageTags) {
+function PushImagesToDockerHub([string[]]$imageTags) {
     write-host "Pushing images to Docker Hub."
     foreach ($tag in $imageTags) {
         write-host "Push $tag"
@@ -22,14 +24,14 @@ function PushImagesToDockerHub($imageTags) {
     }
 }
 
-function PushImagesDryRun($imageTags) {
+function PushImagesDryRun([string[]]$imageTags) {
     write-host "DRY RUN: Pushing images."
     foreach ($tag in $imageTags) {
         write-host "DRY RUN: docker push $tag"
     }
 }
 
-function PushImages($imageTags) {
+function PushImages([string[]]$imageTags) {
     if ($DryRun -eq $False) {
         PushImagesToDockerHub $imageTags
     }
@@ -48,7 +50,7 @@ function RemoveImages($imageTags) {
 }
 
 $version = GetVersionFromArtifactName
-$tags = GetUbuntuImageTags $Repo $version $Arch
+[string[]]$tags = GetUbuntuImageTags $Repo $version $Arch $UseVersionTagsOnly
 PushImages $tags
 
 if ($RemoveImages) {

@@ -28,7 +28,7 @@ namespace SlowTests.Issues
             {
                 SetupData(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var searchedVakanzId = "Vakanz/89d3d971-a227-430e-97ba-613799253a37";
 

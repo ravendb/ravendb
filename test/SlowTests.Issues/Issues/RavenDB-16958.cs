@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    var id = storeB.Subscriptions.Create<User>();
+                    var id = await storeB.Subscriptions.CreateAsync<User>();
                     await using (var subscription = storeB.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    var id = storeB.Subscriptions.Create<User>();
+                    var id = await storeB.Subscriptions.CreateAsync<User>();
                     await using (var subscription = storeB.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)

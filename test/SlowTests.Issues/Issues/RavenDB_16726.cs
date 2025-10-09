@@ -49,7 +49,7 @@ namespace SlowTests.Issues
 
                 await index.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var notificationsQueue = new AsyncQueue<DynamicJsonValue>();
 
@@ -62,7 +62,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     Tuple<bool, DynamicJsonValue> performanceHint;
 
@@ -107,7 +107,7 @@ namespace SlowTests.Issues
                         session.SaveChanges();
                     }
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     db.NotificationCenter.Indexing.UpdateIndexing(null);
 

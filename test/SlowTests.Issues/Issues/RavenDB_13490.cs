@@ -56,7 +56,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new MapReduce_WithOutput().Execute(store);
+                await new MapReduce_WithOutput().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 string artificialDocumentId = null;
 
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new MapReduce_WithOutput().Execute(store);
+                await new MapReduce_WithOutput().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -169,7 +169,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 string artificialDocumentId = null;
 

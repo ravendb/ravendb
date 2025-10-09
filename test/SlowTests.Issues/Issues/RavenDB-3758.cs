@@ -105,7 +105,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new Orders_All().Execute(store);
+                await new Orders_All().ExecuteAsync(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Order { Currency = Currency.EUR, Product = "Milk", Total = 1000, Quantity = 1 });
@@ -119,11 +119,11 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.Equal(1, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 await new Orders_All_Changed().ExecuteAsync(store);
                 await new Orders_All_Changed2().ExecuteAsync(store);

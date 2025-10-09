@@ -99,7 +99,7 @@ namespace SlowTests.Client.Subscriptions
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     GC.KeepAlive(sub.Run(x =>
                     {
@@ -108,11 +108,11 @@ namespace SlowTests.Client.Subscriptions
                             names.Add(item.Result.Current?.Name + item.Result.Previous?.Name);
 
                             if (names.Count == 100)
-                                mre.Set();
+                                amre.Set();
                         }
                     }));
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 }
             }
@@ -178,7 +178,7 @@ namespace SlowTests.Client.Subscriptions
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     var maxAge = -1;
                     GC.KeepAlive(sub.Run(a =>
@@ -193,11 +193,11 @@ namespace SlowTests.Client.Subscriptions
                             }
                             names.Add(x.Current?.Name + x.Previous?.Name);
                             if (names.Count == 10)
-                                mre.Set();
+                                amre.Set();
                         }
                     }));
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 }
             }
@@ -281,7 +281,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     GC.KeepAlive(sub.Run(x =>
                     {
@@ -289,11 +289,11 @@ select { Id: id(d.Current), Age: d.Current.Age }
                         {
                             names.Add(item.Result.Id + item.Result.Age);
                             if (names.Count == 90)
-                                mre.Set();
+                                amre.Set();
                         }
                     }));
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 }
             }
@@ -372,7 +372,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
                     var maxAge = -1;
                     GC.KeepAlive(sub.Run(x =>
@@ -386,11 +386,11 @@ select { Id: id(d.Current), Age: d.Current.Age }
                             }
 
                             if (names.Count == 9)
-                                mre.Set();
+                                amre.Set();
                         }
                     }));
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 }
             }

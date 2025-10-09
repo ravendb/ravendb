@@ -5,6 +5,7 @@ using FastTests;
 using FastTests.Utils;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -50,7 +51,7 @@ public class RavenDB_16751 : RavenTestBase
                                                             loadToUsers(this);");
 
             var etlDone = Etl.WaitForEtlToComplete(src);
-            etlDone.Wait(TimeSpan.FromMinutes(1));
+            await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
             
             // Assert
             List<User> revisions;

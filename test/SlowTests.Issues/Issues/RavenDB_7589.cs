@@ -29,7 +29,7 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
 
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
             Server.ServerStore.Cluster.Changes.DatabaseChanged += (arg1,arg2,arg3,arg4, _) =>
             {
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                 var value = Interlocked.Increment(ref _numberOfDatabasesRemoved);
 
                 if (value == 3)
-                    mre.Set();
+                    amre.Set();
 
                 return Task.CompletedTask;
             };
@@ -141,7 +141,7 @@ namespace SlowTests.Issues
                 Assert.Equal(2, identities["addresses|"]);
             }
 
-            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(10)));
 
             using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())

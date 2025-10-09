@@ -61,7 +61,7 @@ namespace SlowTests.Client.Subscriptions
                         Query = "from Things where Name = 'ThingNo3'",
                         ChangeVector = lastChangeVector
                     };
-                    var subsId = subscriptionManager.Create(subscriptionCreationParams);
+                    var subsId = await subscriptionManager.CreateAsync(subscriptionCreationParams);
                     using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
@@ -140,7 +140,7 @@ select project(d)
                         ChangeVector = lastChangeVector
                     };
 
-                    var subsId = subscriptionManager.Create(subscriptionCreationParams);
+                    var subsId = await subscriptionManager.CreateAsync(subscriptionCreationParams);
                     using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)

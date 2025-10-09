@@ -78,13 +78,13 @@ namespace SlowTests.Issues
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 SubscriptionBatchPerformanceStats stats = null;
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 db.SubscriptionStorage.OnEndBatch += (s, aggregator) =>
                 {
                     stats = aggregator.ToBatchPerformanceStats();
-                    mre.Set();
+                    amre.Set();
                 };
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeCounter(counter1)
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                         .IncludeTimeSeries(timeSeries, TimeSeriesRangeType.Last, 100)
                 });
 
-                await AssertSubscription(store, name, mre);
+                await AssertSubscription(store, name, amre);
 
                 Assert.NotNull(stats);
                 Assert.Equal(expectedCountersSize, stats.SizeOfIncludedCountersInBytes);
@@ -100,7 +100,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static async Task AssertSubscription(DocumentStore store, string name, AsyncManualResetEvent mre)
+        private static async Task AssertSubscription(DocumentStore store, string name, AsyncManualResetEvent amre)
         {
             var baseline = new DateTime(2021, 1, 1);
             using (var sub = store.Subscriptions.GetSubscriptionWorker<Product>(name))
@@ -128,7 +128,7 @@ namespace SlowTests.Issues
                         Assert.Equal(0, s.Advanced.NumberOfRequests);
                     }
                 });
-                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
                 await sub.DisposeAsync();
                 await r; // no error
             }

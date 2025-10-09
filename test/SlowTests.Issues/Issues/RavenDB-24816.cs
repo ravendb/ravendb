@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -80,7 +81,7 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void OverlapTokensSettingInScriptShouldWork()
+    public async Task OverlapTokensSettingInScriptShouldWork()
     {
         const string plainTextToChunk =
             "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
@@ -110,8 +111,8 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: text.splitParagraphs(this.Name, 10, 5) });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -120,7 +121,7 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void OverlapTokensSettingViaPathShouldWork()
+    public async Task OverlapTokensSettingViaPathShouldWork()
     {
         const string plainTextToChunk =
             "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
@@ -158,8 +159,8 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
                     }}
                 ]);
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -202,7 +203,7 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void UnsupportedChunkingSettingsInScriptThrowRelevantException()
+    public async Task UnsupportedChunkingSettingsInScriptThrowRelevantException()
     {
         const string plainTextToChunk =
             "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
@@ -222,7 +223,7 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
             var (configuration, _) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 10, 5) });");
 
-            aiTaskDone.Wait(TimeSpan.FromSeconds(5));
+            await aiTaskDone.WaitAsync(TimeSpan.FromSeconds(5));
 
             var transformationError = Etl.TryGetTransformationErrorAsync(store.Database, configuration).GetAwaiter().GetResult();
 
@@ -231,7 +232,7 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void OverlapTokensShouldBeBackwardCompatible()
+    public async Task OverlapTokensShouldBeBackwardCompatible()
     {
         const string plainTextToChunk =
             "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
@@ -258,8 +259,8 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: text.splitParagraphs(this.Name, 10) });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             

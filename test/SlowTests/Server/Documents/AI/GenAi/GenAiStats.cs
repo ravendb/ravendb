@@ -13,6 +13,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -69,7 +70,7 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
         var stats = etlProcess.GetPerformanceStats()
             .Where(x => x.NumberOfLoadedItems > 0)
@@ -106,7 +107,7 @@ for(const comment of this.Comments)
 
             await session.SaveChangesAsync();
 
-            Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
             EtlPerformanceStats[] stats2 = null;
 
@@ -172,7 +173,7 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
         var db = await GetDatabase(store.Database);
         var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
@@ -253,7 +254,7 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
         var db = await GetDatabase(store.Database);
 
@@ -426,7 +427,7 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
         var db = await GetDatabase(store.Database);
         var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;

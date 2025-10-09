@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(options))
             {
-                new SampleData_Index().Execute(store);
+                await new SampleData_Index().ExecuteAsync(store);
 
                 const string name = "John Doe";
                 using (var session = store.OpenSession())

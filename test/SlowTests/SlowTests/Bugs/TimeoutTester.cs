@@ -95,13 +95,13 @@ namespace SlowTests.SlowTests.Bugs
                 ModifyDocumentStore = ModifyStore
             }))
             {
-                new Answers_ByAnswerEntity().Execute(store);
+                await new Answers_ByAnswerEntity().ExecuteAsync(store);
                 var answerId = "";
 
                 CreateEntities(store, 0);
 
                 const string content = "This is doable";
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;

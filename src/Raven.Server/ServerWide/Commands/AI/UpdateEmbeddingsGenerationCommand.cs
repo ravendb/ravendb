@@ -90,4 +90,6 @@ public sealed class UpdateEmbeddingsGenerationCommand : UpdateEtlCommand<Embeddi
             throw new RachisApplyException("Failed to validate AI Integration configuration", e);
         }
     }
+
+    public override bool Disabled => Configuration.Disabled;
 }

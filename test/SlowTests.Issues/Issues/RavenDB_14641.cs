@@ -38,7 +38,7 @@ namespace SlowTests.Issues
         private async Task IndexStartupBehaviorTestInternal(DocumentStore store)
         {
             var index = new Companies_ByName();
-            index.Execute(store);
+            await index.ExecuteAsync(store);
 
             string autoIndexName = null;
 
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                 autoIndexName = stats.IndexName;
             }
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 

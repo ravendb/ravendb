@@ -26,7 +26,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = @"From Users as u Where startsWith(u.Name,'Th')"
                 });
@@ -73,7 +73,7 @@ namespace SlowTests.Client.Subscriptions
         {            
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = @"From Users as u Where endsWith(u.Name,'nd')"
                 });
@@ -120,7 +120,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = @"From Users as u Where regex(u.Name,'^Th')"
                 });
@@ -171,7 +171,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = @"From Users as u Where exists(u.AddressId)"
                 });
@@ -214,7 +214,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = "From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, 'fabulous'))"
                 });
@@ -257,7 +257,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = "From Users as u Where intersect(endsWith(u.Name,'nd'), startsWith(u.Name, 'Th'), regex(u.Name, '^(\\\\w+\\\\s+){4}\\\\w+$'))"
                 });
@@ -300,7 +300,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = "From Users as u Where startsWith(u.Name, 'my\\\\id')"
                 });
@@ -343,7 +343,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore(options))
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = @"
 

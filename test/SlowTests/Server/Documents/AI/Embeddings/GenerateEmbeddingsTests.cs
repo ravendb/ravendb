@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Ai)]
-    public void CanSingleDocumentHaveTwoEmbeddings()
+    public async Task CanSingleDocumentHaveTwoEmbeddings()
     {
         using var store = GetDocumentStore();
         string id;
@@ -46,8 +46,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             new EmbeddingPathConfiguration() { Path = "SubDto.Name", ChunkingOptions = DefaultChunkingOptions }
         ]);
         
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         
@@ -68,7 +68,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             session.SaveChanges();
         }
 
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["Name2", "Name4"], id);
@@ -78,7 +78,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void DocumentsWithSingleValue()
+    public async Task DocumentsWithSingleValue()
     {
         using (var store = GetDocumentStore())
         {
@@ -91,8 +91,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -101,7 +101,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void DocumentsWithListOfValues()
+    public async Task DocumentsWithListOfValues()
     {
         using (var store = GetDocumentStore())
         {
@@ -115,8 +115,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -125,7 +125,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void DocumentsWithNestedPropertyPath()
+    public async Task DocumentsWithNestedPropertyPath()
     {
         using (var store = GetDocumentStore())
         {
@@ -141,8 +141,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDto.Name" , ChunkingOptions = DefaultChunkingOptions }]);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -151,7 +151,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void DocumentsWithNestedArrayPropertyPath()
+    public async Task DocumentsWithNestedArrayPropertyPath()
     {
         using (var store = GetDocumentStore())
         {
@@ -167,8 +167,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "SubDtos.Name" , ChunkingOptions = DefaultChunkingOptions}]);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -177,7 +177,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void EmbeddingsMustBeGeneratedOnlyOnceInDifferentBatches()
+    public async Task EmbeddingsMustBeGeneratedOnlyOnceInDifferentBatches()
     {
         using (var store = GetDocumentStore())
         {
@@ -196,8 +196,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var embeddingDocName = EmbeddingsHelper.GetEmbeddingCacheDocumentId(aiConnectionStringIdentifier, EmbeddingsHelper.CalculateInputValueHash("Name1"), VectorEmbeddingType.Single);
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -217,7 +217,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 session.Store(dto2);
                 session.SaveChanges();
             }
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
             using (var session = store.OpenSession())
             {
@@ -231,7 +231,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void UpdateOfDocumentsWithSingleValue()
+    public async Task UpdateOfDocumentsWithSingleValue()
     {
         using (var store = GetDocumentStore())
         {
@@ -245,8 +245,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -263,14 +263,14 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 session.SaveChanges();
                 dto = loadDoc;
             }
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
             AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["updated"], dto.Id);
         }
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void HandlingOfNonStringValues()
+    public async Task HandlingOfNonStringValues()
     {
         using (var store = GetDocumentStore())
         {
@@ -284,8 +284,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Age", ChunkingOptions = DefaultChunkingOptions }]);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -294,7 +294,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void FieldsToIncludeMustBeRespected()
+    public async Task FieldsToIncludeMustBeRespected()
     {
         using (var store = GetDocumentStore())
         {
@@ -308,8 +308,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -337,7 +337,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 aiTaskDone.Reset();
                 session.Store(dto);
                 session.SaveChanges();
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
                 var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
@@ -365,7 +365,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 dto.Age = 37;
                 session.SaveChanges();
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
                 var stats2 = etlProcess.GetPerformanceStats()
                     .Where(x => x.NumberOfLoadedItems > 0)
@@ -402,7 +402,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
@@ -440,7 +440,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
@@ -456,7 +456,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void HandlingOfDocumentDeletions()
+    public async Task HandlingOfDocumentDeletions()
     {
         var dto1 = new Dto { Name = "Name1" };
         var dto2 = new Dto { Name = "Name2" };
@@ -471,8 +471,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -481,7 +481,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 session.Delete(dto1);
                 session.SaveChanges();
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             }
 
             var documentEmbeddingsId1 = EmbeddingsHelper.GetEmbeddingDocumentId(dto1.Id);
@@ -499,7 +499,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void WillSetExpirationOnCacheDocuments()
+    public async Task WillSetExpirationOnCacheDocuments()
     {
         var dto = new Dto { Name = "Name1" };
 
@@ -513,8 +513,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
             
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -548,7 +548,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
             var aiTaskDone = Etl.WaitForEtlToComplete(store);
             var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
@@ -582,7 +582,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
                 session.SaveChanges();
             }
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
             AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Name1"], dto.Id);
 
             using (var session = store.OpenSession())
@@ -601,7 +601,7 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void SimpleJsTransformation()
+    public async Task SimpleJsTransformation()
     {
         const string aiIntegrationName = "local-Onnx-AI";
         var dto = new Dto { Name = "Name1" };
@@ -623,8 +623,8 @@ embeddings.generate(
     Bar: 'ConstValue'
 });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             
@@ -635,7 +635,7 @@ embeddings.generate(
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void NestedJsTransformation()
+    public async Task NestedJsTransformation()
     {
         const string aiIntegrationName = "local-Onnx-AI";
         var dto = new Dto { Name = "<h1>Name1</a1>" };
@@ -656,8 +656,8 @@ embeddings.generate(
     Foo: [html.strip(this.Name, 15), 'hello'], 
 });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -667,7 +667,7 @@ embeddings.generate(
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void HashingOfTextShouldBeCaseInsensitiveAndTrimWhitespaces()
+    public async Task HashingOfTextShouldBeCaseInsensitiveAndTrimWhitespaces()
     {
         var dto = new Dto() { Name = "\n UPPERCASEVALUE\n\r " };
         
@@ -683,8 +683,8 @@ embeddings.generate(
 
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store);
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -695,7 +695,7 @@ embeddings.generate(
     private record Test(string Id, DateTime? Expires);
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void TextChunkingInScript()
+    public async Task TextChunkingInScript()
     {
         const string plainTextToChunk =
             "text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk text to chunk";
@@ -716,8 +716,8 @@ embeddings.generate(
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 5) });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
 
@@ -748,7 +748,7 @@ embeddings.generate(
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void MarkdownChunkingInScript()
+    public async Task MarkdownChunkingInScript()
     {
         const string markdownTextToChunk =
             @"# Sample Markdown
@@ -794,8 +794,8 @@ Console.WriteLine(""Hello, World!"");";
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: markdown.splitLines(this.Name, 20) });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
@@ -803,7 +803,7 @@ Console.WriteLine(""Hello, World!"");";
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void CanUseHtmlChunkingInScript()
+    public async Task CanUseHtmlChunkingInScript()
     {
         const string htmlTextToChunk =
             @"<html>
@@ -842,8 +842,8 @@ Console.WriteLine(""Hello, World!"");";
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ChunkedName: html.strip(this.Name, 5) });");
             
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
@@ -851,7 +851,7 @@ Console.WriteLine(""Hello, World!"");";
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void CanUseHtmlChunkingInPaths()
+    public async Task CanUseHtmlChunkingInPaths()
     {
         const string htmlTextToChunk =
             @"<html>
@@ -896,8 +896,8 @@ Console.WriteLine(""Hello, World!"");";
                 }}
             });
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", expectedChunks, dto.Id);
@@ -905,7 +905,7 @@ Console.WriteLine(""Hello, World!"");";
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void TransformationWithArrayFieldOutput()
+    public async Task TransformationWithArrayFieldOutput()
     {
         var dto = new Dto { Name = "CoolName" };
 
@@ -922,8 +922,8 @@ Console.WriteLine(""Hello, World!"");";
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                 script: "embeddings.generate({ ArrayField: [this.Name, 'ConstValue'] });");
 
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
             Assert.True(queriesWorkerRegistered);
             Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ArrayField", ["CoolName", "ConstValue"], dto.Id);
@@ -931,7 +931,7 @@ Console.WriteLine(""Hello, World!"");";
     }
 
     [RavenFact(RavenTestCategory.Ai | RavenTestCategory.Vector | RavenTestCategory.Etl)]
-    public void QuantizationOfEmbeddingsInTwoTasks()
+    public async Task QuantizationOfEmbeddingsInTwoTasks()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         string id;
@@ -946,8 +946,8 @@ Console.WriteLine(""Hello, World!"");";
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
         var (configuration1, connectionString1) = AddEmbeddingsGenerationTask(store,
             embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: VectorEmbeddingType.Int8);
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration1);
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration1);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configuration1, connectionString1, "Name", ["CoolName"], id, VectorEmbeddingType.Int8);
@@ -955,8 +955,8 @@ Console.WriteLine(""Hello, World!"");";
         aiTaskDone.Reset();
         var (configuration2, connectionString2) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "secondtask",
             embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: VectorEmbeddingType.Single);
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-        (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration2);
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration2);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configuration1, connectionString1, "Name", ["CoolName"], id, VectorEmbeddingType.Int8);
@@ -964,7 +964,7 @@ Console.WriteLine(""Hello, World!"");";
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void QuantizationOfEmbeddingsInTask()
+    public async Task QuantizationOfEmbeddingsInTask()
     {
         var dto = new Dto { Name = "CoolName" };
         var targetQuantization = VectorEmbeddingType.Binary;
@@ -981,8 +981,8 @@ Console.WriteLine(""Hello, World!"");";
                 var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                     embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], targetQuantization: targetQuantization);
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 var connectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
@@ -1014,7 +1014,7 @@ Console.WriteLine(""Hello, World!"");";
     [InlineData(VectorEmbeddingType.Int8)]
     [InlineData(VectorEmbeddingType.Binary)]
     [InlineData(VectorEmbeddingType.Single)]
-    public void ChunkingInEmbeddingsGenerationTaskConfiguration(VectorEmbeddingType quantization)
+    public async Task ChunkingInEmbeddingsGenerationTaskConfiguration(VectorEmbeddingType quantization)
     {
         var subDto = new SubDto() { Name = "pretty long text that will generate multiple chunks" };
         var dto = new Dto { Name = "different text that won't be chunked because of the configuration", SubDto = subDto};
@@ -1043,8 +1043,8 @@ Console.WriteLine(""Hello, World!"");";
                     targetQuantization: quantization,
                     embeddingsPaths: [nameConfig, subdtoNameConfig]);
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 AssertEmbeddingsForPath(store, configuration, connectionString, nameConfig.Path, Raven.Server.Documents.AI.TextChunker.Chunk(dto.Name, nameConfig.ChunkingOptions).ToArray(), dto.Id, quantization);
@@ -1109,7 +1109,7 @@ Console.WriteLine(""Hello, World!"");";
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void CollisionOfTwoEmbeddingsInSingleTask()
+    public async Task CollisionOfTwoEmbeddingsInSingleTask()
     {
         using var store = GetDocumentStore();
         string id;
@@ -1128,8 +1128,8 @@ Console.WriteLine(""Hello, World!"");";
             new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions },
         ]);
         
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, config, connection, "Name", ["Name1"], id);
@@ -1141,13 +1141,13 @@ Console.WriteLine(""Hello, World!"");";
             session.Load<Dto>(id).Name = "Updated";
             session.SaveChanges();
         }        
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
         AssertEmbeddingsForPath(store, config, connection, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, config, connection, "Names", ["Name1"], id);
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void CollisionOfTwoEmbeddingsInTwoTasks()
+    public async Task CollisionOfTwoEmbeddingsInTwoTasks()
     {
         using var store = GetDocumentStore();
         string id;
@@ -1170,11 +1170,11 @@ Console.WriteLine(""Hello, World!"");";
             new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions },
         ]);
         
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
-        (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config2);
+        (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config2);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         
@@ -1188,14 +1188,14 @@ Console.WriteLine(""Hello, World!"");";
             session.SaveChanges();
         }        
 
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
         AssertEmbeddingsForPath(store, config, connection, "Name", ["Updated"], id);
         AssertEmbeddingsForPath(store, config2, connection2, "Names", ["Name1"], id);
     }
     
     [RavenFact(RavenTestCategory.Ai)]
-    public void CanUseProjectedFieldNameForQuery()
+    public async Task CanUseProjectedFieldNameForQuery()
     {
         const string plainTextToChunk = "some text that should produce a single chunk";
         string[] expectedChunks = ["some text that should produce a single chunk"];
@@ -1214,8 +1214,8 @@ Console.WriteLine(""Hello, World!"");";
                 var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
                     script: "embeddings.generate({ ChunkedName: text.split(this.Name, 2048) });");
 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier),

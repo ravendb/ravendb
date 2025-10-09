@@ -7,6 +7,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -60,7 +61,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= 5);
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 var database = await GetDatabase(src.Database);
 
@@ -78,7 +79,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     return s.LoadSuccesses >= 6;
                 });
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)), $"ETL sent only {loadSuccesses} docs");;
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)), $"ETL sent only {loadSuccesses} docs");;
             }
         }
     }

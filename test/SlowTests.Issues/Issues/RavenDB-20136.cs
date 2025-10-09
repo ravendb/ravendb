@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                if (loadDone1.Wait(TimeSpan.FromSeconds(30)) == false)
+                if (await loadDone1.WaitAsync(TimeSpan.FromSeconds(30)) == false)
                 {
                     var loadError = await Etl.TryGetLoadErrorAsync(src.Database, configuration);
                     var transformationError = await Etl.TryGetTransformationErrorAsync(src.Database, configuration);
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                if (loadDone2.Wait(TimeSpan.FromSeconds(30)) == false)
+                if (await loadDone2.WaitAsync(TimeSpan.FromSeconds(30)) == false)
                 {
                     var loadError = await Etl.TryGetLoadErrorAsync(src.Database, configuration);
                     var transformationError = await Etl.TryGetTransformationErrorAsync(src.Database, configuration);
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(deleteDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await deleteDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dst.OpenAsyncSession())
                 {

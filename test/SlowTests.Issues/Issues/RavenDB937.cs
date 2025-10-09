@@ -40,7 +40,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new Users_ByActive().Execute(store);
+                await new Users_ByActive().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -75,7 +75,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new Users_ByActive().Execute(store);
+                await new Users_ByActive().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -152,7 +152,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new Users_ByActive().Execute(store);
+                await new Users_ByActive().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -163,7 +163,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     await using var enumerator = await session.Advanced

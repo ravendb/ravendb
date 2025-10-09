@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeDocuments(x => x.Category)
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Product>(name))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -65,9 +65,9 @@ namespace SlowTests.Issues
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Order>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Order>
                 {
                     Includes = builder => builder
                         .IncludeDocuments(x => x.Lines.Select(y => y.Product))
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
 
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Order>(name))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -148,9 +148,9 @@ namespace SlowTests.Issues
                             }
                             Assert.Equal(0, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }

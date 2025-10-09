@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -24,17 +25,17 @@ public class RavenDB_24620(ITestOutputHelper output) : EmbeddingsGenerationTestB
     [InlineData(VectorEmbeddingType.Single, VectorEmbeddingType.Binary)]
     [InlineData(VectorEmbeddingType.Int8, VectorEmbeddingType.Int8)]
     [InlineData(VectorEmbeddingType.Binary, VectorEmbeddingType.Binary)]
-    public void CanUseTaskToQueryPregeneratedEmbedding(VectorEmbeddingType? source, VectorEmbeddingType? destination)
+    public async Task CanUseTaskToQueryPregeneratedEmbedding(VectorEmbeddingType? source, VectorEmbeddingType? destination)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         PrepareDocumentsWithAttachments(store, source);
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
         var (aiIntegrationConfiguration, aiConnectionString) = AddEmbeddingsGenerationTask(store, targetQuantization: source ?? VectorEmbeddingType.Single);
-        Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
 
         var index = new VectorIndex(source, destination);
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {

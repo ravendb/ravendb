@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.TimeSeries
         {
             using (var store = GetDocumentStore(options))
             {
-                new MyTsIndex().Execute(store);
+                await new MyTsIndex().ExecuteAsync(store);
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "EGR" }, "user/322");
@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 }
                 Assert.True(c >= 0);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await cleaner.ExecuteCleanup();
 
                 c = 0;

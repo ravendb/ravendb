@@ -172,7 +172,7 @@ namespace SlowTests.Client.Lazy.Async
                 session.Advanced.GetMetadataFor(contact)["Val"] = "hello";
                 session.SaveChanges();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             using (var session = store.OpenAsyncSession())
             {
                 var contactViewModel =

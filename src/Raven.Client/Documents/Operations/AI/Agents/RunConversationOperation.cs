@@ -64,12 +64,12 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _streamedChunksCallback = streamedChunksCallback;
     }
 
-    public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public virtual RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new RunConversationOperationCommand(this, conventions);
     }
 
-    internal sealed class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>, IRaftCommand
+    internal class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>, IRaftCommand
     {
         private readonly RunConversationOperation<TSchema> _parent;
         private readonly DocumentConventions _conventions;
@@ -130,10 +130,11 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
                 if (line is null)
                     break;
+
                 if (line.StartsWith("{"))
                 {
                     using var final = context.Sync.ReadForMemory(line, "final/result");
-                    Result = ConversationResult<TSchema>.Convert(final, _conventions);
+                    SetResponse(context, final, fromCache: false);
                     break;
                 }
 

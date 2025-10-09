@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                 {
                     using (var session = store.OpenSession())
                     {
-                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
                         {
                             session.Load<User>("users/not-there");
 
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
 
-                backgroundUpdatesCts.Cancel();
+                await backgroundUpdatesCts.CancelAsync();
 
                 await backgroundUpdatesTask.WaitAsync(TimeSpan.FromMinutes(1));
             }
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
                 {
                     using (var session = store.OpenSession())
                     {
-                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
                         {
                             session.Load<User>("users/1-A");
 
@@ -133,7 +133,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
 
-                backgroundUpdatesCts.Cancel();
+                await backgroundUpdatesCts.CancelAsync();
 
                 await backgroundUpdatesTask.WaitAsync(TimeSpan.FromMinutes(1));
             }
@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
                         {
                             await session.LoadAsync<User>("users/1");
 
@@ -183,7 +183,7 @@ namespace SlowTests.Issues
                 }
                 Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
 
-                backgroundUpdatesCts.Cancel();
+                await backgroundUpdatesCts.CancelAsync();
 
                 await backgroundUpdatesTask;
             }
@@ -222,7 +222,7 @@ namespace SlowTests.Issues
                 {
                     using (var session = store.OpenSession())
                     {
-                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
                         {
                             session.Query<User>().ToList();
                         }
@@ -230,7 +230,7 @@ namespace SlowTests.Issues
                 }
                 Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
 
-                backgroundUpdatesCts.Cancel();
+                await backgroundUpdatesCts.CancelAsync();
 
                 await backgroundUpdatesTask.WaitAsync(TimeSpan.FromMinutes(1));
             }

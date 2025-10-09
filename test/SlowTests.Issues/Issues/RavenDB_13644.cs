@@ -1179,9 +1179,9 @@ namespace SlowTests.Issues
             {
                 var index = new TimeSeries_Index_With_CompareExchange();
                 var indexName = index.IndexName;
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -1286,7 +1286,7 @@ namespace SlowTests.Issues
                 
                 store.Maintenance.ForTesting(() => new StartIndexingOperation()).ExecuteOnAll();
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL;
+using Sparrow.Server;
 
 namespace FastTests;
 
@@ -22,14 +23,14 @@ public partial class RavenTestBase
         }
 
 
-        public Task<ManualResetEventSlim> WaitForEtlAsync(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int count) => WaitForEtlAsync(store.Database, predicate, count);
+        public Task<AsyncManualResetEvent> WaitForEtlAsync(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, int count) => WaitForEtlAsync(store.Database, predicate, count);
 
-        public async Task<ManualResetEventSlim> WaitForEtlAsync(string database, Func<string, EtlProcessStatistics, bool> predicate, int count)
+        public async Task<AsyncManualResetEvent> WaitForEtlAsync(string database, Func<string, EtlProcessStatistics, bool> predicate, int count)
         {
             if (count < 1)
                 throw new ArgumentOutOfRangeException(nameof(count));
 
-            var mre = new ManualResetEventSlim();
+            var amre = new AsyncManualResetEvent();
             var confirmations = new ConcurrentDictionary<int, byte>();
             var size = 0;
             var numberOfShards = 0;
@@ -46,7 +47,7 @@ public partial class RavenTestBase
                         {
                             confirmations.Clear();
                             size = 0;
-                            mre.Set();
+                            amre.Set();
                         }
                     }
                 };
@@ -54,11 +55,11 @@ public partial class RavenTestBase
 
             if (numberOfShards < count)
             {
-                mre.Set();
+                amre.Set();
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
 
-            return mre;
+            return amre;
         }
 
         public IEnumerable<ManualResetEventSlim> WaitForEtlOnAllShards(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
@@ -107,7 +108,7 @@ public partial class RavenTestBase
             return mresPerShard.Values;
         }
 
-        public ManualResetEventSlim WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
+        public AsyncManualResetEvent WaitForEtl(IDocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
             return AsyncHelpers.RunSync(() => WaitForEtlAsync(store, predicate, count: 1));
         }

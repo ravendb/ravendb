@@ -85,7 +85,7 @@ if (this.Name === 'aviv') {
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         using (var session = store.OpenAsyncSession())
         {
@@ -162,7 +162,7 @@ if (this.Name === 'Aviv') {
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         using (var session = store.OpenAsyncSession())
         {

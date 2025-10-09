@@ -156,7 +156,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.Maintenance.SendAsync(new StopIndexingOperation());
 
@@ -173,7 +173,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains($"The field 'LastName' is not indexed in '{oldIndexDef.Name}', cannot query/sort on fields that are not indexed in query: from index '{oldIndexDef.Name}' where LastName = $p0 limit $p1, $p2", e.InnerException.Message);
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 var changes = await store.Changes().EnsureConnectedNow();
                 var observable = changes.ForAllIndexes();
@@ -181,14 +181,14 @@ namespace SlowTests.Issues
                 observable.Subscribe(change =>
                 {
                     if (change.Type == IndexChangeTypes.SideBySideReplace)
-                        mre.Set();
+                        amre.Set();
                 });
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
+                Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)));
 
                 using (var session = store.OpenSession())
                 {

@@ -1,7 +1,7 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
 import Code from "components/common/Code";
-import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect } from "components/common/Form";
+import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
@@ -15,6 +15,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import { SelectOption } from "components/common/select/Select";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import Accordion from "react-bootstrap/Accordion";
+import AccordionButton from "react-bootstrap/AccordionButton";
 
 interface EditAiAgentQueryToolItemProps {
     index: number;
@@ -69,10 +71,11 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
         let queryText = "";
 
         const regexToFind$: RegExp = /\$\w+/g;
-        const matches = queryItem.query.match(regexToFind$) || [];
+        const allMatches = queryItem.query.match(regexToFind$) || [];
+        const uniqueMatches = [...new Set(allMatches)];
 
-        if (matches.length > 0) {
-            queryText += matches.map((x) => `${x} = null`).join("\n");
+        if (uniqueMatches.length > 0) {
+            queryText += uniqueMatches.map((x) => `${x} = null`).join("\n");
             queryText += "\n\n";
         }
 
@@ -86,6 +89,8 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
             newWindow: true,
         });
     };
+
+    const isAdvancedOpenByDefault = queryItem.isAllowModelQueriesOverride || queryItem.isAddToInitialContextOverride;
 
     return (
         <div className="well p-2 rounded-2 border border-secondary mt-2">
@@ -119,53 +124,6 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                     name={`queries.${index}.description`}
                     placeholder={queryFieldDescriptionPlaceholder}
                     rows={4}
-                />
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>
-                    Allow model queries
-                    <PopoverWithHoverWrapper
-                        message={
-                            <>
-                                When true, the model is allowed to execute this query on demand based on its own
-                                judgment.
-                                <br />
-                                <br />
-                                When false, the model cannot call this query (unless executed as part of initial
-                                context).
-                            </>
-                        }
-                    >
-                        <Icon icon="info-new" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormSelect
-                    control={control}
-                    name={`queries.${index}.isAllowModelQueries`}
-                    options={isAllowModelQueriesOptions}
-                />
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>
-                    Add to initial context
-                    <PopoverWithHoverWrapper
-                        message={
-                            <>
-                                When true, the query will be executed during the initial context build and its results
-                                provided to the model.
-                                <br />
-                                <br />
-                                When false, the query will not be executed for the initial context.
-                            </>
-                        }
-                    >
-                        <Icon icon="info-new" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormSelect
-                    control={control}
-                    name={`queries.${index}.isAddToInitialContext`}
-                    options={isAddToInitialContextOptions}
                 />
             </FormGroup>
             <FormGroup>
@@ -210,7 +168,113 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                 helpActionTooltipTitle="Syntax example"
                 canRegenerateSchemaName={`queries.${index}.canRegenerateSchema`}
             />
+
+            <Accordion defaultActiveKey={isAdvancedOpenByDefault ? "advanced-settings" : null} className="mt-2">
+                <Accordion.Item eventKey="advanced-settings" className="border border-secondary rounded-2 panel-bg-2">
+                    <Accordion.Header
+                        as={() => <AccordionButton className="rounded-2 panel-bg-2">Advanced settings</AccordionButton>}
+                    ></Accordion.Header>
+                    <Accordion.Body>
+                        <hr className="my-0 mb-2" />
+                        <FormGroup>
+                            <FormLabel>
+                                Allow model queries
+                                <PopoverWithHoverWrapper message={<AllowModelQueriesTooltip />}>
+                                    <Icon icon="info-new" margin="ms-1" />
+                                </PopoverWithHoverWrapper>
+                            </FormLabel>
+                            <div className="d-flex flex-wrap align-items-center">
+                                <FormSelect
+                                    control={control}
+                                    name={`queries.${index}.isAllowModelQueries`}
+                                    options={isAllowModelQueriesOptions}
+                                    isDisabled={!queryItem.isAllowModelQueriesOverride}
+                                    placeholder={
+                                        queryItem.isAllowModelQueriesOverride ? "Select True or False" : "Default"
+                                    }
+                                />
+                                <FormSwitch
+                                    control={control}
+                                    name={`queries.${index}.isAllowModelQueriesOverride`}
+                                    className="ms-2"
+                                    afterChange={(isChecked) => {
+                                        if (!isChecked) {
+                                            setValue(`queries.${index}.isAllowModelQueries`, null, {
+                                                shouldValidate: true,
+                                            });
+                                        }
+                                    }}
+                                >
+                                    Override
+                                </FormSwitch>
+                            </div>
+                        </FormGroup>
+                        <FormGroup className="mb-0">
+                            <FormLabel>
+                                Add to initial context
+                                <PopoverWithHoverWrapper message={<AddToInitialContextTooltip />}>
+                                    <Icon icon="info-new" margin="ms-1" />
+                                </PopoverWithHoverWrapper>
+                            </FormLabel>
+                            <div className="d-flex flex-wrap align-items-center">
+                                <FormSelect
+                                    control={control}
+                                    name={`queries.${index}.isAddToInitialContext`}
+                                    options={isAddToInitialContextOptions}
+                                    isDisabled={!queryItem.isAddToInitialContextOverride}
+                                    placeholder={
+                                        queryItem.isAddToInitialContextOverride ? "Select True or False" : "Default"
+                                    }
+                                />
+                                <FormSwitch
+                                    control={control}
+                                    name={`queries.${index}.isAddToInitialContextOverride`}
+                                    className="ms-2"
+                                    afterChange={(isChecked) => {
+                                        if (!isChecked) {
+                                            setValue(`queries.${index}.isAddToInitialContext`, null, {
+                                                shouldValidate: true,
+                                            });
+                                        }
+                                    }}
+                                >
+                                    Override
+                                </FormSwitch>
+                            </div>
+                        </FormGroup>
+                    </Accordion.Body>
+                </Accordion.Item>
+            </Accordion>
         </div>
+    );
+}
+
+function AllowModelQueriesTooltip() {
+    return (
+        <>
+            When True, the model is allowed to execute this query on demand based on its own judgment.
+            <br />
+            <br />
+            When False, the model cannot call this query (unless executed as part of initial context).
+            <br />
+            <br />
+            When Default, server default is applied.
+        </>
+    );
+}
+
+function AddToInitialContextTooltip() {
+    return (
+        <>
+            When True, the query will be executed during the initial context build and its results provided to the
+            model.
+            <br />
+            <br />
+            When False, the query will not be executed for the initial context.
+            <br />
+            <br />
+            When Default, server default is applied.
+        </>
     );
 }
 
@@ -301,13 +365,11 @@ const QueryFieldJsonSchemaSyntaxHelp = () => {
 };
 
 const isAllowModelQueriesOptions: SelectOption<boolean>[] = [
-    { label: "Default", value: null },
     { label: "True", value: true },
     { label: "False", value: false },
 ];
 
 const isAddToInitialContextOptions: SelectOption<boolean>[] = [
-    { label: "Default", value: null },
     { label: "True", value: true },
     { label: "False", value: false },
 ];

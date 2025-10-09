@@ -42,7 +42,7 @@ namespace SlowTests.Client.Subscriptions
                 firstItemchangeVector[0].Etag += 10;
                 string cvBigger = firstItemchangeVector.SerializeVector();
 
-                var sn = store.Subscriptions.Create<User>();
+                var sn = await store.Subscriptions.CreateAsync<User>();
                 var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)

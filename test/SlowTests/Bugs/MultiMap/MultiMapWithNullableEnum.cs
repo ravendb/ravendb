@@ -29,9 +29,9 @@ namespace SlowTests.Bugs.MultiMap
                     session.SaveChanges();
                 }
 
-                new MySearchIndexTask().Execute(store);
+                await new MySearchIndexTask().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());

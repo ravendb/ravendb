@@ -77,7 +77,7 @@ namespace SlowTests.Bugs.MapRedue
                     session.SaveChanges();
                 }
 
-                new Users_LastLoggedInAt().Execute((IDocumentStore)store);
+                await new Users_LastLoggedInAt().ExecuteAsync((IDocumentStore)store);
 
                 using (var session = store.OpenSession())
                 {
