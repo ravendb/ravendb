@@ -23,7 +23,7 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
     protected abstract IDisposable AllocateContextForAsyncOperation(out TOperationContext asyncOperationContext);
 
     protected abstract void ScheduleOperation(TOperationContext asyncOperationContext, IDisposable returnAsyncOperationContext, IndexQueryServerSide query, long operationId, QueryOperationOptions options);
-
+    
     public override async ValueTask ExecuteAsync()
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -37,7 +37,8 @@ internal abstract class AbstractOperationQueriesHandlerProcessor<TRequestHandler
             try
             {
                 var query = await GetIndexQueryAsync(asyncOperationContext, QueryMethod, tracker, addSpatialProperties: false);
-
+                AssertQueryDoesNotUseFilterClause(query);
+                
                 query.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
                 if (TrafficWatchManager.HasRegisteredClients)
