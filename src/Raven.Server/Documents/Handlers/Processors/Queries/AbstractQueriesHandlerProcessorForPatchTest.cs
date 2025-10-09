@@ -25,7 +25,7 @@ internal abstract class AbstractQueriesHandlerProcessorForPatchTest<TRequestHand
         {
             var docId = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-            var query = await GetIndexQueryAsync(context, QueryMethod, null);
+            var query = await GetIndexQueryAsync(context, null);
             AssertQueryDoesNotUseFilterClause(query);
 
             if (TrafficWatchManager.HasRegisteredClients)

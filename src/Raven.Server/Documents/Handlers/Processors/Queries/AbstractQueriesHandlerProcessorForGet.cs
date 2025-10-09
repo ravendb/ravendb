@@ -105,7 +105,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                 {
                     var parameters = QueryStringParameters.Create(HttpContext.Request);
-                    var indexQueryTask = GetIndexQueryAsync(context, QueryMethod, tracker, parameters.AddSpatialProperties);
+                    var indexQueryTask = GetIndexQueryAsync(context, tracker, parameters.AddSpatialProperties);
                     var indexQuery = indexQueryTask.IsCompletedSuccessfully ? indexQueryTask.Result : await indexQueryTask;
 
                     indexQuery.Diagnostics = parameters.Diagnostics ? new List<string>() : null;
