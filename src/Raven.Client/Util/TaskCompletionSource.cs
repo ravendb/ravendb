@@ -14,7 +14,9 @@ internal sealed class TaskCompletionSource
 
     public TaskCompletionSource(TaskCreationOptions creationOptions)
     {
-        _tcs = new TaskCompletionSource<object>(creationOptions| TaskCreationOptions.RunContinuationsAsynchronously);
+#pragma warning disable RDB0008
+        _tcs = new TaskCompletionSource<object>(creationOptions);
+#pragma warning restore RDB0008
     }
 
     public Task Task => _tcs.Task;
