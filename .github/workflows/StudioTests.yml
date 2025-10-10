@@ -51,7 +51,7 @@ jobs:
       working-directory: ./src/Raven.Studio
 
     - name: Install Playwright
-      run: npx playwright install --with-deps
+      run: npx playwright install --with-deps chromium
       working-directory: ./src/Raven.Studio
 
     - name: Build Storybook
