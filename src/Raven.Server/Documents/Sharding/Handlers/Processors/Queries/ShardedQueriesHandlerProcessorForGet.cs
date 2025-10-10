@@ -30,7 +30,7 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
     {
     }
 
-    protected override IDisposable AllocateContextForQueryOperation(out TransactionOperationContext queryContext, out TransactionOperationContext context)
+    internal override IDisposable AllocateContextForQueryOperation(out TransactionOperationContext queryContext, out TransactionOperationContext context)
     {
         var returnContext = ContextPool.AllocateOperationContext(out queryContext);
 

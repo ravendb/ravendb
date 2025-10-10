@@ -21,7 +21,7 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
     {
     }
 
-    protected override IDisposable AllocateContextForQueryOperation(out QueryOperationContext queryContext, out DocumentsOperationContext context)
+    internal override IDisposable AllocateContextForQueryOperation(out QueryOperationContext queryContext, out DocumentsOperationContext context)
     {
         queryContext = QueryOperationContext.Allocate(RequestHandler.Database);
 

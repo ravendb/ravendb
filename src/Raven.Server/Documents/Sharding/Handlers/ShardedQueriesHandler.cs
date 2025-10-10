@@ -8,15 +8,29 @@ namespace Raven.Server.Documents.Sharding.Handlers
     public sealed class ShardedQueriesHandler : ShardedDatabaseRequestHandler
     {
         [RavenShardedAction("/databases/*/queries", "POST")]
-        public Task Post()
+        public async Task Post()
         {
-            return new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post).ExecuteAsTask();
+            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post))
+            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
+            using (var tracker = processor.CreateRequestTimeTracker())
+            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
+            {
+                var indexQuery = await processor.ExecuteWithExceptionHandling(processor.ReadIndexQueryForPost(context, tracker, processor.AddSpatialProperties), tracker);
+                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
+            }
         }
 
         [RavenShardedAction("/databases/*/queries", "GET")]
-        public Task Get()
+        public async Task Get()
         {
-            return new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get).ExecuteAsTask();
+            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get))
+            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
+            using (var tracker = processor.CreateRequestTimeTracker())
+            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
+            {
+                var indexQuery = processor.ReadIndexQueryForGet(context, tracker, processor.AddSpatialProperties);
+                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
+            }
         }
 
         [RavenShardedAction("/databases/*/queries", "PATCH")]

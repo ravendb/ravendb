@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.NotificationCenter;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
@@ -38,43 +40,49 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
 
     protected abstract RavenConfiguration Configuration { get; }
 
-    protected RequestTimeTracker CreateRequestTimeTracker()
+    internal RequestTimeTracker CreateRequestTimeTracker()
     {
         return new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
     }
 
-    public ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false)
+    internal OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery() => RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
+    
+    internal ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod queryMethod, RequestTimeTracker tracker, bool addSpatialProperties)
     {
-        return QueryMethod == HttpMethod.Get 
-            ? ValueTask.FromResult(ReadIndexQueryForGet(context, tracker, addSpatialProperties)) 
-            : GetIndexQueryFromPostRequestAsync();
-
-        async ValueTask<IndexQueryServerSide> GetIndexQueryFromPostRequestAsync()
-        {
-            var readJsonTask = context.ReadForMemoryAsync(_stream, "index/query");
-            var json = readJsonTask.IsCompletedSuccessfully ? readJsonTask.Result : await readJsonTask;
-            
-            if (json == null)
-                throw new BadRequestException("Missing JSON content.");
-
-            var queryType = QueryType.Select;
-
-            if (QueryMethod == HttpMethod.Patch)
-            {
-                queryType = QueryType.Update;
-
-                if (json.TryGet("Query", out BlittableJsonReaderObject q) == false || q == null)
-                    throw new BadRequestException("Missing 'Query' property.");
-
-                json = q;
-            }
-
-            return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
-        }
+        if (QueryMethod == HttpMethod.Get)
+            return ValueTask.FromResult(ReadIndexQueryForGet(context, tracker, addSpatialProperties));
+        
+        return ReadIndexQueryForPost(context, tracker, addSpatialProperties);
     }
-
-    private IndexQueryServerSide ReadIndexQueryForGet(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    
+    internal async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
+        Debug.Assert(QueryMethod != HttpMethod.Get);
+        var readJsonTask = context.ReadForMemoryAsync(_stream, "index/query");
+        var json = readJsonTask.IsCompletedSuccessfully ? readJsonTask.Result : await readJsonTask;
+            
+        if (json == null)
+            throw new BadRequestException("Missing JSON content.");
+
+        var queryType = QueryType.Select;
+
+        if (QueryMethod == HttpMethod.Patch)
+        {
+            queryType = QueryType.Update;
+
+            if (json.TryGet("Query", out BlittableJsonReaderObject q) == false || q == null)
+                throw new BadRequestException("Missing 'Query' property.");
+
+            json = q;
+        }
+
+        return IndexQueryServerSide.Create(_httpContext, json, QueryMetadataCache, tracker, addSpatialProperties, queryType: queryType);
+        
+    }
+    
+    internal IndexQueryServerSide ReadIndexQueryForGet(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    {
+        Debug.Assert(QueryMethod == HttpMethod.Get);
         return IndexQueryServerSide.Create(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties);
     }
     

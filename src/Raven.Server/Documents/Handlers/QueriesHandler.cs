@@ -8,15 +8,29 @@ namespace Raven.Server.Documents.Handlers
     public sealed class QueriesHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public Task Post()
+        public async Task Post()
         {
-            return new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post).ExecuteAsTask();
+            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post))
+            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
+            using (var tracker = processor.CreateRequestTimeTracker())
+            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
+            {
+                var indexQuery = await processor.ExecuteWithExceptionHandling(processor.ReadIndexQueryForPost(context, tracker, processor.AddSpatialProperties), tracker);
+                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
+            }
         }
 
         [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public Task Get()
+        public async Task Get()
         {
-            return new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get).ExecuteAsTask();
+            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get))
+            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
+            using (var tracker = processor.CreateRequestTimeTracker())
+            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
+            {
+                var indexQuery = processor.ReadIndexQueryForGet(context, tracker, processor.AddSpatialProperties);
+                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
+            }
         }
 
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
