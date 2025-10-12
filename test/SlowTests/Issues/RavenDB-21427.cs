@@ -961,6 +961,29 @@ public class MyAnalyzer2 : Analyzer
             }
         }
 
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing)]
+        public async Task Prevent_Put_ServerWideClientConfiguration()
+        {
+            DoNotReuseServer();
+            var server = GetNewServer();
+            var options = new Options() { Server = server };
+            using (var store = GetDocumentStore(options))
+            {
+                await DisableRevisionCompression(server, store);
+                await PutLicense(server, RL_COMM);
+
+                var config = new ClientConfiguration { MaxNumberOfRequestsPerSession = 50 };
+
+                var command = new PutClientConfigurationCommand(config, RaftIdGenerator.NewId());
+                var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () => await server.ServerStore.SendToLeaderAsync(command));
+                Assert.Equal(LimitType.ClientConfiguration, exception.LimitType);
+
+                command = new PutClientConfigurationCommand(config, RaftIdGenerator.NewId());
+                await PutLicense(server, RL_PRO);
+                await server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+
         // ----------------------------------------
         // Tests for Studio Configuration License Limits
         //  ----------------------------------------
