@@ -33,4 +33,14 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
     public abstract bool ShouldAddPagingPerformanceHint(long numberOfResults);
 
     public abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration, long totalDocumentsSizeInBytes);
+
+    private TOperationContext _context;
+
+    public TOperationContext GetContextScopedToRequest()
+    {
+        if (_context == null)
+            RegisterForDisposal(ContextPool.AllocateOperationContext(out _context));
+        
+        return _context;
+    }
 }

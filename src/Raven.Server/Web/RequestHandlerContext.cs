@@ -18,12 +18,9 @@ namespace Raven.Server.Web
         public string DatabaseName => Database?.Name ?? DatabaseContext?.DatabaseName;
         public MetricCounters DatabaseMetrics => Database?.Metrics ?? DatabaseContext?.Metrics;
         public string ClusterTransactionId => Database?.ClusterTransactionId ?? DatabaseContext?.DatabaseRecord.GetClusterTransactionId();
-
-        public IDisposable Register(IDisposable disposable)
+        
+        public void RegisterForDisposal(IDisposable disposable)
         {
-            if (disposable == null)
-                return null;
-
             if (ReferenceEquals(_disposables, DisposedSentinel))
                 throw new ObjectDisposedException(nameof(RequestHandlerContext));
 
@@ -35,8 +32,6 @@ namespace Raven.Server.Web
             }
 
             disposables.Add(disposable);
-
-            return disposable;
         }
 
         public void Dispose()

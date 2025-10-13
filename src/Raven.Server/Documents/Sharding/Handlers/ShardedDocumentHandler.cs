@@ -37,10 +37,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task PostGet()
         {
             // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync(await ShardedDocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this), context);
-            }
+            TransactionOperationContext context = GetContextScopedToRequest();
+            await new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync(await ShardedDocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this));
         }
 
         [RavenShardedAction("/databases/*/docs", "DELETE")]
