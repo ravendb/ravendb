@@ -295,7 +295,7 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
-                throw new CryptographicException("Failed to import server certificate", e);
+                Console.WriteLine(e);
             }
 
             if (new X509Certificate2Collection(collection).OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
