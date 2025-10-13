@@ -815,7 +815,7 @@ namespace Raven.Server.Utils
 
         public static RSA GetExportableRsaPrivateKey(this X509Certificate2 cert)
         {
-            var rsa = cert.GetRSAPrivateKey();
+            using var rsa = cert.GetRSAPrivateKey();
             return rsa?.GetExportableRsaPrivateKey();
         }
 
