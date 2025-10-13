@@ -34,8 +34,10 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
     private Task<IOperationResult> StartValidation(Action<IOperationProgress> onProgress)
     {
         var maxErrorsMsg = Parameters.MaxErrorMessages ?? 1024;
-        var maxTime = TimeSpan.FromMinutes(Parameters.MaxDurationInMinutes ?? 16);
-        var maxReadTrxTime = TimeSpan.FromSeconds(Parameters.MaxReadBatchDurationInSeconds ?? 16 * 60);
+        var maxToValidate = Parameters.MaxDocumentsToValidate ?? long.MaxValue;
+        var etag = Parameters.Etag ?? 0L;
+        
+        var maxReadTrxTime = TimeSpan.FromSeconds(16);
         
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
@@ -43,20 +45,18 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
 
             var stop = Stopwatch.StartNew();
             
-            var stopTotalTime = maxTime;
-            var progressReportRate = TimeSpan.FromMinutes(1);
+            var progressReportRate = TimeSpan.FromSeconds(5);
             var nextProgressReport = TimeSpan.Zero;
             
-            var etag = 0L;
-            var actualErrorCount = 0;
-            var totalScanned = 0;
+            var actualErrorCount = 0L;
+            var totalValidated = 0L;
             
             using var blittable = context.Sync.ReadForMemory(Parameters.SchemaDefinition, "schema-validation");
             var schemaValidator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, Parameters.SchemaDefinition);
 
             using var errorBuilder = new ErrorBuilder(context);
             
-            while (stop.Elapsed < stopTotalTime)
+            while (totalValidated < maxToValidate)
             {
                 using (context.OpenReadTransaction())
                 {
@@ -75,7 +75,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
                         {
                             onProgress(new ValidateSchemaValidationProgress
                             {
-                                ScannedCount = totalScanned,
+                                ValidatedCount = totalValidated,
                                 ErrorCount = actualErrorCount
                             });
                             nextProgressReport = stop.Elapsed + progressReportRate;
@@ -99,10 +99,10 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
                                 ++actualErrorCount;
                         }
 
-                        ++totalScanned;
+                        ++totalValidated;
 
                         var now = stop.Elapsed;
-                        if(now > stopTotalTime || now > stopTrxTime)
+                        if(totalValidated >= maxToValidate || now > stopTrxTime)
                             break;
                     }
                     if(hasMore == false)
@@ -113,7 +113,8 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
             {
                 Errors = errors,
                 ErrorCount = actualErrorCount,
-                ScannedCount = totalScanned,
+                ValidatedCount = totalValidated,
+                LastEtag = etag
             });
         }
     }

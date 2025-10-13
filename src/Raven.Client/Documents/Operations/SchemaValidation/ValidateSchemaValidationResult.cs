@@ -5,15 +5,15 @@ namespace Raven.Client.Documents.Operations.SchemaValidation;
 
 public class ValidateSchemaValidationProgress : IOperationProgress
 {
-    public int ErrorCount { get; set; }
-    public int ScannedCount { get; set; }
+    public long ErrorCount { get; set; }
+    public long ValidatedCount { get; set; }
 
     public virtual DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue(GetType())
         {
             [nameof(ErrorCount)] = ErrorCount,
-            [nameof(ScannedCount)] = ScannedCount,
+            [nameof(ValidatedCount)] = ValidatedCount,
         };
     }
 
@@ -22,7 +22,7 @@ public class ValidateSchemaValidationProgress : IOperationProgress
         return new ValidateSchemaValidationProgress
         {
             ErrorCount = ErrorCount,
-            ScannedCount = ScannedCount,
+            ValidatedCount = ValidatedCount,
         };
     }
 
@@ -33,13 +33,15 @@ public class ValidateSchemaValidationProgress : IOperationProgress
             return;
         
         ErrorCount += p.ErrorCount;
-        ScannedCount += p.ScannedCount;
+        ValidatedCount += p.ValidatedCount;
     }
 }
 
 public sealed class ValidateSchemaValidationResult : ValidateSchemaValidationProgress, IOperationResult
 {
     public Dictionary<string, string> Errors { get; set; }
+    
+    public long LastEtag { get; set; }
     
     public override DynamicJsonValue ToJson()
     {
@@ -51,6 +53,7 @@ public sealed class ValidateSchemaValidationResult : ValidateSchemaValidationPro
 
         var result = base.ToJson();
         result[nameof(Errors)] = errors;
+        result[nameof(LastEtag)] = LastEtag;
         return  result;
     }
     
@@ -65,7 +68,7 @@ public sealed class ValidateSchemaValidationResult : ValidateSchemaValidationPro
         if (result is not ValidateSchemaValidationResult r)
             return;
         ErrorCount += r.ErrorCount;
-        ScannedCount += r.ScannedCount;
+        ValidatedCount += r.ValidatedCount;
 
         Errors ??= new Dictionary<string, string>();
         foreach (var keyValue in r.Errors)

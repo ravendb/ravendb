@@ -10,8 +10,9 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Operations.SchemaValidation;
 
 /// <summary>
-/// Starts a background operation that validates documents in the specified collection against the given JSON schema.
-/// Server defaults when optional limits are omitted: MaxErrorMessages=1024, MaxDurationInMinutes=16, MaxReadBatchDurationInSeconds=960.
+/// Starts a background operation that validates documents in the specified collection against the provided JSON schema.
+/// Optional limits (if omitted server defaults are used): MaxErrorMessages=1024, MaxDocumentsToValidate=unlimited.
+/// You may also provide a starting Etag to continue validation from a point in the collection; by default validation starts from the first document.
 /// </summary>
 public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<OperationIdResult<StartValidateSchemaValidationOperationResult>>
 {
@@ -25,17 +26,17 @@ public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<Op
         /// <summary>JSON schema definition. (Required)</summary>
         public string SchemaDefinition { get; set; }
 
+        /// <summary>Target collection to validate. (Required)</summary>
+        public string Collection { get; set; }
+        
         /// <summary>Maximum collected validation error messages. (Optional, default 1024, must be >= 0 when specified)</summary>
         public int? MaxErrorMessages { get; set; }
 
-        /// <summary>Target collection to validate. (Required)</summary>
-        public string Collection { get; set; }
-
-        /// <summary>Total time limit in minutes. (Optional, default 16, must be > 0 when specified)</summary>
-        public int? MaxDurationInMinutes { get; set; }
-
-        /// <summary>Maximum duration per read batch in seconds. (Optional, default 960, must be > 0 when specified)</summary>
-        public int? MaxReadBatchDurationInSeconds { get; set; }
+        /// <summary>Maximum collected validation error messages. (Optional, default 'unlimited', must be >= 0 when specified)</summary>
+        public long? MaxDocumentsToValidate { get; set; }
+        
+        /// <summary>Starting document etag to begin validation from. (Optional, default: start from the first document)</summary>
+        public long? Etag { get; set; }
     }
 
     /// <summary>
@@ -52,10 +53,8 @@ public sealed class ValidateSchemaValidationOperation : IMaintenanceOperation<Op
 
         if (_parameters.MaxErrorMessages is < 0)
             throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxErrorMessages)} must be >= 0.");
-        if (_parameters.MaxDurationInMinutes is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxDurationInMinutes)} must be > 0.");
-        if (_parameters.MaxReadBatchDurationInSeconds is <= 0)
-            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxReadBatchDurationInSeconds)} must be > 0.");
+        if (_parameters.MaxDocumentsToValidate is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(parameters), $"Property {nameof(parameters.MaxDocumentsToValidate)} must be > 0.");
     }
 
     public RavenCommand<OperationIdResult<StartValidateSchemaValidationOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)

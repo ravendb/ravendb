@@ -46,9 +46,7 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
         if (string.IsNullOrWhiteSpace(Parameters.Collection) == false 
             && string.IsNullOrWhiteSpace(Parameters.SchemaDefinition) == false 
             && (Parameters.MaxErrorMessages.HasValue == false || Parameters.MaxErrorMessages.Value >= 0) 
-            && (Parameters.MaxDurationInMinutes.HasValue == false || Parameters.MaxDurationInMinutes.Value > 0 )
-            // Optional per-read-batch duration limit in seconds.
-            && (Parameters.MaxReadBatchDurationInSeconds.HasValue == false || Parameters.MaxReadBatchDurationInSeconds.Value > 0))
+            && (Parameters.MaxDocumentsToValidate.HasValue == false || Parameters.MaxDocumentsToValidate.Value > 0 ))
             return;
         
         var errors = new List<string>();
@@ -60,10 +58,8 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
 
         if (Parameters.MaxErrorMessages is < 0)
             errors.Add($"Parameter '{nameof(Parameters.MaxErrorMessages)}' must be non-negative.");
-        if (Parameters.MaxDurationInMinutes is <= 0)
-            errors.Add($"Parameter '{nameof(Parameters.MaxDurationInMinutes)}' must be greater than 0.");
-        if (Parameters.MaxReadBatchDurationInSeconds is <= 0)
-            errors.Add($"Parameter '{nameof(Parameters.MaxReadBatchDurationInSeconds)}' must be greater than 0.");
+        if (Parameters.MaxDocumentsToValidate is <= 0)
+            errors.Add($"Parameter '{nameof(Parameters.MaxDocumentsToValidate)}' must be greater than 0.");
 
         throw new BadRequestException("Invalid schema validation parameters:" + string.Join(", ", errors));
     }

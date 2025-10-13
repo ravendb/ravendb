@@ -2,6 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.SchemaValidation;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
@@ -17,6 +18,9 @@ internal sealed class ShardedSchemaValidationHandlerProcessorForValidate : Abstr
 
     protected override void StartValidationOperation(long operationId, OperationCancelToken token)
     {
+        if (Parameters.Etag != null)
+            throw new BadRequestException($"Parameter '{nameof(Parameters.Etag)}' is not supported for schema validation on a sharded database.");
+        
         Parameters.MaxErrorMessages = Parameters.MaxErrorMessages.HasValue 
             ? Math.Max(1, Parameters.MaxErrorMessages.Value / RequestHandler.DatabaseContext.ShardCount) 
             : null;

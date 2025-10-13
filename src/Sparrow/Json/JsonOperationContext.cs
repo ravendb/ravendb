@@ -492,20 +492,15 @@ namespace Sparrow.Json
             if (field == null)
                 return null;
 
-            return GetLazyString(field, longLived: false);
+            return GetLazyString(field, field, longLived: false);
         }
 
         private LazyStringValue GetLazyString(StringSegment field, bool longLived)
         {
-            return GetLazyString(field.AsSpan(), field, longLived);
-        }
-
-        public LazyStringValue GetLazyString(ReadOnlySpan<char> value, bool longLived)
-        {
-            return GetLazyString(value, StringSegment.Empty, longLived);
+            return GetLazyString(field.AsSpan(), field.Value, longLived);
         }
         
-        public unsafe LazyStringValue GetLazyString(ReadOnlySpan<char> value, StringSegment strValue, bool longLived)
+        public unsafe LazyStringValue GetLazyString(ReadOnlySpan<char> value, string strValue, bool longLived)
         {
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(value.Length);
@@ -521,7 +516,7 @@ namespace Sparrow.Json
             state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
 
             state.WriteEscapePositionsTo(address + actualSize);
-            LazyStringValue result = longLived == false ? AllocateStringValue(strValue.Value, address, actualSize) : new LazyStringValue(strValue.Value, address, actualSize, this);
+            LazyStringValue result = longLived == false ? AllocateStringValue(strValue, address, actualSize) : new LazyStringValue(strValue, address, actualSize, this);
             result.AllocatedMemoryData = memory;
 
             if (state.EscapePositions.Count > 0)
