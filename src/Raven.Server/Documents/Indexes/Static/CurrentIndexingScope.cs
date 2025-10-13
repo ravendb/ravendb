@@ -279,12 +279,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public dynamic SchemaValid(BlittableJsonReaderObject doc)
-        {
-            return ValidateSchema(doc, null);
-        }
-        
-        public dynamic SchemaError(BlittableJsonReaderObject doc)
+        public string SchemaValid(BlittableJsonReaderObject doc)
         {
             _schemaValidationErrorBuilder ??= new ErrorBuilder(Current.IndexContext);
             _schemaValidationErrorBuilder.Reset();
@@ -295,7 +290,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return _schemaValidationErrorBuilder.GetErrors().ToString();
         }
 
-        private bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
+        private static bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
         {
             var schemaValidator = Current.Index._schemaValidator.validator;
             if (schemaValidator == null)

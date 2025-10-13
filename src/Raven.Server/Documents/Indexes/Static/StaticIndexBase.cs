@@ -184,12 +184,6 @@ namespace Raven.Server.Documents.Indexes.Static
             var json = EnsureSourceDocumentOrThrow(doc, nameof(SchemaValid));
             return CurrentIndexingScope.Current.SchemaValid(json);
         }
-        
-        protected dynamic SchemaError(dynamic doc)
-        {
-            var json = EnsureSourceDocumentOrThrow(doc, nameof(SchemaError));
-            return CurrentIndexingScope.Current.SchemaError(json);
-        }
 
         private static BlittableJsonReaderObject EnsureSourceDocumentOrThrow(dynamic doc, string funcName)
         {
@@ -208,7 +202,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"'{funcName}' can only be performed on the source document.");
             return json.BlittableJson;
         }
-
 
         [DoesNotReturn]
         private static void ThrowInvalidDocType(dynamic doc, string funcName)

@@ -23,7 +23,6 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Sparrow;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -65,6 +64,7 @@ function map(name, lambda) {
             engine.SetClrFunc("counterNamesFor", CounterNamesFor);
             engine.SetClrFunc("loadAttachment", LoadAttachment);
             engine.SetClrFunc("loadAttachments", LoadAttachments);
+            engine.SetClrFunc("schemaValidate", SchemaValidate);
             engine.SetClrFunc("id", GetDocumentId);
         }
 
@@ -201,6 +201,14 @@ function map(name, lambda) {
             scope.RegisterJavaScriptUtils(_javaScriptUtils);
 
             return _javaScriptUtils.LoadAttachments(self, args);
+        }
+        
+        private JsValue SchemaValidate(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            
+            return _javaScriptUtils.SchemaValidate(self, args);
         }
     }
 
