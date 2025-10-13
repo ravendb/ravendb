@@ -1,13 +1,18 @@
+using System;
 using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Web
 {
     public sealed class RequestHandlerContext
     {
+        private static readonly DisposableScope DisposedSentinel = new();
+        private DisposableScope _disposables;
+
         public HttpContext HttpContext;
         public RavenServer RavenServer;
         public RouteMatch RouteMatch;
@@ -27,32 +32,23 @@ namespace Raven.Server.Web
             var disposables = _disposables;
             if (disposables == null)
             {
-                disposables = new List<IDisposable>();
+                disposables = new DisposableScope();
                 _disposables = disposables;
             }
 
-            disposables.Add(disposable);
+            disposables.EnsureDispose(disposable);
         }
 
         public void Dispose()
         {
             var disposables = _disposables;
+           
             if (ReferenceEquals(disposables, DisposedSentinel))
                 return;
 
             _disposables = DisposedSentinel;
 
-            if (disposables == null)
-                return;
-
-            ExceptionAggregator aggregator = new ExceptionAggregator($"Could not dispose {nameof(RequestHandlerContext)}");
-                
-            for (var i = disposables.Count - 1; i >= 0; i--)
-            {
-                aggregator.Execute(disposables[i]);
-            }
-
-            aggregator.ThrowIfNeeded();
+            disposables?.Dispose();
         }
     }
 }
