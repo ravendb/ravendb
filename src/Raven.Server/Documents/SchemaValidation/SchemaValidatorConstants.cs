@@ -31,6 +31,7 @@ internal static class SchemaValidatorConstants
     public const string MinProperties = "minProperties";
     public const string PropertyNames = "propertyNames";
     public const string Required = "required";
+    public const string ExcludedProperties = "x-excludedProperties";
     #endregion
     
     #region Array

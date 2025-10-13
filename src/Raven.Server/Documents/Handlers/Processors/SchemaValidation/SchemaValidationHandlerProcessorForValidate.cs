@@ -52,9 +52,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
             var totalScanned = 0;
             
             using var blittable = context.Sync.ReadForMemory(Parameters.SchemaDefinition, "schema-validation");
-            
-            var schemaValidator = new SchemaValidator { SchemaDefinition = Parameters.SchemaDefinition };
-            schemaValidator.Init(blittable);
+            var schemaValidator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, Parameters.SchemaDefinition);
 
             using var errorBuilder = new ErrorBuilder(context);
             

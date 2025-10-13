@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Logging;
 
@@ -15,23 +16,25 @@ namespace Raven.Server.Documents.SchemaValidation;
 public class SchemaValidatorCache : IDisposable
 {
     private static readonly FrozenDictionary<string, SchemaValidator> EmptyCache = Array.Empty<KeyValuePair<string, SchemaValidator>>().ToFrozenDictionary();
-    
+
+    private readonly DatabaseNotificationCenter _notificationCenter;
     private readonly RavenLogger _logger;
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
     private bool _disabled;
 
-    public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, RavenLogger logger)
+    public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, DatabaseNotificationCenter notificationCenter, RavenLogger logger)
         where T : JsonOperationContext
     {
         var returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
-        return new SchemaValidatorCache(returnContext, context, logger);
+        return new SchemaValidatorCache(returnContext, context, notificationCenter, logger);
     }
     
-    private SchemaValidatorCache(IDisposable returnCtx, JsonOperationContext ctx, RavenLogger logger)
+    private SchemaValidatorCache(IDisposable returnCtx, JsonOperationContext ctx, DatabaseNotificationCenter notificationCenter, RavenLogger logger)
     {
         _context.Return = returnCtx;
         _context.Value = ctx;
+        _notificationCenter = notificationCenter;
         _logger = logger;
     }
 
@@ -50,25 +53,29 @@ public class SchemaValidatorCache : IDisposable
 
         Dictionary<string, SchemaValidator> newSchemaValidators = null;
         
-        foreach ((string collection, Client.Documents.Operations.SchemaValidation.SchemaDefinition validator) in configuration.ValidatorsPerCollection)
+        foreach ((string collection, SchemaDefinition validator) in configuration.ValidatorsPerCollection)
         {
             if (_schemaValidatorsPerCollection.TryGetValue(collection, out var existingValidator)
                 && validator.Schema.Equals(existingValidator.SchemaDefinition))
                 continue;
 
-            var schemaValidator = new SchemaValidator(validator.Disabled) { SchemaDefinition = validator.Schema };
-
+            SchemaValidator schemaValidator;
             try
             {
                 var blittable = _context.Value.Sync.ReadForMemory(validator.Schema, "schema-validation");
-                SchemaValidationHelper.EnsureMetadataIsValid(_context.Value, ref blittable);
-                schemaValidator.Init(blittable);
+                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context.Value, blittable, validator.Schema);
             }
             catch (Exception e)
             {
+                var errorMessage = $"Failed to parse the schema validator for collection {collection}";
+                
                 if (_logger.IsErrorEnabled)
-                    _logger.Error($"Failed to parse the schema validator for collection {collection}", e);
+                    _logger.Error(errorMessage, e);
 
+                const string title = "Schema Validation Configuration";
+                var alert = AlertRaised.Create(_notificationCenter.Database, title, errorMessage, AlertType.SchemaValidationConfiguration_Error, NotificationSeverity.Error, details:new ExceptionDetails(e));
+                _notificationCenter.Add(alert);
+                
                 continue;
             }
 

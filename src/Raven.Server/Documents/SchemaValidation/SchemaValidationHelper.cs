@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Raven.Client;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Sparrow;
 using Sparrow.Json;
@@ -221,36 +222,33 @@ public static class SchemaValidationHelper
 
         return true;
     }
-    
-    public static void EnsureMetadataIsValid(JsonOperationContext context, ref BlittableJsonReaderObject blittable)
+
+    public static SchemaValidator InitValidatorForDocument(JsonOperationContext context, BlittableJsonReaderObject definition, string strDefinition)
     {
-        if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) == false 
-            || additionalProperties is true)
-            //If additional properties are allowed, no problematic restriction on metadata is can be.
-            return;
-
-        if (blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties)
-            && properties.Contains(Client.Constants.Documents.Metadata.Key))
-            //If explicit restriction on metadata is configured we don't verify it in this point.
-            return;
-        
-        
-        object newProperties;
-        if (properties == null)
+        var validator = new SchemaValidator { SchemaDefinition = strDefinition };
+        ValidateSchemaDefinitionForDocument(definition);
+        ExcludeMetadata(context, ref definition);
+        validator.Init(definition);
+        return validator;
+    }
+    
+    private static void ExcludeMetadata(JsonOperationContext context, ref BlittableJsonReaderObject blittable)
+    {
+        blittable.Modifications = new DynamicJsonValue(blittable)
         {
-            newProperties = new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
-        }
-        else
-        {
-            properties.Modifications = new DynamicJsonValue(properties) { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
-            newProperties = properties;
-        }
+            [SchemaValidatorConstants.ExcludedProperties] = new [] {Constants.Documents.Metadata.Id},
+        };
         
-        blittable.Modifications = new DynamicJsonValue(blittable) { [SchemaValidatorConstants.Properties] = newProperties };
-
         using (_ = blittable)
         {
-            blittable = context.ReadObject(blittable, "modified-schema-validation");
+            blittable = context.ReadObject(blittable, "schema-validation-metadata-excluded");
         }
+    }
+
+    public static void ValidateSchemaDefinitionForDocument(BlittableJsonReaderObject blittable)
+    {
+        if (blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties)
+            && properties.Contains(Constants.Documents.Metadata.Key))
+            throw new InvalidOperationException("Define a schema validation on metadata is not allowed.");
     }
 }

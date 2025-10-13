@@ -13,17 +13,27 @@ namespace Raven.Server.Documents.SchemaValidation.Validators.Object;
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly SchemaPath _schemaPath;
+    private readonly LazyStringValue[] _exclude;
     private readonly Dictionary<LazyStringValue, ElementSchemaRuleValidator> _namedPropertyValidators;
     private readonly (Regex Regex, ElementSchemaRuleValidator Validator)[] _patternPropertiesValidators;
     private readonly (bool Allowed, ElementSchemaRuleValidator Validator) _additionalPropertiesValidator;
 
     // ReSharper disable once ConvertToPrimaryConstructor
-    public ObjectSchemaRuleValidator(Dictionary<LazyStringValue, ElementSchemaRuleValidator> named, (Regex, ElementSchemaRuleValidator x)[] pattern, (bool IsAllowed, ElementSchemaRuleValidator Validator) additional, SchemaPath schemaPath)
+    public ObjectSchemaRuleValidator(Dictionary<LazyStringValue, ElementSchemaRuleValidator> named, (Regex, ElementSchemaRuleValidator x)[] pattern, (bool IsAllowed, ElementSchemaRuleValidator Validator) additional, SchemaPath schemaPath, LazyStringValue[] exclude)
     {
         _namedPropertyValidators = named;
         _patternPropertiesValidators = pattern;
         _additionalPropertiesValidator = additional;
         _schemaPath = schemaPath;
+        _exclude = exclude;
+
+        if (exclude != null)
+        {
+            foreach (var lazyStringValue in exclude)
+            {
+                _namedPropertyValidators.Remove(lazyStringValue);
+            }
+        }
     }
 
     public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
@@ -45,6 +55,8 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
             for (int i = 0; i < value.Count; i++)
             {
                 var propName = value.GetPropertyNameByIndex(i);
+                if (_exclude?.Contains(propName) == true) 
+                    continue;
                 
                 var hasValidator = _namedPropertyValidators != null && _namedPropertyValidators.ContainsKey(propName);
                 if (_patternPropertiesValidators != null)
@@ -96,6 +108,24 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         return isValid;
     }
 
+    private bool ShouldExclude(LazyStringValue prop)
+    {
+        if(_exclude != null)
+            return true;
+
+        var ret = false;
+        foreach (var ex in _exclude)
+        {
+            if(prop.Equals(ex))
+            if (string.Equals(ex, prop, StringComparison.Ordinal))
+            {
+                ret = true;
+                break;
+            }
+        }
+        return false;
+    }
+
     private static bool ValidateProperty(ElementSchemaRuleValidator validator, BlittableJsonReaderObject value, LazyStringValue prop,
         ErrorBuilder errorBuilder)
     {
@@ -124,8 +154,10 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
 
         if (named == null && pattern == null && additional is { IsAllowed: true, Validator: null })
             return null;
+
+        var exclude = ReadExcludeProperties(schemaDefinition, schemaPath);
         
-        return new ObjectSchemaRuleValidator(named, pattern, additional, schemaPath);
+        return new ObjectSchemaRuleValidator(named, pattern, additional, schemaPath, exclude);
     }
     
     private static (bool IsAllowed, ElementSchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
@@ -152,6 +184,29 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 SchemaValidationHelper.ThrowRuleTypeError(additionalProperties, expectedTypes.ToHashSet(), schemaPath);
                 return (false, null);
         }
+    }
+    
+    private static LazyStringValue[] ReadExcludeProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
+    {
+        const string rule = SchemaValidatorConstants.ExcludedProperties;
+        schemaPath += rule;
+        if(SchemaValidationHelper.TryGetArray(schemaDefinition, rule, schemaPath, out var excludeProperties) == false)
+            return null;
+
+        var excluded = new LazyStringValue[excludeProperties.Length];
+        for (var i = 0; i < excludeProperties.Length; i++)
+        {
+            var item = excludeProperties[i];
+            if (item is LazyStringValue str == false)
+            {
+                SchemaValidationHelper.ThrowRuleTypeError(item, typeof(LazyStringValue), schemaPath + $"[{i}]");
+                return null; // never hit
+            }
+            
+            excluded[i] = str;
+        }
+
+        return excluded;
     }
 
     private static List<(LazyStringValue property, ElementSchemaRuleValidator validator)> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,

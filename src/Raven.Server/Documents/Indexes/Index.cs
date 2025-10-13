@@ -876,10 +876,9 @@ namespace Raven.Server.Documents.Indexes
                 if (Definition.SchemaValidation != null)
                 {
                     _schemaValidator.retrunCtx = _contextPool.AllocateOperationContext(out TransactionOperationContext context);
-                    _schemaValidator.validator = new SchemaValidator { SchemaDefinition = Definition.SchemaValidation };
                     var blittable = context.Sync.ReadForMemory(Definition.SchemaValidation, "schema-validation");
-                    SchemaValidationHelper.EnsureMetadataIsValid(context, ref blittable);
-                    _schemaValidator.validator.Init(blittable);
+                    
+                    _schemaValidator.validator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, Definition.SchemaValidation);
                 }
                 
                 OnInitialization();

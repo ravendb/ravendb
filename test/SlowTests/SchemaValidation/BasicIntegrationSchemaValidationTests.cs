@@ -673,6 +673,48 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         }
     }
     
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenDefineSchemaOnMetadata_ShouldReject()
+    {
+        var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { [Constants.Documents.Metadata.Key] = new DynamicJsonValue { [SVC.Const] = "123" } } };
+
+        using var context = JsonOperationContext.ShortTermSingleUse();
+        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
+        using var store = GetDocumentStore();
+
+        var configuration = new SchemaValidationConfiguration
+        {
+            Disabled = false,
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
+            }
+        };
+        var e = await Assert.ThrowsAnyAsync<Exception>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+        Assert.Contains("Define a schema validation on metadata is not allowed.", e.Message);
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenDefineInvalidSchema_ShouldReject()
+    {
+        var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = "ShouldBeObject" };
+
+        using var context = JsonOperationContext.ShortTermSingleUse();
+        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
+        using var store = GetDocumentStore();
+
+        var configuration = new SchemaValidationConfiguration
+        {
+            Disabled = false,
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
+            }
+        };
+        var e = await Assert.ThrowsAnyAsync<Exception>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+        Assert.Contains("The value of 'properties' must be an object, but received 'ShouldBeObject' of type 'string'. Schema path '#/properties'.", e.Message);
+    }
+    
     private static void AssertError(string expected, string actual)
     {
         if(actual.Contains(expected) == false)

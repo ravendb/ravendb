@@ -446,7 +446,7 @@ namespace Raven.Server.Documents
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
-                SchemaValidatorCache = SchemaValidatorCache.Create(DocumentsStorage.ContextPool, Loggers.GetLogger<SchemaValidatorCache>());
+                SchemaValidatorCache = SchemaValidatorCache.Create(DocumentsStorage.ContextPool, NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
 
                 _addToInitLog(LogLevel.Debug, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);

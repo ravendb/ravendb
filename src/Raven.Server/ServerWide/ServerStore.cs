@@ -24,6 +24,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -51,6 +52,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -82,6 +84,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -2074,9 +2077,25 @@ namespace Raven.Server.ServerWide
         public Task<(long Index, object Result)> ModifySchemaValidation(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(configurationJson);
-
+            ValidateSchemaDefinition(context, schemaValidationConfiguration);            
+            
             var editSchemaValidation = new EditSchemaValidationConfigurationCommand(schemaValidationConfiguration, databaseName, raftRequestId);
             return SendToLeaderAsync(editSchemaValidation);
+        }
+
+        private static void ValidateSchemaDefinition(JsonOperationContext context, SchemaValidationConfiguration configurationJson)
+        {
+            if (configurationJson.ValidatorsPerCollection == null)
+                throw new InvalidOperationException($"'{nameof(SchemaValidationConfiguration.ValidatorsPerCollection)}' cannot be null");
+
+            foreach (var item in configurationJson.ValidatorsPerCollection)
+            {
+                using var schema = context.Sync.ReadForMemory(item.Value.Schema, "schema-validation");
+                //TO make sure the schema is valid we run Init on an instance of SchemaValidator, but it is not used
+                var validator = new SchemaValidator();
+                validator.Init(schema);
+                SchemaValidationHelper.ValidateSchemaDefinitionForDocument(schema);
+            }
         }
 
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
