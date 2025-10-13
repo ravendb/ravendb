@@ -26,7 +26,6 @@
     <EmbeddedResource Include="Data\Northwind.4.2.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="JunitXml.TestLogger" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="xRetry" />

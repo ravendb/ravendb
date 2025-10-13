@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using Confluent.Kafka;
+using Org.BouncyCastle.Utilities.IO.Pem;
 using Raven.Client.Documents.Operations.QueueSink;
-using Raven.Server.Utils;
+using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.QueueSink;
 
@@ -31,8 +31,8 @@ public sealed class KafkaQueueSink : QueueSinkProcess
 
         if (settings.UseRavenCertificate && certificateHolder?.ClientCertificate != null)
         {
-            consumerConfig.SslCertificatePem = certificateHolder.ClientCertificate.ExportCertificatePem();
-            consumerConfig.SslKeyPem = (certificateHolder.PrivateKey as RSA).GetExportableRsaPrivateKey().ExportRSAPrivateKeyPem();
+            consumerConfig.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.ClientCertificate.RawData));
+            consumerConfig.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
             consumerConfig.SecurityProtocol = SecurityProtocol.Ssl;
         }
 
@@ -62,5 +62,17 @@ public sealed class KafkaQueueSink : QueueSinkProcess
         consumer.Subscribe(Script.Queues);
 
         return new KafkaSinkConsumer(consumer);
+    }
+
+    private static string ExportAsPem(object @object)
+    {
+        using (var sw = new StringWriter())
+        {
+            var pemWriter = new PemWriter(sw);
+
+            pemWriter.WriteObject(@object);
+
+            return sw.ToString();
+        }
     }
 }

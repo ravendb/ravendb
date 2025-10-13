@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Pkcs;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Utils;
@@ -20,7 +22,7 @@ public sealed class LetsEncryptCertificateUtil
             throw new InvalidOperationException($"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
 
         // this creates a client certificate which is signed by the current server certificate
-        var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder.ServerCertificate, certificateHolder.PrivateKey, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
+        var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder.ServerCertificate, certificateHolder.PrivateKey.Key, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
         var newCertDef = new CertificateDefinition
         {
@@ -39,32 +41,62 @@ public sealed class LetsEncryptCertificateUtil
 
     public static async Task WriteCertificateAsPemToZipArchiveAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
     {
-        var cert = new X509Certificate2(rawBytes, exportPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
-    
-        // Export the certificate to PEM
-        var certPem = cert.ExportCertificatePem();
-        var zipEntryCrt = archive.CreateEntry($"{name}.crt");
-        zipEntryCrt.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-        using (var entryStream = zipEntryCrt.Open())
-        using (var writer = new StreamWriter(entryStream))
+        var a = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
+        a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
+
+        X509CertificateEntry entry = null;
+        AsymmetricKeyEntry key = null;
+        foreach (var alias in a.Aliases)
         {
-            await writer.WriteAsync(certPem);
+            var aliasKey = a.GetKey(alias.ToString());
+            if (aliasKey != null)
+            {
+                entry = a.GetCertificate(alias.ToString());
+                key = aliasKey;
+                break;
+            }
         }
 
-        var zipEntryKey = archive.CreateEntry($"{name}.key");
-        zipEntryKey.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-        
-        string keyPem;
-        var privateKey = cert.GetExportableRsaPrivateKey();
-        if (privateKey != null)
-            keyPem = privateKey.ExportPkcs8PrivateKeyPem();
-        else
-            throw new CryptographicException("No RSA private key found");
-        
-        using (var entryStream = zipEntryKey.Open())
-        using (var writer = new StreamWriter(entryStream))
+        if (entry == null)
         {
-            await writer.WriteAsync(keyPem);
+            throw new InvalidOperationException("Could not find private key.");
+        }
+
+        var zipEntryCrt = archive.CreateEntry(name + ".crt");
+        zipEntryCrt.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+        await using (var stream = zipEntryCrt.Open())
+        await using (var writer = new StreamWriter(stream))
+        {
+            var pw = new PemWriter(writer);
+            pw.WriteObject(entry.Certificate);
+        }
+
+        var zipEntryKey = archive.CreateEntry(name + ".key");
+        zipEntryKey.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+        await using (var stream = zipEntryKey.Open())
+        await using (var writer = new StreamWriter(stream))
+        {
+            var pw = new PemWriter(writer);
+
+            object privateKey;
+            if (exportPassword != null)
+            {
+                privateKey = new MiscPemGenerator(
+                        key.Key,
+                        "DES-EDE3-CBC",
+                        exportPassword.ToCharArray(),
+                        CertificateUtils.GetSeededSecureRandom())
+                    .Generate();
+            }
+            else
+            {
+                privateKey = key.Key;
+            }
+
+            pw.WriteObject(privateKey);
+
             await writer.FlushAsync();
         }
     }

@@ -4,6 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Math;
+using Org.BouncyCastle.Security;
+using Sparrow;
 
 namespace Raven.Server.Commercial
 {
@@ -40,6 +45,7 @@ namespace Raven.Server.Commercial
         public static Dictionary<LicenseAttribute, object> Validate(License licenseKey, RSAParameters rsaParameters)
         {
             var keys = ExtractKeys(licenseKey.Keys);
+
             var result = new Dictionary<LicenseAttribute, object>();
             using (var ms = new MemoryStream())
             using (var br = new BinaryReader(ms))
@@ -79,24 +85,18 @@ namespace Raven.Server.Commercial
                 {
                     binaryWriter.Write(licenseKey.Id.ToByteArray());
                     binaryWriter.Write(licenseKey.Name);
-                }
 
-                var dataToVerify = ms.ToArray();
+                    RsaKeyParameters publicKey = new(isPrivate: false,
+                        new BigInteger(1, rsaParameters.Modulus),
+                        new BigInteger(1, rsaParameters.Exponent));
 
-                using (RSA rsa = RSA.Create())
-                {
-                    rsa.ImportParameters(rsaParameters);
+                    var dataToVerify = ms.ToArray();
+                    ISigner verifier = SignerUtilities.GetSigner("SHA1withRSA");
+                    verifier.Init(forSigning: false, publicKey);
+                    verifier.BlockUpdate(dataToVerify, 0, dataToVerify.Length);
 
-                    bool isSignatureValid = rsa.VerifyData(
-                        dataToVerify,
-                        keys.Signature,
-                        HashAlgorithmName.SHA1,
-                        RSASignaturePadding.Pkcs1);
-
-                    if (isSignatureValid == false)
-                    {
+                    if (verifier.VerifySignature(keys.Signature) == false)
                         throw new InvalidDataException("Could not validate signature on license");
-                    }
                 }
 
                 return result;
