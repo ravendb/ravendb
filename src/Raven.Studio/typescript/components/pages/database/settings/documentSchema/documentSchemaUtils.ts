@@ -5,10 +5,10 @@ import genUtils from "common/generalUtils";
 
 const mapToSchemaValidationConfigurationDto = (
     formData: DocumentSchemaValidatorConfig[],
-    globalDisabled?: boolean
+    isGlobalDisabled?: boolean
 ): SchemaValidationConfiguration => {
     return {
-        Disabled: globalDisabled,
+        Disabled: isGlobalDisabled,
         ValidatorsPerCollection: Object.fromEntries(
             formData.map((x) => [
                 x.Name,

@@ -7,7 +7,7 @@ import { ThemeColor } from "components/models/common";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
 import classNames from "classnames";
-import IconName from "../../../../../../../typings/server/icons";
+import IconName from "typings/server/icons";
 
 export type DocumentSchemaOperationConfirmType = "enable" | "disable";
 

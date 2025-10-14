@@ -259,12 +259,12 @@ const CollectionSchemaRichPanel = ({
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
-    const globalDisabled = useAppSelector(documentSchemaSelectors.globalDisabled);
+    const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
 
     const asyncSaveValidators = async (items: DocumentSchemaValidatorConfig[]) => {
         await databasesService.saveSchemaValidation(
             databaseName,
-            documentSchemaUtils.mapToSchemaValidationConfigurationDto(items, globalDisabled)
+            documentSchemaUtils.mapToSchemaValidationConfigurationDto(items, isGlobalDisabled)
         );
         dispatch(documentSchemaActions.validatorsSaved());
     };
