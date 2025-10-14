@@ -136,7 +136,7 @@ public class RavenDB_24495 : ClusterTestBase
         var clientCn = $"client-{Guid.NewGuid():N}";
 
         var dnServerBytes = CertificateUtils.CreateSelfSignedTestCertificate(cn, issuerName: null, with2Eku: true);
-        using var serverCert = CertificateLoaderUtil.CreateCertificate(dnServerBytes, flags: CertificateLoaderUtil.FlagsForExport);
+        using var serverCert = CertificateLoaderUtil.CreateCertificateFromPfx(dnServerBytes, flags: CertificateLoaderUtil.FlagsForExport);
 
         var serverPrivateKey = serverCert.GetExportableRsaPrivateKey();
         var bcClient = BouncyCastleCertificateUtils.CreateSelfSignedClientCertificate(clientCn, serverCert, DotNetUtilities.GetRsaKeyPair(serverPrivateKey).Private, out byte[] _, DateTime.UtcNow.AddMonths(3));
@@ -159,7 +159,7 @@ public class RavenDB_24495 : ClusterTestBase
         var cn = $"srv-{Guid.NewGuid():N}";
 
         var dnServerBytes = CertificateUtils.CreateSelfSignedTestCertificate(cn, issuerName: null, with2Eku: true);
-        using var serverCert = CertificateLoaderUtil.CreateCertificate(dnServerBytes, flags: CertificateLoaderUtil.FlagsForExport);
+        using var serverCert = CertificateLoaderUtil.CreateCertificateFromPfx(dnServerBytes, flags: CertificateLoaderUtil.FlagsForExport);
 
         var bcClient = BouncyCastleCertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out byte[] _);
         var dnClient = CertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out byte[] _);

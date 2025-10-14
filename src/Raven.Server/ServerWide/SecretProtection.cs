@@ -843,7 +843,7 @@ namespace Raven.Server.ServerWide
         internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricAlgorithm pk, SetupProgressAndResult progress = null)
         {
             pk = null;
-            var certificate = CertificateLoaderUtil.CreateCertificate(rawData, certificatePassword, X509KeyStorageFlags.PersistKeySet);
+            var certificate = CertificateLoaderUtil.CreateCertificateFromPfx(rawData, certificatePassword, X509KeyStorageFlags.PersistKeySet);
 
             // Get the private key.
             pk = certificate.GetRSAPrivateKey();

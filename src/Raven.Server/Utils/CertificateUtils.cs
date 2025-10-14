@@ -276,7 +276,7 @@ namespace Raven.Server.Utils
             pfxCollection.Import(certBytes, null, CertificateLoaderUtil.FlagsForExport);
 
             // Add the server certificate to the collection
-            pfxCollection.Add(CertificateLoaderUtil.CreateCertificateFromPfx(serverCertBytes, flags: CertificateLoaderUtil.FlagsForExport));
+            pfxCollection.Add(CertificateLoaderUtil.CreateCertificateFromAny(serverCertBytes, flags: CertificateLoaderUtil.FlagsForExport));
 
             // Export the entire collection as a new PFX file.
             // The native .NET method handles the complex encoding and
@@ -520,7 +520,7 @@ namespace Raven.Server.Utils
 
             // Return a new X509Certificate2 object from the generated PFX byte array.
             var flags = X509KeyStorageFlags.PersistKeySet;
-            return new X509Certificate2(clientCertBytes, string.Empty, flags);
+            return CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes, string.Empty, flags);
         }
 
         public static X509Certificate2 ExtractServerCertificateFromExtension(X509Certificate2 clientCert)
@@ -540,7 +540,7 @@ namespace Raven.Server.Utils
                 {
                     // The RawData property of the extension contains the DER-encoded certificate bytes.
                     // The native .NET X509Certificate2 constructor can directly create a certificate from these bytes.
-                    serverCertificateFromExtension = CertificateHelper.CreateCertificateFromPfx(extension.RawData, (string)null, CertificateLoaderUtil.FlagsForExport);
+                    serverCertificateFromExtension = CertificateHelper.CreateCertificateFromCert(extension.RawData);
                 }
                 catch (CryptographicException)
                 {
