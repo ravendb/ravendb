@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -92,7 +93,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using (var session = store.OpenAsyncSession())
             {
                 var messages = (await session.LoadAsync<Chat>(chat.Id)).Messages;
-                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content); // query results
+                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content.ToString()); // query results
                 Assert.Equal(1, toolCallAnswer.Count);
                 Assert.Equal("Aviv", toolCallAnswer.FirstOrDefault()?.Author);
             }
@@ -150,7 +151,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using (var session = store.OpenAsyncSession())
             {
                 var messages = (await session.LoadAsync<Chat>(chat.Id)).Messages;
-                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content); // query results
+                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content.ToString()); // query results
                 Assert.Equal(1, toolCallAnswer.Count);
                 Assert.Equal("Shahar", toolCallAnswer.FirstOrDefault()?.Author);
             }
@@ -208,7 +209,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using (var session = store.OpenAsyncSession())
             {
                 var messages = (await session.LoadAsync<Chat>(chat.Id)).Messages;
-                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content); // query results
+                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content.ToString()); // query results
                 Assert.Equal(1, toolCallAnswer.Count);
                 Assert.Equal("Shahar", toolCallAnswer.FirstOrDefault()?.Author);
             }
@@ -265,7 +266,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using (var session = store.OpenAsyncSession())
             {
                 var messages = (await session.LoadAsync<Chat>(chat.Id)).Messages;
-                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content); // query results
+                var toolCallAnswer = JsonConvert.DeserializeObject<List<Question>>(messages[4].Content.ToString()); // query results
                 Assert.Equal(1, toolCallAnswer.Count);
                 Assert.Equal("Karmel", toolCallAnswer.FirstOrDefault()?.Author);
             }
@@ -282,7 +283,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string Role { get; set; }
 
             [JsonPropertyName("content")]
-            public string Content { get; set; }
+            public JToken Content { get; set; }
 
             [JsonPropertyName("date")]
             public DateTime Date { get; set; }

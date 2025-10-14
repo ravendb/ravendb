@@ -56,4 +56,6 @@ function useTheme(theme: Theme) {
     themeLink.rel = "stylesheet";
     themeLink.href = stylesheetPrefix + fileName;
     document.head.insertBefore(themeLink, document.head.firstChild);
+
+    document.body.setAttribute("data-theme", theme);
 }

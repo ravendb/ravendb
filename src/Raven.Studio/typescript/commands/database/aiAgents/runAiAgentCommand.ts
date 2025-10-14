@@ -2,10 +2,14 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import aiAgentsTypes = require("components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes");
 
-class runAiAgentCommand extends commandBase {
+export interface RunAiAgentRequestDto extends Omit<Raven.Client.Documents.Operations.AI.Agents.ConversionRequestBody, "UserPrompt"> {
+    UserPrompt: string | { type: "text", text: string }[];
+}
+
+export default class runAiAgentCommand extends commandBase {
     constructor(
         private db: string,
-        private dto: Raven.Client.Documents.Operations.AI.Agents.ConversionRequestBody,
+        private dto: RunAiAgentRequestDto,
         private agentId: string,
         private conversationId: string,
         private changeVector: string
@@ -27,5 +31,3 @@ class runAiAgentCommand extends commandBase {
         );
     }
 }
-
-export = runAiAgentCommand;

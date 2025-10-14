@@ -202,6 +202,14 @@ public interface IAiConversationOperations
     void SetUserPrompt(string userPrompt);
 
     /// <summary>
+    /// Adds the next user prompt or prompts to send to the AI agent.
+    /// </summary>
+    /// <param name="userPrompt">
+    /// The text of the user’s message.
+    /// </param>
+    void AddUserPrompt(params IEnumerable<string> userPrompt);
+
+    /// <summary>
     /// This is called if the model invoked an action that has no register handler using
     /// <see cref="Handle"/> or <see cref="Receive"/>. If there is no event handler for
     /// this event and an unexpected action is raised by the model, and exception will

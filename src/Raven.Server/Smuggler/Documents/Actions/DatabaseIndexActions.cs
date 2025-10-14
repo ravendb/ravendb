@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Org.BouncyCastle.Security.Certificates;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -33,7 +33,7 @@ public sealed class DatabaseIndexActions : IIndexActions
         if (_configuration.Security.AuthenticationEnabled &&
             authorizationStatus == AuthorizationStatus.ValidUser)
         {
-            throw new CertificateException(
+            throw new CryptographicException(
                 $"Could not import '{indexDefinition.Name}' index: Your existing certificate lacks the necessary permissions to create indexes.");
         }
 
@@ -54,7 +54,7 @@ public sealed class DatabaseIndexActions : IIndexActions
             (indexDefinition.Type == IndexType.Map ||
              indexDefinition.Type == IndexType.MapReduce))
         {
-            throw new CertificateException(
+            throw new CryptographicException(
                 $"Could not import '{indexDefinition.Name}' index: Your existing certificate lacks the necessary permissions to create indexes.");
         }
 

@@ -1,5 +1,5 @@
 .custom-dropdown-toggle {
     &.no-caret:after {
-        display: none;
+        display: none !important;
     }
 }

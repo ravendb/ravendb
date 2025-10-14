@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents;
 public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>>
 {
     private readonly string _agentId;
-    private readonly string _userPrompt;
+    private readonly IEnumerable<ContentPart> _promptParts;
     private readonly AiConversationCreationOptions _options;
 
     private readonly string _conversationId;
@@ -31,17 +31,17 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     public RunConversationOperation(
         string agentId,
         string conversationId,
-        string userPrompt,
+        List<ContentPart> promptParts,
         List<AiAgentActionResponse> actionResponses,
         AiConversationCreationOptions options,
-        string changeVector) : this(agentId, conversationId, userPrompt, actionResponses, options, changeVector, null, null)
+        string changeVector) : this(agentId, conversationId, promptParts, actionResponses, options, changeVector, null, null)
     {
     }
 
     public RunConversationOperation(
         string agentId,
         string conversationId,
-        string userPrompt,
+        IEnumerable<ContentPart> promptParts,
         List<AiAgentActionResponse> actionResponses,
         AiConversationCreationOptions options,
         string changeVector,
@@ -55,7 +55,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
         _agentId = agentId;
         _conversationId = conversationId;
-        _userPrompt = userPrompt;
+        _promptParts = promptParts;
         _changeVector = changeVector;
         _actionResponses = actionResponses;
         _options = options;
@@ -64,6 +64,19 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _streamedChunksCallback = streamedChunksCallback;
     }
 
+    [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
+    public RunConversationOperation(
+            string agentId,
+            string conversationId,
+            string userPrompt,
+            List<AiAgentActionResponse> actionResponses,
+            AiConversationCreationOptions options,
+            string changeVector,
+            string streamPropertyPath,
+            Func<string, Task> streamedChunksCallback)
+        : this(agentId, conversationId, new List<ContentPart> { new TextPart(userPrompt) }, actionResponses, options, changeVector, streamPropertyPath, streamedChunksCallback)
+    {
+    }
     public virtual RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new RunConversationOperationCommand(this, conventions);
@@ -106,7 +119,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             var body = new ConversionRequestBody
             {
                 ActionResponses = _parent._actionResponses,
-                UserPrompt = _parent._userPrompt,
+                UserPrompt = _parent._promptParts,
                 CreationOptions = _parent._options
             };
 

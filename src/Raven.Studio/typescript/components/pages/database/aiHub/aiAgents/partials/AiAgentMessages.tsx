@@ -201,7 +201,20 @@ interface UserMessageProps {
 }
 
 function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
-    const isMessageWithParameters = message.content.startsWith("AI Agent Parameters:");
+    const getMessageContent = (): string | { type: "text"; text: string }[] => {
+        try {
+            return JSON.parse(message.content);
+        } catch {
+            return message.content;
+        }
+    };
+
+    const messageContent = getMessageContent();
+
+    const isContentString = typeof messageContent === "string";
+    const isContentArray = Array.isArray(messageContent);
+
+    const isMessageWithParameters = isContentString && messageContent.startsWith("AI Agent Parameters:");
 
     if (isMessageWithParameters) {
         return null;
@@ -216,7 +229,19 @@ function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
                     style={{ maxWidth: "75%" }}
                 >
                     <div className="overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
-                        {message.content}
+                        {isContentString && messageContent}
+                        {isContentArray && (
+                            <div className="vstack gap-2 align-items-start">
+                                {messageContent.map((x, idx) => (
+                                    <div key={idx} className="vstack gap-1 align-items-start">
+                                        <Badge bg="primary" pill style={{ fontSize: "12px" }}>
+                                            Prompt #{idx + 1}
+                                        </Badge>
+                                        <div className="text-start">{x.text}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     {message.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
