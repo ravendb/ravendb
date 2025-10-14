@@ -2077,13 +2077,13 @@ namespace Raven.Server.ServerWide
         public Task<(long Index, object Result)> ModifySchemaValidation(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(configurationJson);
-            ValidateSchemaDefinition(context, schemaValidationConfiguration);            
+            ValidateSchemaConfiguration(context, schemaValidationConfiguration);            
             
             var editSchemaValidation = new EditSchemaValidationConfigurationCommand(schemaValidationConfiguration, databaseName, raftRequestId);
             return SendToLeaderAsync(editSchemaValidation);
         }
 
-        private static void ValidateSchemaDefinition(JsonOperationContext context, SchemaValidationConfiguration configurationJson)
+        private static void ValidateSchemaConfiguration(JsonOperationContext context, SchemaValidationConfiguration configurationJson)
         {
             if (configurationJson.ValidatorsPerCollection == null)
                 throw new InvalidOperationException($"'{nameof(SchemaValidationConfiguration.ValidatorsPerCollection)}' cannot be null");

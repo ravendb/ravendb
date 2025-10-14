@@ -690,7 +690,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
                 { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
-        var e = await Assert.ThrowsAnyAsync<Exception>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+        var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
         Assert.Contains("Define a schema validation on metadata is not allowed.", e.Message);
     }
     
@@ -711,7 +711,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
                 { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
-        var e = await Assert.ThrowsAnyAsync<Exception>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+        var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
         Assert.Contains("The value of 'properties' must be an object, but received 'ShouldBeObject' of type 'string'. Schema path '#/properties'.", e.Message);
     }
     

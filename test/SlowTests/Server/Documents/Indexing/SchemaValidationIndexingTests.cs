@@ -165,9 +165,6 @@ map("TestObjs", (doc) => {
     [MemberData(nameof(ValidateDocumentData))]
     public async Task IndexingSchemaValidity_WhenDefineSchemaOnMetadata_ShouldReject(string map, IndexType indexType)
     {
-        const string invalidDocId = "invalidDocId";
-        const string validDocId = "validDocId";
-        
         using var store = GetDocumentStore();
 
         string schemaDefinition;

@@ -158,7 +158,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public async Task ValidateSchemaOperation_WhenSettingEtagOnSharded_ShouldStartFromTheEtag()
+    public async Task ValidateSchemaOperation_WhenSettingEtagOnSharded_ShouldFail()
     {
         const int maxLength = 10;
         

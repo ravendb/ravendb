@@ -101,8 +101,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
 
                         ++totalValidated;
 
-                        var now = stop.Elapsed;
-                        if(totalValidated >= maxToValidate || now > stopTrxTime)
+                        if(totalValidated >= maxToValidate || stop.Elapsed > stopTrxTime)
                             break;
                     }
                     if(hasMore == false)

@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.SchemaValidation.Validators.Object;
 public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
     private readonly SchemaPath _schemaPath;
-    private readonly LazyStringValue[] _exclude;
+    private readonly HashSet<LazyStringValue> _exclude;
     private readonly Dictionary<LazyStringValue, ElementSchemaRuleValidator> _namedPropertyValidators;
     private readonly (Regex Regex, ElementSchemaRuleValidator Validator)[] _patternPropertiesValidators;
     private readonly (bool Allowed, ElementSchemaRuleValidator Validator) _additionalPropertiesValidator;
@@ -25,7 +25,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         _patternPropertiesValidators = pattern;
         _additionalPropertiesValidator = additional;
         _schemaPath = schemaPath;
-        _exclude = exclude;
+        _exclude = exclude?.ToHashSet();
 
         if (exclude != null)
         {
@@ -106,24 +106,6 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         }
 
         return isValid;
-    }
-
-    private bool ShouldExclude(LazyStringValue prop)
-    {
-        if(_exclude != null)
-            return true;
-
-        var ret = false;
-        foreach (var ex in _exclude)
-        {
-            if(prop.Equals(ex))
-            if (string.Equals(ex, prop, StringComparison.Ordinal))
-            {
-                ret = true;
-                break;
-            }
-        }
-        return false;
     }
 
     private static bool ValidateProperty(ElementSchemaRuleValidator validator, BlittableJsonReaderObject value, LazyStringValue prop,
