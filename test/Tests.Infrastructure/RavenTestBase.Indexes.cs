@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Util;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;

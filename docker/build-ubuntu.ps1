@@ -5,7 +5,8 @@ param(
     $Arch = "x64",
     $DockerfileDir = "./ravendb-ubuntu",
     $DebPackagePath="",
-    [switch]$NoCache)
+    [switch]$NoCache,
+    [switch]$UseVersionTagsOnly)
 
 $ErrorActionPreference = "Stop"
 
@@ -135,7 +136,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
     Write-Host "Providing deb path '$($pathToDeb)' to Dockerfile.."
 
     Write-Host "Build docker image: $version"
-    $tags = GetUbuntuImageTags $repo $version $arch
+    [string[]]$tags = GetUbuntuImageTags $repo $version $arch $UseVersionTagsOnly
     Write-Host "Tags: $tags"
     $fullNameTag = $tags[0]
 

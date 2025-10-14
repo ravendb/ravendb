@@ -103,20 +103,15 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document,
                             oldChangeVectorForClusterTransactionIndexCheck: cmd.OriginalChangeVector, flags: flags);
                     }
-                    catch (Voron.Exceptions.VoronConcurrencyErrorException)
+                    catch (Voron.Exceptions.VoronConcurrencyErrorException e)
                     {
-                        // RavenDB-10581 - If we have a concurrency error on "doc-id/"
-                        // this means that we have existing values under the current etag
-                        // we'll generate a new (random) id for them.
-
-                        // The TransactionMerger will re-run us when we ask it to as a
-                        // separate transaction
                         for (; i < ParsedCommands.Count; i++)
                         {
                             cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
-                            if (cmd.Type == CommandType.PUT && cmd.Id?.EndsWith(Database.IdentityPartsSeparator) == true)
+                            if (cmd.Type == CommandType.PUT && DocumentPutAction.TryHandleVoronConcurrencyError(e, Database, cmd.Id, out var newId))
                             {
-                                cmd.Id = MergedPutCommand.GenerateNonConflictingId(Database, cmd.Id);
+                                cmd.Id = newId;
+                                // The TransactionMerger will re-run us when we ask it to as a separate transaction
                                 RetryOnError = true;
                             }
                         }

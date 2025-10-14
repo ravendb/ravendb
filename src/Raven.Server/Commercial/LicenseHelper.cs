@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Util;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Properties;

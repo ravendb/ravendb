@@ -51,7 +51,7 @@ namespace SlowTests.Authentication
                 Server.ServerStore.GetLicenseType(),
                 Server.ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
-            var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder.Certificate, serverCertificateHolder.PrivateKey.Key);
+            var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder.Certificate, serverCertificateHolder.PrivateKey);
 
             using (var store = GetDocumentStore(new Options
             {

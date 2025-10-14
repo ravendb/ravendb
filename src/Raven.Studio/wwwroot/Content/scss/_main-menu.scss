@@ -195,8 +195,9 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                 }
                 & > a {
                     padding: $gutter-sm calc($gutter-xs - 1px);
-                    @media (min-height: 750px) {
-                        height: 60px;
+
+                    @media (max-height: 800px) {
+                        padding: $gutter-xs calc($gutter-xs - 1px);
                     }
                     span {
                         transition: opacity 0.1s linear;
@@ -210,6 +211,11 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                         i {
                             -webkit-transform: scale(1.4);
                             transform: scale(1.4);
+
+                            @media (max-height: 800px) {
+                                -webkit-transform: scale(1.15);
+                                transform: scale(1.15);
+                            }
                         }
                     }
                 }

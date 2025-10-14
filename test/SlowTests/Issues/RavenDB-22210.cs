@@ -7,9 +7,9 @@ using FastTests;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
+using System.Security.Cryptography;
 
 namespace SlowTests.Issues;
 
@@ -33,12 +33,11 @@ public class RavenDB_22210 : RavenTestBase
         }
         catch
         {
-            //make sure CA certs are in store
             Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
             Assert.True(IsCACertificateInStore(certificates.intermediate),
-                $"Certificate {certificates.intermediate.SubjectName} is not in store.  {string.Join('\n', explanationsList)}");
+                $"Certificate {certificates.intermediate.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
             Assert.True(IsCACertificateInStore(certificates.intermediate2),
-                $"Certificate {certificates.intermediate2.SubjectName} is not in store.  {string.Join('\n', explanationsList)}");
+                $"Certificate {certificates.intermediate2.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
 
             throw;
         }
@@ -62,7 +61,6 @@ public class RavenDB_22210 : RavenTestBase
         }
         catch
         {
-            //make sure CA certs are in store
             Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
             Assert.True(IsCACertificateInStore(certificates.intermediate),
                 $"Certificate {certificates.intermediate.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
@@ -99,7 +97,6 @@ public class RavenDB_22210 : RavenTestBase
         }
         catch
         {
-            //make sure CA certs are in store
             Assert.True(IsCACertificateInStore(certificates.ca), $"Certificate {certificates.ca.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
             Assert.True(IsCACertificateInStore(certificates.ca2), $"Certificate {certificates.ca2.SubjectName} is not in store. {string.Join('\n', explanationsList)}");
             Assert.True(IsCACertificateInStore(certificates.intermediate),
@@ -119,19 +116,51 @@ public class RavenDB_22210 : RavenTestBase
         GenerateAndRenewWithDifferentIntermediate()
     {
         var suffix = GenerateSuffix();
-        var caKp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca = CertificateGenerator.GenerateRootCACertificate($"CaName-{suffix}", 5, caKp);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"CaName-{suffix}", out var caKp, out _);
 
-        var intermediateKp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{IntermediateName}-{suffix}",
+            issuerCN: ca.SubjectName,
+            issuerKeyPair: caKp,
+            isClientCertificate: false,
+            isCaCertificate: true,
+            notAfter: DateTime.UtcNow.Date.AddYears(2),
+            certBytes: out var intermediateBytes);
+        var intermediate = new X509Certificate2(intermediateBytes);
 
-        var intermediate2Kp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}-2", 2, intermediate2Kp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{IntermediateName}-{suffix}-2",
+            issuerCN: ca.SubjectName,
+            issuerKeyPair: caKp,
+            isClientCertificate: false,
+            isCaCertificate: true,
+            notAfter: DateTime.UtcNow.Date.AddYears(2),
+            certBytes: out var intermediate2Bytes);
+        var intermediate2 = new X509Certificate2(intermediate2Bytes);
 
-        var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
+        var clientKp = RSA.Create(2048);
 
-        var client2 = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientName}-{suffix}",
+            issuerCN: intermediate.SubjectName,
+            issuerKeyPair: (intermediate.GetRSAPrivateKey(), intermediate.GetRSAPublicKey()),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var clientBytes,
+            subjectPrivateKey: clientKp);
+        var client = new X509Certificate2(clientBytes);
+
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientRenewedName}-{suffix}",
+            issuerCN: intermediate2.SubjectName,
+            issuerKeyPair: (intermediate2.GetRSAPrivateKey(), intermediate2.GetRSAPublicKey()),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var client2Bytes,
+            subjectPrivateKey: clientKp);
+        var client2 = new X509Certificate2(client2Bytes);
 
         return (ca, intermediate, intermediate2, client, client2);
     }
@@ -141,22 +170,52 @@ public class RavenDB_22210 : RavenTestBase
         GenerateAndRenewWithDifferentChain()
     {
         var suffix = GenerateSuffix();
-        var caKp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca = CertificateGenerator.GenerateRootCACertificate($"{CaName}-{suffix}", 5, caKp);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}", out _, out _);
+        var ca2 = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}-2", out _, out _, generateNewKeyPair: true);
 
-        var ca2Kp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca2 = CertificateGenerator.GenerateRootCACertificate($"{CaName}-{suffix}-2", 5, ca2Kp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{IntermediateName}-{suffix}",
+            issuerCN: ca.SubjectName,
+            issuerKeyPair: (ca.GetRSAPrivateKey(), ca.GetRSAPublicKey()),
+            isClientCertificate: false,
+            isCaCertificate: true,
+            notAfter: DateTime.UtcNow.Date.AddYears(2),
+            certBytes: out var intermediateBytes);
+        var intermediate = new X509Certificate2(intermediateBytes);
 
-        var intermediateKp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{IntermediateName}-{suffix}-2",
+            issuerCN: ca2.SubjectName,
+            issuerKeyPair: (ca2.GetRSAPrivateKey(), ca2.GetRSAPublicKey()),
+            isClientCertificate: false,
+            isCaCertificate: true,
+            notAfter: DateTime.UtcNow.Date.AddYears(2),
+            certBytes: out var intermediate2Bytes);
+        var intermediate2 = new X509Certificate2(intermediate2Bytes);
 
-        var intermediate2Kp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca2, ca2Kp, $"{IntermediateName}-{suffix}-2", 2, intermediate2Kp);
+        var clientKp = RSA.Create(2048);
 
-        var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientName}-{suffix}",
+            issuerCN: intermediate.SubjectName,
+            issuerKeyPair: (intermediate.GetRSAPrivateKey(), intermediate.GetRSAPublicKey()),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var clientBytes,
+            subjectPrivateKey: clientKp);
+        var client = new X509Certificate2(clientBytes);
 
-        var client2 = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientRenewedName}-{suffix}",
+            issuerCN: intermediate2.SubjectName,
+            issuerKeyPair: (intermediate2.GetRSAPrivateKey(), intermediate2.GetRSAPublicKey()),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var client2Bytes,
+            subjectPrivateKey: clientKp);
+        var client2 = new X509Certificate2(client2Bytes);
 
         return (ca, ca2, intermediate, intermediate2, client, client2);
     }
@@ -164,15 +223,41 @@ public class RavenDB_22210 : RavenTestBase
     private static (X509Certificate2 ca, X509Certificate2 intermediate, X509Certificate2 client, X509Certificate2 clientRenewed) GenerateAndRenewWithTheSameIntermediate()
     {
         var suffix = GenerateSuffix();
-        var caKp = CertificateGenerator.GenerateRSAKeyPair();
-        var ca = CertificateGenerator.GenerateRootCACertificate($"{CaName}-{suffix}", 5, caKp);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}", out var caKp, out _);
 
-        var intermediateKp = CertificateGenerator.GenerateRSAKeyPair();
-        var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{IntermediateName}-{suffix}",
+            issuerCN: ca.SubjectName,
+            issuerKeyPair: caKp,
+            isClientCertificate: false,
+            isCaCertificate: true,
+            notAfter: DateTime.UtcNow.Date.AddYears(2),
+            certBytes: out var intermediateBytes);
+        var intermediate = new X509Certificate2(intermediateBytes);
 
-        var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
-        var client2 = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
+        var clientKp = RSA.Create(2048);
+
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientName}-{suffix}",
+            issuerCN: intermediate.SubjectName,
+            issuerKeyPair: (intermediate.GetRSAPrivateKey(), intermediate.GetRSAPublicKey()),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var clientBytes,
+            subjectPrivateKey: clientKp);
+        var client = new X509Certificate2(clientBytes);
+
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientRenewedName}-{suffix}",
+            issuerCN: intermediate.SubjectName,
+            issuerKeyPair: (intermediate.GetRSAPrivateKey(), intermediate.GetRSAPublicKey()),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var client2Bytes,
+            subjectPrivateKey: clientKp);
+        var client2 = new X509Certificate2(client2Bytes);
 
         return (ca, intermediate, client, client2);
     }
@@ -180,9 +265,29 @@ public class RavenDB_22210 : RavenTestBase
     private static (X509Certificate2 client, X509Certificate2 clientRenewed) GenerateAndRenewSelfSigned()
     {
         var suffix = GenerateSuffix();
-        var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSelfSignedClientCertificate($"{ClientName}-{suffix}", 1, clientKp);
-        var client2 = CertificateGenerator.GenerateSelfSignedClientCertificate($"{ClientRenewedName}-{suffix}", 1, clientKp);
+        var clientKp = RSA.Create(2048);
+
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientName}-{suffix}",
+            issuerCN: new X500DistinguishedName($"CN={ClientName}-{suffix}"),
+            issuerKeyPair: (clientKp, clientKp),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var clientBytes,
+            subjectPrivateKey: clientKp);
+        var client = new X509Certificate2(clientBytes);
+
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+            commonNameValue: $"{ClientRenewedName}-{suffix}",
+            issuerCN: new X500DistinguishedName($"CN={ClientName}-{suffix}"),
+            issuerKeyPair: (clientKp, clientKp),
+            isClientCertificate: true,
+            isCaCertificate: false,
+            notAfter: DateTime.UtcNow.Date.AddYears(1),
+            certBytes: out var client2Bytes,
+            subjectPrivateKey: clientKp);
+        var client2 = new X509Certificate2(client2Bytes);
 
         return (client, client2);
     }

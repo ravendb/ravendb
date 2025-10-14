@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class EditExpirationCommand : UpdateDatabaseCommand
+    public sealed class EditExpirationCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public ExpirationConfiguration Configuration;
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
@@ -31,5 +31,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

@@ -12,7 +12,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
-    public sealed class UpdatePeriodicBackupCommand : UpdateDatabaseCommand
+    public sealed class UpdatePeriodicBackupCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public PeriodicBackupConfiguration Configuration;
         private bool _shouldRemoveBackupStatus;
@@ -83,5 +83,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

@@ -490,5 +490,12 @@ public enum RavenTestCategory : long
     /// REQUIREMENTS: Often requires multiple RavenDB versions, special test infrastructure
     /// </summary>
     Interversion = 1L << 52,
-    Debug = 1L << 52,
+    
+    /// <summary>
+    /// Tests for debugging features.
+    /// USAGE: Tests involving Debug Package Analyzer, debug endpoints, debugging related functionalities.
+    /// COMBINE WITH: Memory, Logging
+    /// EXAMPLES: Debug Package Analyzer
+    /// </summary>
+    Debug = 1L << 53,
 }
