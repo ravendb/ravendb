@@ -87,7 +87,6 @@
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Revisions_3.5.35220.ravendbdump" />
-    <EmbeddedResource Include="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />

@@ -49,7 +49,7 @@ public class RavenDB_25136(ITestOutputHelper output) : RavenTestBase(output)
         void ExtractFile(string path)
         {
             using (var file = File.Create(path))
-            using (var stream = typeof(RavenDB_22937).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_25136.RavenDB_25136.ravendb-snapshot"))
+            using (var stream = typeof(RavenDB_25136).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_25136.RavenDB_25136.ravendb-snapshot"))
             {
                 stream.CopyTo(file);
             }
