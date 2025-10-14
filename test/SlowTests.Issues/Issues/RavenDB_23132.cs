@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                 await store.Maintenance.SendAsync(new PutIndexesOperation(index));
 
                 
-                Indexes.WaitForIndexing(store, allowErrors: true);
+                await Indexes.WaitForIndexingAsync(store, allowErrors: true);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store, allowErrors: true);
+                await Indexes.WaitForIndexingAsync(store, allowErrors: true);
 
                 collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
 

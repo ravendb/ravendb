@@ -71,4 +71,6 @@ public sealed class AddEmbeddingsGenerationCommand : AddEtlCommand<EmbeddingsGen
             throw new RachisApplyException("Failed to validate AI connection string", e);
         }
     }
+
+    public override bool Disabled => Configuration.Disabled;
 }

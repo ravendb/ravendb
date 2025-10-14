@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                 Path = path
             }))
             {
-                new Users_ByName().Execute(store);
+                await new Users_ByName().ExecuteAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -54,9 +54,9 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
-                var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(new CompactSettings
                 {
                     DatabaseName = store.Database,
                     Documents = true,

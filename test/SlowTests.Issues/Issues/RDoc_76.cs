@@ -105,8 +105,8 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    Assert.Null(commands.Get("a/1"));
-                    Assert.NotNull(commands.Get("mb/1"));
+                    Assert.Null(await commands.GetAsync("a/1"));
+                    Assert.NotNull(await commands.GetAsync("mb/1"));
                 }
             }
         }

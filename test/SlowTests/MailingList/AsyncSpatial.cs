@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
         {
             using (var db = GetDocumentStore(options))
             {
-                new Promos_Index().Execute(db);
+                await new Promos_Index().ExecuteAsync(db);
 
                 using (IAsyncDocumentSession session = db.OpenAsyncSession())
                 {
@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
                         Coordinate = new Coordinate { latitude = 12.233, longitude = -73.995 }
                     });
                     await session.SaveChangesAsync();
-                    Indexes.WaitForIndexing(db);
+                    await Indexes.WaitForIndexingAsync(db);
 
                     var result = await session.Query<Promo, Promos_Index>()
                         .Spatial("Coordinates", x => x.WithinRadius(3.0, 41.145556, -73.995))

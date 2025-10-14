@@ -101,7 +101,7 @@ namespace SlowTests.Bugs.Caching
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), AggressiveCacheMode.TrackChanges))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5), AggressiveCacheMode.TrackChanges))
             {
                 await loadFuncAsync(session, docId);
             }
@@ -119,7 +119,7 @@ namespace SlowTests.Bugs.Caching
             }
 
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), aggressiveCacheMode))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5), aggressiveCacheMode))
             {
                 var loadAsync = session.Advanced.Lazily.LoadAsync<Doc>(docId);
                 _ = await loadAsync.Value;
@@ -201,7 +201,7 @@ namespace SlowTests.Bugs.Caching
             }
 
             using (var session = store.OpenSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), AggressiveCacheMode.TrackChanges))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5), AggressiveCacheMode.TrackChanges))
             {
                 loadFunc(session, docId);
             }
@@ -219,7 +219,7 @@ namespace SlowTests.Bugs.Caching
             }
 
             using (var session = store.OpenSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), aggressiveCacheMode))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5), aggressiveCacheMode))
             {
                 _ = session.Advanced.Lazily.Load<Doc>(docId).Value;
                 return session.Advanced.NumberOfRequests;
@@ -238,7 +238,7 @@ namespace SlowTests.Bugs.Caching
             const string notCachedId = "TestObjs/notCached";
 
             using var store = GetDocumentStore();
-            store.AggressivelyCacheFor(TimeSpan.FromMinutes(5));
+            await store.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5));
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new TestObj(), cachedId);
@@ -339,7 +339,7 @@ namespace SlowTests.Bugs.Caching
                     documentStore.Conventions.MaxHttpCacheSize = conventionsMaxHttpCacheSize;
                 }
             });
-            store.AggressivelyCache();
+            await store.AggressivelyCacheAsync();
 
             async Task<int> GetSingleDocSize()
             {
@@ -423,7 +423,7 @@ namespace SlowTests.Bugs.Caching
 
             using (var store = GetDocumentStore())
             {
-                store.AggressivelyCache();
+                await store.AggressivelyCacheAsync();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -502,7 +502,7 @@ namespace SlowTests.Bugs.Caching
 
             var requestExecutor = store.GetRequestExecutor();
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5), AggressiveCacheMode.DoNotTrackChanges))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5), AggressiveCacheMode.DoNotTrackChanges))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var result = new List<Lazy<Task<BlittableJsonReaderObject>>>();

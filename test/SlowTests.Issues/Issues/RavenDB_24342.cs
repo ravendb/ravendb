@@ -59,7 +59,7 @@ for(const comment of this.Comments)
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(30)));
 
             using var verify = store.OpenAsyncSession();
             var ids = (await verify.Query<Comment>(collectionName: "someNewCollection").Select(x => x.Id).ToListAsync());

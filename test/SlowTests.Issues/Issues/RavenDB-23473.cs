@@ -73,7 +73,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
 
             var sub = await store.Subscriptions.CreateAsync<Question>(new SubscriptionCreationOptions<Question>());
             var worker = store.Subscriptions.GetSubscriptionWorker<Question>(sub);
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
             List<float> vector = [];
             var t = worker.Run(async x =>
             {
@@ -99,7 +99,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
                 }
 
                 await session.SaveChangesAsync();
-                mre.Set();
+                amre.Set();
             });
 
             for (int i = 0; i < 5; i++)
@@ -111,7 +111,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
                 }
             }
 
-            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+            Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
 
             await Indexes.WaitForIndexingAsync(store);
             var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);

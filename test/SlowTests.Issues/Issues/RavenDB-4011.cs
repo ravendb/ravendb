@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                     store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {

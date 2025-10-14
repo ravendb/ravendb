@@ -55,7 +55,7 @@ namespace SlowTests.Client.Subscriptions
 
                     var subscription = store.Subscriptions.GetSubscriptionWorker<Team>(subscriptionName);
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var names = new List<string>();
 
                     await session.StoreAsync(new Team
@@ -87,10 +87,10 @@ namespace SlowTests.Client.Subscriptions
                         names.AddRange(x.Items.Select(i => i.Result.Name).ToList());
                         count+= x.Items.Count;
                         if(count >= 3)
-                            mre.Set();
+                            amre.Set();
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     names.Sort();
                     Assert.Equal(new[] { "Marketing", "R&D", "Support" }, names);
                 }

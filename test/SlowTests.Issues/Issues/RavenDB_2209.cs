@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                using (store.AggressivelyCache())
+                using (await store.AggressivelyCacheAsync())
                 {
                     // make sure that object is cached
                     using (var session = store.OpenSession())

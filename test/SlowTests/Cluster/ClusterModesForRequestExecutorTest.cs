@@ -367,7 +367,7 @@ namespace SlowTests.Cluster
                         await Task.Delay(100);
                     } while (requestExecutor.TopologyNodes == null);
 
-                    DisposeServerAndWaitForFinishOfDisposal(leader);
+                    await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
 
                     var failedRequests = new HashSet<(string, Exception)>();
 

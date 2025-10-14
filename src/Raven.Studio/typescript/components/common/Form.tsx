@@ -58,7 +58,7 @@ type FormToggleProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     TFieldValues,
     TName
 > &
-    Omit<CheckboxProps, "selected" | "toggleSelection">;
+    Omit<CheckboxProps, "selected" | "toggleSelection"> & { afterChange?: (value: boolean) => void };
 
 type FormRadioToggleWithIconProps<
     TFieldValues extends FieldValues,
@@ -572,7 +572,7 @@ function FormInputGeneral<
 function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
     props: FormToggleProps<TFieldValues, TName> & { type: Extract<InputType, "checkbox" | "switch" | "radio"> }
 ) {
-    const { name, control, rules, defaultValue, type, shouldUnregister, ...rest } = props;
+    const { name, control, rules, defaultValue, type, shouldUnregister, afterChange, ...rest } = props;
 
     const {
         field: { onChange, onBlur, value },
@@ -606,7 +606,10 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
             <div className="d-flex flex-grow-1">
                 <ToggleComponent
                     selected={!!value}
-                    toggleSelection={onChange}
+                    toggleSelection={(x) => {
+                        onChange(x);
+                        afterChange?.(x.currentTarget.checked);
+                    }}
                     isInvalid={invalid}
                     onBlur={onBlur}
                     color="primary"

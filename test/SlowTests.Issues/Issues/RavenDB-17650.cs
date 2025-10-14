@@ -521,10 +521,10 @@ namespace SlowTests.Issues
             });
 
             var cts = new CancellationTokenSource();
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
-            var t = worker.Run(batch => { mre.Set(); }, cts.Token);
-            await mre.WaitAsync(cts.Token);
+            var t = worker.Run(batch => { amre.Set(); }, cts.Token);
+            await amre.WaitAsync(cts.Token);
 
             // disable database
             var disableSucceeded = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));

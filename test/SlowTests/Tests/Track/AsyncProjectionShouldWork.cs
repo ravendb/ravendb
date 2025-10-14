@@ -70,7 +70,7 @@ namespace SlowTests.Tests.Track
             using (var store = GetDocumentStore(options))
             {
                 Fill(store);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenAsyncSession())
                 {
                     var q = session.Query<Summary>("TestObjs/Summary")

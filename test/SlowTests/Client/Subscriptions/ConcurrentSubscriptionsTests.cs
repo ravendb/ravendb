@@ -39,7 +39,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -95,7 +95,7 @@ namespace SlowTests.Client.Subscriptions
             var workersAmount = 10;
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
 
                 var workerToDocsAmount = new Dictionary<SubscriptionWorker<User>, ConcurrentSet<string>>();
 
@@ -140,7 +140,7 @@ namespace SlowTests.Client.Subscriptions
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -327,7 +327,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -336,11 +336,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         var exception = string.Empty;
                         var t = subscription.Run(x =>
@@ -376,7 +376,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -468,7 +468,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -499,7 +499,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = subscription2.Run(async x =>
                         {
@@ -508,11 +508,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -567,7 +567,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -598,7 +598,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -607,11 +607,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -666,7 +666,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 await using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -697,7 +697,7 @@ namespace SlowTests.Client.Subscriptions
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
                     {
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
 
                         var _ = Subscription2.Run(async x =>
                         {
@@ -706,11 +706,11 @@ namespace SlowTests.Client.Subscriptions
                                 con2Docs.Add(item.Id);
                             }
 
-                            mre.Set();
+                            amre.Set();
                             await tcs.Task;
                         });
 
-                        await mre.WaitAsync();
+                        await amre.WaitAsync();
 
                         using (var session = store.OpenAsyncSession())
                         {
@@ -794,7 +794,7 @@ namespace SlowTests.Client.Subscriptions
             await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "user/6", predicate: null, TimeSpan.FromSeconds(15));
             await WaitForDocumentInClusterAsync<User>(cluster.Nodes, database, "user/3", predicate: null, TimeSpan.FromSeconds(15));
 
-            var id = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions
+            var id = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions
             {
                 MentorNode = "A"
             });
@@ -878,7 +878,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var worker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -937,7 +937,7 @@ namespace SlowTests.Client.Subscriptions
                     await mre1.WaitAsync();
                     await mre2.WaitAsync();
 
-                    store.Subscriptions.DropSubscriptionWorker(worker2);
+                    await store.Subscriptions.DropSubscriptionWorkerAsync(worker2);
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState);
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);
@@ -954,7 +954,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using var subscription1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = strategy1,
@@ -989,7 +989,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using var subscription1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = strategy1,
@@ -1029,7 +1029,7 @@ namespace SlowTests.Client.Subscriptions
             {
                 Server.ServerStore.LicenseManager.LicenseStatus.Attributes[LicenseAttribute.ConcurrentSubscriptions] = false;
 
-                var id = store.Subscriptions.Create<User>();
+                var id = await store.Subscriptions.CreateAsync<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.Concurrent,
@@ -1063,8 +1063,8 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var mre = new AsyncManualResetEvent();
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                var amre = new AsyncManualResetEvent();
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = "from Users where Name != 'R'"
                 });
@@ -1097,12 +1097,12 @@ namespace SlowTests.Client.Subscriptions
                         var res = Interlocked.Add(ref count, x.NumberOfItemsInBatch);
                         if (res >= collectionSize)
                         {
-                            mre.Set();
+                            amre.Set();
                         }
 
                     });
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(60)));
 
                     using (var session = store.OpenSession())
                     {
@@ -1113,7 +1113,7 @@ namespace SlowTests.Client.Subscriptions
                     var executor = store.GetRequestExecutor();
                     using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
                     var cmd = new GetSubscriptionResendListCommand(store.Database, id);
-                    executor.Execute(cmd, ctx);
+                    await executor.ExecuteAsync(cmd, ctx);
                     var res = cmd.Result;
 
                     // the last batch may still not be cleared

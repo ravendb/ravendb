@@ -38,6 +38,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
+using Sparrow.Server;
 using Tests.Infrastructure;
 
 namespace FastTests
@@ -141,7 +142,7 @@ namespace FastTests
                 return (_src, _dest, result);
             }
 
-            public ManualResetEventSlim WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate = null, int numOfProcessesToWaitFor = 1)
+            public AsyncManualResetEvent WaitForEtlToComplete(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate = null, int numOfProcessesToWaitFor = 1)
             {
                 predicate ??= (n, statistics) => statistics.LoadSuccesses > 0;
                 var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
@@ -159,19 +160,19 @@ namespace FastTests
                 }, timeout, interval);
             }
 
-            private ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
+            private AsyncManualResetEvent WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
             {
                 var database = AsyncHelpers.RunSync(() => _parent.GetDatabase(store.Database));
 
-                var mre = new ManualResetEventSlim();
+                var amre = new AsyncManualResetEvent();
 
                 database.EtlLoader.BatchCompleted += x =>
                 {
                     if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                        mre.Set();
+                        amre.Set();
                 };
                 
-                return mre;
+                return amre;
             }
 
             public async Task<(string, string, EtlProcessStatistics)> WaitForEtlAsync(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, TimeSpan timeout)

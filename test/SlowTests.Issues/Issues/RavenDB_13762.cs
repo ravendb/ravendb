@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     Exception exception = null;
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     GC.KeepAlive(sub.Run(x =>
                     {
                         try
@@ -98,11 +98,11 @@ namespace SlowTests.Issues
                         }
                         finally
                         {
-                            mre.Set();
+                            amre.Set();
                         }
                     }));
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                     if (exception != null)
                         throw exception;

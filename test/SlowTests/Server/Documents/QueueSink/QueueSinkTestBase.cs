@@ -14,6 +14,8 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Sparrow.Server;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using QueueSinkConfiguration = Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
@@ -87,25 +89,25 @@ namespace SlowTests.Server.Documents.QueueSink
             return null;
         }
         
-        protected ManualResetEventSlim WaitForQueueSinkBatch(DocumentStore store,
+        protected AsyncManualResetEvent WaitForQueueSinkBatch(DocumentStore store,
             Func<string, QueueSinkProcessStatistics, bool> predicate)
         {
             var database = AsyncHelpers.RunSync(() => GetDatabase(store.Database));
 
-            var mre = new ManualResetEventSlim();
+            var amre = new AsyncManualResetEvent();
 
             database.QueueSinkLoader.BatchCompleted += x =>
             {
                 if (predicate($"{x.ConfigurationName}/{x.ScriptName}", x.Statistics))
-                    mre.Set();
+                    amre.Set();
             };
 
-            return mre;
+            return amre;
         }
 
-        protected void AssertQueueSinkDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, QueueSinkConfiguration config)
+        protected async Task AssertQueueSinkDoneAsync(AsyncManualResetEvent etlDone, TimeSpan timeout, string databaseName, QueueSinkConfiguration config)
         {
-            if (etlDone.Wait(timeout) == false)
+            if (await etlDone.WaitAsync(timeout) == false)
             {
                 var error = AsyncHelpers.RunSync(() => TryErrorFromAlertAsync(databaseName, config));
 

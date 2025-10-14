@@ -102,7 +102,7 @@ namespace SlowTests.Issues
                     const string fileName = "001.txt";
                     using (var writer = new StreamWriter(File.Open(fileName, FileMode.Create)))
                     {
-                        writer.Write("1010011010");
+                        await writer.WriteAsync("1010011010");
                     }
 
                     using (var session = store.OpenAsyncSession(dbName))
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
                         {
                             using (var reader = new StreamReader(file.Stream))
                             {
-                                var str = reader.ReadLine();
+                                var str = await reader.ReadLineAsync();
                                 Assert.Equal("1010011010", str);
                             }
 

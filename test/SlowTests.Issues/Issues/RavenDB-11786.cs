@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                 }
-                var subsId = store.Subscriptions.Create<User>(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<User>()
+                var subsId = await store.Subscriptions.CreateAsync<User>(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<User>()
                 {
                     Projection = x => new
                     {
@@ -83,7 +83,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                 }
-                var subsId = store.Subscriptions.Create<User>(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<User>()
+                var subsId = await store.Subscriptions.CreateAsync<User>(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<User>()
                 {
                     Projection = x => new
                     {

@@ -51,7 +51,7 @@ namespace FastTests.Sharding.Subscriptions
                     session.SaveChanges();
                 }
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
                     var c = 0;
@@ -62,12 +62,12 @@ namespace FastTests.Sharding.Subscriptions
                             names.Remove(item.Result.Name);
                             if (++c == 3)
                             {
-                                mre.Set();
+                                amre.Set();
                             }
                         }
                     });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     Assert.Empty(names);
                 }
             }

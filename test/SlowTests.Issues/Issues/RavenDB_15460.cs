@@ -148,7 +148,7 @@ namespace SlowTests.Issues
             Assert.Equal(IndexPriority.Low, indexStats.Priority);
 
             index.Priority = IndexPriority.High;
-            index.Execute(store);
+            await index.ExecuteAsync(store);
 
             indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
             indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
             Assert.Equal(IndexPriority.High, indexStats.Priority);
 
             index.Priority = IndexPriority.Low;
-            store.ExecuteIndex(index);
+            await store.ExecuteIndexAsync(index);
 
             indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
             indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));

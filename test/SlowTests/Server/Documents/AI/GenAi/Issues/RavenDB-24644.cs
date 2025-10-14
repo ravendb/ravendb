@@ -93,7 +93,7 @@ ai.genContext({}).withPdf(pdf);
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
             using (var session = store.OpenAsyncSession())
             {
                 var item1 = await session.LoadAsync<Item>(FirstItemId);
@@ -163,7 +163,7 @@ ai.genContext({}).withPdf(pdf);
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
             // Wait until hashes reflect the change
             string hash1 = string.Empty, hash2 = string.Empty;
@@ -186,7 +186,7 @@ ai.genContext({}).withPdf(pdf);
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
             await WaitForAssertionAsync(async () =>
             {

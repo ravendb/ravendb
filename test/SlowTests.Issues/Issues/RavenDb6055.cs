@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     Assert.Equal("Auto/Users/ByFirstName", indexes[0].Name);
                 }
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
 
                 var allIndexes = store.Changes()
                     .ForAllIndexes();
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                     .Subscribe(x =>
                     {
                         if (x.Type == IndexChangeTypes.IndexRemoved)
-                            mre.Set();
+                            amre.Set();
                     });
                 await allIndexes.EnsureSubscribedNow();
                 using (var session = store.OpenAsyncSession())
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                         .ToListAsync();
                 }
 
-                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 WaitForUserToContinueTheTest(store);
                 

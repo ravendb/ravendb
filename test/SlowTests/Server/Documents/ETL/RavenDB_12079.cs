@@ -10,6 +10,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.LowMemory;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,7 +53,7 @@ namespace SlowTests.Server.Documents.ETL
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 for (int i = 0; i < numberOfDocs; i++)
                 {

@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var subsId = store.Subscriptions.Create(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions()
+                var subsId = await store.Subscriptions.CreateAsync(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions()
                 {
                     Query = @"from orders as o where o.Employee=='zzz'"
                 });

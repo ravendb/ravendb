@@ -93,7 +93,7 @@ ai.genContext({}).withPng(img1);
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -230,7 +230,7 @@ ai.genContext({
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -336,7 +336,7 @@ ai.genContext({})
 
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -411,7 +411,7 @@ for(const comment of this.Comments)
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         using (var session = store.OpenAsyncSession())
         {
@@ -434,7 +434,7 @@ for(const comment of this.Comments)
             session.Advanced.Attachments.Store("Post/1", "star.png", heart); // changing star to be heart
             await session.SaveChangesAsync();
         }
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         await WaitForAssertionAsync(async () =>
         {
@@ -451,7 +451,7 @@ for(const comment of this.Comments)
             session.Advanced.Attachments.Delete("Post/1", "star.png");
             await session.SaveChangesAsync();
         }
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         await WaitForAssertionAsync(async () =>
         {
@@ -490,7 +490,7 @@ for(const comment of this.Comments)
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         var hash1 = string.Empty;
         var hash2 = string.Empty;
@@ -512,7 +512,7 @@ for(const comment of this.Comments)
             await session.SaveChangesAsync();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+        Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
 
         await WaitForAssertionAsync(async () =>
         {

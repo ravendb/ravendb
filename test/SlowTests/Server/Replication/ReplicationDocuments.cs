@@ -58,23 +58,23 @@ namespace SlowTests.Server.Replication
 
                 using (var sourceCommands = source.Commands())
                 {
-                    sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
+                    await sourceCommands.PutAsync("docs/1", null, new { Key = "Value" }, null);
 
                     Assert.True(WaitForDocument(destination, "docs/1"));
 
-                    sourceCommands.Delete("docs/1", null);
+                    await sourceCommands.DeleteAsync("docs/1", null);
                 }
 
                 using (var destinationCommands = destination.Commands())
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        if (destinationCommands.Get("docs/1") == null)
+                        if (await destinationCommands.GetAsync("docs/1") == null)
                             break;
                         Thread.Sleep(100);
                     }
 
-                    Assert.Null(destinationCommands.Get("docs/1"));
+                    Assert.Null(await destinationCommands.GetAsync("docs/1"));
                 }
             }
         }
@@ -90,16 +90,16 @@ namespace SlowTests.Server.Replication
                 using (var sourceCommands = source.Commands())
                 using (var destinationCommands = destination.Commands())
                 {
-                    sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
-                    destinationCommands.Put("docs/1", null, new { Key = "Value2" }, null);
+                    await sourceCommands.PutAsync("docs/1", null, new { Key = "Value" }, null);
+                    await destinationCommands.PutAsync("docs/1", null, new { Key = "Value2" }, null);
 
                     await SetupReplicationAsync(source, destination);
 
-                    sourceCommands.Put("marker$docs/1", null, new { Key = "Value" }, null);
+                    await sourceCommands.PutAsync("marker$docs/1", null, new { Key = "Value" }, null);
 
                     Assert.True(WaitForDocument(destination, "marker$docs/1"));
 
-                    var conflicts = destination.Commands().GetConflictsFor("docs/1");
+                    var conflicts = await destination.Commands().GetConflictsForAsync("docs/1");
                     Assert.Equal(2, conflicts.Length);
 
                     var cv1 = conflicts[0].ChangeVector.ToVersion().AsString().ToChangeVector();
@@ -124,16 +124,16 @@ namespace SlowTests.Server.Replication
                 using (var sourceCommands = source.Commands())
                 using (var destinationCommands = destination.Commands())
                 {
-                    sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
-                    destinationCommands.Put("docs/1", null, new { Key = "Value2" }, null);
+                    await sourceCommands.PutAsync("docs/1", null, new { Key = "Value" }, null);
+                    await destinationCommands.PutAsync("docs/1", null, new { Key = "Value2" }, null);
 
                     await SetupReplicationAsync(source, destination);
 
-                    sourceCommands.Put("marker$docs/1", null, new { Key = "Value" }, null);
+                    await sourceCommands.PutAsync("marker$docs/1", null, new { Key = "Value" }, null);
 
                     Assert.True(WaitForDocument(destination, "marker$docs/1"));
 
-                    conflicts = destination.Commands().GetConflictsFor("docs/1");
+                    conflicts = await destination.Commands().GetConflictsForAsync("docs/1");
                     Assert.Equal(2, conflicts.Length);
                     var cv1 = conflicts[0].ChangeVector.ToVersion().AsString().ToChangeVector();
                     var cv2 = conflicts[1].ChangeVector.ToVersion().AsString().ToChangeVector();
@@ -146,10 +146,10 @@ namespace SlowTests.Server.Replication
                 //now actually resolve the conflict
                 //(resolve by using first variant)
                 var resolution = conflicts[0];
-                destination.Commands().Put("docs/1", null, resolution.Doc);
+                await destination.Commands().PutAsync("docs/1", null, resolution.Doc);
 
                 ////this shouldn't throw since we have just resolved the conflict
-                var fetchedDoc = destination.Commands().Get("docs/1");
+                var fetchedDoc = await destination.Commands().GetAsync("docs/1");
                 var actualVal = resolution.Doc["Key"] as LazyStringValue;
                 var fetchedVal = fetchedDoc["Key"] as LazyStringValue;
 

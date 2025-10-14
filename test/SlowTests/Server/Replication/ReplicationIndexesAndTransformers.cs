@@ -82,7 +82,7 @@ namespace SlowTests.Server.Replication
             using (destination)
             {
                 var userByAge = new UserByAgeIndex();
-                userByAge.Execute(source);
+                await userByAge.ExecuteAsync(source);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -106,10 +106,10 @@ namespace SlowTests.Server.Replication
             using (destination)
             {
                 var userByAge = new UserByAgeIndex();
-                userByAge.Execute(source);
+                await userByAge.ExecuteAsync(source);
 
                 var userByName = new UserByNameIndex();
-                userByName.Execute(source);
+                await userByName.ExecuteAsync(source);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -134,10 +134,10 @@ namespace SlowTests.Server.Replication
             using (destination)
             {
                 var userByAge = new UserByAgeIndex();
-                userByAge.Execute(source);
+                await userByAge.ExecuteAsync(source);
 
                 var userByName = new UserByNameIndex();
-                userByName.Execute(source);
+                await userByName.ExecuteAsync(source);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];

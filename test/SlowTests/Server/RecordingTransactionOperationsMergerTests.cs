@@ -363,7 +363,7 @@ namespace SlowTests.Server
 
                 await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
             }

@@ -64,8 +64,22 @@ const editSchema = yup.object({
                 .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
                 .test("unique-name", "Tool name must be unique", getIsToolNameUnique),
             description: yup.string().required(),
-            isAllowModelQueries: yup.boolean().nullable(),
-            isAddToInitialContext: yup.boolean().nullable(),
+            isAllowModelQueries: yup
+                .boolean()
+                .nullable()
+                .when("isAllowModelQueriesOverride", {
+                    is: true,
+                    then: (schema) => schema.required(),
+                }),
+            isAllowModelQueriesOverride: yup.boolean(),
+            isAddToInitialContext: yup
+                .boolean()
+                .nullable()
+                .when("isAddToInitialContextOverride", {
+                    is: true,
+                    then: (schema) => schema.required(),
+                }),
+            isAddToInitialContextOverride: yup.boolean(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup

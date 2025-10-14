@@ -68,7 +68,7 @@ namespace SlowTests.Issues
 
                     using (var commands = store2.Commands())
                     {
-                        var qr = commands.Query(iq);
+                        var qr = await commands.QueryAsync(iq);
 
                         var address = (BlittableJsonReaderObject)qr.Includes["addresses/1"];
                         var metadata = address.GetMetadata();
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                     {
                         var command = new GetDocumentsCommand(commands.RequestExecutor.Conventions, "users/1$addresses/1", includes: new[] { "AddressId" }, metadataOnly: false);
 
-                        commands.RequestExecutor.Execute(command, commands.Context);
+                        await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                         var address = (BlittableJsonReaderObject)command.Result.Includes["addresses/1"];
                         var metadata = address.GetMetadata();

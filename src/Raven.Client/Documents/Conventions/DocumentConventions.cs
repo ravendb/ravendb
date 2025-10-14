@@ -249,6 +249,13 @@ namespace Raven.Client.Documents.Conventions
                 DefaultForServer.HttpVersion = httpVersion;
             }
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (RuntimeInformation.ProcessArchitecture == Architecture.Arm || RuntimeInformation.ProcessArchitecture == Architecture.Arm64))
+            {
+                DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+                Default.HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+                DefaultForServer.HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
+            }
+
             var httpCompressionAlgorithmAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_COMPRESSION_ALGORITHM");
             if (httpCompressionAlgorithmAsString != null)
             {

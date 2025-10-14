@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
-                    session.Store(new Order { Company = "Hibernating Rhinos" }, id);
+                    await session.StoreAsync(new Order { Company = "Hibernating Rhinos" }, id);
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<Order>(
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
-                    session.Store(new Order { Company = "Hibernating Rhinos" }, id);
+                    await session.StoreAsync(new Order { Company = "Hibernating Rhinos" }, id);
                     session.SaveChanges();
 
                     Assert.True(await WaitForDocumentInClusterAsync<Order>(

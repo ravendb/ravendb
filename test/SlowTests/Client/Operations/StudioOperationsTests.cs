@@ -114,7 +114,7 @@ namespace SlowTests.Client.Operations
                 }
                 await store.ExecuteIndexAsync(new AllowedUsers());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var stats = store.Maintenance.Send(new GetStudioFooterStatisticsOperation());
 

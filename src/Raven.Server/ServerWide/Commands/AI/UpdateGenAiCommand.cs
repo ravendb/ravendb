@@ -161,4 +161,6 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
 
         return json;
     }
+
+    public override bool Disabled => Configuration.Disabled;
 }

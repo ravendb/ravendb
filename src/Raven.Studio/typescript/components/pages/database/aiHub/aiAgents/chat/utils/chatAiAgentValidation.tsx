@@ -2,7 +2,11 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 
 const schema = yup.object({
-    prompt: yup.string().nullable().required(),
+    prompts: yup.array().of(
+        yup.object({
+            text: yup.string().nullable().required(),
+        })
+    ),
     parameters: yup.array().of(
         yup.object({
             name: yup.string().nullable(),

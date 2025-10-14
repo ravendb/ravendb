@@ -122,7 +122,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 db.ForTestingPurposesOnly().BulkInsert_StreamReadTimeout = _readTimeout;
                 var bulkInsertOptions = new BulkInsertOptions();
@@ -132,10 +132,10 @@ namespace SlowTests.Issues
                 {
                     bulkInsertOptions.ForTestingPurposesOnly().OnSendHeartBeat_DoBulkStore = () =>
                     {
-                        mre.Set();
+                        amre.Set();
                     };
 
-                    Assert.True(await mre.WaitAsync(_delay * 3));
+                    Assert.True(await amre.WaitAsync(_delay * 3));
 
                     await bulk.StoreAsync(new User { Name = "Daniel" }, "users/1");
                 }
@@ -170,7 +170,7 @@ namespace SlowTests.Issues
                 await Task.Delay(_delay);
                 bulk.Store(new User { Name = "Ido" }, "users/3");
                 await Task.Delay(_delay);
-                bulk.Dispose();
+                await bulk.DisposeAsync();
 
                 using (var session = store.OpenSession())
                 {

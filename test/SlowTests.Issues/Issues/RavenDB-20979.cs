@@ -41,7 +41,7 @@ public class RavenDB_20979 : RavenTestBase
         {
             for (int i = 0; i < 1024*5; ++i)
             {
-                bulkInsert.Store(new Query.Order() {Employee = i.ToString()});
+                await bulkInsert.StoreAsync(new Query.Order() {Employee = i.ToString()});
             }
         }
 

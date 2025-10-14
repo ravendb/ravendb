@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -32,7 +33,7 @@ loadToUsers(this);
 function deleteDocumentsOfUsersBehavior(docId, deleted){
 return deleted;
 }")]
-        public void ShouldNotDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
+        public async Task ShouldNotDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -51,7 +52,7 @@ return deleted;
 
                     Etl.AddEtl(src, dest, "Users", script);
                     var etlDone = Etl.WaitForEtlToComplete(src);
-                    etlDone.Wait(timeout:TimeSpan.FromSeconds(10));
+                    await etlDone.WaitAsync(timeout:TimeSpan.FromSeconds(10));
                 }
 
                 using (var session = dest.OpenSession())
@@ -80,7 +81,7 @@ loadToUsers(this);
 function deleteDocumentsOfUsersBehavior(docId, deleted) {
 return !deleted;
 }")]
-        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
+        public async Task ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -101,7 +102,7 @@ return !deleted;
 
                 Etl.AddEtl(src, dest, "Users", script);
                 var etlDone = Etl.WaitForEtlToComplete(src);
-                etlDone.Wait(timeout:TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(timeout:TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {

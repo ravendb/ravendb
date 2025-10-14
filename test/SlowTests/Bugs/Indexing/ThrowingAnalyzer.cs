@@ -104,7 +104,7 @@ namespace SlowTests.Bugs.Indexing
 
                     try
                     {
-                        Indexes.WaitForIndexing(store);
+                        await Indexes.WaitForIndexingAsync(store);
                     }
                     catch
                     {

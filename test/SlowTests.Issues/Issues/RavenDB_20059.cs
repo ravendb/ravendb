@@ -17,7 +17,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanModifyGlobalObjectUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction(Options options)
+        public async Task CanModifyGlobalObjectUsingEtlTransformScriptWithDeleteDocumentsBehaviorFunction(Options options)
         {
             using (var srcStore = GetDocumentStore(options))
             using (var destStore = GetDocumentStore())
@@ -37,7 +37,7 @@ function deleteDocumentsOfContractsBehavior(docId) {
 
                     session.SaveChanges();
                 }
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = destStore.OpenSession())
                 {
@@ -53,7 +53,7 @@ function deleteDocumentsOfContractsBehavior(docId) {
                 }
 
                 etlDone = Etl.WaitForEtlToComplete(srcStore);
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = destStore.OpenSession())
                 {

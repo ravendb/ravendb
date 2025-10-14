@@ -50,7 +50,7 @@ namespace SlowTests.Issues
             using var worker = store.Subscriptions
                .GetSubscriptionWorker<Command>(workerOptions);
 
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
             var cts = new CancellationTokenSource();
             var last = DateTime.UtcNow;
             InvalidOperationException exception = null;
@@ -66,10 +66,10 @@ namespace SlowTests.Issues
                     return Task.CompletedTask;
                 });
 
-                mre.Set();
+                amre.Set();
             }, cts.Token);
 
-            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
+            Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)));
             Assert.NotNull(exception);
             Assert.Equal("Session can only be opened once per each Subscription batch", exception.Message);
         }

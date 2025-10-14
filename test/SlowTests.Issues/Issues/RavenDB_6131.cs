@@ -48,7 +48,7 @@ namespace SlowTests.Issues
             }))
             {
                 var index = new SimpleIndex();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 Assert.Equal(path1, database.Configuration.Core.DataDirectory.FullPath);
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                 }))
                 {
                     var index = new SimpleIndex();
-                    index.Execute(store);
+                    await index.ExecuteAsync(store);
 
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     Assert.Equal(path1, database.Configuration.Core.DataDirectory.FullPath);

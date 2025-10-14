@@ -28,9 +28,9 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {

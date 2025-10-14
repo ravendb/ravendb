@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 await index1.ExecuteAsync(store);
                 await new Index2(indexName).ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
+                await Indexes.WaitForIndexingAsync(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.Indexes.Count);
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
 
                 // replacing with another index with another index with an error
                 await new Index3(indexName).ExecuteAsync(store);
-                Indexes.WaitForIndexing(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
+                await Indexes.WaitForIndexingAsync(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                 // an index with no errors will replace both the original and the replacement
                 var index4 = new Index4(indexName);
                 await new Index4(indexName).ExecuteAsync(store);
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 index = database.IndexStore.GetIndex(indexName);
                 Assert.Contains("New_Count = 5", index.GetIndexDefinition().Maps.First());

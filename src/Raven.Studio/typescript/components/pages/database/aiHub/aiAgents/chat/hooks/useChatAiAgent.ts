@@ -9,7 +9,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useForm, useWatch } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { ChatAiAgentFormData, chatAiAgentYupResolver } from "../utils/chatAiAgentValidation";
 
@@ -77,13 +77,13 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         }
 
         return {
-            prompt: "",
+            prompts: [{ text: "" }],
             parameters: config.Parameters.map((x) => ({ name: x.Name, value: "" })),
             isEnableDocumentExpiration: !isDocumentExpirationEnabled,
             isDocumentExpireInCustomizeEnabled: false,
             persistenceConversationIdPrefix: "",
             persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
-        };
+        } satisfies Required<ChatAiAgentFormData>;
     });
 
     const areParametersRequired = !window.location.href.includes("conversationId");
@@ -103,6 +103,11 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
     const { control, handleSubmit, setValue } = chatForm;
 
+    const promptsFieldsArray = useFieldArray({
+        control,
+        name: "prompts",
+    });
+
     const formValues = useWatch({
         control,
     });
@@ -117,7 +122,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
             })
         ).unwrap();
 
-        setValue("prompt", "");
+        setValue("prompts", [{ text: "" }]);
     };
 
     const handleSend = async () => {
@@ -144,6 +149,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         dispatch(chatAiAgentActions.messagesSet([]));
         dispatch(chatAiAgentActions.documentSet(null));
         dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
+        dispatch(chatAiAgentActions.activePromptIndexSet(0));
         chatForm.reset();
     };
 
@@ -155,6 +161,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         handleSubmit,
         runChat,
         asyncGetDefaultValues,
+        promptsFieldsArray,
     };
 }
 

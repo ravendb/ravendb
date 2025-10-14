@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var testDoc = new TestDocument { Name = "Foo", Id = "TestDocuments-1-A" };
 
 
@@ -75,13 +75,13 @@ namespace SlowTests.Issues
                             await session.SaveChangesAsync();
                         }
 
-                        if (mre.IsSet == false)
+                        if (amre.IsSet == false)
                         {
-                            mre.Set();
+                            amre.Set();
                         }
 
                     });
-                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
+                Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)));
 
 
                 using (var commands = store.Commands())

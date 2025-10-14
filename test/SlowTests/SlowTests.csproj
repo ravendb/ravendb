@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RuntimeFrameworkVersion>8.0.20</RuntimeFrameworkVersion>
@@ -21,6 +21,9 @@
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\src\Usings.Server.cs">
+      <Link>Properties\Usings.Server.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
@@ -84,6 +87,7 @@
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Revisions_3.5.35220.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />

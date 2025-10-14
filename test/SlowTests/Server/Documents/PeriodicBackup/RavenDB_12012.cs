@@ -75,8 +75,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 RestoreBackupOperation restoreOperation = new RestoreBackupOperation(config2);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 using (var store2 = GetDocumentStore(new Options()
                 {

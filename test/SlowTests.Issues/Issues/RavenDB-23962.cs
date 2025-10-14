@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues;
 public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Indexes)]
-    public void ReferencedCollectionsShouldWorkWithStalenessHandling()
+    public async Task ReferencedCollectionsShouldWorkWithStalenessHandling()
     {
         const string collectionName = "Dtos";
         var referencedCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName);
@@ -29,8 +30,8 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
 
@@ -58,7 +59,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 var stopIndexOp = new StopIndexOperation(stats.IndexName);
                 
-                store.Maintenance.Send(stopIndexOp);
+                await store.Maintenance.SendAsync(stopIndexOp);
                 
                 dto.Name = "strawberry";
                 session.SaveChanges();
@@ -94,9 +95,9 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 }, true);
 
                 var startIndexOp = new StartIndexOperation(stats.IndexName);
-                store.Maintenance.Send(startIndexOp);
+                await store.Maintenance.SendAsync(startIndexOp);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 result = session.Query<Dto>()
                     .Statistics(out stats)
@@ -123,7 +124,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public void TombstonesAreProcessed()
+    public async Task TombstonesAreProcessed()
     {
         const string collectionName = "Dtos";
         var referencedCollection = EmbeddingsHelper.GetEmbeddingDocumentCollectionName(collectionName);
@@ -139,8 +140,8 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -164,7 +165,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.Delete(embeddingDocId);
                 session.SaveChanges();
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
 
@@ -175,7 +176,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
-    public void DeletesAreHandled()
+    public async Task DeletesAreHandled()
     {
         using (var store = GetDocumentStore())
         {
@@ -189,8 +190,8 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
             
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
                 
-                Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
                 Assert.True(queriesWorkerRegistered);
                 Assert.True(indexingWorkerRegistered);
                 
@@ -206,7 +207,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 
                 var stopIndexOp = new StopIndexOperation(stats.IndexName);
                 
-                store.Maintenance.Send(stopIndexOp);
+                await store.Maintenance.SendAsync(stopIndexOp);
                 
                 var embeddingDocId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);
                 
@@ -225,9 +226,9 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still some tombstone references to process from collection '@embeddings/Dtos'")));
                 
                 var startIndexOp = new StartIndexOperation(stats.IndexName);
-                store.Maintenance.Send(startIndexOp);
+                await store.Maintenance.SendAsync(startIndexOp);
                 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 
                 result = session.Query<Dto>()
                     .Customize(c => c.WaitForNonStaleResults())

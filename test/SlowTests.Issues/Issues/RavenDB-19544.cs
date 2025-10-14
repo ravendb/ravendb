@@ -34,7 +34,7 @@ public class RavenDB_19544 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             using (var session = store.OpenAsyncSession())
             {
                 var projection =
@@ -73,7 +73,7 @@ public class RavenDB_19544 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             using (var session = store.OpenAsyncSession())
             {
                 var projection =

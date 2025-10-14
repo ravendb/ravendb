@@ -89,7 +89,7 @@ namespace SlowTests.Cluster
                         await session.SaveChangesAsync(cts.Token);
                     }
 
-                    cts.Cancel();
+                    await cts.CancelAsync();
 
                     try
                     {

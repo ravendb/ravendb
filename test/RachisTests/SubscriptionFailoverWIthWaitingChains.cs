@@ -46,14 +46,14 @@ namespace RachisTests
                 });
 
                 ConcurrentSet<string> redirects = new ConcurrentSet<string>();
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 var processedItems = new List<string>();
                 subsWorker.AfterAcknowledgment += batch =>
                 {
                     foreach (var item in batch.Items)
                         processedItems.Add(item.Result.Name);
 
-                    mre.Set();
+                    amre.Set();
                     return Task.CompletedTask;
                 };
                 subsWorker.OnSubscriptionConnectionRetry += ex =>
@@ -81,7 +81,7 @@ namespace RachisTests
                     Assert.NotNull(node);
 
                     if (i != 0)
-                        mre.Reset();
+                        amre.Reset();
 
                     using (var session = store.OpenSession())
                     {
@@ -92,7 +92,7 @@ namespace RachisTests
                         session.SaveChanges();
                     }
 
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
 
                     var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
                     Assert.Equal(currentResponsibleNode, res.NodeTag);
@@ -143,7 +143,7 @@ namespace RachisTests
 
             using (var store = GetDocumentStore(options))
             {
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());
@@ -163,13 +163,13 @@ namespace RachisTests
                         Assert.True(ae.InnerExceptions.Count(e => e.GetType() == typeof(IOException) || e.GetType() == typeof(EndOfStreamException)) > 0);
                     else
                         Assert.True(ex.GetType() == typeof(IOException) || ex.GetType() == typeof(EndOfStreamException));
-                    mre.Set();
+                    amre.Set();
                 };
                 server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = true;
                 try
                 {
                     var task = subsWorker.Run(x => { });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
                 }
                 finally
                 {

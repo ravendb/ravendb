@@ -41,7 +41,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(options))
             {
-                new People_ByName().Execute(store);
+                await new People_ByName().ExecuteAsync(store);
                 using (IAsyncDocumentSession session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Person { Name = "Jack", Age = 20 });

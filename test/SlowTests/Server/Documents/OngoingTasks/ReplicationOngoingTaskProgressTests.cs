@@ -198,7 +198,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
                 CreateDatabase = true
             });
 
-            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+            var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition

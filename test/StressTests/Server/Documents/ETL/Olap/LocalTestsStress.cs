@@ -20,6 +20,7 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Tests.Infrastructure;
 using SlowTests.Server.Documents.ETL;
 using Sparrow.Server;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -78,7 +79,7 @@ loadToOrders(partitionBy(key), o);
                 SetupLocalOlapEtl(store, script, path, frequency: DefaultFrequency);
                 var firstBatchTime = DateTime.UtcNow;
                 var firstBatchTimeMinutes = firstBatchTime.Minute;
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
@@ -143,7 +144,7 @@ loadToOrders(partitionBy(key), o);
                 }
 
                 etlDone = Etl.WaitForEtlToComplete(store);
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(60)));
 
                 var secondBatchTime = DateTime.UtcNow;
                 var secondBatchTimeMinutes = secondBatchTime.Minute;
@@ -208,7 +209,7 @@ loadToOrders(partitionBy(key), o);
                 var sw = new Stopwatch();
                 sw.Start();
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
@@ -266,15 +267,15 @@ loadToOrders(partitionBy(key), o);
 
         private static AsyncManualResetEvent WaitForEtl(DocumentDatabase database, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
 
             database.EtlLoader.BatchCompleted += x =>
             {
                 if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
-                    mre.Set();
+                    amre.Set();
             };
 
-            return mre;
+            return amre;
         }
 
         private async Task<DocumentDatabase> WaitForDatabaseToUnlockAsync(IDocumentStore store, TimeSpan timeout)

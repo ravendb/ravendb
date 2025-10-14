@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -196,7 +198,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-
+            agent.SampleObject = JsonConvert.SerializeObject(OutputSchema.Instance);
             agent.Actions =
             [
                 new AiAgentToolAction
@@ -213,7 +215,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 document: null,
                 "what goes well with my cheese for recent orders?",
                 new AiConversationCreationOptions(new Dictionary<string, object>{ ["company"] = "companies/90-A" }) ,
-                actionResponses: null));
+                actionResponses: null)) as TestResult<OutputSchema>;
 
             var responses = new List<AiAgentActionResponse>();
             foreach (var request in r.ActionRequests)
@@ -229,18 +231,86 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 document: r.Document,
                 userPrompt: null, // "what goes well with my cheese for recent orders?",
                 options: null,
-                actionResponses: responses));
+                actionResponses: responses)) as TestResult<OutputSchema>;
         }
 
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanStreamTest(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
 
-        private class RunTestConversationOperation<TSchema> : IMaintenanceOperation<TestResult<TSchema>> where TSchema : new()
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
+                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+            agent.Identifier = "shopping-assistant";
+            agent.SampleObject = JsonConvert.SerializeObject(OutputSchema.Instance);
+            agent.Actions =
+            [
+                new AiAgentToolAction
+                {
+                    Name = "ProductSearch",
+                    Description = "semantic search the store product catalog",
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                },
+                new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
+            ];
+
+            var sb = new StringBuilder();
+            var r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                agent,
+                document: null,
+                userPrompt: "what goes well with my cheese for recent orders?",
+                options: new AiConversationCreationOptions(new Dictionary<string, object> { ["company"] = "companies/90-A" }),
+                actionResponses : null,
+                streamPropertyPath: s => s.Answer,
+                streamedChunksCallback: c =>
+                {
+                    sb.Append(c);
+                    return Task.CompletedTask;
+                })) as TestResult<OutputSchema>;
+
+            Assert.NotNull(r);
+            Assert.Equal(r.ActionRequests.Count, 1);
+            Assert.Empty(sb.ToString());
+
+            var responses = new List<AiAgentActionResponse>();
+            foreach (var request in r.ActionRequests)
+            {
+                responses.Add(new AiAgentActionResponse
+                {
+                    ToolId = request.ToolId,
+                    Content = "{}" // Simulating an empty response for the action tool
+                });
+            }
+
+            r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                agent,
+                document: r.Document,
+                userPrompt: null, // "what goes well with my cheese for recent orders?",
+                options: null,
+                actionResponses: responses,
+                s => s.Answer,
+                c =>
+                {
+                    sb.Append(c);
+                    return Task.CompletedTask;
+                })) as TestResult<OutputSchema>;
+
+            Assert.NotNull(r);
+            Assert.Equal(r.Response.Answer , sb.ToString());
+        }
+
+        private class RunTestConversationOperation<TSchema> : RunConversationOperation<TSchema>
         {
             private readonly AiAgentConfiguration _agent;
             private readonly string _document;
             private readonly string _userPrompt;
             private readonly AiConversationCreationOptions _options;
             private readonly List<AiAgentActionResponse> _actionResponses;
-            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses)
+            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses) : 
+                base(agent.Identifier, conversationId: "test/" + Guid.NewGuid(), userPrompt, actionResponses, options, changeVector: null, streamPropertyPath: null, streamedChunksCallback: null)
             {
                 _agent = agent;
                 _document = document;
@@ -248,12 +318,24 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 _options = options;
                 _actionResponses = actionResponses;
             }
-            public RavenCommand<TestResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+
+            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses, Expression<Func<TSchema, string>> streamPropertyPath,
+                Func<string, Task> streamedChunksCallback) : 
+                base(agent.Identifier, conversationId: "test/" + Guid.NewGuid(), userPrompt, actionResponses: actionResponses, options, changeVector: null, streamPropertyPath.ToPropertyPath(DocumentConventions.Default), streamedChunksCallback)
             {
-                return new RunConversationOperationCommand(_agent, _document, _userPrompt, _options, _actionResponses, conventions);
+                _agent = agent;
+                _document = document;
+                _userPrompt = userPrompt;
+                _options = options;
+                _actionResponses = actionResponses;
             }
 
-            private sealed class RunConversationOperationCommand : RavenCommand<TestResult<TSchema>>
+            public override RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new RunTestConversationOperationCommand(this, _agent, _document, _userPrompt, _options, _actionResponses, conventions);
+            }
+
+            private sealed class RunTestConversationOperationCommand : RunConversationOperationCommand
             {
                 private readonly AiAgentConfiguration _agent;
                 private readonly string _document;
@@ -262,8 +344,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 private readonly List<AiAgentActionResponse> _toolResponses;
                 private readonly DocumentConventions _conventions;
 
-                public RunConversationOperationCommand(AiAgentConfiguration agent, string document, string prompt, AiConversationCreationOptions options,
-                    List<AiAgentActionResponse> toolResponses, DocumentConventions conventions)
+                public RunTestConversationOperationCommand(RunTestConversationOperation<TSchema> parent, AiAgentConfiguration agent, string document, string prompt, AiConversationCreationOptions options,
+                    List<AiAgentActionResponse> toolResponses, DocumentConventions conventions) : base(parent, conventions)
                 {
                     _agent = agent;
                     _document = document;
@@ -273,11 +355,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     _conventions = conventions;
                 }
 
-                public override bool IsReadRequest => false;
-
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
-                    url = $"{node.Url}/databases/{node.Database}/ai/agent/test";
+                    using var _ = base.CreateRequest(ctx, node, out url);
+                    url = url.Replace("/ai/agent","/ai/agent/test");
                    
                     var body = new TestRequestBody
                     {
@@ -287,7 +368,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                         UserPrompt = _prompt,
                     };
 
-                    var request = new HttpRequestMessage
+                    return new HttpRequestMessage
                     {
                         Method = HttpMethod.Post,
                         Content = new BlittableJsonContent(async stream =>
@@ -295,12 +376,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                             if (_document != null)
                                 body.Document = ctx.Sync.ReadForMemory(_document, "test");
 
-                            body.Configuration.SampleObject ??= DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new TSchema(), ctx).ToString();
                             await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
                         }, _conventions)
                     };
-
-                    return request;
                 }
 
                 public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
@@ -308,7 +386,18 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     if (response == null)
                         ThrowInvalidResponse();
 
-                    Result = TestResult<TSchema>.Convert(response, _conventions);
+                    response.TryGet(nameof(TestResult<TSchema>.Document), out BlittableJsonReaderObject document);
+                    
+                    var r = TestResult<TSchema>.Convert(response, _conventions);
+                    Result = new TestResult<TSchema>
+                    {
+                        TotalUsage = r.TotalUsage,
+                        Response = r.Response,
+                        ChangeVector = r.ChangeVector,
+                        ActionRequests = r.ActionRequests,
+                        ConversationId = r.ConversationId,
+                        Document = document.ToString()
+                    };
                 }
             }
             public class TestRequestBody : IDynamicJson
@@ -337,38 +426,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             }
         }
 
-        public class TestResult<TSchema> where TSchema : new()
+        public class TestResult<TSchema> : ConversationResult<TSchema>
         {
             public string Document;
-            public TSchema Response;
-            public List<AiAgentActionRequest> ActionRequests;
-            public AiUsage Usage;
-
-            internal static TestResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
-            {
-                response.TryGet(nameof(ConversationResult<object>.TotalUsage), out BlittableJsonReaderObject usage);
-                response.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject result);
-                response.TryGet(nameof(Document), out BlittableJsonReaderObject document);
-
-                List<AiAgentActionRequest> requests = null;
-                if (response.TryGet(nameof(ActionRequests), out BlittableJsonReaderArray actionRequests) && actionRequests != null)
-                {
-                    requests = [];
-                    foreach (BlittableJsonReaderObject actionRequest in actionRequests)
-                    {
-                        var r = JsonDeserializationClient.ActionRequest(actionRequest);
-                        requests.Add(r);
-                    }
-                }
-
-                return new TestResult<TSchema>
-                {
-                    ActionRequests = requests,
-                    Usage = JsonDeserializationClient.AiUsage(usage),
-                    Document = document.ToString(),
-                    Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, "test")
-                };
-            }
         }
     }
 }

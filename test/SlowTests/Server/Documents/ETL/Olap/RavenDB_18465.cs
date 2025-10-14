@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Order = Tests.Infrastructure.Entities.Order;
@@ -77,7 +78,8 @@ loadTo(""Orders"", partitionBy(key),
                 var result = Etl.AddEtl(store, configuration, connectionString);
 
                 var timeout = TimeSpan.FromMinutes(1);
-                Assert.True(etlDone.Wait(timeout), await Etl.GetEtlDebugInfo(store.Database, timeout, options.DatabaseMode));
+                var r = await etlDone.WaitAsync(timeout);
+                Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, timeout, options.DatabaseMode));
 
                 var files = Directory.GetFiles(path, searchPattern: LocalTests.AllFilesPattern, SearchOption.AllDirectories);
                 var expected = options.DatabaseMode == RavenDatabaseMode.Single ? 2 : 6;

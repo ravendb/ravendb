@@ -47,11 +47,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                new Employees_Query().Execute(store);
+                await new Employees_Query().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {

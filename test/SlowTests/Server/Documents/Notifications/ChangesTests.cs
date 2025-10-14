@@ -109,7 +109,7 @@ namespace SlowTests.Server.Documents.Notifications
 
                 using (var commands = store.Commands())
                 {
-                    commands.Delete("users/1", null);
+                    await commands.DeleteAsync("users/1", null);
                 }
 
                 DocumentChange documentChange;
@@ -188,12 +188,12 @@ namespace SlowTests.Server.Documents.Notifications
                 });
                 await observableWithTask.EnsureSubscribedNow();
 
-                new UsersIndex().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new UsersIndex().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
                 Assert.True(list.Count == 0);
 
-                new UsersIndexChanged().Execute(store);
-                Indexes.WaitForIndexing(store);
+                await new UsersIndexChanged().ExecuteAsync(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 Assert.True(list.TryTake(out var indexChange, TimeSpan.FromSeconds(1)));
                 Assert.Equal("Users/All", indexChange.Name);

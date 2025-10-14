@@ -1235,7 +1235,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var now = DateTime.UtcNow;
                 var baseline = now.AddHours(-2);
 
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                await store.Maintenance.SendAsync(new StartTransactionsRecordingOperation(recordFilePath));
 
                 using (var session = store.OpenSession())
                 {
@@ -1255,7 +1255,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+                await store.Maintenance.SendAsync(new StopTransactionsRecordingOperation());
 
 
                 using (var session = store.OpenSession())
@@ -1274,7 +1274,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 var command = new GetNextOperationIdCommand();
-                store.Commands().Execute(command);
+                await store.Commands().ExecuteAsync(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())

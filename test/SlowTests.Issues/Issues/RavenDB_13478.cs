@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeCounter("Likes")
@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
                 await AssertSubscription(store, name, 0);
 
-                name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeAllCounters()
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 await AssertSubscription(store, name, 0);
 
-                name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>
+                name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>
                 {
                     Includes = builder => builder
                         .IncludeCounter("Likes")
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
 
                 await AssertSubscription(store, name, 1);
 
-                name = store.Subscriptions.Create(new SubscriptionCreationOptions<Product>());
+                name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Product>());
 
                 await AssertSubscription(store, name, 2);
             }
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
             {
                 using (var sub = store.Subscriptions.GetSubscriptionWorker<Product>(name))
                 {
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     var r = sub.Run(batch =>
                     {
                         Assert.NotEmpty(batch.Items);
@@ -87,9 +87,9 @@ namespace SlowTests.Issues
                             }
                             Assert.Equal(expectedNumberOfRequests, s.Advanced.NumberOfRequests);
                         }
-                        mre.Set();
+                        amre.Set();
                     });
-                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await amre.WaitAsync(TimeSpan.FromSeconds(30)));
                     await sub.DisposeAsync();
                     await r;// no error
                 }

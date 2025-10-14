@@ -68,8 +68,8 @@ namespace SlowTests.Server.Replication
                 var resolvedConflicts2 = (await store2.Maintenance.SendAsync(ctx, new GetResolvedRevisionsOperation())).Results.ToList();
                 Assert.Equal(1, resolvedConflicts2.Count);
 
-                Assert.Empty(store1.Commands().GetConflictsFor("foo/bar"));
-                Assert.Empty(store2.Commands().GetConflictsFor("foo/bar"));
+                Assert.Empty(await store1.Commands().GetConflictsForAsync("foo/bar"));
+                Assert.Empty(await store2.Commands().GetConflictsForAsync("foo/bar"));
             }
         }
 
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Replication
                     {
                         Assert.Equal(e.DocId, "users/1");
                         Assert.NotEqual(e.LargestEtag, 0);
-                        slave.Commands().Delete("users/1", null); //resolve conflict to the one with tombstone
+                        await slave.Commands().DeleteAsync("users/1", null); //resolve conflict to the one with tombstone
                     }
                 }
 

@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.ExecuteIndex(new TestIndex());
+                await store.ExecuteIndexAsync(new TestIndex());
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

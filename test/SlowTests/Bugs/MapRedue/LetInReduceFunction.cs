@@ -62,9 +62,9 @@ namespace SlowTests.Bugs.MapRedue
                     session.SaveChanges();
                 }
 
-                new IndexWithLetInReduceFunction().Execute(store);
+                await new IndexWithLetInReduceFunction().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());

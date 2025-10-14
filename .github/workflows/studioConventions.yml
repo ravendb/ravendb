@@ -29,6 +29,7 @@ jobs:
 
     - name: Build dotnet
       run: dotnet build
+      working-directory: ./tools/TypingsGenerator
 
     - name: Install npm dependencies
       run: npm ci

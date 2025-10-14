@@ -85,7 +85,7 @@ namespace SlowTests.Bugs
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMinutes(5)))
                         {
                             await session.LoadAsync<User>("users/1");
                         }

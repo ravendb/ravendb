@@ -39,7 +39,7 @@ public class RavenDB_22040 : ReplicationTestBase
             await session.StoreAsync(order1);
             await session.SaveChangesAsync();
             await new Index().ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
         }
 
         t1.Mend();
@@ -54,7 +54,7 @@ public class RavenDB_22040 : ReplicationTestBase
         {
             await session.StoreAsync(order2);
             await session.SaveChangesAsync();
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             session.Delete(order2.Id);
             await session.SaveChangesAsync();
@@ -67,8 +67,8 @@ public class RavenDB_22040 : ReplicationTestBase
         t2.Mend();
 
         await WaitForDocumentInClusterAsync<Employee>(cluster.Nodes, database, markerDocument.Id, null, defaultTimeout);
-        Indexes.WaitForIndexing(store, database, timeout: defaultTimeout, nodeTag: "A");
-        Indexes.WaitForIndexing(store, database, timeout: defaultTimeout, nodeTag: "B");
+        await Indexes.WaitForIndexingAsync(store, database, timeout: defaultTimeout, nodeTag: "A");
+        await Indexes.WaitForIndexingAsync(store, database, timeout: defaultTimeout, nodeTag: "B");
     }
 
     private class Index : AbstractIndexCreationTask<Order>

@@ -55,7 +55,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     await SetupReplicationAsync(master, slave);
                     replication.ReplicateOnce("users/karmel");
 
-                    Indexes.WaitForIndexing(slave);
+                    await Indexes.WaitForIndexingAsync(slave);
                     RavenTestHelper.AssertNoIndexErrors(slave);
                 }
             }
@@ -104,7 +104,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     replication.ReplicateOnce("users/karmel");
 
                     await new TimeSeriesIndex().ExecuteAsync(slave);
-                    Indexes.WaitForIndexing(slave);
+                    await Indexes.WaitForIndexingAsync(slave);
                     RavenTestHelper.AssertNoIndexErrors(slave);
                 }
             }

@@ -68,7 +68,7 @@ namespace SlowTests.Issues
 
             var index = new Item_Content();
             await index.ExecuteAsync(store);
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenSession())
             {

@@ -20,6 +20,7 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,7 +90,7 @@ loadToOrders(partitionBy(key),
 ";
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -154,7 +155,7 @@ loadToOrders(partitionBy(key),
 ";
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -336,7 +337,8 @@ loadToOrders(partitionBy(key), orderData);
                         ? TimeSpan.FromMinutes(2)
                         : TimeSpan.FromMinutes(1);
 
-                    Assert.True(await etlDone.WaitAsync(timeout), await Etl.GetEtlDebugInfo(store.Database, timeout));
+                    var r = await etlDone.WaitAsync(timeout);
+                    Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, timeout));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -489,7 +491,7 @@ loadToOrders(partitionBy(['order_date', key]),
 
                     SetupS3OlapEtl(store, settings, configuration);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -549,7 +551,7 @@ loadToOrders(noPartition(),
 ";
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -681,7 +683,7 @@ loadToOrders(partitionBy(
 ";
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     var expectedFields = new[] { "RequireAt", "ShipVia", "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
@@ -810,7 +812,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                     const string customPartition = "shop-16";
                     SetupS3OlapEtl(store, script, settings, customPartitionValue: customPartition);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -854,7 +856,7 @@ loadToOrders(noPartition(), {
 ;
                     SetupS3OlapEtl(store, script, settings, transformationName: "script#1=$'/orders'");
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -960,7 +962,7 @@ for (var i = 0; i < this.Lines.length; i++){
 })}";
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -1018,7 +1020,7 @@ for (var i = 0; i < this.Lines.length; i++){
 ";
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -1124,7 +1126,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     var result = Etl.AddEtl(store, configuration, connectionString);
                     var taskId = result.TaskId;
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -1194,7 +1196,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     Assert.NotNull(update.RaftCommandIndex);
 
                     etlDone = Etl.WaitForEtlToComplete(store);
-                    Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                    Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
@@ -1255,7 +1257,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                     SetupS3OlapEtl(store, script, settings);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                     using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))

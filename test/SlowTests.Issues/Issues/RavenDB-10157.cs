@@ -28,8 +28,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                new UserByName().Execute(store);
-                new UserByNameCount().Execute(store);
+                await new UserByName().ExecuteAsync(store);
+                await new UserByNameCount().ExecuteAsync(store);
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }

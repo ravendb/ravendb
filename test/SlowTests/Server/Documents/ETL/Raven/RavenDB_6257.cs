@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 etlDone.Reset();
 
@@ -47,7 +48,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 var db = await GetDatabase(src.Database);
 
@@ -82,7 +83,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 etlDone = Etl.WaitForEtlToComplete(src, (n, s) => s.LoadSuccesses >= 6);
 
@@ -93,7 +94,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 var db = await GetDatabase(src.Database);
 

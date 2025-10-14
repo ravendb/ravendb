@@ -61,7 +61,7 @@ public class RavenDB_19557 : RavenTestBase
             await session.SaveChangesAsync();
         }
 
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenAsyncSession())
         {
             var query = from r in session.Query<Index.Result, Index>()

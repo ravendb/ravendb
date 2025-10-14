@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 database.ForTestingPurposesOnly().AfterSnapshotOfDocuments = () =>
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     DatabaseName = databaseName
                 }))
                 {
-                    Indexes.WaitForIndexing(store, databaseName);
+                    await Indexes.WaitForIndexingAsync(store, databaseName);
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 long cleanedTombstones = 0;
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
                     DatabaseName = databaseName
                 }))
                 {
-                    Indexes.WaitForIndexing(store, databaseName);
+                    await Indexes.WaitForIndexingAsync(store, databaseName);
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -166,7 +166,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 long cleanedTombstones = 0;
@@ -194,7 +194,7 @@ namespace SlowTests.Issues
                     DatabaseName = databaseName
                 }))
                 {
-                    Indexes.WaitForIndexing(store, databaseName);
+                    await Indexes.WaitForIndexingAsync(store, databaseName);
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 long cleanedTombstones = 0;
@@ -259,7 +259,7 @@ namespace SlowTests.Issues
                     DatabaseName = databaseName
                 }))
                 {
-                    Indexes.WaitForIndexing(store, databaseName);
+                    await Indexes.WaitForIndexingAsync(store, databaseName);
 
                     using (var session = store.OpenAsyncSession(databaseName))
                     {

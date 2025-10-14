@@ -92,7 +92,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var sub = store.Subscriptions.Create(new SubscriptionCreationOptions<User>
+                var sub = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
                 {
                     Filter = user => user.Count > 0
                 });
@@ -147,11 +147,11 @@ namespace SlowTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub1" });
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                var subscriptionStataList = store.Subscriptions.GetSubscriptions(0, 10);
+                var subscriptionStataList = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                 Assert.Equal(3, subscriptionStataList.Count);
 
@@ -166,13 +166,13 @@ namespace SlowTests.Client.Subscriptions
                 {
                     using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => databaseName, CreateDatabase = false }))
                     {
-                        subscriptionStataList = store2.Subscriptions.GetSubscriptions(0, 10, databaseName);
+                        subscriptionStataList = await store2.Subscriptions.GetSubscriptionsAsync(0, 10, databaseName);
 
                         Assert.Equal(3, subscriptionStataList.Count);
                         Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
                         Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub2")));
 
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
                         using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                         {
                             MaxDocsPerBatch = 5,
@@ -181,10 +181,10 @@ namespace SlowTests.Client.Subscriptions
                         {
                             var t = worker.Run(_ =>
                             {
-                                mre.Set();
+                                amre.Set();
                             });
 
-                            Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                            Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                         }
                     }
                 }
@@ -206,11 +206,11 @@ namespace SlowTests.Client.Subscriptions
                     ModifyDatabaseName = s => $"{s}_2"
                 }))
                 {
-                    store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub1" });
-                    store1.Subscriptions.Create(new SubscriptionCreationOptions<User>() { Name = "sub2" });
-                    store1.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                    await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub1" });
+                    await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>() { Name = "sub2" });
+                    await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
 
-                    var subscriptionStataList = store1.Subscriptions.GetSubscriptions(0, 10);
+                    var subscriptionStataList = await store1.Subscriptions.GetSubscriptionsAsync(0, 10);
 
                     Assert.Equal(3, subscriptionStataList.Count);
 
@@ -220,7 +220,7 @@ namespace SlowTests.Client.Subscriptions
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    subscriptionStataList = store2.Subscriptions.GetSubscriptions(0, 10, store2.Database);
+                    subscriptionStataList = await store2.Subscriptions.GetSubscriptionsAsync(0, 10, store2.Database);
 
                     Assert.Equal(3, subscriptionStataList.Count);
                     Assert.True(subscriptionStataList.Any(x => x.SubscriptionName.Equals("sub1")));
@@ -232,7 +232,7 @@ namespace SlowTests.Client.Subscriptions
                         await session.SaveChangesAsync();
                     }
 
-                    var mre = new AsyncManualResetEvent();
+                    var amre = new AsyncManualResetEvent();
                     using (var worker = store2.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("sub1")
                     {
                         MaxDocsPerBatch = 5,
@@ -241,10 +241,10 @@ namespace SlowTests.Client.Subscriptions
                     {
                         var t = worker.Run(_ =>
                         {
-                            mre.Set();
+                            amre.Set();
                         });
 
-                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                        Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                     }
                 }
             }
@@ -328,7 +328,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
@@ -483,7 +483,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -576,7 +576,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -622,7 +622,7 @@ namespace SlowTests.Client.Subscriptions
 
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
@@ -674,7 +674,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var count = 10;
-                store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
+                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
                 Assert.Equal(1, subscriptions.Count);
 
@@ -714,7 +714,7 @@ namespace SlowTests.Client.Subscriptions
 
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
@@ -804,7 +804,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions() { Query = @"from Dogs" });
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = @"from Dogs" });
 
                 using (var commands = store.Commands())
                 {
@@ -829,7 +829,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = @"from Dogs" });
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Dog(DateTime.Now) { Name = 1 });
@@ -843,11 +843,11 @@ namespace SlowTests.Client.Subscriptions
 
                     subscription.OnUnexpectedSubscriptionError += x =>
                     {
-                        mre.Set();
+                        amre.Set();
                     };
                     var t = subscription.Run(x => { });
 
-                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                    Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 }
                 finally
                 {
@@ -1129,7 +1129,7 @@ namespace SlowTests.Client.Subscriptions
         [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task DisposeSubscriptionWorkerShouldNotThrow()
         {
-            var mre = new AsyncManualResetEvent();
+            var amre = new AsyncManualResetEvent();
             var mre2 = new AsyncManualResetEvent();
             using (var store = GetDocumentStore(new Options()
             {
@@ -1139,20 +1139,20 @@ namespace SlowTests.Client.Subscriptions
                     {
                         if (args.Url.Contains("info/remote-task/tcp?database="))
                         {
-                            mre.Set();
+                            amre.Set();
                             await mre2.WaitAsync(_reasonableWaitTime);
                         }
                     };
                 }
             }))
             {
-                var id = store.Subscriptions.Create(new SubscriptionCreationOptions<Company>());
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Company>());
                 var workerOptions = new SubscriptionWorkerOptions(id) { IgnoreSubscriberErrors = true, Strategy = SubscriptionOpeningStrategy.TakeOver };
                 var worker = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions, store.Database);
 
                 var t = worker.Run(x => { });
 
-                await mre.WaitAsync(_reasonableWaitTime);
+                await amre.WaitAsync(_reasonableWaitTime);
                 await worker.DisposeAsync(false);
                 mre2.Set();
 
@@ -1169,7 +1169,7 @@ namespace SlowTests.Client.Subscriptions
             var maxErroneousPeriod = TimeSpan.FromSeconds(1);
             using (var store = GetDocumentStore())
             {
-                var id1 = store.Subscriptions.Create(new SubscriptionCreationOptions<Company>());
+                var id1 = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<Company>());
                 var workerOptions1 = new SubscriptionWorkerOptions(id1) { Strategy = SubscriptionOpeningStrategy.WaitForFree, MaxErroneousPeriod = maxErroneousPeriod };
 
                 var worker1Ack = new AsyncManualResetEvent();
@@ -1590,9 +1590,9 @@ namespace SlowTests.Client.Subscriptions
                     ConnectionStreamTimeout = TimeSpan.FromSeconds(15),
                 };
 
-                var mre = new AsyncManualResetEvent();
+                var amre = new AsyncManualResetEvent();
                 await using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(ops);
-                subscription.OnEstablishedSubscriptionConnection += () => mre.Set();
+                subscription.OnEstablishedSubscriptionConnection += () => amre.Set();
 
                 var processingSubs = subscription.Run(ProcessDocuments);
                 await using var subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(ops);
@@ -1604,7 +1604,7 @@ namespace SlowTests.Client.Subscriptions
                 subscription3.OnSubscriptionConnectionRetry += exception => exceptions.Add(exception);
                 subscription3.OnUnexpectedSubscriptionError += exception => exceptions.Add(exception);
 
-                Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                Assert.True(await amre.WaitAsync(_reasonableWaitTime));
 
                 var waitingSubs1 = subscription2.Run(ProcessDocuments);
                 var waitingSubs2 = subscription3.Run(ProcessDocuments);

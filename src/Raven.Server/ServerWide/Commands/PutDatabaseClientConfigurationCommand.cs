@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class PutDatabaseClientConfigurationCommand : UpdateDatabaseCommand
+    public sealed class PutDatabaseClientConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
 
         public ClientConfiguration Configuration;
@@ -30,5 +30,7 @@ namespace Raven.Server.ServerWide.Commands
             record.Client = Configuration;
             record.Client.Etag = etag;
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

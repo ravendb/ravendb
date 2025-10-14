@@ -27,10 +27,10 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(store.Database);
 
                 var index1 = new Index_Without_Overriden_Analyzers();
-                index1.Execute(store);
+                await index1.ExecuteAsync(store);
 
                 var index2 = new Index_With_Overriden_Analyzers();
-                index2.Execute(store);
+                await index2.ExecuteAsync(store);
 
                 var index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
@@ -97,10 +97,10 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(store.Database);
 
                 var index1 = new Index_Without_Overriden_Analyzers();
-                index1.Execute(store);
+                await index1.ExecuteAsync(store);
 
                 var index2 = new Index_With_Overriden_Analyzers();
-                index2.Execute(store);
+                await index2.ExecuteAsync(store);
 
                 var index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);
@@ -170,10 +170,10 @@ namespace SlowTests.Issues
                 var database = await GetDatabase(store.Database);
 
                 var index1 = new Index_Without_Overriden_Analyzers();
-                index1.Execute(store);
+                await index1.ExecuteAsync(store);
 
                 var index2 = new Index_With_Overriden_Analyzers();
-                index2.Execute(store);
+                await index2.ExecuteAsync(store);
 
                 var index1Instance = database.IndexStore.GetIndex(index1.IndexName);
                 Assert.Equal(database.Configuration.Indexing.DefaultAnalyzer, index1Instance.Configuration.DefaultAnalyzer);

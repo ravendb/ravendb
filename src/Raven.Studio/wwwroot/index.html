@@ -138,6 +138,37 @@
                 }
             }
         </style>
+        <script type="text/javascript">
+            if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+                var msViewportStyle = document.createElement("style");
+                var mq = "@@-ms-viewport{width:auto!important}";
+                msViewportStyle.appendChild(document.createTextNode(mq));
+                document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+            }
+        </script>
+    </head>
+    <body class="loading-active">
+    
+        <div class="splash-screen">
+            <div class="spinner-box">
+                <div class="orbit orbit-1">
+                    <i class="splash-screen-icon-raven"></i>
+                </div>
+                <div class="orbit orbit-2">
+                    <i class="orbit-icon"></i>
+                    <i class="orbit-icon orbit-icon-2-2"></i>
+                </div>
+                <div class="orbit orbit-3">
+                    <i class="orbit-icon"></i>
+                    <i class="orbit-icon orbit-icon-3-2"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div id="applicationHost"></div>
+        <div id="bs5-modal" class="bs5"></div>
+
+        <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
 
         <script type="text/javascript">
             var themeToCss = {
@@ -194,39 +225,9 @@
             
             head.appendChild(bs5link);
             head.appendChild(link);
-        </script>
 
-        <script type="text/javascript">
-            if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
-                var msViewportStyle = document.createElement("style");
-                var mq = "@@-ms-viewport{width:auto!important}";
-                msViewportStyle.appendChild(document.createTextNode(mq));
-                document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
-            }
+            document.body.setAttribute("data-theme", themeToUse);
         </script>
-    </head>
-    <body class="loading-active">
-    
-        <div class="splash-screen">
-            <div class="spinner-box">
-                <div class="orbit orbit-1">
-                    <i class="splash-screen-icon-raven"></i>
-                </div>
-                <div class="orbit orbit-2">
-                    <i class="orbit-icon"></i>
-                    <i class="orbit-icon orbit-icon-2-2"></i>
-                </div>
-                <div class="orbit orbit-3">
-                    <i class="orbit-icon"></i>
-                    <i class="orbit-icon orbit-icon-3-2"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div id="applicationHost"></div>
-        <div id="bs5-modal" class="bs5"></div>
-
-        <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
 
         <!-- splash screen -->
         <script type="text/javascript">

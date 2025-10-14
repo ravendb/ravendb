@@ -88,7 +88,7 @@ ai.genContext({})
                 session.Advanced.Attachments.Store(FirstItemId, Image+actualFormat, file1);
                 await session.SaveChangesAsync();
             }
-            Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
+            Assert.True(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
         
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             Assert.False(ValidateErrorNotification(db, string.Empty));
@@ -134,7 +134,7 @@ ai.genContext({})
                 session.Advanced.Attachments.Store(FirstItemId, "image.png", file1);
                 await session.SaveChangesAsync();
             }
-            etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30));
+            await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30));
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             Assert.True(ValidateErrorNotification(db, $"Attachment must be loaded or base64 string (on type image/png)"));
@@ -182,7 +182,7 @@ ai.genContext({})
                 session.Advanced.Attachments.Store(FirstItemId, "image.png", file1);
                 await session.SaveChangesAsync();
             }
-            Assert.False(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
+            Assert.False(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));

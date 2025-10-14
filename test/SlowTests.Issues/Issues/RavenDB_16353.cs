@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplierNoTracking.IndexName, "Name", fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplierNoTracking.IndexName, "Name", fromValue: null));
                 Assert.Equal(1, terms.Length);

@@ -391,8 +391,8 @@ namespace SlowTests.Server.Documents.Replication
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 // new server should have only 0 external replications
                 var server = GetNewServer();
@@ -405,8 +405,8 @@ namespace SlowTests.Server.Documents.Replication
                     Server = server
                 }))
                 {
-                    store2.Maintenance.Server.Send(restoreOperation)
-                        .WaitForCompletion(TimeSpan.FromSeconds(30));
+                    await (await store2.Maintenance.Server.SendAsync(restoreOperation))
+                        .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                     var record2 = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     Assert.Equal(0, record2.ExternalReplications.Count);
@@ -498,8 +498,8 @@ namespace SlowTests.Server.Documents.Replication
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+                await (await store.Maintenance.Server.SendAsync(restoreOperation))
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 // new server should have only 0 external replications
                 var server = GetNewServer();
@@ -512,8 +512,8 @@ namespace SlowTests.Server.Documents.Replication
                     Server = server
                 }))
                 {
-                    store2.Maintenance.Server.Send(restoreOperation)
-                        .WaitForCompletion(TimeSpan.FromSeconds(30));
+                    await (await store2.Maintenance.Server.SendAsync(restoreOperation))
+                        .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                     var record2 = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     Assert.Equal(1, record2.ExternalReplications.Count);

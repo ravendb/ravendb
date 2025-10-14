@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -102,7 +103,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenAsyncSession())
                 {
@@ -203,7 +204,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenAsyncSession())
                 {

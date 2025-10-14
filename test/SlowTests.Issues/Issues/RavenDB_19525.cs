@@ -35,7 +35,7 @@ public class RavenDB_19525 : RavenTestBase
             session.SaveChanges();
         }
 
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         var indexes = await store.Maintenance.SendAsync(new GetIndexErrorsOperation());
         Assert.DoesNotContain(indexes, idx => idx.Errors.Any());
     }

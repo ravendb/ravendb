@@ -33,7 +33,7 @@ public class RavenDB_21683 : RavenTestBase
             var indexDefinition = index.CreateIndexDefinition();
 
             await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             await WaitForIndexCountAsync(store, 1);
 
             using (var session = store.OpenAsyncSession())
@@ -47,7 +47,7 @@ public class RavenDB_21683 : RavenTestBase
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeForDocumentTransactionToRemainOpen)] = "10";
 
                 await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await WaitForIndexCountAsync(store, 1);
 
                 await session
@@ -61,7 +61,7 @@ public class RavenDB_21683 : RavenTestBase
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.IndexEmptyEntries)] = "true";
 
                 await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
                 await WaitForIndexCountAsync(store, 1);
 
                 await session

@@ -1,18 +1,17 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Amazon;
 using Amazon.SQS;
 using Azure.Identity;
 using Azure.Storage.Queues;
+using System.Security.Cryptography;
 using Confluent.Kafka;
-using Org.BouncyCastle.Utilities.IO.Pem;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Utils;
 using Sparrow.Server.Logging;
 using ClientConfig = Confluent.Kafka.ClientConfig;
-using PemWriter = Org.BouncyCastle.OpenSsl.PemWriter;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
@@ -57,8 +56,8 @@ public static class QueueBrokerConnectionHelper
     {
         if (settings.UseRavenCertificate && certificateHolder?.ClientCertificate != null)
         {
-            config.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.ClientCertificate.RawData));
-            config.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
+            config.SslCertificatePem = certificateHolder.ClientCertificate.ExportCertificatePem();
+            config.SslKeyPem = (certificateHolder.PrivateKey as RSA).GetExportableRsaPrivateKey().ExportRSAPrivateKeyPem();
             config.SecurityProtocol = SecurityProtocol.Ssl;
         }
 
@@ -68,18 +67,6 @@ public static class QueueBrokerConnectionHelper
             {
                 config.Set(option.Key, option.Value);
             }
-        }
-    }
-
-    private static string ExportAsPem(object @object)
-    {
-        using (var sw = new StringWriter())
-        {
-            var pemWriter = new PemWriter(sw);
-
-            pemWriter.WriteObject(@object);
-
-            return sw.ToString();
         }
     }
 

@@ -34,11 +34,11 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore(options))
             {
-                new FakeIndex().Execute(store);
+                await new FakeIndex().ExecuteAsync(store);
 
                 foreach (var expected in new[] { IndexPriority.Normal, IndexPriority.High, IndexPriority.Low })
                 {
-                    store.Maintenance.Send(new SetIndexesPriorityOperation("FakeIndex", expected));
+                    await store.Maintenance.SendAsync(new SetIndexesPriorityOperation("FakeIndex", expected));
 
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     var indexInstance = db.IndexStore.GetIndex("FakeIndex");

@@ -475,28 +475,28 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var timeSeriesIndex = new MyCounterIndex_Load();
                 var indexName = timeSeriesIndex.IndexName;
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
                 RavenTestHelper.AssertEqualRespectingNewLines("counters.Companies.HeartRate.Select(counter => new {\r\n    counter = counter,\r\n    company = this.LoadDocument(counter.DocumentId, \"Companies\")\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    employee = this.LoadDocument(this0.company.Desc, \"Employees\")\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.counter.Value,\r\n    User = this1.this0.counter.DocumentId,\r\n    Employee = this1.employee.FirstName\r\n})", indexDefinition.Maps.First());
 
-                timeSeriesIndex.Execute(store);
+                await timeSeriesIndex.ExecuteAsync(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Employee", null));
                 Assert.Equal(1, terms.Length);
@@ -515,14 +515,14 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Employee", null));
                 Assert.Equal(1, terms.Length);
@@ -540,9 +540,9 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -552,7 +552,7 @@ namespace SlowTests.Client.Indexing.Counters
 
                 // delete source document
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -566,9 +566,9 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(2, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.All(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex(indexName);
@@ -589,7 +589,7 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -786,7 +786,7 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var countersIndex = new AverageHeartRate_WithLoad();
                 var indexName = countersIndex.IndexName;
@@ -794,16 +794,16 @@ namespace SlowTests.Client.Indexing.Counters
                 RavenTestHelper.AssertEqualRespectingNewLines("counters.Users.HeartRate.Select(counter => new {\r\n    counter = counter,\r\n    user = this.LoadDocument(counter.DocumentId, \"Users\")\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    address = this.LoadDocument(this0.user.AddressId, \"Addresses\")\r\n}).Select(this1 => new {\r\n    HeartBeat = ((double) this1.this0.counter.Value),\r\n    Count = 1,\r\n    City = this1.address.City\r\n})", indexDefinition.Maps.First());
                 RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => r.City).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    City = this1.this0.g.Key,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
 
-                countersIndex.Execute(store);
+                await countersIndex.ExecuteAsync(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -820,7 +820,7 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("ny", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -838,9 +838,9 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -850,7 +850,7 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Contains("ny", terms);
                 Assert.Contains("la", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -865,9 +865,9 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(1, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.False(staleness.IsStale);
@@ -877,7 +877,7 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Contains("la", terms);
                 Assert.Contains("NULL_VALUE", terms);
 
-                store.Maintenance.Send(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -892,9 +892,9 @@ namespace SlowTests.Client.Indexing.Counters
                 Assert.Equal(2, staleness.StalenessReasons.Count);
                 Assert.True(staleness.StalenessReasons.All(x => x.Contains("There are still")));
 
-                store.Maintenance.Send(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                 Assert.Equal(0, terms.Length);
@@ -1205,7 +1205,7 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1274,7 +1274,7 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
@@ -1299,7 +1299,7 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -1321,7 +1321,7 @@ namespace SlowTests.Client.Indexing.Counters
                     session.SaveChanges();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -1426,7 +1426,7 @@ namespace SlowTests.Client.Indexing.Counters
                 }
                 await session.SaveChangesAsync();
             }
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             await store.Maintenance.SendAsync(new StopIndexingOperation());
             using (var session = store.OpenAsyncSession())
@@ -1443,7 +1443,7 @@ namespace SlowTests.Client.Indexing.Counters
             }
 
             await store.Maintenance.SendAsync(new StartIndexingOperation());
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
             await store.Maintenance.SendAsync(new StopIndexingOperation());
             using (var session = store.OpenAsyncSession())
             {

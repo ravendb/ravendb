@@ -14,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Employee = Orders.Employee;
 using Xunit.Abstractions;
@@ -31,7 +32,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Simple_script(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Simple_script(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -70,7 +71,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -248,7 +249,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenAsyncSession())
                 {
@@ -267,7 +268,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     await session.SaveChangesAsync();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenAsyncSession())
                 {
@@ -283,7 +284,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void No_script(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task No_script(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -302,7 +303,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -321,7 +322,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -334,7 +335,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Filtering_and_transformation_with_load_document(Options dstOptions)
+        public async Task Filtering_and_transformation_with_load_document(Options dstOptions)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore(dstOptions))
@@ -379,7 +380,7 @@ loadToUsers(
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -415,7 +416,7 @@ loadToUsers(
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -431,7 +432,7 @@ loadToUsers(
 
         [RavenTheory(RavenTestCategory.Etl)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Loading_to_different_collections(Options dstOptions)
+        public async Task Loading_to_different_collections(Options dstOptions)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore(dstOptions))
@@ -466,7 +467,7 @@ loadToAddresses(load(this.AddressId));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -508,7 +509,7 @@ loadToAddresses(load(this.AddressId));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -533,7 +534,7 @@ loadToAddresses(load(this.AddressId));
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Loading_to_different_collections_using_this(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Loading_to_different_collections_using_this(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -565,7 +566,7 @@ loadToAddresses(this.Address);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -600,7 +601,7 @@ loadToAddresses(this.Address);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -622,7 +623,7 @@ loadToAddresses(this.Address);
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -648,7 +649,7 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -722,7 +723,7 @@ loadToOrders(orderData);
 
                 var timeout = TimeSpan.FromSeconds(30);
 
-                Assert.True(etlDone.Wait(timeout), await AddDebugInfo(src, dest, timeout, srcDbMode));
+                Assert.True(await etlDone.WaitAsync(timeout), await AddDebugInfo(src, dest, timeout, srcDbMode));
 
                 using (var session = dest.OpenSession())
                 {
@@ -770,7 +771,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(timeout);
+                await etlDone.WaitAsync(timeout);
 
                 using (var session = dest.OpenSession())
                 {
@@ -797,7 +798,7 @@ loadToOrders(orderData);
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Can_get_document_id(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Can_get_document_id(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -816,7 +817,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = dest.OpenSession())
                 {
@@ -898,7 +899,7 @@ loadToOrders(orderData);
         [InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Single)]
         [InlineData(RavenDatabaseMode.Sharded, RavenDatabaseMode.Sharded)]
-        public void Can_load_to_specific_collection_when_applying_to_all_docs(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
+        public async Task Can_load_to_specific_collection_when_applying_to_all_docs(RavenDatabaseMode srcDbMode, RavenDatabaseMode dstDbMode)
         {
             using (var src = GetDocumentStore(Options.ForMode(srcDbMode)))
             using (var dest = GetDocumentStore(Options.ForMode(dstDbMode)))
@@ -920,7 +921,7 @@ loadToUsers(this);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {

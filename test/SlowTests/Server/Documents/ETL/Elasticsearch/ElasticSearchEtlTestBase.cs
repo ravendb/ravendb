@@ -10,7 +10,9 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
+using Sparrow.Server;
 using Tests.Infrastructure.ConnectionString;
+using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -140,9 +142,9 @@ loadToOrders" + IndexSuffix + @"(orderData);";
             }
         }
 
-        protected async Task AssertEtlDoneAsync(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
+        protected async Task AssertEtlDoneAsync(AsyncManualResetEvent etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
         {
-            if (etlDone.Wait(timeout) == false)
+            if (await etlDone.WaitAsync(timeout) == false)
             {
                 var loadError = await Etl.TryGetLoadErrorAsync(databaseName, config);
                 var transformationError = await Etl.TryGetTransformationErrorAsync(databaseName, config);

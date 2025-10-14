@@ -50,7 +50,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                new PersonsIndex().Execute(store);
+                await new PersonsIndex().ExecuteAsync(store);
 
                 //store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
                 var offices = Enumerable.Range(1, 20).Select(x => new Office { FacilityName = "Main Offices", OfficeNumber = x });

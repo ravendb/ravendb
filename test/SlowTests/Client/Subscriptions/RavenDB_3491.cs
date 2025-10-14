@@ -235,10 +235,10 @@ namespace SlowTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        var mre = new AsyncManualResetEvent();
+                        var amre = new AsyncManualResetEvent();
                         subscription.AfterAcknowledgment += batch =>
                         {
-                            mre.Set();
+                            amre.Set();
                             return Task.CompletedTask;
                         };
 
@@ -294,7 +294,7 @@ namespace SlowTests.Client.Subscriptions
                         Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(34, age);
 
-                        Assert.True(await mre.WaitAsync(TimeSpan.FromMilliseconds(250)));
+                        Assert.True(await amre.WaitAsync(TimeSpan.FromMilliseconds(250)));
                     }
                 }
 

@@ -116,7 +116,7 @@ public class RavenDB_19016 : RavenTestBase
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var index = database.IndexStore.GetIndex(deployedIndex.IndexName);
@@ -143,7 +143,7 @@ public class RavenDB_19016 : RavenTestBase
                     await session.SaveChangesAsync();
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -265,7 +265,7 @@ public class RavenDB_19016 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            Indexes.WaitForIndexing(store);
+            await Indexes.WaitForIndexingAsync(store);
 
             using (var session = store.OpenAsyncSession())
             {

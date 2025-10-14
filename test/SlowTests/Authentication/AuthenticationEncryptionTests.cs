@@ -46,9 +46,9 @@ namespace SlowTests.Authentication
                 Path = NewDataPath()
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var file = GetTempFileName();
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
@@ -56,24 +56,24 @@ namespace SlowTests.Authentication
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query(new IndexQuery
+                    var result = await commands.QueryAsync(new IndexQuery
                     {
                         Query = "FROM @all_docs",
                         WaitForNonStaleResults = true
                     });
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     Assert.True(result.Results.Length > 1000);
 
-                    QueryResult queryResult = store.Commands().Query(new IndexQuery
+                    QueryResult queryResult = await store.Commands().QueryAsync(new IndexQuery
                     {
                         Query = "FROM INDEX 'Orders/ByCompany'"
                     });
-                    QueryResult queryResult2 = store.Commands().Query(new IndexQuery
+                    QueryResult queryResult2 = await store.Commands().QueryAsync(new IndexQuery
                     {
                         Query = "FROM INDEX 'Orders/Totals'"
                     });
-                    QueryResult queryResult3 = store.Commands().Query(new IndexQuery
+                    QueryResult queryResult3 = await store.Commands().QueryAsync(new IndexQuery
                     {
                         Query = "FROM INDEX 'Product/Search'"
                     });
@@ -128,7 +128,7 @@ namespace SlowTests.Authentication
                 Path = NewDataPath()
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
 
                 using (var commands = store.Commands())
                 {
@@ -139,7 +139,7 @@ namespace SlowTests.Authentication
                         WaitForNonStaleResults = true
                     });
 
-                    commands.RequestExecutor.Execute(command, commands.Context);
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                     // create auto map reduce index
                     command = new QueryCommand(commands.Session, new IndexQuery
@@ -148,18 +148,18 @@ namespace SlowTests.Authentication
                         WaitForNonStaleResults = true
                     });
 
-                    commands.RequestExecutor.Execute(command, commands.Context);
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                     var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
                     Assert.Equal(9, indexDefinitions.Length); // 6 sample data indexes + 2 new dynamic indexes
 
-                    Indexes.WaitForIndexing(store);
+                    await Indexes.WaitForIndexingAsync(store);
 
                     // perform a query per index
                     foreach (var indexDef in indexDefinitions)
                     {
-                        QueryResult queryResult = store.Commands().Query(new IndexQuery
+                        QueryResult queryResult = await store.Commands().QueryAsync(new IndexQuery
                         {
                             Query = $"FROM INDEX '{indexDef.Name}'"
                         });
@@ -174,7 +174,7 @@ namespace SlowTests.Authentication
                     // perform a query per index
                     foreach (var indexDef in indexDefinitions)
                     {
-                        QueryResult queryResult = store.Commands().Query(new IndexQuery
+                        QueryResult queryResult = await store.Commands().QueryAsync(new IndexQuery
                         {
                             Query = $"FROM INDEX '{indexDef.Name}'"
                         });
@@ -244,14 +244,14 @@ namespace SlowTests.Authentication
                     }
                 }
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 var deleteOperation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                var compactOperation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+                var compactOperation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(new CompactSettings
                 {
                     DatabaseName = store.Database,
                     Documents = true,

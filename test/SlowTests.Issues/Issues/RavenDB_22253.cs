@@ -22,7 +22,7 @@ public class RavenDB_22253 : RavenTestBase
     {
         using var store = GetDocumentStore();
 
-        store.ExecuteIndex(new PupilsIndex());
+        await store.ExecuteIndexAsync(new PupilsIndex());
 
         var tasks = new List<Task>();
         var failures = new ConcurrentSet<string>();

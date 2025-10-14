@@ -5,6 +5,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using System.Threading.Tasks;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public void Should_filter_out_deletions_using_generic_delete_behavior()
+        public async Task Should_filter_out_deletions_using_generic_delete_behavior()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -69,7 +70,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -85,7 +86,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -102,7 +103,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -117,7 +118,7 @@ namespace SlowTests.Server.Documents.ETL
         [RavenTheory(RavenTestCategory.Etl)]
         [InlineData(new string[0], true)]
         [InlineData(new[] { "Users", "Employees" }, false)]
-        public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(string[] collections, bool applyToAllDocuments)
+        public async Task Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(string[] collections, bool applyToAllDocuments)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -150,7 +151,7 @@ function deleteDocumentsBehavior(docId, collection) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -170,7 +171,7 @@ function deleteDocumentsBehavior(docId, collection) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -181,7 +182,7 @@ function deleteDocumentsBehavior(docId, collection) {
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public void Should_filter_out_deletions_using_delete_behavior_function_and_marker_document()
+        public async Task Should_filter_out_deletions_using_delete_behavior_function_and_marker_document()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -215,7 +216,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -233,7 +234,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                Assert.False(etlDone.Wait(TimeSpan.FromSeconds(3)));
+                Assert.False(await etlDone.WaitAsync(TimeSpan.FromSeconds(3)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -272,7 +273,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
         return true;
     }
 ")]
-        public void Should_choose_more_specific_delete_behavior_function(string script)
+        public async Task Should_choose_more_specific_delete_behavior_function(string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -296,7 +297,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -314,7 +315,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {

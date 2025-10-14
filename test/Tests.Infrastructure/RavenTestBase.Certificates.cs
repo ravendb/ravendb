@@ -212,7 +212,7 @@ public partial class RavenTestBase
                 return new TestCertificatesHolder(serverCertificatePath, serverCertificateForCommunicationPath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
             }
 
-            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk, string ekuSuffix)
+            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, AsymmetricAlgorithm pk, string ekuSuffix)
             {
                 string name = $"{Environment.MachineName}_CC_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}_{ekuSuffix}";
                 string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
@@ -222,8 +222,8 @@ public partial class RavenTestBase
                     CertificateUtils.CreateSelfSignedClientCertificate(
                         name,
                         serverCertificate,
-                        pk.Key,
-                        out var certBytes,
+                        pk,
+                        out var certBytes, 
                         DateTime.UtcNow.Date.AddYears(5));
 
                     try

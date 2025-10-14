@@ -95,9 +95,9 @@ namespace SlowTests.Bugs.MapRedue
                     session.SaveChanges();
                 }
 
-                new LargeKeysInVoronFunction().Execute(store);
+                await new LargeKeysInVoronFunction().ExecuteAsync(store);
 
-                Indexes.WaitForIndexing(store);
+                await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {

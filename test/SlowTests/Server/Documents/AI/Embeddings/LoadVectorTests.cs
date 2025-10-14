@@ -13,18 +13,19 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using System.Threading.Tasks;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexSingleVectorGeneratedByEtl() => CanIndexSingleVectorGeneratedByEtlBase<IndexByName>();
+    public async Task CanIndexSingleVectorGeneratedByEtl() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByName>();
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexSingleVectorGeneratedByEtlJs() => CanIndexSingleVectorGeneratedByEtlBase<IndexByNameJs>();
+    public async Task CanIndexSingleVectorGeneratedByEtlJs() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByNameJs>();
 
-    private void CanIndexSingleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
+    private async Task CanIndexSingleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore();
 
@@ -38,8 +39,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         var index = new TIndex();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -50,17 +51,17 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Contains("Couldn't find Embeddings Generation task with 'localaitask' identifier", ex.Message);
         }
 
-        store.Maintenance.Send(new StopIndexOperation(index.IndexName));
+        await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store);
-        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Joe"], id);
 
-        store.Maintenance.Send(new StartIndexOperation(index.IndexName));
-        Indexes.WaitForIndexing(store);
+        await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -87,8 +88,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             session.SaveChanges();
         }
 
-        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-        Indexes.WaitForIndexing(store);
+        Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -106,12 +107,12 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
     }
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexMultipleVectorGeneratedByEtl() => CanIndexMultipleVectorGeneratedByEtlBase<IndexByNames>();
+    public async Task CanIndexMultipleVectorGeneratedByEtl() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNames>();
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexMultipleVectorGeneratedByEtlJs() => CanIndexMultipleVectorGeneratedByEtlBase<IndexByNamesJs>();
+    public async Task CanIndexMultipleVectorGeneratedByEtlJs() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNamesJs>();
 
-    private void CanIndexMultipleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
+    private async Task CanIndexMultipleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore();
 
@@ -125,8 +126,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         var index = new TIndex();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -134,15 +135,15 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Equal(1, nullElements);
         }
 
-        store.Maintenance.Send(new StopIndexOperation(index.IndexName));
+        await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
-        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
-        store.Maintenance.Send(new StartIndexOperation(index.IndexName));
-        Indexes.WaitForIndexing(store);
+        await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -169,8 +170,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             session.SaveChanges();
         }
 
-        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-        Indexes.WaitForIndexing(store);
+        Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector == null);
@@ -189,12 +190,12 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexVectorFromTwoDifferentEtl() => CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFields>();
+    public async Task CanIndexVectorFromTwoDifferentEtl() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFields>();
 
     [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void CanIndexVectorFromTwoDifferentEtlJs() => CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFieldsJs>();
+    public async Task CanIndexVectorFromTwoDifferentEtlJs() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFieldsJs>();
 
-    private void CanIndexVectorFromTwoDifferentEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
+    private async Task CanIndexVectorFromTwoDifferentEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
     {
         const string embeddingEtlName = "V1";
         const string embeddingEtlName2 = "V2";
@@ -211,8 +212,8 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         }
 
         var index = new TIndex();
-        index.Execute(store);
-        Indexes.WaitForIndexing(store);
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -223,18 +224,18 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
             Assert.Equal(1, nullElements);
         }
 
-        store.Maintenance.Send(new StopIndexOperation(index.IndexName));
+        await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName);
         
-        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
         
-        store.Maintenance.Send(new StartIndexOperation(index.IndexName));
-        Indexes.WaitForIndexing(store);
+        await store.Maintenance.SendAsync(new StartIndexOperation(index.IndexName));
+        await Indexes.WaitForIndexingAsync(store);
 
         using (var session = store.OpenSession())
         {
@@ -254,11 +255,11 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
 
         etlStatus.Reset();
         var (config2, connectionString2) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName2);
-        Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-        (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config2);
+        Assert.True(await etlStatus.WaitAsync(DefaultEtlTimeout));
+        (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, config2);
         Assert.True(queriesWorkerRegistered);
         Assert.True(indexingWorkerRegistered);
-        Indexes.WaitForIndexing(store);
+        await Indexes.WaitForIndexingAsync(store);
         using (var session = store.OpenSession())
         {
             var nullElements = session.Query<Dto, TIndex>().Count(x => x.Vector2 == null);
