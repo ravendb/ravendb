@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class UpdatePullReplicationAsSinkCommand : UpdateDatabaseCommand
+    public sealed class UpdatePullReplicationAsSinkCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public PullReplicationAsSink PullReplicationAsSink;
         public bool? UseServerCertificate;
@@ -70,5 +70,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(PullReplicationAsSink)] = PullReplicationAsSink.ToJson();
             json[nameof(UseServerCertificate)] = UseServerCertificate;
         }
+
+        public override bool Disabled => PullReplicationAsSink.Disabled;
     }
 }

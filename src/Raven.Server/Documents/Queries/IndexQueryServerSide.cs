@@ -138,11 +138,11 @@ namespace Raven.Server.Documents.Queries
             return _asJson;
         }
 
-        public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
+        public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null, QueryType queryType = QueryType.Select)
         {
             Query = Uri.UnescapeDataString(query);
             QueryParameters = queryParameters;
-            Metadata = new QueryMetadata(Query, queryParameters, 0);
+            Metadata = new QueryMetadata(Query, queryParameters, 0, queryType: queryType);
         }
 
         public static IndexQueryServerSide Create(HttpContext httpContext,

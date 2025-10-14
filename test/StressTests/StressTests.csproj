@@ -17,6 +17,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\src\Usings.Server.cs">
+      <Link>Properties\Usings.Server.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Corax\Bugs\Terms.log.gz" />

@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.QueueSink
 {
-    public class AddQueueSinkCommand: UpdateDatabaseCommand
+    public class AddQueueSinkCommand: UpdateDatabaseRecordFeaturesCommand
     {
         public QueueSinkConfiguration Configuration { get; protected set; }
         
@@ -47,5 +47,7 @@ namespace Raven.Server.ServerWide.Commands.QueueSink
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
+
+        public override bool Disabled => Configuration.Disabled;
     }
 }

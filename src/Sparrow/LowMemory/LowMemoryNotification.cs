@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime;
 using System.Threading;
+using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -52,18 +53,19 @@ namespace Sparrow.LowMemory
 
         private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity)
         {
-
             try
             {
+                var lowMemoryHandlersCount = _lowMemoryHandlers.Count;
+
                 try
                 {
                     var now = DateTime.UtcNow;
-                    
+
                     if (((isLowMemory && _logger.IsOperationsEnabled) || _logger.IsInfoEnabled)
                         && now - _lastLoggedLowMemory > _logLowMemoryInterval)
                     {
                         _lastLoggedLowMemory = now;
-                        _logger.Operations($"Running {_lowMemoryHandlers.Count} low memory handlers with severity: {lowMemorySeverity}. " +
+                        _logger.Operations($"Running {lowMemoryHandlersCount} low memory handlers with severity: {lowMemorySeverity}. " +
                                            $"{MemoryUtils.GetExtendedMemoryInfo(memoryInfo, _lowMemoryMonitor.GetDirtyMemoryState())}");
                     }
 
@@ -76,6 +78,12 @@ namespace Sparrow.LowMemory
                 {
                     // can fail because of oom error
                 }
+
+#if NET6_0_OR_GREATER
+                var maxLowMemoryHandlersToClean = Math.Clamp(Bits.PowerOf2(lowMemoryHandlersCount / 10), 128, 2048);
+#else
+                var maxLowMemoryHandlersToClean = 256;
+#endif
 
                 foreach (var lowMemoryHandler in _lowMemoryHandlers)
                 {
@@ -103,12 +111,13 @@ namespace Sparrow.LowMemory
                     }
                     else
                     {
-                        // make sure that we aren't allocating here, we reserve 128 items
+                        // make sure that we aren't allocating here, we reserve up to 2048 items
                         // and worst case we'll get it in the next run
-                        if (_inactiveHandlers.Count < _inactiveHandlers.Capacity)
+                        if (_inactiveHandlers.Count < maxLowMemoryHandlersToClean)
                             _inactiveHandlers.Add(lowMemoryHandler);
                     }
                 }
+
                 foreach (var x in _inactiveHandlers)
                 {
                     if (x == null)
@@ -125,13 +134,13 @@ namespace Sparrow.LowMemory
 
 #if NET7_0_OR_GREATER
         internal bool SupportsCompactionOfLargeObjectHeap { get; set; }
-        
+
         private void RequestLohCompactionIfNeeded(MemoryInfoResult memoryInfo, DateTime now)
         {
             if (now - _lastLohCompactionRequest <= _lohCompactionInterval ||
                 GCSettings.LargeObjectHeapCompactionMode == GCLargeObjectHeapCompactionMode.CompactOnce)
                 return;
-            
+
             var threshold = LargeObjectHeapCompactionThresholdPercentage;
 
             var envVariableThreshold = Environment.GetEnvironmentVariable("RAVEN_LOH_COMPACTION_THRESHOLD");
@@ -141,7 +150,7 @@ namespace Sparrow.LowMemory
 
             if (threshold <= 0)
                 return;
-            
+
             var info = GC.GetGCMemoryInfo(GCKind.Any);
 
             if (info.Index == 0) // no GC was run
@@ -185,7 +194,7 @@ namespace Sparrow.LowMemory
 
         public bool IsEarlyOutOfMemory { get; private set; }
 
-        public DirtyMemoryState DirtyMemoryState { get; private set; } = new DirtyMemoryState {IsHighDirty = false};
+        public DirtyMemoryState DirtyMemoryState { get; private set; } = new DirtyMemoryState { IsHighDirty = false };
 
         public Size LowMemoryThreshold { get; private set; }
 
@@ -198,7 +207,7 @@ namespace Sparrow.LowMemory
         public float LargeObjectHeapCompactionThresholdPercentage { get; private set; }
 
         public void Initialize(
-            Size lowMemoryThreshold, 
+            Size lowMemoryThreshold,
             bool useTotalDirtyMemInsteadOfMemUsage,
             bool enableHighTemporaryDirtyMemoryUse,
             float temporaryDirtyMemoryAllowedPercentage,
@@ -238,7 +247,7 @@ namespace Sparrow.LowMemory
 
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
-        private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
+        private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(2048);
         private AbstractLowMemoryMonitor _lowMemoryMonitor;
         private bool _initialized;
         private bool _enableHighTemporaryDirtyMemoryUse;
@@ -345,6 +354,7 @@ namespace Sparrow.LowMemory
                 memoryInfo = default;
                 totalUnmanagedAllocations = -1;
             }
+
             if (isLowMemory != LowMemorySeverity.None)
             {
                 if (LowMemoryState == false)
@@ -353,10 +363,9 @@ namespace Sparrow.LowMemory
                     {
                         if (_logger.IsInfoEnabled)
                         {
-
                             _logger.Info("Low memory detected, will try to reduce memory usage...");
-
                         }
+
                         AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk, memoryInfo, totalUnmanagedAllocations);
                     }
                     catch (OutOfMemoryException)
@@ -364,6 +373,7 @@ namespace Sparrow.LowMemory
                         // nothing we can do, we'll wait and try again
                     }
                 }
+
                 LowMemoryState = true;
 
                 timeout = 500;
@@ -373,6 +383,7 @@ namespace Sparrow.LowMemory
                 {
                     isLowMemory = LowMemorySeverity.ExtremelyLow; // On linux we want two severity steps
                 }
+
                 _clearInactiveHandlersCounter = 0;
                 RunLowMemoryHandlers(true, memoryInfo, isLowMemory);
             }
@@ -382,9 +393,10 @@ namespace Sparrow.LowMemory
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info("Back to normal memory usage detected");
-                    
+
                     AddLowMemEvent(LowMemReason.BackToNormal, memoryInfo, totalUnmanagedAllocations);
                 }
+
                 LowMemoryState = false;
                 RunLowMemoryHandlers(false, memoryInfo, isLowMemory);
                 timeout = memoryInfo.AvailableMemory < LowMemoryThreshold * 2 ? 1000 : 5000;
@@ -436,7 +448,7 @@ namespace Sparrow.LowMemory
 
             if (memInfo.AvailableMemoryForProcessing < LowMemoryThreshold)
                 return LowMemorySeverity.Low;
-            
+
             return LowMemorySeverity.None;
         }
 

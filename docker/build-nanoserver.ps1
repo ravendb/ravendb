@@ -3,7 +3,8 @@ param(
     $ArtifactsDir = "..\artifacts",
     $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.windows.json",
     $WinVer = "1809",
-    $DockerfileDir = "./ravendb-nanoserver")
+    $DockerfileDir = "./ravendb-nanoserver",
+    [switch]$UseVersionTagsOnly)
 
 $ErrorActionPreference = "Stop"
 
@@ -28,7 +29,7 @@ function BuildWindowsDockerImage ($version, $WinVer) {
 
 
     write-host "Build docker image: $version"
-    $tags = GetWindowsImageTags $repo $version $WinVer
+    [string[]]$tags = GetWindowsImageTags $repo $version $WinVer $UseVersionTagsOnly
     $fullNameTag = $tags[0]
 
     write-host "Tags: $tags"
