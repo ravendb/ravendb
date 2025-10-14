@@ -14,7 +14,7 @@ const isSelectedCollectionName = (name: string) => (store: RootState) =>
 
 const newDraftIds = (store: RootState) => store.documentSchema.newDraftIds;
 
-const globalDisabled = (store: RootState) => store.documentSchema.globalDisabled;
+const isGlobalDisabled = (store: RootState) => store.documentSchema.isGlobalDisabled;
 
 export const documentSchemaSelectors = {
     allValidators,
@@ -22,5 +22,5 @@ export const documentSchemaSelectors = {
     selectedCollectionNames,
     isSelectedCollectionName,
     newDraftIds,
-    globalDisabled,
+    isGlobalDisabled,
 };

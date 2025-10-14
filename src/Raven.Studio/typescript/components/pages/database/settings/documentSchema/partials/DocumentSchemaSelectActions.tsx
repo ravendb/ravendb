@@ -24,6 +24,7 @@ import { useServices } from "hooks/useServices";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import useConfirm from "components/common/ConfirmDialog";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
@@ -38,8 +39,8 @@ export default function DocumentSchemaSelectActions() {
     const { value: isTogglingStatus, setTrue: setTogglingStatus, setFalse: unsetTogglingStatus } = useBoolean(false);
     const {
         value: isTogglingGlobalStatus,
-        setTrue: setTogglingGlobalStatus,
-        setFalse: unsetTogglingGlobalStatus,
+        setTrue: setIsTogglingGlobalStatusTrue,
+        setFalse: setIsTogglingGlobalStatusFalse,
     } = useBoolean(false);
     const [operationConfirm, setOperationConfirm] = React.useState<OperationConfirm>(null);
     const confirm = useConfirm();
@@ -49,7 +50,7 @@ export default function DocumentSchemaSelectActions() {
     const allValidators = useAppSelector(documentSchemaSelectors.allValidators);
     const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
-    const globalDisabled = useAppSelector(documentSchemaSelectors.globalDisabled);
+    const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
 
     if (allCollectionNames.length === 0) {
         return null;
@@ -84,7 +85,7 @@ export default function DocumentSchemaSelectActions() {
 
             await databasesService.saveSchemaValidation(
                 databaseName,
-                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allUpdatedValidators, globalDisabled)
+                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allUpdatedValidators, isGlobalDisabled)
             );
 
             dispatch(documentSchemaActions.validatorsSaved());
@@ -131,10 +132,10 @@ export default function DocumentSchemaSelectActions() {
         }
 
         try {
-            setTogglingGlobalStatus();
+            setIsTogglingGlobalStatusTrue();
             reportEvent("document-schema", disabled ? "global-disable" : "global-enable");
 
-            dispatch(documentSchemaActions.globalDisabledToggled(disabled));
+            dispatch(documentSchemaActions.isGlobalDisabledToggled(disabled));
 
             await databasesService.saveSchemaValidation(
                 databaseName,
@@ -143,7 +144,7 @@ export default function DocumentSchemaSelectActions() {
 
             dispatch(documentSchemaActions.validatorsSaved());
         } finally {
-            unsetTogglingGlobalStatus();
+            setIsTogglingGlobalStatusFalse();
         }
     };
 
@@ -206,26 +207,24 @@ export default function DocumentSchemaSelectActions() {
                         </div>
                     </SelectionActions>
                 </div>
-                {globalDisabled ? (
-                    <Button
+                {isGlobalDisabled ? (
+                    <ButtonWithSpinner
                         variant="success"
                         onClick={() => handleGlobalStatusOperation(false)}
-                        disabled={isTogglingGlobalStatus}
+                        isSpinning={isTogglingGlobalStatus}
                     >
-                        {isTogglingGlobalStatus && <Spinner size="sm" />}
                         <Icon icon="play" />
                         Enable Schema Validation
-                    </Button>
+                    </ButtonWithSpinner>
                 ) : (
-                    <Button
+                    <ButtonWithSpinner
                         variant="secondary"
                         onClick={() => handleGlobalStatusOperation(true)}
-                        disabled={isTogglingGlobalStatus}
+                        isSpinning={isTogglingGlobalStatus}
                     >
-                        {isTogglingGlobalStatus && <Spinner size="sm" />}
                         <Icon icon="stop" />
                         Disable Schema Validation
-                    </Button>
+                    </ButtonWithSpinner>
                 )}
             </div>
             {isDeleteModalOpen && (
