@@ -309,8 +309,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             private readonly string _userPrompt;
             private readonly AiConversationCreationOptions _options;
             private readonly List<AiAgentActionResponse> _actionResponses;
+#pragma warning disable CS0618 // Type or member is obsolete
             public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses) : 
                 base(agent.Identifier, conversationId: "test/" + Guid.NewGuid(), userPrompt, actionResponses, options, changeVector: null, streamPropertyPath: null, streamedChunksCallback: null)
+#pragma warning restore CS0618 // Type or member is obsolete
             {
                 _agent = agent;
                 _document = document;
@@ -320,8 +322,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             }
 
             public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses, Expression<Func<TSchema, string>> streamPropertyPath,
+#pragma warning disable CS0618 // Type or member is obsolete
                 Func<string, Task> streamedChunksCallback) : 
                 base(agent.Identifier, conversationId: "test/" + Guid.NewGuid(), userPrompt, actionResponses: actionResponses, options, changeVector: null, streamPropertyPath.ToPropertyPath(DocumentConventions.Default), streamedChunksCallback)
+#pragma warning restore CS0618 // Type or member is obsolete
             {
                 _agent = agent;
                 _document = document;
