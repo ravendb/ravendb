@@ -67,7 +67,7 @@ public class DataArchivist : BackgroundWorkBase
             database.NotificationCenter.Add(AlertRaised.Create(
                 database.Name,
                 $"Data archival load configuration error in '{database.Name}' database", msg,
-                AlertType.ArchivalConfigurationNotValid, NotificationSeverity.Error, database.Name));
+                AlertReason.ArchivalConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
             var logger = database.Loggers.GetLogger<DataArchivist>();
             if (logger.IsErrorEnabled)

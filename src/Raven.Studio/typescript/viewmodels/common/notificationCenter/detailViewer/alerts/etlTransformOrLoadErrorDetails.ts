@@ -54,7 +54,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
                 customComparator: generalUtils.sortAlphaNumeric
             });
             
-            return this.alert.alertType() === "Etl_LoadError" ?
+            return this.alert.alertReason() === "Etl_LoadError" ?
                 [previewColumn, dateColumn, errorColumn, documentIdColumn] :
                 [previewColumn, documentIdColumn, dateColumn, errorColumn];
             });
@@ -94,7 +94,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && (notification.alertType() == "Etl_LoadError" || notification.alertType() == "Etl_TransformationError");
+        return (notification instanceof alert) && (notification.alertReason() == "Etl_LoadError" || notification.alertReason() == "Etl_TransformationError");
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

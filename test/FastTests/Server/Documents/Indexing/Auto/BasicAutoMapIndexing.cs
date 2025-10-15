@@ -1414,7 +1414,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     var readAlert = alerts[0].Json;
 
-                    Assert.Equal(AlertType.IndexStore_IndexCouldNotBeOpened.ToString(), readAlert[nameof(AlertRaised.AlertType)].ToString());
+                    Assert.Equal(AlertReason.IndexStore_IndexCouldNotBeOpened.ToString(), readAlert[nameof(AlertRaised.Reason)].ToString());
                     Assert.Contains(indexName, readAlert[nameof(AlertRaised.Message)].ToString());
                 }
             }

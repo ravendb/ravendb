@@ -67,7 +67,7 @@ class complexFieldsAlertDetails extends abstractAlertDetails {
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "Indexing_CoraxComplexItem";
+        return (notification instanceof alert) && notification.alertReason() === "Indexing_CoraxComplexItem";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

@@ -1037,7 +1037,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 dbName,
                 $"Could not reach any node of '{dbName}' database",
                 $"{alertMsg}. {ThingsToCheck}",
-                AlertType.DatabaseTopologyWarning,
+                AlertReason.DatabaseTopologyWarning,
                 NotificationSeverity.Warning
             );
 
@@ -1051,7 +1051,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 null,
                 $"Node {node} not found.",
                 $"{alertMsg}",
-                AlertType.DatabaseTopologyWarning,
+                AlertReason.DatabaseTopologyWarning,
                 NotificationSeverity.Warning
             );
 

@@ -36,7 +36,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 null,
                 $@"You've reached your license limit ({EnumHelper.GetDescription(licenseLimit.LimitType)})",
                 licenseLimit.Message,
-                AlertType.LicenseManager_LicenseLimit,
+                AlertReason.LicenseManager_LicenseLimit,
                 NotificationSeverity.Warning,
                 key: licenseLimit.LimitType.ToString(),
                 details: new LicenseLimitWarning(licenseLimit));
@@ -46,7 +46,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public static void DismissLicenseLimitNotification(ServerNotificationCenter notificationCenter, LimitType type)
         {
-            notificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_LicenseLimit, type.ToString()));
+            notificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.LicenseManager_LicenseLimit, type.ToString()));
         }
     }
 }

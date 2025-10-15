@@ -431,7 +431,7 @@ namespace Raven.Server.Rachis
                     null,
                     msg,
                     e.Message,
-                    AlertType.ClusterTopologyWarning,
+                    AlertReason.ClusterTopologyWarning,
                     NotificationSeverity.Error, details: new ExceptionDetails(e)));
             }
         }
@@ -683,7 +683,7 @@ namespace Raven.Server.Rachis
                 null,
                 title,
                 message,
-                AlertType.ClusterTopologyWarning,
+                AlertReason.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 key: title,
                 details: new ExceptionDetails(e));

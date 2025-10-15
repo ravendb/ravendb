@@ -1811,7 +1811,7 @@ namespace Raven.Server.Documents.Indexes
                     _documentDatabase.Name,
                     "Indexes store initialization error",
                     message,
-                    AlertType.IndexStore_IndexCouldNotBeOpened,
+                    AlertReason.IndexStore_IndexCouldNotBeOpened,
                     NotificationSeverity.Error,
                     key: faultyIndex.Name,
                     details: new ExceptionDetails(e)));

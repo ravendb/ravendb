@@ -197,7 +197,7 @@ public abstract partial class RachisConsensus
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var prefix = AlertRaised.GetKey(AlertType.UnrecoverableClusterError, key: null) + "/";
+            var prefix = AlertRaised.GetKey(AlertReason.UnrecoverableClusterError, key: null) + "/";
             var json = ServerStore.NotificationCenter.GetStoredMessageByPrefix(context, prefix);
             if (json == null)
                 return null;

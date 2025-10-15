@@ -5,6 +5,7 @@ using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -36,6 +37,11 @@ namespace Raven.Server.Dashboard.Cluster
                 await WaitOrThrowOperationCanceled(NotificationInterval - timeSpan);
             }
 
+            EnqueueNotification();
+        }
+
+        protected void EnqueueNotification()
+        {
             try
             {
                 if (CancellationToken.IsCancellationRequested)
@@ -71,6 +77,11 @@ namespace Raven.Server.Dashboard.Cluster
             {
                 _lastSentNotification = SystemTime.UtcNow;
             }
+        }
+
+        internal virtual void UpdateConfiguration(BlittableJsonReaderObject configuration)
+        {
+            throw new NotSupportedException($"Configuration update is not supported for {GetType().Name}.");
         }
     }
 }

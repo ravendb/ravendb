@@ -109,7 +109,7 @@ namespace Raven.Server.NotificationCenter
         {
             const string source = "slow-writes";
 
-            var id = PerformanceHint.GetKey(PerformanceHintType.SlowIO, source);
+            var id = PerformanceHint.GetKey(PerformanceHintReason.SlowIO, source);
 
             using (_notificationCenter.Storage.Read(id, out var ntv))
             {
@@ -134,7 +134,7 @@ namespace Raven.Server.NotificationCenter
                         _notificationCenter.Database,
                         "An extremely slow write to disk",
                         "We have detected very slow writes",
-                        PerformanceHintType.SlowIO,
+                        PerformanceHintReason.SlowIO,
                         NotificationSeverity.Info,
                         source,
                         details

@@ -114,7 +114,7 @@ namespace SlowTests.Server.NotificationCenter
                         ((BlittableJsonReaderObject)readAlert[nameof(AlertRaised.Details)])[nameof(ExceptionDetails.Exception)].ToString());
 
                     Assert.Equal(alert.Severity.ToString(), readAlert[nameof(AlertRaised.Severity)].ToString());
-                    Assert.Equal(alert.AlertType.ToString(), readAlert[nameof(AlertRaised.AlertType)].ToString());
+                    Assert.Equal(alert.Reason.ToString(), readAlert[nameof(AlertRaised.Reason)].ToString());
                     Assert.Equal(alert.Key, readAlert[nameof(AlertRaised.Key)].ToString());
                 }
             }
@@ -526,8 +526,8 @@ namespace SlowTests.Server.NotificationCenter
         {
             // Filtering out two AlertType notifications and two entire notification types: PerformanceHint and DatabaseChanged
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
-            customSettings[RavenConfiguration.GetKey(x => x.Notifications.FilteredOutNotifications)] = $"{nameof(AlertType.LicenseManager_AGPL3)};" +
-                                                                                                       $"{nameof(AlertType.RevisionsConfigurationNotValid)};" +
+            customSettings[RavenConfiguration.GetKey(x => x.Notifications.FilteredOutNotifications)] = $"{nameof(AlertReason.LicenseManager_AGPL3)};" +
+                                                                                                       $"{nameof(AlertReason.RevisionsConfigurationNotValid)};" +
                                                                                                        $"{nameof(NotificationType.PerformanceHint)};" +
                                                                                                        $"{nameof(NotificationType.DatabaseChanged)};";
             var notifications = CreateSampleNotificationsForFilterOutTest();
@@ -565,7 +565,7 @@ namespace SlowTests.Server.NotificationCenter
             using var dis = Server.ServerStore.NotificationCenter.GetStored(out var alerts, postponed: false);
             var alertsList = alerts.ToList();
 
-            var isLowSwapSizeRaised = alertsList.Any(a => a.Json[nameof(AlertRaised.AlertType)].ToString() == AlertType.LowSwapSize.ToString());
+            var isLowSwapSizeRaised = alertsList.Any(a => a.Json[nameof(AlertRaised.Reason)].ToString() == AlertReason.LowSwapSize.ToString());
             Assert.True(isLowSwapSizeRaised, $"Actual swap {memoryInfoResult.TotalSwapSize}, min swap config {minSwapConfig}, total memory {memoryInfoResult.TotalPhysicalMemory}");
         }
 
@@ -577,45 +577,45 @@ namespace SlowTests.Server.NotificationCenter
                     null,
                     "DatabaseTopologyWarning",
                     "DatabaseTopologyWarning_MSG",
-                    AlertType.DatabaseTopologyWarning,
+                    AlertReason.DatabaseTopologyWarning,
                     NotificationSeverity.Info),
                 DatabaseChanged.Create(null, DatabaseChangeType.Put), // filtered out, DatabaseChange
                 AlertRaised.Create(
                     null,
                     "LicenseManager_AGPL3",
                     "LicenseManager_AGPL3_MSG",
-                    AlertType.ClusterTransactionFailure,
+                    AlertReason.ClusterTransactionFailure,
                     NotificationSeverity.Info),
                 AlertRaised.Create(
                     null,
                     "LicenseManager_AGPL3",
                     "LicenseManager_AGPL3_MSG",
-                    AlertType.LicenseManager_AGPL3, // filtered out explicitly
+                    AlertReason.LicenseManager_AGPL3, // filtered out explicitly
                     NotificationSeverity.Info),
                 AlertRaised.Create(
                     null,
                     "RevisionsConfigurationNotValid",
                     "RevisionsConfigurationNotValid_MSG",
-                    AlertType.RevisionsConfigurationNotValid, // filtered out explicitly
+                    AlertReason.RevisionsConfigurationNotValid, // filtered out explicitly
                     NotificationSeverity.Info),
                 AlertRaised.Create(
                     null,
                     "Certificates_ReplaceError",
                     "Certificates_ReplaceError_MSG",
-                    AlertType.Certificates_ReplaceError,
+                    AlertReason.Certificates_ReplaceError,
                     NotificationSeverity.Info),
                 PerformanceHint.Create(
                     null,
                     "SlowIO",
                     "SlowIO_MSG",
-                    PerformanceHintType.SlowIO, // filtered out, PerformanceHint
+                    PerformanceHintReason.SlowIO, // filtered out, PerformanceHint
                     NotificationSeverity.Info,
                     "test"),
                 PerformanceHint.Create(
                     null,
                     "SqlEtl_SlowSql",
                     "SqlEtl_SlowSql_MSG",
-                    PerformanceHintType.SqlEtl_SlowSql, // filtered out, PerformanceHint
+                    PerformanceHintReason.SqlEtl_SlowSql, // filtered out, PerformanceHint
                     NotificationSeverity.Info,
                     "test"),
                 OperationChanged.Create(null,1, new OperationDescription(), new OperationState()
@@ -654,7 +654,7 @@ namespace SlowTests.Server.NotificationCenter
 
         private static PerformanceHint GetSamplePerformanceHint(string customSource = null)
         {
-            return PerformanceHint.Create("db", "title", "message", PerformanceHintType.None, NotificationSeverity.Info, source: customSource);
+            return PerformanceHint.Create("db", "title", "message", PerformanceHintReason.None, NotificationSeverity.Info, source: customSource);
         }
 
         private class PersistableResult : IOperationResult

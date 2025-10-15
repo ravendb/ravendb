@@ -263,7 +263,7 @@ namespace FastTests
                 else
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
-                var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_LoadError);
+                var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertReason.Etl_LoadError);
 
                 if (loadAlert is null)
                     return null;
@@ -298,7 +298,7 @@ namespace FastTests
                 else
                     throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
 
-                var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_TransformationError);
+                var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertReason.Etl_TransformationError);
                 
                 if (loadAlert is null)
                     return null;

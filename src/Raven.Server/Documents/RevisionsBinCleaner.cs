@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
                 database.NotificationCenter.Add(AlertRaised.Create(
                     database.Name,
                     $"Revisions-bin cleaner error in {database.Name}", msg,
-                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
+                    AlertReason.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
                 var logger = database.Loggers.GetLogger<RevisionsBinCleaner>();
                 if (logger.IsErrorEnabled)

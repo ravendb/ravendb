@@ -286,7 +286,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
             ShardedDatabaseName,
             "Resharding Delay Due to an Error",
             msg,
-            AlertType.ClusterTransactionFailure,
+            AlertReason.ClusterTransactionFailure,
             NotificationSeverity.Error,
             details: new ExceptionDetails(exception),
             key: ReshardingFailureNotificationKey));
@@ -294,7 +294,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
 
     private void DismissNotificationOnDeleteBucketSuccessIfNeeded()
     {
-        var id = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, ReshardingFailureNotificationKey);
+        var id = AlertRaised.GetKey(AlertReason.ClusterTransactionFailure, ReshardingFailureNotificationKey);
         ServerStore.NotificationCenter.Dismiss(id, sendNotificationEvenIfDoesntExist: false);
     } 
 

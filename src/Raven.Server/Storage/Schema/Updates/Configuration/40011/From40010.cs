@@ -13,7 +13,7 @@ namespace Raven.Server.Storage.Schema.Updates.Configuration
         {
             var table = step.WriteTx.OpenTable(Raven.Server.Documents.Schemas.Notifications.NotificationsSchemaBase, Raven.Server.Documents.Schemas.Notifications.NotificationsTree);
 
-            using (Slice.From(step.WriteTx.Allocator, PerformanceHint.GetKey(PerformanceHintType.SlowIO, string.Empty), out Slice slowIoHintPrefix))
+            using (Slice.From(step.WriteTx.Allocator, PerformanceHint.GetKey(PerformanceHintReason.SlowIO, string.Empty), out Slice slowIoHintPrefix))
             {
                 table.DeleteByPrimaryKeyPrefix(slowIoHintPrefix);
             }

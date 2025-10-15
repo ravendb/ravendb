@@ -35,7 +35,7 @@ public class RavenDB_18740 : RavenTestBase
             using (database2.NotificationCenter.GetStored(out var actions))
                 Assert.Equal(0, actions.ToList().Count);
 
-            database1.NotificationCenter.Add(AlertRaised.Create(store1.Database, "Test", "Test Message", AlertType.Etl_Error, NotificationSeverity.Warning));
+            database1.NotificationCenter.Add(AlertRaised.Create(store1.Database, "Test", "Test Message", AlertReason.Etl_Error, NotificationSeverity.Warning));
 
             Assert.Equal(1, database1.NotificationCenter.GetAlertCount());
             Assert.Equal(0, database1.NotificationCenter.GetPerformanceHintCount());
@@ -65,7 +65,7 @@ public class RavenDB_18740 : RavenTestBase
         {
             var database = await GetDocumentDatabaseInstanceFor(store);
 
-            database.NotificationCenter.Add(AlertRaised.Create(store.Database, "Test", "Test Message", AlertType.Etl_Error, NotificationSeverity.Warning));
+            database.NotificationCenter.Add(AlertRaised.Create(store.Database, "Test", "Test Message", AlertReason.Etl_Error, NotificationSeverity.Warning));
 
             using (database.NotificationCenter.GetStored(out var actions))
                 Assert.Equal(1, actions.ToList().Count);

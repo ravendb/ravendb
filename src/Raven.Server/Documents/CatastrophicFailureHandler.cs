@@ -66,7 +66,7 @@ namespace Raven.Server.Documents
                         databaseName,
                         title,
                         message,
-                        AlertType.CatastrophicDatabaseFailure,
+                        AlertReason.CatastrophicDatabaseFailure,
                         NotificationSeverity.Error,
                         key: databaseName,
                         details: new ExceptionDetails(e)));

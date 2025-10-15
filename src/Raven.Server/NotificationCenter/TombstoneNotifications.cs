@@ -28,9 +28,9 @@ namespace Raven.Server.NotificationCenter
                 _notificationCenter.Database,
                 title: "Blockage in tombstone deletion",
                 msg: "We have detected a blockage in tombstone deletion due to certain processes being in the disabled, errored, or paused states. Deletion or enabling of certain processes may be required.",
-                type: AlertType.BlockingTombstones,
+                reason: AlertReason.BlockingTombstones,
                 severity: NotificationSeverity.Warning,
-                key: nameof(AlertType.BlockingTombstones),
+                key: nameof(AlertReason.BlockingTombstones),
                 details));
         }
 

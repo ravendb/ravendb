@@ -1202,7 +1202,7 @@ namespace Raven.Server.Documents.TimeSeries
 
 
                 var alert = AlertRaised.Create(_context.DocumentDatabase.Name, "Time series segment is full - merge operation has performed", msg,
-                    AlertType.Replication, NotificationSeverity.Warning);
+                    AlertReason.Replication, NotificationSeverity.Warning);
                 _tss._documentDatabase.NotificationCenter.Add(alert);
             }
 

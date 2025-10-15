@@ -78,7 +78,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 notificationCenter.Database,
                 $"AI Agent '{agentName}': Exceeded Token Threshold",
                 message,
-                AlertType.AiAgent_ExceededTokenThreshold,
+                AlertReason.AiAgent_ExceededTokenThreshold,
                 NotificationSeverity.Warning,
                 details: details);
 

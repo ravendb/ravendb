@@ -19,17 +19,20 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
+using Raven.Server.Dashboard.DatabaseNotifications;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Server.Utils;
 using Voron;
 using Size = Sparrow.Size;
@@ -89,6 +92,11 @@ namespace Raven.Server.Dashboard
             return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DrivesUsage>().First();
         }
 
+        public DatabaseNotificationsSummary GetDatabaseNotificationsSummary()
+        {
+            return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DatabaseNotificationsSummary>().First();
+        }
+
         private sealed class AggregatedWatchInfo
         {
             public readonly DatabasesInfo DatabasesInfo = new DatabasesInfo();
@@ -96,6 +104,7 @@ namespace Raven.Server.Dashboard
             public readonly IndexingSpeed IndexingSpeed = new IndexingSpeed();
             public readonly TrafficWatch TrafficWatch = new TrafficWatch();
             public readonly DrivesUsage DrivesUsage = new DrivesUsage();
+            public readonly DatabaseNotificationsSummary DatabaseNotificationsSummary = new DatabaseNotificationsSummary();
         }
 
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, bool collectOngoingTasks, CancellationToken token)
@@ -194,6 +203,7 @@ namespace Raven.Server.Dashboard
             yield return trafficWatchInfo.IndexingSpeed;
             yield return trafficWatchInfo.TrafficWatch;
             yield return trafficWatchInfo.DrivesUsage;
+            yield return trafficWatchInfo.DatabaseNotificationsSummary;
             
             if (collectOngoingTasks)
             {
@@ -209,6 +219,7 @@ namespace Raven.Server.Dashboard
             var indexingSpeed = trafficWatchInfo.IndexingSpeed;
             var trafficWatch = trafficWatchInfo.TrafficWatch;
             var databasesOngoingTasksInfo = trafficWatchInfo.DatabasesOngoingTasksInfo;
+            var databaseNotificationsSummary = trafficWatchInfo.DatabaseNotificationsSummary;
             var rate = (int)RefreshRate.TotalSeconds;
 
             try
@@ -249,6 +260,14 @@ namespace Raven.Server.Dashboard
                     TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.GetRate(rate)
                 };
                 trafficWatch.Items.Add(trafficWatchItem);
+
+                var databaseNotificationsSummaryItem = new DatabaseNotificationsSummaryItem
+                {
+                    DatabaseName = database.Name,
+                    NotificationCounts = GetNotificationCounts(database)
+                };
+                
+                databaseNotificationsSummary.Items.Add(databaseNotificationsSummaryItem);
 
                 var ongoingTasksInfoItem = GetOngoingTasksInfoItem(database, serverStore, context, out var ongoingTasksCount);
                 if (collectOngoingTasks)
@@ -615,6 +634,41 @@ namespace Raven.Server.Dashboard
                 
                 UpdateMountPoint(serverStore.Configuration.Storage, mountPointUsage, databaseName, existingDrivesUsage);
             }
+        }
+        
+        private static NotificationCounts GetNotificationCounts(DocumentDatabase database)
+        {
+            var result = new NotificationCounts();
+            
+            var storage = database.NotificationCenter.Storage;
+            
+            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (var alert in storage.ReadActionsOfType(context, NotificationType.AlertRaised))
+                {
+                    var reason = Bits.SwapBytes(alert.Reason);
+
+                    var reasonName = ((AlertReason)reason).ToString();
+                    
+                    result.Increment(NotificationType.AlertRaised, reasonName);
+                    
+                    alert.Dispose();
+                }
+                
+                foreach (var performanceHint in storage.ReadActionsOfType(context, NotificationType.PerformanceHint))
+                {
+                    var reason = Bits.SwapBytes(performanceHint.Reason);
+
+                    var reasonName = ((PerformanceHintReason)reason).ToString();
+                    
+                    result.Increment(NotificationType.PerformanceHint, reasonName);
+                    
+                    performanceHint.Dispose();
+                }
+            }
+
+            return result;
         }
     }
     

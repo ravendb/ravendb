@@ -77,7 +77,7 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
                 Database.Name,
                 SqlEtlTag,
                 message,
-                AlertType.SqlEtl_ProviderError,
+                AlertReason.SqlEtl_ProviderError,
                 NotificationSeverity.Error,
                 details: new ExceptionDetails(e)));
 
@@ -92,7 +92,7 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
             database.Name,
             SqlEtlTag,
             $"[{etlConfigurationName}] Could not open connection using '{connectionStringName}' connection string",
-            AlertType.SqlEtl_ConnectionError,
+            AlertReason.SqlEtl_ConnectionError,
             NotificationSeverity.Error,
             key: $"{etlConfigurationName}/{connectionStringName}",
             details: new ExceptionDetails(e)));

@@ -80,7 +80,7 @@ class mismatchedReferenceLoadDetails extends abstractAlertDetails {
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "MismatchedReferenceLoad";
+        return (notification instanceof alert) && notification.alertReason() === "MismatchedReferenceLoad";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
     public sealed class HugeDocuments : IDisposable
     {
         private static readonly string PerformanceHintSource = "Documents";
-        internal static readonly string HugeDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.HugeDocuments}/{PerformanceHintSource}";
+        internal static readonly string HugeDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintReason.HugeDocuments}/{PerformanceHintSource}";
         private readonly object _addHintSyncObj = new object();
         private readonly SizeLimitedConcurrentDictionary<Tuple<string, DateTime>, long> _hugeDocs;
         private readonly RavenLogger _logger;
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents
                     _notificationCenter.Database,
                     "Huge documents",
                     message,
-                    PerformanceHintType.HugeDocuments,
+                    PerformanceHintReason.HugeDocuments,
                     NotificationSeverity.Warning,
                     PerformanceHintSource,
                     details

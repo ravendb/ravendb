@@ -832,7 +832,7 @@ namespace Raven.Server.Documents
             {
                 _notificationCenter = notificationCenter;
                 _key = $"{databaseName}/ClusterTransaction";
-                _id = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, _key);
+                _id = AlertRaised.GetKey(AlertReason.ClusterTransactionFailure, _key);
                 _databaseName = databaseName;
             }
 
@@ -844,7 +844,7 @@ namespace Raven.Server.Documents
                     _databaseName,
                     "Cluster transaction failed to execute",
                     msg,
-                    AlertType.ClusterTransactionFailure,
+                    AlertReason.ClusterTransactionFailure,
                     NotificationSeverity.Error,
                     _key,
                     new ExceptionDetails(e)));
@@ -1999,7 +1999,7 @@ namespace Raven.Server.Documents
                 Name,
                 title,
                 e.Message,
-                AlertType.NonDurableFileSystem,
+                AlertReason.NonDurableFileSystem,
                 NotificationSeverity.Warning,
                 Name,
                 details: new MessageDetails { Message = e.Details }));
@@ -2053,7 +2053,7 @@ namespace Raven.Server.Documents
             nc?.Add(AlertRaised.Create(Name,
                 title,
                 message,
-                AlertType.RecoveryError,
+                AlertReason.RecoveryError,
                 NotificationSeverity.Error,
                 key: $"{resourceName}/{SystemTime.UtcNow.Ticks % 5}")); // if this was called multiple times let's try to not overwrite previous alerts
         }
@@ -2106,7 +2106,7 @@ namespace Raven.Server.Documents
             nc?.Add(AlertRaised.Create(Name,
                 title,
                 message,
-                AlertType.IntegrityErrorOfAlreadySyncedData,
+                AlertReason.IntegrityErrorOfAlreadySyncedData,
                 NotificationSeverity.Warning,
                 key: $"{resourceName}/{SystemTime.UtcNow.Ticks % 5}")); // if this was called multiple times let's try to not overwrite previous alerts
         }
@@ -2125,7 +2125,7 @@ namespace Raven.Server.Documents
                     Name,
                     title,
                     message,
-                    AlertType.RecoverableVoronFailure,
+                    AlertReason.RecoverableVoronFailure,
                     NotificationSeverity.Warning,
                     key: e.EnvironmentId.ToString(),
                     details: new ExceptionDetails(e.Exception)));

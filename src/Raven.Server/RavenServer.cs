@@ -578,7 +578,7 @@ namespace Raven.Server
                     msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support at https://ravendb.net/support/request.";
                 }
 
-                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertReason.Certificates_Expiration, NotificationSeverity.Error));
 
                 if (Logger.IsErrorEnabled)
                     Logger.Error(msg);
@@ -602,14 +602,14 @@ namespace Raven.Server
                 var severity = remainingDays < 3 ? NotificationSeverity.Error : NotificationSeverity.Warning;
                 var logLevel = remainingDays < 3 ? LogLevel.Error : LogLevel.Warn;
 
-                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, severity));
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertReason.Certificates_Expiration, severity));
 
                 if (Logger.IsEnabled(logLevel))
                     Logger.Log(logLevel, msg);
             }
             else
             {
-                ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_Expiration, null));
+                ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Certificates_Expiration, null));
             }
         }
 
@@ -865,7 +865,7 @@ namespace Raven.Server
                     if (alert == null && remainingTimeToAlert-- > 0)
                     {
                         alert = AlertRaised.Create(null, "CPU credits balance exhausted", alertMessage,
-                            AlertType.Throttling_CpuCreditsBalance,
+                            AlertReason.Throttling_CpuCreditsBalance,
                             NotificationSeverity.Warning);
                         ServerStore.NotificationCenter.Add(alert);
                     }
@@ -1219,7 +1219,7 @@ namespace Raven.Server
                             null,
                             CertificateReplacement.CertReplaceAlertTitle,
                             msg,
-                            AlertType.Certificates_ReplaceError,
+                            AlertReason.Certificates_ReplaceError,
                             NotificationSeverity.Error));
                         return;
                     }
@@ -1281,7 +1281,7 @@ namespace Raven.Server
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
                     msg,
-                    AlertType.Certificates_ReplaceError,
+                    AlertReason.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
 
@@ -1374,7 +1374,7 @@ namespace Raven.Server
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
                     msg,
-                    AlertType.Certificates_DeveloperLetsEncryptRenewal,
+                    AlertReason.Certificates_DeveloperLetsEncryptRenewal,
                     NotificationSeverity.Warning));
 
                 if (Logger.IsWarnEnabled)
@@ -1523,7 +1523,7 @@ namespace Raven.Server
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
                     msg,
-                    AlertType.Certificates_ReplaceError,
+                    AlertReason.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
 
@@ -2189,7 +2189,7 @@ namespace Raven.Server
                             Logger.Error(msg, ex);
 
                         ServerStore.NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Unable to start tcp listener", msg,
-                            AlertType.TcpListenerError, NotificationSeverity.Error, key: $"tcp/listener/{ipAddress}/{port}", details: new ExceptionDetails(ex)));
+                            AlertReason.TcpListenerError, NotificationSeverity.Error, key: $"tcp/listener/{ipAddress}/{port}", details: new ExceptionDetails(ex)));
 
                         continue;
                     }
@@ -2620,7 +2620,7 @@ namespace Raven.Server
                         msg,
                         $"Unable to accept connections from TCP, because the listening socket on {listener.LocalEndpoint} was disconnected.{Environment.NewLine}" +
                         $"Restarting the server might temporary fix the issue, but further investigation is required.",
-                        AlertType.TcpListenerError,
+                        AlertReason.TcpListenerError,
                         NotificationSeverity.Error,
                         key: msg,
                         details: new ExceptionDetails(e)

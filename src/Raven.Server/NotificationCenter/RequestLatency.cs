@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter
 {
     public sealed class RequestLatency : IDisposable
     {
-        private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}/Query";
+        private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintReason.RequestLatency}/Query";
         private readonly object _locker = new();
         private readonly RavenLogger _logger;
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
@@ -96,7 +96,7 @@ namespace Raven.Server.NotificationCenter
                         _notificationCenter.Database,
                         "Request latency is too high",
                         "We have detected that some query duration has surpassed the configured threshold",
-                        PerformanceHintType.RequestLatency,
+                        PerformanceHintReason.RequestLatency,
                         NotificationSeverity.Warning,
                         "Query",
                         details

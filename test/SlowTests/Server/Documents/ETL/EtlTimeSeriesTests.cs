@@ -360,7 +360,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var alert = await AssertWaitForNotNullAsync(() =>
             {
-                var alert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>("Raven ETL", connectionStringName, AlertType.Etl_LoadError);
+                var alert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>("Raven ETL", connectionStringName, AlertReason.Etl_LoadError);
                 return Task.FromResult(alert);
             });
 

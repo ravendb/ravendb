@@ -67,7 +67,7 @@ class serverLimitsDetails extends abstractAlertDetails {
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "ServerLimits";
+        return (notification instanceof alert) && notification.alertReason() === "ServerLimits";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

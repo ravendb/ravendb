@@ -100,7 +100,7 @@ namespace Raven.Server.Storage
                 var message =
                     $"The following {(PlatformDetails.RunningOnPosix ? "mount points" : "disks")} are running out of space:{Environment.NewLine} {string.Join(Environment.NewLine, lowSpaceDisks)}";
 
-                _notificationCenter.Add(AlertRaised.Create(null, "Low free disk space", message, AlertType.LowDiskSpace, NotificationSeverity.Warning,
+                _notificationCenter.Add(AlertRaised.Create(null, "Low free disk space", message, AlertReason.LowDiskSpace, NotificationSeverity.Warning,
                     "low-disk-space"));
 
                 if (_logger.IsWarnEnabled)

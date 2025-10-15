@@ -252,7 +252,7 @@ namespace Raven.Server.Web.System
                             $"Last one from ({HttpContext.Connection.RemoteIpAddress} as ({GetCertificateInfo()}) " +
                             "This is usually an indication that you are creating a large number of DocumentStore instance. " +
                             "Are you creating a Document Store per request, instead of using DocumentStore as a singleton? ",
-                            AlertType.HighClientCreationRate,
+                            AlertReason.HighClientCreationRate,
                             NotificationSeverity.Warning
                         ));
 

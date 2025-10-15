@@ -195,7 +195,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
                         var key = $"{Tag}/{Name}";
 
-                        var alert = AlertRaised.Create(Database.Name, Tag, msg, AlertType.QueueSink_ConsumerCreationError, NotificationSeverity.Error, key, new ExceptionDetails(e));
+                        var alert = AlertRaised.Create(Database.Name, Tag, msg, AlertReason.QueueSink_ConsumerCreationError, NotificationSeverity.Error, key, new ExceptionDetails(e));
 
                         Database.NotificationCenter.Add(alert);
 
@@ -475,7 +475,7 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             Database.Name,
             Tag,
             message,
-            AlertType.QueueSink_ScriptError,
+            AlertReason.QueueSink_ScriptError,
             NotificationSeverity.Error,
             key: key,
             details: details);

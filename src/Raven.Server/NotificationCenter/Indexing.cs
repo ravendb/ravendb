@@ -18,8 +18,8 @@ namespace Raven.Server.NotificationCenter
     public sealed class Indexing : IDisposable
     {
         private static readonly string Source = "Indexing";
-        private static readonly string HighOutputsRate = PerformanceHint.GetKey(PerformanceHintType.Indexing, Source);
-        private static readonly string ReferencesLoad = PerformanceHint.GetKey(PerformanceHintType.Indexing_References, Source);
+        private static readonly string HighOutputsRate = PerformanceHint.GetKey(PerformanceHintReason.Indexing, Source);
+        private static readonly string ReferencesLoad = PerformanceHint.GetKey(PerformanceHintReason.Indexing_References, Source);
 
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
@@ -148,7 +148,7 @@ namespace Raven.Server.NotificationCenter
                 {
                     if (_isCpuExhaustionWarningAdded)
                     {
-                        _notificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Throttling_CpuCreditsBalance, Source));
+                        _notificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Throttling_CpuCreditsBalance, Source));
                         _isCpuExhaustionWarningAdded = false;
                     }
                 }
@@ -221,7 +221,7 @@ namespace Raven.Server.NotificationCenter
 
                     return PerformanceHint.Create(_notificationCenter.Database, "High indexing fanout ratio",
                         "Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
-                        PerformanceHintType.Indexing, NotificationSeverity.Warning, Source, details);
+                        PerformanceHintReason.Indexing, NotificationSeverity.Warning, Source, details);
                 }
             }
         }
@@ -241,7 +241,7 @@ namespace Raven.Server.NotificationCenter
                     return PerformanceHint.Create(_notificationCenter.Database, "High indexing load reference rate",
                         "We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. " +
                         "Please see Indexing Performance graph to check the performance of your indexes.",
-                        PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
+                        PerformanceHintReason.Indexing_References, NotificationSeverity.Warning, Source, details);
                 }
             }
         }
@@ -250,21 +250,21 @@ namespace Raven.Server.NotificationCenter
         {
             return AlertRaised.Create(_notificationCenter.Database, $"Loading documents with mismatched collection name in '{_mismatchedReferencesLoadWarning.IndexName}' index",
                 "We have detected usage of LoadDocument(doc, collectionName) where loaded document collection is different than given parameter.",
-                AlertType.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
+                AlertReason.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
         }
 
         private AlertRaised GetComplexFieldAlert(ComplexFieldsWarning complexFieldsWarning)
         {
             return AlertRaised.Create(_notificationCenter.Database, $"Complex field in Corax auto index", $"We have detected a complex field in an auto index. " +
                     $"To avoid higher resources usage when processing JSON objects, the values of these fields will be replaced with 'JSON_VALUE'. " +
-                    $"Please consider querying on individual fields of that object or using a static index. Read more at: https://ravendb.net/l/OB9XW4/7.1", AlertType.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
+                    $"Please consider querying on individual fields of that object or using a static index. Read more at: https://ravendb.net/l/OB9XW4/7.1", AlertReason.Indexing_CoraxComplexItem, NotificationSeverity.Warning, Source, complexFieldsWarning);
         }
 
         private AlertRaised GetCpuCreditsExhaustionAlert(CpuCreditsExhaustionWarning cpuCreditsExhaustionWarning)
         {
             return AlertRaised.Create(_notificationCenter.Database, "Indexing paused because of CPU credits exhaustion",
                 "Indexing has been paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
-                AlertType.Throttling_CpuCreditsBalance, NotificationSeverity.Warning, Source, cpuCreditsExhaustionWarning);
+                AlertReason.Throttling_CpuCreditsBalance, NotificationSeverity.Warning, Source, cpuCreditsExhaustionWarning);
         }
 
         public void Dispose()

@@ -31,6 +31,7 @@ using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
+using Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
@@ -358,6 +359,8 @@ namespace Raven.Server.Json
         
         internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();
 
+        internal static readonly Func<BlittableJsonReaderObject, DatabaseNotificationsSummaryRequestConfig> NotificationsSummaryRequestConfig = GenerateJsonDeserializationRoutine<DatabaseNotificationsSummaryRequestConfig>();
+        
         public sealed class Parameters
         {
             private Parameters()

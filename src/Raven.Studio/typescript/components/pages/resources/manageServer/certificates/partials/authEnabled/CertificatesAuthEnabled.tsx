@@ -71,9 +71,9 @@ export default function CertificatesAuthEnabled() {
     const handleAlert = useCallback(
         (alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) => {
             if (
-                alert.AlertType === "Certificates_ReplaceError" ||
-                alert.AlertType === "Certificates_ReplaceSuccess" ||
-                alert.AlertType === "Certificates_EntireClusterReplaceSuccess"
+                alert.Reason === "Certificates_ReplaceError" ||
+                alert.Reason === "Certificates_ReplaceSuccess" ||
+                alert.Reason === "Certificates_EntireClusterReplaceSuccess"
             ) {
                 dispatch(certificatesActions.fetchData());
             }

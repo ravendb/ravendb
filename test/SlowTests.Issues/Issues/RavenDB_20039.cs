@@ -132,7 +132,7 @@ public class RavenDB_20039 : RavenTestBase
             database.Name,
             "An extremely slow write to disk",
             "We have detected very slow writes",
-            PerformanceHintType.SlowIO,
+            PerformanceHintReason.SlowIO,
             NotificationSeverity.Info,
             "slow-writes",
             details
@@ -159,7 +159,7 @@ public class RavenDB_20039 : RavenTestBase
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    database.NotificationCenter.Storage.Store(context.GetLazyString(hint.Id), hint.CreatedAt, null, hintWithLegacySlowWriteInfo, tx);
+                    database.NotificationCenter.Storage.Store(context.GetLazyString(hint.Id), hint.CreatedAt, null, (int)NotificationType.PerformanceHint, (int)PerformanceHintReason.SlowIO, hintWithLegacySlowWriteInfo, tx);
                     tx.Commit();
                 }
             }

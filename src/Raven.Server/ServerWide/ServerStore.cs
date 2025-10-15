@@ -702,7 +702,7 @@ namespace Raven.Server.ServerWide
                     null,
                     title,
                     e.Message,
-                    AlertType.NonDurableFileSystem,
+                    AlertReason.NonDurableFileSystem,
                     NotificationSeverity.Warning,
                     "NonDurable Error System",
                     details: new MessageDetails { Message = e.Details });
@@ -727,7 +727,7 @@ namespace Raven.Server.ServerWide
                     null,
                     title,
                     e.Message,
-                    AlertType.RecoveryError,
+                    AlertReason.RecoveryError,
                     NotificationSeverity.Error,
                     key: $"Recovery Error System/{SystemTime.UtcNow.Ticks % 5}"); // if this was called multiple times let's try to not overwrite previous alerts
 
@@ -752,7 +752,7 @@ namespace Raven.Server.ServerWide
                     null,
                     title,
                     e.Message,
-                    AlertType.IntegrityErrorOfAlreadySyncedData,
+                    AlertReason.IntegrityErrorOfAlreadySyncedData,
                     NotificationSeverity.Warning,
                     key: $"Integrity Error of Synced Data - System/{SystemTime.UtcNow.Ticks % 5}"); // if this was called multiple times let's try to not overwrite previous alerts
 
@@ -776,7 +776,7 @@ namespace Raven.Server.ServerWide
                         "Swap Storage Type Warning",
                         "OS swapping on at least one HDD drive while there is at least one SSD drive on this system. " +
                         "This can cause a slowdown, consider moving swap-partition/pagefile to SSD. The current HDD spinning drive with swapping : " + swapping,
-                        AlertType.SwappingHddInsteadOfSsd,
+                        AlertReason.SwappingHddInsteadOfSsd,
                         NotificationSeverity.Warning);
                     if (NotificationCenter.IsInitialized)
                     {
@@ -981,7 +981,7 @@ namespace Raven.Server.ServerWide
                     NotificationCenter.Add(AlertRaised.Create(null,
                         title,
                         message,
-                        AlertType.LowSwapSize,
+                        AlertReason.LowSwapSize,
                         NotificationSeverity.Warning));
                 }
 
@@ -995,7 +995,7 @@ namespace Raven.Server.ServerWide
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "No PageFile available",
                         "Your system has no PageFile. It is recommended to have a PageFile in order for Server to work properly",
-                        AlertType.LowSwapSize,
+                        AlertReason.LowSwapSize,
                         NotificationSeverity.Warning));
             }
         }
@@ -1486,15 +1486,15 @@ namespace Raven.Server.ServerWide
                         if (Logger.IsInfoEnabled)
                             Logger.Info("The server certificate was successfully replaced in the entire cluster.");
 
-                        NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceSuccess, null));
-                        NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
-                        NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplacePending, null));
+                        NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Certificates_ReplaceSuccess, null));
+                        NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Certificates_ReplaceError, null));
+                        NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Certificates_ReplacePending, null));
 
                         NotificationCenter.Add(AlertRaised.Create(
                             null,
                             CertificateReplacement.CertReplaceAlertTitle,
                             "The server certificate was successfully replaced in the entire cluster.",
-                            AlertType.Certificates_EntireClusterReplaceSuccess,
+                            AlertReason.Certificates_EntireClusterReplaceSuccess,
                             NotificationSeverity.Success));
                     }
                 }
@@ -1508,7 +1508,7 @@ namespace Raven.Server.ServerWide
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
                     $"Failed to process {type}.",
-                    AlertType.Certificates_ReplaceError,
+                    AlertReason.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
@@ -1546,7 +1546,7 @@ namespace Raven.Server.ServerWide
                             null,
                             CertificateReplacement.CertReplaceAlertTitle,
                             msg,
-                            AlertType.Certificates_ReplaceError,
+                            AlertReason.Certificates_ReplaceError,
                             NotificationSeverity.Error));
                         return;
                     }
@@ -1564,7 +1564,7 @@ namespace Raven.Server.ServerWide
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
                     $"Failed to process {type}.",
-                    AlertType.Certificates_ReplaceError,
+                    AlertReason.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
@@ -1609,7 +1609,7 @@ namespace Raven.Server.ServerWide
                                     null,
                                     CertificateReplacement.CertReplaceAlertTitle,
                                     msg,
-                                    AlertType.Certificates_ReplacePending,
+                                    AlertReason.Certificates_ReplacePending,
                                     NotificationSeverity.Warning));
                                 return;
                             }
@@ -1678,7 +1678,7 @@ namespace Raven.Server.ServerWide
                             null,
                             CertificateReplacement.CertReplaceAlertTitle,
                             msg,
-                            AlertType.Certificates_ReplaceError,
+                            AlertReason.Certificates_ReplaceError,
                             NotificationSeverity.Error));
                         return;
                     }
@@ -1690,14 +1690,14 @@ namespace Raven.Server.ServerWide
 
                     Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
 
-                    NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
-                    NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplacePending, null));
+                    NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Certificates_ReplaceError, null));
+                    NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Certificates_ReplacePending, null));
 
                     NotificationCenter.Add(AlertRaised.Create(
                         null,
                         CertificateReplacement.CertReplaceAlertTitle,
                         $"The server certificate was successfully replaced on node {NodeTag}.",
-                        AlertType.Certificates_ReplaceSuccess,
+                        AlertReason.Certificates_ReplaceSuccess,
                         NotificationSeverity.Success));
 
                     if (Logger.IsInfoEnabled)
@@ -1731,7 +1731,7 @@ namespace Raven.Server.ServerWide
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
                     $"Failed to process {type}.",
-                    AlertType.Certificates_ReplaceError,
+                    AlertReason.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
@@ -2555,7 +2555,7 @@ namespace Raven.Server.ServerWide
                     {
                         deserializedSqlConnectionString.FactoryName = "MySqlConnector.MySqlConnectorFactory";
                         var alert = AlertRaised.Create(databaseName, "Deprecated MySql factory auto-updated", "MySql.Data.MySqlClient factory has been defaulted to MySqlConnector.MySqlConnectorFactory",
-                            AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
+                            AlertReason.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
                         NotificationCenter.Add(alert);
                     }
 
@@ -3614,7 +3614,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "RAFT connection error", msg,
-                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: ((IPEndPoint)remoteEndpoint).Address.ToString(), details: new ExceptionDetails(e)));
+                    AlertReason.ClusterTopologyWarning, NotificationSeverity.Error, key: ((IPEndPoint)remoteEndpoint).Address.ToString(), details: new ExceptionDetails(e)));
             }
         }
 

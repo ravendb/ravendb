@@ -19,7 +19,7 @@ class newVersionAvailableDetails extends abstractAlertDetails {
     });
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "Server_NewVersionAvailable";
+        return (notification instanceof alert) && notification.alertReason() === "Server_NewVersionAvailable";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

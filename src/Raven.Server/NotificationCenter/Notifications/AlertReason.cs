@@ -1,7 +1,7 @@
 ﻿// ReSharper disable InconsistentNaming
 namespace Raven.Server.NotificationCenter.Notifications
 {
-    public enum AlertType
+    public enum AlertReason
     {
         Etl_Error,
         Etl_Warning,

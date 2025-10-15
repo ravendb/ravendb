@@ -1211,7 +1211,7 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Error($"Unexpected error in '{Name}' index. This should never happen.", e);
 
                 DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
-                    "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                    "Unexpected error in indexing thread. See details.", AlertReason.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
                     key: Name,
                     details: new ExceptionDetails(e)));
             }
@@ -4451,7 +4451,7 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.Name,
                 $"Index '{Name}' is including the origin document in output.",
                 $"Putting the whole document as one of the fields of the index entry isn't usually intentional. Especially when it is a fanout index because the document is included multiple times. Please verify your index definition for better indexing performance.",
-                PerformanceHintType.Indexing,
+                PerformanceHintReason.Indexing,
                 NotificationSeverity.Warning,
                 nameof(Index)));
 

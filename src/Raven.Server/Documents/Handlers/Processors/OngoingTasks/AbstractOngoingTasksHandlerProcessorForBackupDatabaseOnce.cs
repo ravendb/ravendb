@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         RequestHandler.DatabaseName,
                         message,
                         null,
-                        AlertType.PeriodicBackup,
+                        AlertReason.PeriodicBackup,
                         NotificationSeverity.Error,
                         details: new ExceptionDetails(e)));
 

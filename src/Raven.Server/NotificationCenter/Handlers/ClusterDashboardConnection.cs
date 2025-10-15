@@ -149,16 +149,21 @@ namespace Raven.Server.NotificationCenter.Handlers
             if (reader.TryGet(nameof(WidgetRequest.Id), out int id) == false)
                 throw new ArgumentNullException(nameof(command), "Id argument is mandatory");
 
+            BlittableJsonReaderObject configuration;
             switch (command.ToLower())
             {
                 case "watch":
                     if (reader.TryGet(nameof(WidgetRequest.Type), out ClusterDashboardNotificationType type) == false)
                         throw new ArgumentNullException(nameof(command), "Type argument is mandatory");
-                    reader.TryGet(nameof(WidgetRequest.Config), out BlittableJsonReaderObject configuration);
+                    reader.TryGet(nameof(WidgetRequest.Config), out configuration);
                     await WatchCommand(id, type, configuration);
                     break;
                 case "unwatch":
                     UnwatchCommand(id);
+                    break;
+                case "update-config":
+                    reader.TryGet(nameof(WidgetRequest.Config), out configuration);
+                    UpdateConfiguration(id, configuration);
                     break;
                 default:
                     throw new NotSupportedException($"Unhandled command: {command}");
@@ -167,7 +172,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         private async Task WatchCommand(int widgetId, ClusterDashboardNotificationType type, BlittableJsonReaderObject configuration)
         {
-            var notificationSender = await _clusterDashboardNotifications.CreateNotificationSender(widgetId, type);
+            var notificationSender = await _clusterDashboardNotifications.CreateNotificationSender(widgetId, type, configuration);
 
             if (notificationSender != null)
             {
@@ -186,6 +191,14 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 widget.Dispose();
             }
+        }
+
+        private void UpdateConfiguration(int widgetId, BlittableJsonReaderObject configuration)
+        {
+            if (_activeNotificationSenders.TryGetValue(widgetId, out var notificationSender) == false)
+                return;
+
+            notificationSender.UpdateConfiguration(configuration);
         }
 
         public override void Dispose()
