@@ -238,8 +238,8 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
             props: {
                 databaseName: details.database,
                 nodeTag: details.nodeTag,
-                alerts: details.alerts,
-                alertsCount: details.alertsCount,
+                items: details.alerts,
+                count: details.alertsCount,
                 onClose: () => this.alertsModal(null),
             },
         });
@@ -251,8 +251,8 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
             props: {
                 databaseName: details.database,
                 nodeTag: details.nodeTag,
-                performanceHints: details.performanceHints,
-                performanceHintsCount: details.performanceHintsCount,
+                items: details.performanceHints,
+                count: details.performanceHintsCount,
                 onClose: () => this.performanceHintsModal(null),
             },
         });

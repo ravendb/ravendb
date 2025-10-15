@@ -1,49 +1,43 @@
 import Modal from "components/common/Modal";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import { useMemo } from "react";
+import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import SizeGetter from "components/common/SizeGetter";
 import Badge from "react-bootstrap/Badge";
 
-interface SummaryAlertsModalProps {
+type NotificationSummaryItem =
+    Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.NotificationSummaryItem;
+
+interface NotificationModalProps {
     databaseName: string;
-    alerts: Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.NotificationSummaryItem[];
-    alertsCount: number;
+    items: NotificationSummaryItem[];
+    count: number;
     nodeTag?: string;
     onClose: () => void;
 }
 
-export function SummaryAlertsModal({ alerts, databaseName, nodeTag, alertsCount, onClose }: SummaryAlertsModalProps) {
+export function SummaryAlertsModal({ items, databaseName, nodeTag, count, onClose }: NotificationModalProps) {
     return (
-        <Modal show onHide={onClose} contentClassName="modal-border bulge-primary">
-            <Modal.Header closeButton onCloseClick={onClose} className="vstack">
-                <div className="text-center">
-                    <Icon icon="alerts" color="warning" className="fs-1" margin="m-0" />
-                </div>
-                <div className="text-center lead">
-                    Alerts <strong>({alertsCount.toLocaleString()})</strong>
-                </div>
+        <Modal show onHide={onClose} contentClassName="modal-border bulge-warning" size="lg">
+            <Modal.Header closeButton onCloseClick={onClose}>
+                <h3>
+                    <Icon icon="alerts" color="warning" />
+                    Alerts
+                </h3>
             </Modal.Header>
             <Modal.Body className="vstack gap-2 pt-0">
-                <div className="text-truncate">
-                    <Icon icon="database" color="primary" />
-                    <strong title={databaseName}>{databaseName}</strong>
-                </div>
-                {nodeTag && (
-                    <div>
-                        <Icon icon="node" color="node" />
-                        <strong>{nodeTag}</strong>
-                    </div>
-                )}
-                <div className="vstack gap-1 panel-bg-2 p-1 rounded-2 overflow-auto" style={{ maxHeight: "300px" }}>
-                    {alerts.map((alert) => (
-                        <div key={alert.Reason} className="d-flex align-items-center">
-                            <Badge bg="warning" pill>
-                                <Icon icon="alert" />
-                                {alert.Count.toLocaleString()}
-                            </Badge>
-                            <span className="ms-1">{alert.PrettifiedReason ?? alert.Reason}</span>
-                        </div>
-                    ))}
-                </div>
+                <NotificationDetails type="alerts" databaseName={databaseName} count={count} node={nodeTag} />
+                <SizeGetter render={({ width }) => <NotificationTable width={width} notifications={items} />} />
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose} className="rounded-pill">
@@ -55,53 +49,18 @@ export function SummaryAlertsModal({ alerts, databaseName, nodeTag, alertsCount,
     );
 }
 
-interface SummaryPerformanceHintsModalProps {
-    databaseName: string;
-    performanceHints: Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.NotificationSummaryItem[];
-    performanceHintsCount: number;
-    nodeTag?: string;
-    onClose: () => void;
-}
-
-export function SummaryPerformanceHintsModal({
-    performanceHints,
-    databaseName,
-    nodeTag,
-    performanceHintsCount,
-    onClose,
-}: SummaryPerformanceHintsModalProps) {
+export function SummaryPerformanceHintsModal({ databaseName, items, count, nodeTag, onClose }: NotificationModalProps) {
     return (
-        <Modal show onHide={onClose} contentClassName="modal-border bulge-primary">
-            <Modal.Header closeButton onCloseClick={onClose} className="vstack">
-                <div className="text-center">
-                    <Icon icon="performance" color="info" className="fs-1" margin="m-0" />
-                </div>
-                <div className="text-center lead">
-                    Performance hints <strong>({performanceHintsCount.toLocaleString()})</strong>
-                </div>
+        <Modal show onHide={onClose} contentClassName="modal-border bulge-info" size="lg">
+            <Modal.Header closeButton onCloseClick={onClose}>
+                <h3>
+                    <Icon icon="performance" color="info" />
+                    Performance hints
+                </h3>
             </Modal.Header>
             <Modal.Body className="vstack gap-2 pt-0">
-                <div className="text-truncate">
-                    <Icon icon="database" color="primary" />
-                    <strong title={databaseName}>{databaseName}</strong>
-                </div>
-                {nodeTag && (
-                    <div>
-                        <Icon icon="node" color="node" />
-                        <strong>{nodeTag}</strong>
-                    </div>
-                )}
-                <div className="vstack gap-1 panel-bg-2 p-1 rounded-2 overflow-auto" style={{ maxHeight: "300px" }}>
-                    {performanceHints.map((performanceHint) => (
-                        <div key={performanceHint.Reason} className="d-flex align-items-center">
-                            <Badge bg="info" pill>
-                                <Icon icon="performance" />
-                                {performanceHint.Count.toLocaleString()}
-                            </Badge>
-                            <span className="ms-1">{performanceHint.PrettifiedReason ?? performanceHint.Reason}</span>
-                        </div>
-                    ))}
-                </div>
+                <NotificationDetails type="performanceHints" databaseName={databaseName} count={count} node={nodeTag} />
+                <SizeGetter render={({ width }) => <NotificationTable width={width} notifications={items} />} />
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose} className="rounded-pill">
@@ -110,5 +69,121 @@ export function SummaryPerformanceHintsModal({
                 </Button>
             </Modal.Footer>
         </Modal>
+    );
+}
+
+interface NotificationDetailsProps {
+    type: "alerts" | "performanceHints";
+    databaseName: string;
+    count: number;
+    node?: string;
+}
+
+function NotificationDetails({ databaseName, count, type, node }: NotificationDetailsProps) {
+    return (
+        <div>
+            <div className="hstack justify-content-between align-items-center">
+                <div>Notification type</div>
+                <NotificationTypeBadge type={type} />
+            </div>
+            <div>
+                <hr className="m-0 mt-1" />
+                <div className="hstack justify-content-between align-items-center mt-2">
+                    <div>Total count</div>
+                    <div>{count.toLocaleString()}</div>
+                </div>
+            </div>
+            <div>
+                <hr className="m-0 mt-1" />
+                <div className="hstack justify-content-between align-items-center mt-2">
+                    <div>Database name</div>
+                    <div className="text-truncate" title={databaseName}>
+                        {databaseName}
+                    </div>
+                </div>
+            </div>
+            {node && (
+                <div>
+                    <hr className="m-0 mt-1" />
+                    <div className="hstack justify-content-between align-items-center mt-2">
+                        <div>Node</div>
+                        <div>
+                            <Icon icon="node" color="node" />
+                            Node {node}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function NotificationTypeBadge({ type }: Pick<NotificationDetailsProps, "type">) {
+    if (type === "alerts") {
+        return (
+            <Badge pill bg="warning">
+                <Icon icon="alert" />
+                Alerts
+            </Badge>
+        );
+    }
+
+    if (type === "performanceHints") {
+        return (
+            <Badge pill bg="info">
+                <Icon icon="performance" />
+                Performance hints
+            </Badge>
+        );
+    }
+
+    return null;
+}
+
+interface NotificationTableProps {
+    width: number;
+    notifications: NotificationSummaryItem[];
+}
+
+function NotificationTable({ width, notifications }: NotificationTableProps) {
+    const columns = useColumns(width);
+
+    const table = useReactTable({
+        data: notifications,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+    });
+
+    const heightInPx = virtualTableUtils.getHeightInPx(notifications.length, 300);
+
+    return (
+        <div className="mt-2">
+            <VirtualTable table={table} heightInPx={heightInPx} />
+        </div>
+    );
+}
+
+function useColumns(width: number): ColumnDef<NotificationSummaryItem>[] {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(width);
+    const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
+
+    return useMemo(
+        () => [
+            {
+                header: "Reason",
+                accessorFn: (x) => x.PrettifiedReason ?? x.Reason,
+                cell: CellValueWrapper,
+                size: getSize(50),
+            },
+            {
+                header: "Count",
+                accessorKey: "Count",
+                cell: CellValueWrapper,
+                size: getSize(50),
+            },
+        ],
+        [getSize]
     );
 }
