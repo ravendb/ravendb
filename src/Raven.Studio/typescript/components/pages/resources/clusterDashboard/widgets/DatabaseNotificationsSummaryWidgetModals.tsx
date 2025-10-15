@@ -9,11 +9,14 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import SizeGetter from "components/common/SizeGetter";
 import Badge from "react-bootstrap/Badge";
+import databasesManager from "common/shell/databasesManager";
+import notificationCenter from "common/notifications/notificationCenter";
+import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 
 type NotificationSummaryItem =
     Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.NotificationSummaryItem;
@@ -37,7 +40,16 @@ export function SummaryAlertsModal({ items, databaseName, nodeTag, count, onClos
             </Modal.Header>
             <Modal.Body className="vstack gap-2 pt-0">
                 <NotificationDetails type="alerts" databaseName={databaseName} count={count} node={nodeTag} />
-                <SizeGetter render={({ width }) => <NotificationTable width={width} notifications={items} />} />
+                <SizeGetter
+                    render={({ width }) => (
+                        <NotificationTable
+                            width={width}
+                            notifications={items}
+                            databaseName={databaseName}
+                            onClose={onClose}
+                        />
+                    )}
+                />
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose} className="rounded-pill">
@@ -60,7 +72,16 @@ export function SummaryPerformanceHintsModal({ databaseName, items, count, nodeT
             </Modal.Header>
             <Modal.Body className="vstack gap-2 pt-0">
                 <NotificationDetails type="performanceHints" databaseName={databaseName} count={count} node={nodeTag} />
-                <SizeGetter render={({ width }) => <NotificationTable width={width} notifications={items} />} />
+                <SizeGetter
+                    render={({ width }) => (
+                        <NotificationTable
+                            width={width}
+                            notifications={items}
+                            databaseName={databaseName}
+                            onClose={onClose}
+                        />
+                    )}
+                />
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose} className="rounded-pill">
@@ -143,10 +164,12 @@ function NotificationTypeBadge({ type }: Pick<NotificationDetailsProps, "type">)
 interface NotificationTableProps {
     width: number;
     notifications: NotificationSummaryItem[];
+    databaseName: string;
+    onClose: () => void;
 }
 
-function NotificationTable({ width, notifications }: NotificationTableProps) {
-    const columns = useColumns(width);
+function NotificationTable({ width, notifications, databaseName, onClose }: NotificationTableProps) {
+    const columns = useColumns(width, databaseName, onClose);
 
     const table = useReactTable({
         data: notifications,
@@ -165,16 +188,37 @@ function NotificationTable({ width, notifications }: NotificationTableProps) {
     );
 }
 
-function useColumns(width: number): ColumnDef<NotificationSummaryItem>[] {
+function useColumns(width: number, databaseName: string, onClose: () => void): ColumnDef<NotificationSummaryItem>[] {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(width);
     const getSize = useMemo(() => virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
+
+    const openNotificationCenterForDatabase = useCallback(() => {
+        const db = databasesManager.default.getDatabaseByName(databaseName);
+        if (!db) {
+            return;
+        }
+
+        databasesManager.default.activate(db, { waitForNotificationCenterWebSocket: true });
+        notificationCenter.instance.showNotifications.toggle();
+        onClose();
+    }, [databaseName, onClose]);
 
     return useMemo(
         () => [
             {
                 header: "Reason",
                 accessorFn: (x) => x.PrettifiedReason ?? x.Reason,
-                cell: CellValueWrapper,
+                cell: ({ getValue }) => {
+                    const value = getValue<string>();
+
+                    return (
+                        <CellWithCopy value={value}>
+                            <Button onClick={openNotificationCenterForDatabase} variant="link">
+                                {value}
+                            </Button>
+                        </CellWithCopy>
+                    );
+                },
                 size: getSize(50),
             },
             {

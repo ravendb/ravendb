@@ -62,7 +62,7 @@
             <div class="list absolute-fill">
                 <virtual-grid
                     class="resizable no-margin"
-                    params="controller: gridController, condensed: true, disableStripes: true"
+                    params="controller: gridController, condensed: true, disableStripes: true, emptyTemplate: 'empty-notifications-template'"
                 ></virtual-grid>
                 <div class="absolute-center loading" data-bind="visible: $root.spinners.loading">
                     <div class="global-spinner"></div>
@@ -77,3 +77,9 @@
         <div data-bind="react: performanceHintsModal"></div>
     </div>
 </div>
+
+<script type="text/html" id="empty-notifications-template">
+    <div>
+        No notifications found.
+    </div>
+</script>
