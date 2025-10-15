@@ -33,7 +33,7 @@ public class GenAiTestScript : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAiScript(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -144,7 +144,7 @@ if($output.Blocked)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanReuseContextFromPreviousRun(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -251,7 +251,7 @@ for (const comment of this.Comments)
     }
     
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanReuseModelOutputFromPreviousRun(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -355,7 +355,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanModifyUpdateScript(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -572,7 +572,7 @@ Provide an explanation, confidence level (0.0–1.0), and summarize the comment 
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanEditDocumentAndTestAgain(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -666,7 +666,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanEditContextAndTestAgain(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -775,7 +775,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAiScript_ViaEndpoint(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -984,7 +984,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAiScript_ViaEndpoint_WithDocumentAsInput(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1112,7 +1112,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanTestGenAi_WithFakeDocumentAndNoId(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1246,7 +1246,7 @@ if($output.Blocked)
 
     // todo: Fix test
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Skip = "Failing test")] 
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Failing test")] 
     public async Task TestGenAi_ShouldNotSendCachedItems(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -1424,7 +1424,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Skip = "need to fix")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "need to fix")]
     public async Task TestGenAi_ShouldTrackAiHashesInMetadata(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -1527,7 +1527,7 @@ for (const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldStripMetadataPropertiesFromInputDocument(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -1654,7 +1654,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldReturnModelUsageStats(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))

@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task PutInUpdateScriptShouldUseSourceDocumentIdNotNull(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);

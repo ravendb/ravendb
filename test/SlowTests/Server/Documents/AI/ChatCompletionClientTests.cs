@@ -50,7 +50,7 @@ public class ChatCompletionClientTests : RavenTestBase
 }";
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama ,DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi ,DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiClientSanityTest(Options options, GenAiConfiguration configuration)
     {
         using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests())))
@@ -75,7 +75,7 @@ public class ChatCompletionClientTests : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
     public async Task OtherErrors(Options options, GenAiConfiguration configuration)
     {
         const string prompt = "Check if the following blog post comment is spam or not";
