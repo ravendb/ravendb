@@ -76,6 +76,7 @@
     <EmbeddedResource Include="Data\RavenDB_24649\RavenDB_24649.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24797\24797_counters_test.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
+    <EmbeddedResource Include="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />

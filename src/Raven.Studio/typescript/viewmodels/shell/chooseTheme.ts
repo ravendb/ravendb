@@ -32,6 +32,7 @@ class chooseTheme extends dialogViewModelBase {
     useTheme(theme: string) {
         localStorage.setItem(chooseTheme.themeLocalStorageKey, theme);
         this.updateStylesheet(chooseTheme.themeToStylesheet[theme]);
+        document.body.setAttribute("data-theme", theme);
         this.close();
     }
     

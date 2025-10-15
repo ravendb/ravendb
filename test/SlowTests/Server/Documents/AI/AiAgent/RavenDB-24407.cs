@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
@@ -46,7 +47,7 @@ public class RavenDB_24407 : RavenTestBase
         public string Role { get; set; }
 
         [JsonProperty("content")]
-        public string Content { get; set; }
+        public JToken Content { get; set; }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

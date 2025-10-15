@@ -22,7 +22,7 @@ internal class AiConversation : IAiConversationOperations
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
     private readonly List<AiAgentActionResponse> _actionResponses = [];
-    private string _userPrompt;
+    private readonly List<ContentPart> _promptParts = new();
     private string _changeVector;
     public string ChangeVector => _changeVector;
 
@@ -94,8 +94,17 @@ internal class AiConversation : IAiConversationOperations
     public void SetUserPrompt(string userPrompt)
     {
         ValidationMethods.AssertNotNullOrEmpty(userPrompt, nameof(userPrompt));
+        _promptParts.Clear();
+        AddUserPrompt(userPrompt);
+    }
 
-        _userPrompt = userPrompt;
+    public void AddUserPrompt(params IEnumerable<string> prompts)
+    {
+        foreach (string prompt in prompts)
+        {
+            ValidationMethods.AssertNotNullOrEmpty(prompt, nameof(prompt));
+            _promptParts.Add(new TextPart(prompt));
+        }
     }
 
     public void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
@@ -224,7 +233,7 @@ internal class AiConversation : IAiConversationOperations
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
             _actionRequests != null &&
             // otherwise, we already went to the server and have nothing new to tell it, so we are done
-            string.IsNullOrEmpty(_userPrompt) && _actionResponses.Count == 0)
+            _promptParts.Count == 0 && _actionResponses.Count == 0)
         {
             return new AiAnswer<TAnswer>
             {
@@ -232,7 +241,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, _actionResponses, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
 
         try
         {
@@ -255,7 +264,7 @@ internal class AiConversation : IAiConversationOperations
         finally
         {
             // clear the user prompt and tool responses after running the conversation
-            _userPrompt = null;
+            _promptParts.Clear();
             _actionResponses.Clear();
         }
     }

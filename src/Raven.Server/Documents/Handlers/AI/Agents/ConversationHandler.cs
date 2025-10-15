@@ -66,7 +66,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 };
             }
 
-            if (string.IsNullOrEmpty(_request.UserPrompt))
+            if (RequestBody.HasUserPrompt(_request.Content) == false)
             {
                 throw new InvalidOperationException(
                     $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
@@ -470,7 +470,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {
         var hasActionResponse = _request.ActionResponses is { Length: > 0 };
-        var hasUserPrompt = string.IsNullOrEmpty(_request.UserPrompt) == false;
+        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content);
 
         if (hasActionResponse && hasUserPrompt)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
@@ -507,12 +507,12 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' without open action calls or user prompt.");
 
 
-        if (string.IsNullOrEmpty(_request.UserPrompt) == false)
+        if (RequestBody.HasUserPrompt(_request.Content))
         {
             _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
             {
                 ["role"] = "user",
-                ["content"] = _request.UserPrompt
+                ["content"] = _request.Content
             }, "user/msg"), usage: null);
         }
 

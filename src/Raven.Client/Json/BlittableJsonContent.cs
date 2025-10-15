@@ -13,9 +13,9 @@ namespace Raven.Client.Json
 {
     internal sealed class BlittableJsonContent : HttpContent
     {
-        private static readonly TaskCompletionSource<object> Sentinel = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private static readonly TaskCompletionSource Sentinel = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private TaskCompletionSource<object> _tcs;
+        private TaskCompletionSource _tcs;
 
         private readonly Func<Stream, Task> _asyncTaskWriter;
         private readonly DocumentConventions _conventions;
@@ -91,7 +91,7 @@ namespace Raven.Client.Json
             }
             finally
             {
-                _tcs!.TrySetResult(null);
+                _tcs!.TrySetResult();
             }
         }
 

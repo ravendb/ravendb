@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,83 +19,103 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanNotAccess_WithoutSAN()
         {
-            var caKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var ca = CertificateGenerator.GenerateRootCACertificate("ca", 2, caKeyPair);
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
-            var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, LocalDomainName, 1, clientKeyPair, []);
+            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                commonNameValue: "admin",
+                issuerCN: ca.SubjectName,
+                issuerKeyPair: caKeyPair,
+                isClientCertificate: true,
+                isCaCertificate: false,
+                notAfter: DateTime.UtcNow.Date.AddMonths(1),
+                certBytes: out var clientCertBytes);
+
+            var client = new X509Certificate2(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
                 {
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
-                        [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
-                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{LocalDomainName}",
-                    }
+                    [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                    [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
+                    [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{LocalDomainName}",
                 }
-            );
+            });
 
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.UnfamiliarCertificate, result.Status);
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [InlineData($"a.{LocalDomainName}", $"*.{LocalDomainName}")]
-        [InlineData($"c.{LocalDomainName}", $"c.{LocalDomainName}")]
-        [InlineData($"test.{LocalDomainName}", $"*.{LocalDomainName}")]
-        [InlineData($"longdomainname.{LocalDomainName}", $"*.{LocalDomainName}")]
-        [InlineData($"{LocalDomainName}", $"{LocalDomainName}")]
+        [InlineData("a.localhost", "*.localhost")]
+        [InlineData("c.localhost", "c.localhost")]
+        [InlineData("test.localhost", "*.localhost")]
+        [InlineData("longdomainname.localhost", "*.localhost")]
+        [InlineData("localhost", "localhost")]
         public void KnownIssuerCert_CanAccess_WithValidSAN(string publicDomain, string san)
         {
-            var caKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var ca = CertificateGenerator.GenerateRootCACertificate("ca", 2, caKeyPair);
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
-            var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [san]);
+            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                commonNameValue: "admin",
+                issuerCN: ca.SubjectName,
+                issuerKeyPair: caKeyPair,
+                isClientCertificate: true,
+                isCaCertificate: false,
+                notAfter: DateTime.UtcNow.Date.AddMonths(1),
+                certBytes: out var clientCertBytes,
+                sans: new[] { san });
+
+            var client = new X509Certificate2(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
                 {
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
-                        [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
-                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{publicDomain}",
-                    }
+                    [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                    [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
+                    [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{publicDomain}",
                 }
-            );
+            });
 
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.ClusterAdmin, result.Status);
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [InlineData($"a.b.{LocalDomainName}", $"*.{LocalDomainName}")]
-        [InlineData($"a.{LocalDomainName}", $"*.a.{LocalDomainName}")]
-        [InlineData($"aaa.{LocalDomainName}", $"bbb.{LocalDomainName}")]
-        [InlineData($"aaa.{LocalDomainName}.bbb", $"aaa.{LocalDomainName}")]
-        [InlineData($"aaa.{LocalDomainName}", $"aaa.{LocalDomainName}.bbb")]
+        [InlineData("a.b.localhost", "*.localhost")]
+        [InlineData("a.localhost", "*.a.localhost")]
+        [InlineData("aaa.localhost", "bbb.localhost")]
+        [InlineData("aaa.localhost.bbb", "aaa.localhost")]
+        [InlineData("aaa.localhost", "aaa.localhost.bbb")]
         public void KnownIssuerCert_CanNotAccess_WithInvalidSAN(string publicDomain, string san)
         {
-            var caKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var ca = CertificateGenerator.GenerateRootCACertificate("ca", 2, caKeyPair);
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
-            var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [san]);
+            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                commonNameValue: "admin",
+                issuerCN: ca.SubjectName,
+                issuerKeyPair: caKeyPair,
+                isClientCertificate: true,
+                isCaCertificate: false,
+                notAfter: DateTime.UtcNow.Date.AddMonths(1),
+                certBytes: out var clientCertBytes,
+                sans: new[] { san });
+
+            var client = new X509Certificate2(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
                 {
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
-                        [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
-                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{publicDomain}",
-                    }
+                    [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                    [RavenConfiguration.GetKey(x => x.Security.ValidateSanForCertificateWithWellKnownIssuer)] = true.ToString(),
+                    [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://{publicDomain}",
                 }
-            );
+            });
 
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.UnfamiliarCertificate, result.Status);
@@ -104,22 +124,29 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanAccess_WhenSANValidation_IsDisabled_AndNotMatchingServerDomainName()
         {
-            var caKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var ca = CertificateGenerator.GenerateRootCACertificate("ca", 2, caKeyPair);
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
-            var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [LocalDomainName]);
+            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                commonNameValue: "admin",
+                issuerCN: ca.SubjectName,
+                issuerKeyPair: caKeyPair,
+                isClientCertificate: true,
+                isCaCertificate: false,
+                notAfter: DateTime.UtcNow.Date.AddMonths(1),
+                certBytes: out var clientCertBytes,
+                sans: new[] { LocalDomainName });
+
+            var client = new X509Certificate2(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
                 {
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
-                        [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://a.{LocalDomainName}",
-                    }
+                    [RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)] = caBase64,
+                    [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://a.{LocalDomainName}",
                 }
-            );
+            });
 
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.ClusterAdmin, result.Status);

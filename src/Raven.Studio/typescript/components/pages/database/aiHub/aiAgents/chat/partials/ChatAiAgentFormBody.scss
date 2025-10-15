@@ -2,19 +2,53 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-.gradient-top {
-    border-radius: sizes.$border-radius-sm;
+.chat-ai-agent-bottom-section {
+    .prompt-wrapper {
+        position: relative;
+        padding: sizes.$gutter-xs;
+        border-radius: sizes.$border-radius;
+        border: 1px solid colors.$border-color-light-var;
+        background-color: colors.$input-bg-var;
+        z-index: 10;
+        box-shadow: 0px -10px 10px var(--bs-body-bg);
 
-    &::before {
-        content: "";
-        position: absolute;
-        top: -#{sizes.$gutter-sm};
-        left: 0;
-        right: 0;
-        height: 36px;
-        z-index: 4;
-        background: linear-gradient(0deg, var(--bs-body-bg) 0%, transparent 1000%);
-        filter: blur(sizes.$gutter-xxs);
-        margin: 0 -#{sizes.$gutter-sm};
+        .prompt-textarea {
+            z-index: 11;
+            border-radius: sizes.$border-radius;
+            field-sizing: content;
+            min-height: 60px;
+            max-height: 200px;
+            resize: none;
+            border: none !important;
+            box-shadow: none !important;
+            background-image: none !important;
+
+            &:focus {
+                border: none;
+                box-shadow: none;
+            }
+        }
+
+        .validation-message {
+            display: none;
+        }
+
+        .prompt-actions {
+            color: colors.$text-color-var;
+
+            .btn-link {
+                color: colors.$text-color-var;
+            }
+        }
+
+        body[data-theme="blue"] & {
+            .prompt-actions {
+                color: colors.$gray;
+
+                .btn-link {
+                    color: colors.$gray;
+                }
+            }
+        }
     }
 }
