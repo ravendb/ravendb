@@ -2335,15 +2335,6 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var putResult = store.Maintenance.Send(new PutConnectionStringOperation<OlapConnectionString>(connectionString));
                 Assert.NotNull(putResult.RaftCommandIndex);
 
-                // re enable task
-
-                configuration.Disabled = false;
-                update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
-                Assert.NotNull(update.RaftCommandIndex);
-
-                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.OlapEtl));
-                Assert.Equal(OngoingTaskState.Enabled, ongoingTask.TaskState);
-
                 // add more data
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2365,7 +2356,17 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
+                // re enable task
+
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+
+                configuration.Disabled = false;
+                update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                Assert.NotNull(update.RaftCommandIndex);
+
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.OlapEtl));
+                Assert.Equal(OngoingTaskState.Enabled, ongoingTask.TaskState);
+
                 r = await etlDone.WaitAsync(_defaultTimeout);
                 Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, _defaultTimeout, databaseMode));
 
