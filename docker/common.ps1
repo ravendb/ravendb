@@ -42,6 +42,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
             }
             return $versionTags + @(
                 "$($repo):ubuntu-latest",
+#                "$($repo):ubuntu-latest-lts",
                 "$($repo):8.0-ubuntu-latest"
             )
             break;
@@ -55,6 +56,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
             }
             return $versionTags + @(
                 "$($repo):ubuntu-arm32v7-latest",
+#                "$($repo):ubuntu-arm32v7-latest-lts",
                 "$($repo):8.0-ubuntu-arm32v7-latest"
             )
             break;
@@ -68,6 +70,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
             }
             return $versionTags + @(
                 "$($repo):ubuntu-arm64v8-latest",
+#                "$($repo):ubuntu-arm64v8-latest-lts",
                 "$($repo):8.0-ubuntu-arm64v8-latest"
                 )
                 break;

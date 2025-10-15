@@ -211,7 +211,7 @@ public class AiConnectionStringsTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Google)]
-    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi | RavenAiIntegration.Onnx | RavenAiIntegration.Vertex, Skip = "This provider does not support dimensionality yet.")]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi | RavenAiIntegration.Onnx | RavenAiIntegration.Vertex, Skip = "This provider does not support dimensionality yet.")]
     public void SemanticKernel_ShouldRespect_Dimensionality(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
         const int dimensions = 5;

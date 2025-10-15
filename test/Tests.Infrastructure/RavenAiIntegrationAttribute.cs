@@ -15,15 +15,15 @@ public enum RavenAiIntegration
     None = 0,
     OpenAi = 1 << 1,
     AzureOpenAI = 1 << 2,
-    Ollama = 1 << 3,
+    // Ollama = 1 << 3,
     Onnx = 1 << 4,
     Google = 1 << 5,
     HuggingFace = 1 << 6,
     MistralAi = 1 << 7,
     Vertex = 1 << 8,
 
-    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace | MistralAi | Vertex,
-    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace | MistralAi | Vertex
+    All = OpenAi | AzureOpenAI/* | Ollama*/ | Onnx | Google | HuggingFace | MistralAi | Vertex,
+    NonInternal = OpenAi | AzureOpenAI /*| Ollama*/ | Google | HuggingFace | MistralAi | Vertex
 }
 
 public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDataAttributeBase
@@ -129,8 +129,8 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
         if (aiIntegration.HasFlag(RavenAiIntegration.OpenAi))
             yield return GenAiOpenAiConnectorForTesting.Instance;
 
-        if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
-            yield return GenAiOllamaConnectorForTesting.Instance;
+        /*if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
+            yield return GenAiOllamaConnectorForTesting.Instance;*/
 
         if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
             yield return GenAiAzureOpenAiConnectorForTesting.Instance;
@@ -149,8 +149,8 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
         if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
             yield return EmbeddingsAzureOpenAiConnectorForTesting.Instance;
 
-        if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
-            yield return EmbeddingsOllamaConnectorForTesting.Instance;
+        /*if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
+            yield return EmbeddingsOllamaConnectorForTesting.Instance;*/
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Onnx))
             yield return EmbeddedConnectorForTesting.Instance;

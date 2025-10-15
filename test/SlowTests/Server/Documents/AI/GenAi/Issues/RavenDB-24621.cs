@@ -33,7 +33,7 @@ public class RavenDB_24621(ITestOutputHelper output) : RavenTestBase(output)
     //  - withJpeg(this.ImageBase64) <-- should work
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanUseModelToDescribeImages(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -85,7 +85,7 @@ ai.genContext({})
     private record Transaction(string User, DateTime Date, string Location, Summary[] Summary = null);
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanAttachTextFile(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
