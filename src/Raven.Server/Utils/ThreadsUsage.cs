@@ -148,19 +148,22 @@ namespace Raven.Server.Utils
                                     var reader = ThreadIoStatsReader.Instance;
                                     if (reader != null && reader.TryGet(thread.Id, out var io))
                                     {
-                                        ti.IoOpsPerSecLast = io.OpsPerSecLast;
-                                        ti.ThroughputKbPerSecLast = io.KbPerSecLast;
-                                        ti.IoOpsTotal = io.OpsTotal;
-                                        ti.ThroughputKbTotal = io.KbTotal;
+                                        ti.IoStats = new IoStats
+                                        {
+                                            IoOpsPerSecLast = io.OpsPerSecLast,
+                                            ThroughputKbPerSecLast = io.KbPerSecLast,
+                                            IoOpsTotal = io.OpsTotal,
+                                            ThroughputKbTotal = io.KbTotal,
 
-                                        ti.ReadIoOpsPerSecLast = io.ReadOpsPerSecLast;
-                                        ti.WriteIoOpsPerSecLast = io.WriteOpsPerSecLast;
-                                        ti.ReadThroughputKbPerSecLast = io.ReadKbPerSecLast;
-                                        ti.WriteThroughputKbPerSecLast = io.WriteKbPerSecLast;
-                                        ti.ReadIoOpsTotal = io.ReadOpsTotal;
-                                        ti.WriteIoOpsTotal = io.WriteOpsTotal;
-                                        ti.ReadThroughputKbTotal = io.ReadKbTotal;
-                                        ti.WriteThroughputKbTotal = io.WriteKbTotal;
+                                            ReadIoOpsPerSecLast = io.ReadOpsPerSecLast,
+                                            WriteIoOpsPerSecLast = io.WriteOpsPerSecLast,
+                                            ReadThroughputKbPerSecLast = io.ReadKbPerSecLast,
+                                            WriteThroughputKbPerSecLast = io.WriteKbPerSecLast,
+                                            ReadIoOpsTotal = io.ReadOpsTotal,
+                                            WriteIoOpsTotal = io.WriteOpsTotal,
+                                            ReadThroughputKbTotal = io.ReadKbTotal,
+                                            WriteThroughputKbTotal = io.WriteKbTotal
+                                        };
                                     }
                                 }
                             }
