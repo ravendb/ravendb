@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
-
 import app = require("durandal/app")
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
@@ -11,17 +10,20 @@ import prismjs = require("prismjs");
 import threadStackTrace = require("viewmodels/manage/threadStackTrace");
 import threadsInfoWebSocketClient = require("common/threadsInfoWebSocketClient");
 import eventsCollector = require("common/eventsCollector");
+import awesomeMultiselect = require("common/awesomeMultiselect");
+
+type Unit = "" | "%" | "KB" | "KB/s";
+type ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
-
     view = require("views/manage/debugAdvancedThreadsRuntime.html");
 
-    allData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
-    filteredData = ko.observable<Raven.Server.Dashboard.ThreadInfo[]>();
+    allData = ko.observable<ThreadInfo[]>();
+    filteredData = ko.observable<ThreadInfo[]>();
 
     private liveClient = ko.observable<threadsInfoWebSocketClient>();
-    private gridController = ko.observable<virtualGridController<Raven.Server.Dashboard.ThreadInfo>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Server.Dashboard.ThreadInfo>();
+    private gridController = ko.observable<virtualGridController<ThreadInfo>>();
+    private columnPreview = new columnPreviewPlugin<ThreadInfo>();
 
     isConnectedToWebSocket: KnockoutComputed<boolean>;
     
@@ -33,6 +35,46 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     isPause = ko.observable<boolean>(false);
     
     filter = ko.observable<string>();
+
+    allColumnHeaders = [
+        "Stack",
+        "Name",
+        "CPU%",
+        "Unmanaged Alloc.",
+        "IOPS",
+        "IOPS Read",
+        "IOPS Write",
+        "IO Throughput",
+        "IO Throughput Read",
+        "IO Throughput Write",
+        "Total IOPS",
+        "Total IOPS Read",
+        "Total IOPS Write",
+        "Total IO Throughput",
+        "Total IO Throughput Read",
+        "Total IO Throughput Write",
+        "Total CPU Time",
+        "Thread ID",
+        "Start Time",
+        "State",
+        "Wait reason",
+    ] as const;
+
+    visibleColumnHeaders = ko.observableArray<(typeof this.allColumnHeaders)[number]>([
+        "Stack",
+        "Name",
+        "CPU%",
+        "Unmanaged Alloc.",
+        "IOPS",
+        "IO Throughput",
+        "Total IOPS",
+        "Total IO Throughput",
+        "Total CPU Time",
+        "Thread ID",
+        "Start Time",
+        "State",
+        "Wait reason",
+    ]);
     
     constructor() {
         super();
@@ -48,10 +90,21 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             return 0;
         });
         
-        this.filter.throttle(500).subscribe(() => this.filterEntries());
+        this.filter.throttle(300).subscribe(() => this.filterEntries());
+        this.visibleColumnHeaders.subscribe(() => this.filterEntries(true));
     }
     
-     private filterEntries() {
+    attached() {
+        super.attached();
+        
+        awesomeMultiselect.build($("#visibleColumnsSelector"), opts => {
+            opts.includeSelectAllOption = true;
+            opts.nSelectedText = " columns selected";
+            opts.allSelectedText = "All columns selected";
+        });
+    }
+    
+     private filterEntries(hard: boolean = false) {
         if (this.gridController()) {
             const filter = this.filter();
             if (filter) {
@@ -60,13 +113,13 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                 this.filteredData(this.allData().slice());
             }
     
-            this.gridController().reset(true);
+            this.gridController().reset(hard);
         } else {
             this.filteredData(this.allData().slice());
         }
     }
     
-    private matchesFilter(item: Raven.Server.Dashboard.ThreadInfo): boolean {
+    private matchesFilter(item: ThreadInfo): boolean {
         const filter = this.filter();
         if (!filter) {
             return true;
@@ -76,7 +129,34 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         return item.Name.toLocaleLowerCase().includes(filterLowered) ||
                item.Id.toString().includes(filterLowered);
     }
+
+    private getUnitSeparator(unit: Unit): string {
+        if (unit === "KB" || unit === "KB/s") {
+            return " ";
+        }
+
+        return "";
+    }
     
+    private getStringValue(value: number, fractionDigits: number, unit: Unit = ""): string {
+        if (value == null) {
+            return "N/A";
+        }
+
+        const unitSeparator = this.getUnitSeparator(unit);
+        const fractionDigitsToUse = value === 0 ? 0 : fractionDigits;
+
+        return generalUtils.formatNumberToStringFixed(value, fractionDigitsToUse) + unitSeparator + unit;
+    }
+
+    private getSortableValue(value: number | string): number | string {
+        if (value == null) {
+            return -1;
+        }
+
+        return value;
+    }
+
     compositionComplete(): void {
         super.compositionComplete();
 
@@ -86,81 +166,92 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
             return $.when({
                 totalResultCount: data.length,
                 items: data
-            } as pagedResult<Raven.Server.Dashboard.ThreadInfo>);
+            } as pagedResult<ThreadInfo>);
         };
-
+        
         const grid = this.gridController();
         grid.headerVisible(true);
         grid.setDefaultSortBy(2, "desc");
         grid.init(fetcher, () => {
-                return [
-                    new actionColumn<Raven.Server.Dashboard.ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack",
-                                () => `<i title="Click to view Stack Trace" class="icon-thread-stack-trace"></i>`, "55px"),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "20%", {
+                type ColumnHeader = (typeof this.allColumnHeaders)[number];
+
+                const columns = [
+                    new actionColumn<ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack" satisfies ColumnHeader, () => `<i title="Click to view Stack Trace" class="icon-thread-stack-trace"></i>`, "55px"),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => x.Name, "Name", "20%", {
                         sortable: "string"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "CPU%", "3%", {
-                        sortable: x => x.CpuUsage,
-                        defaultSortOrder: "desc"
-                    }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.UnmanagedAllocationsInBytes ? generalUtils.formatBytesToSize(x.UnmanagedAllocationsInBytes, 2) : "N/A", "Unmanaged Alloc.", "8%", {
-                        sortable: x => x.UnmanagedAllocationsInBytes ?? 0,
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.CpuUsage, 2, "%"), "CPU%", "5%", {
+                        sortable: x => this.getSortableValue(x.CpuUsage),
                         defaultSortOrder: "desc",
+                        headerTitle: "Current CPU usage percentage",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadIoOpsPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.ReadIoOpsPerSecLast, 0) : "N/A", "Read IOPS", "5%", {
-                        sortable: x => x.ReadIoOpsPerSecLast ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.UnmanagedAllocationsInBytes, 2, "KB"), "Unmanaged Alloc.", "7%", {
+                        sortable: x => this.getSortableValue(x.UnmanagedAllocationsInBytes),
+                        headerTitle: "Unmanaged allocations in bytes",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteIoOpsPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.WriteIoOpsPerSecLast, 0) : "N/A", "Write IOPS", "5%", {
-                        sortable: x => x.WriteIoOpsPerSecLast ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoOpsPerSecLast, 0), "IOPS", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.IoOpsPerSecLast),
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadThroughputKbPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.ReadThroughputKbPerSecLast, 2) + " KB/s" : "N/A", "Read KB/s", "4%", {
-                        sortable: x => x.ReadThroughputKbPerSecLast ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoOpsPerSecLast, 0), "IOPS Read", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ReadIoOpsPerSecLast),
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteThroughputKbPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.WriteThroughputKbPerSecLast, 2) + " KB/s" : "N/A", "Write KB/s", "5%", {
-                        sortable: x => x.WriteThroughputKbPerSecLast ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoOpsPerSecLast, 0), "IOPS Write", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.WriteIoOpsPerSecLast),
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadIoOpsTotal != null ? generalUtils.formatNumberToStringFixed(x.ReadIoOpsTotal, 0) : "N/A", "Read IOPS Total", "7%", {
-                        sortable: x => x.ReadIoOpsTotal ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ThroughputKbPerSecLast, 2, "KB/s"), "IO Throughput", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ThroughputKbPerSecLast),
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteIoOpsTotal != null ? generalUtils.formatNumberToStringFixed(x.WriteIoOpsTotal, 0) : "N/A", "Write IOPS Total", "8%", {
-                        sortable: x => x.WriteIoOpsTotal ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadThroughputKbPerSecLast, 2, "KB/s"), "IO Throughput Read", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ReadThroughputKbPerSecLast),
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadThroughputKbTotal != null ? generalUtils.formatNumberToStringFixed(x.ReadThroughputKbTotal, 2) + " KB" : "N/A", "Read KB Total", "6%", {
-                        sortable: x => x.ReadThroughputKbTotal ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteThroughputKbPerSecLast, 2, "KB/s"), "IO Throughput Write", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.WriteThroughputKbPerSecLast),
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteThroughputKbTotal != null ? generalUtils.formatNumberToStringFixed(x.WriteThroughputKbTotal, 2) + " KB" : "N/A", "Write KB Total", "7%", {
-                        sortable: x => x.WriteThroughputKbTotal ?? -1,
-                        defaultSortOrder: "desc",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoOpsTotal, 0), "Total IOPS", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.IoOpsTotal),
+                        headerTitle: "Total IOPS aggregated since this view was open",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Total CPU Time", "7%", {
-                        sortable: x => x.Duration,
-                        defaultSortOrder: "desc"
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoOpsTotal, 0), "Total IOPS Read", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ReadIoOpsTotal),
+                        headerTitle: "Total IOPS Read aggregated since this view was open",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "TID", "3%", {
-                        sortable: x => x.Id
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoOpsTotal, 0), "Total IOPS Write", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.WriteIoOpsTotal),
+                        headerTitle: "Total IOPS Write aggregated since this view was open",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "5%", {
-                        sortable: x => x.StartingTime
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ThroughputKbTotal, 2, "KB"), "Total IO Throughput", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ThroughputKbTotal),
+                        headerTitle: "Total IO Throughput aggregated since this view was open",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "2%", {
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadThroughputKbTotal, 2, "KB"), "Total IO Throughput Read", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ReadThroughputKbTotal),
+                        headerTitle: "Total IO Throughput Read aggregated since this view was open",
+                    }),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteThroughputKbTotal, 2, "KB"), "Total IO Throughput Write", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.WriteThroughputKbTotal),
+                        headerTitle: "Total IO Throughput Write aggregated since this view was open",
+                    }),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Total CPU Time", "7%", {
+                        sortable: x => this.getSortableValue(x.Duration),
+                    }),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => x.Id + " (" + (x.ManagedThreadId || "N/A") + ")", "Thread ID", "7%", {
+                        sortable: x => this.getSortableValue(x.Id)
+                    }),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "9%", {
+                        sortable: x => this.getSortableValue(x.StartingTime)
+                    }),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => x.State, "State", "5%", {
                         sortable: "string"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "5%")
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => x.WaitReason, "Wait reason", "7%")
                 ];
+
+                return columns.filter(column => this.visibleColumnHeaders().includes(column.header as ColumnHeader));
             }
         );
 
         this.columnPreview.install("virtual-grid", ".js-threads-runtime-tooltip",
-            (entry: Raven.Server.Dashboard.ThreadInfo,
-                column: textColumn<Raven.Server.Dashboard.ThreadInfo>,
-             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
+            (entry: ThreadInfo, column: textColumn<ThreadInfo>, _: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column.header === "Overall CPU Time") {
                     const timings = {
                         StartTime: entry.StartingTime,
@@ -196,8 +287,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         this.dedicatedThreadsCount(data.DedicatedThreadsCount);
 
         this.filterEntries();
-        
-        this.gridController().reset(false);
     }
 
     deactivate() {
@@ -208,7 +297,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     }
     }
 
-    private showStackTrace(thread: Raven.Server.Dashboard.ThreadInfo) {
+    private showStackTrace(thread: ThreadInfo) {
         app.showBootstrapDialog(new threadStackTrace(thread.Id, thread.Name));
     }
 

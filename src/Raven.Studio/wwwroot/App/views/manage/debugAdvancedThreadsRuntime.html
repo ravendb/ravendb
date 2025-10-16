@@ -15,6 +15,14 @@
                 <div>
                     <input class="form-control" placeholder="Filter (Name, Thread Id)" data-bind="textInput: filter" />
                 </div>
+                <div class="btn-group">
+                    <select
+                        id="visibleColumnsSelector"
+                        size="5"
+                        multiple="multiple"
+                        data-bind="options: allColumnHeaders, selectedOptions: visibleColumnHeaders"
+                    ></select>
+                </div>
                 <div>
                     <div class="text-muted info-block">
                         <div class="text-center"><small>RavenDB CPU Usage:</small></div>
