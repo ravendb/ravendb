@@ -234,9 +234,13 @@ public static class SchemaValidationHelper
     
     private static void ExcludeMetadata(JsonOperationContext context, ref BlittableJsonReaderObject blittable)
     {
+        object[] excludedProperties = [Constants.Documents.Metadata.Key];
+        if (blittable.TryGet(SchemaValidatorConstants.ExcludedProperties, out BlittableJsonReaderArray blitExcludedProperties))
+            excludedProperties = blitExcludedProperties.Select(x => x).Concat(excludedProperties).ToArray();
+        
         blittable.Modifications = new DynamicJsonValue(blittable)
         {
-            [SchemaValidatorConstants.ExcludedProperties] = new [] {Constants.Documents.Metadata.Id},
+            [SchemaValidatorConstants.ExcludedProperties] = excludedProperties,
         };
         
         using (_ = blittable)
