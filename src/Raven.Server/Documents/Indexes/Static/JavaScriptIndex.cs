@@ -66,6 +66,10 @@ function map(name, lambda) {
             engine.SetClrFunc("loadAttachments", LoadAttachments);
             engine.SetClrFunc("schemaValidate", SchemaValidate);
             engine.SetClrFunc("id", GetDocumentId);
+            
+            var schemaValidatorObject = new JsObject(engine);
+            schemaValidatorObject.FastSetProperty("validate", new PropertyDescriptor(new ClrFunction(engine, "validate", SchemaValidate), false, false, false));
+            engine.SetValue("schema", schemaValidatorObject);
         }
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)

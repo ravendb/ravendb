@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -39,7 +38,7 @@ select new
 map("TestObjs", (doc) => { 
     return {
         Id: id(doc),
-        Error: schemaValidate(doc.Inner)
+        Error: schema.validate(doc.Inner)
     };
 })
 """;
@@ -102,7 +101,7 @@ map("TestObjs", (doc) => {
         map("TestObjs", (doc) => { 
             return {
                 Id: id(doc),
-                Error: schemaValidate(doc)
+                Error: schema.validate(doc)
             };
         })
         """;
@@ -155,7 +154,7 @@ map("TestObjs", (doc) => {
         {
             var results = await session.Query<TestObj>(indexDefinition.Name).ProjectInto<IndexResult>().ToArrayAsync();
             var dicResults = results.ToDictionary(o => o.Id);
-            Assert.Equal(null, dicResults[validDocId].Error);
+            Assert.Null(dicResults[validDocId].Error);
             Assert.Contains("The length of the value '0123456789a' at 'Prop' should not exceed 10, but its actual length is 11.", dicResults[invalidDocId].Error);
         }
     }
