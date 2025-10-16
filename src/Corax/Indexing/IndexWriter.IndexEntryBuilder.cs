@@ -140,26 +140,26 @@ public partial class IndexWriter
             {
                 ref var token = ref tokens[i];
 
-                if (token.Offset + token.Length > _parent._encodingBufferHandler.Length)
+                if (token.Offset + token.Length > _parent._analyzersContext.EncodingBufferHandler.Length)
                     _parent.ThrowInvalidTokenFoundOnBuffer(field, value, wordsBuffer, tokens, token);
 
-                var word = new Span<byte>(_parent._encodingBufferHandler, token.Offset, (int)token.Length);
+                var word = new Span<byte>(_parent._analyzersContext.EncodingBufferHandler, token.Offset, (int)token.Length);
                 ExactInsert(field, word);
             }
         }
 
         private void AnalyzeTerm(IndexedField field, ReadOnlySpan<byte> value, Analyzer analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens)
         {
-            if (value.Length > _parent._encodingBufferHandler.Length)
+            if (value.Length > _parent._analyzersContext.EncodingBufferHandler.Length)
             {
                 analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-                if (outputSize > _parent._encodingBufferHandler.Length || tokenSize > _parent._tokensBufferHandler.Length)
-                    _parent.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
+                if (outputSize > _parent._analyzersContext.EncodingBufferHandler.Length || tokenSize > _parent._analyzersContext.TokensBufferHandler.Length)
+                    _parent._analyzersContext.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
             }
 
-            wordsBuffer = _parent._encodingBufferHandler;
-            tokens = _parent._tokensBufferHandler;
-            analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._utf8ConverterBufferHandler);
+            wordsBuffer = _parent._analyzersContext.EncodingBufferHandler;
+            tokens = _parent._analyzersContext.TokensBufferHandler;
+            analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._analyzersContext.Utf8ConverterBufferHandler);
 
             if (tokens.Length > 1)
             {

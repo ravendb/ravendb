@@ -47,22 +47,20 @@ namespace Corax.Indexing
         private Tree _indexMetadata;
         private long _numberOfTermModifications;
         private CompactKeyCacheScope _compactKeyScope;
-        
+
         /// <summary>
         /// Meta-tree that contains mapping Field -> EntryId -> TermId.
         /// This is used by SortingMatches for building an array of terms to sort.
         /// </summary>
-        private Tree _entriesToTermsTree; 
-        
+        private Tree _entriesToTermsTree;
+
         private ContextBoundNativeList<long> _smallPostingListWorkingBuffer;
-        
-        
+
+
         private bool _ownsTransaction;
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
-        private Token[] _tokensBufferHandler;
-        private byte[] _encodingBufferHandler;
-        private byte[] _utf8ConverterBufferHandler;
+
 
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
@@ -96,8 +94,13 @@ namespace Corax.Indexing
         private HashSet<long> _nonExistingTermsMarkers;
         private Dictionary<long, IndexedField> _fieldsByRootPage;
         
-        internal EntryIdPaginationSupportStatus PaginationBasedOnEntryIdSupportStatus { get; private set; }
+        /// <summary>
+        /// Context used by analyzers during indexing.
+        /// </summary>
+        private readonly AnalyzersContext _analyzersContext;
         
+        internal EntryIdPaginationSupportStatus PaginationBasedOnEntryIdSupportStatus { get; private set; }
+
         /// <summary>
         /// Method to update dynamic mapping in runtime. 
         /// </summary>
@@ -130,9 +133,7 @@ namespace Corax.Indexing
             _builder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
             _supportedFeatures = supportedFeatures; // if not explicitly set - all features are available
-            _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
-            _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
-            _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
+            _analyzersContext = new AnalyzersContext(fieldsMapping.MaximumOutputSize);
 
             var bufferSize = fieldsMapping!.Count;
             _knownFieldsTerms = new IndexedField[bufferSize];
@@ -192,8 +193,8 @@ namespace Corax.Indexing
             {
                 PaginationBasedOnEntryIdSupportStatus = (EntryIdPaginationSupportStatus)paginationBasedOnEntryIdSupportStatus.Value;
             }
-            
-            _lastEntryId =  _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
+
+            _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
             _nullEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
             _nonExistingEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NonExistingPostingLists);
@@ -1426,23 +1427,6 @@ namespace Corax.Indexing
             termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
         }
 
-        private void UnlikelyGrowAnalyzerBuffer(int newBufferSize, int newTokenSize)
-        {
-            if (newBufferSize > _encodingBufferHandler.Length)
-            {
-                Analyzer.BufferPool.Return(_encodingBufferHandler);
-                _encodingBufferHandler = null;
-                _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
-            }
-
-            if (newTokenSize > _tokensBufferHandler.Length)
-            {
-                Analyzer.TokensPool.Return(_tokensBufferHandler);
-                _tokensBufferHandler = null;
-                _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
-            }
-        }
-
         public void Dispose()
         {
             _compactKeyScope.Dispose();
@@ -1454,25 +1438,7 @@ namespace Corax.Indexing
             if (_ownsTransaction)
                 _transaction?.Dispose();
 
-
-            if (_encodingBufferHandler != null)
-            {
-                Analyzer.BufferPool.Return(_encodingBufferHandler);
-                _encodingBufferHandler = null;
-            }
-
-            if (_tokensBufferHandler != null)
-            {
-                Analyzer.TokensPool.Return(_tokensBufferHandler);
-                _tokensBufferHandler = null;
-            }
-
-            if (_utf8ConverterBufferHandler != null)
-            {
-                Analyzer.BufferPool.Return(_utf8ConverterBufferHandler);
-                _utf8ConverterBufferHandler = null;
-            }
-
+            _analyzersContext.Dispose();
             _indexDebugDumper.Dispose();
             _builder.Clean();
         }
