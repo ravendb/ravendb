@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import AiAssistantWindow from "./AiAssistantWindow";
 import { mockServices } from "test/mocks/services/MockServices";

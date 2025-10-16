@@ -50,7 +50,7 @@ import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.Ongo
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlProcessProgress = Raven.Server.Documents.ETL.Stats.EtlProcessProgress;
-import { produce, Draft, original } from "immer";
+import { produce, Draft } from "immer";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
