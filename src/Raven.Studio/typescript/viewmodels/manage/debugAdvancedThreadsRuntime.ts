@@ -99,60 +99,60 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "20%", {
                         sortable: "string"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "Current CPU %", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => `${(x.CpuUsage === 0 ? "0" : generalUtils.formatNumberToStringFixed(x.CpuUsage, 2))}%`, "CPU%", "3%", {
                         sortable: x => x.CpuUsage,
                         defaultSortOrder: "desc"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.UnmanagedAllocationsInBytes ? generalUtils.formatBytesToSize(x.UnmanagedAllocationsInBytes, 2) : "N/A", "Unmanaged Allocations", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.UnmanagedAllocationsInBytes ? generalUtils.formatBytesToSize(x.UnmanagedAllocationsInBytes, 2) : "N/A", "Unmanaged Alloc.", "8%", {
                         sortable: x => x.UnmanagedAllocationsInBytes ?? 0,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadIoOpsPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.ReadIoOpsPerSecLast, 0) : "N/A", "Read IOPS", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadIoOpsPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.ReadIoOpsPerSecLast, 0) : "N/A", "Read IOPS", "5%", {
                         sortable: x => x.ReadIoOpsPerSecLast ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteIoOpsPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.WriteIoOpsPerSecLast, 0) : "N/A", "Write IOPS", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteIoOpsPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.WriteIoOpsPerSecLast, 0) : "N/A", "Write IOPS", "5%", {
                         sortable: x => x.WriteIoOpsPerSecLast ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadThroughputKbPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.ReadThroughputKbPerSecLast, 2) + " KB/s" : "N/A", "Read KB/s", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadThroughputKbPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.ReadThroughputKbPerSecLast, 2) + " KB/s" : "N/A", "Read KB/s", "4%", {
                         sortable: x => x.ReadThroughputKbPerSecLast ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteThroughputKbPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.WriteThroughputKbPerSecLast, 2) + " KB/s" : "N/A", "Write KB/s", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteThroughputKbPerSecLast != null ? generalUtils.formatNumberToStringFixed(x.WriteThroughputKbPerSecLast, 2) + " KB/s" : "N/A", "Write KB/s", "5%", {
                         sortable: x => x.WriteThroughputKbPerSecLast ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadIoOpsTotal != null ? generalUtils.formatNumberToStringFixed(x.ReadIoOpsTotal, 0) : "N/A", "Total Read IOPS", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadIoOpsTotal != null ? generalUtils.formatNumberToStringFixed(x.ReadIoOpsTotal, 0) : "N/A", "Read IOPS Total", "7%", {
                         sortable: x => x.ReadIoOpsTotal ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteIoOpsTotal != null ? generalUtils.formatNumberToStringFixed(x.WriteIoOpsTotal, 0) : "N/A", "Total Write IOPS", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteIoOpsTotal != null ? generalUtils.formatNumberToStringFixed(x.WriteIoOpsTotal, 0) : "N/A", "Write IOPS Total", "8%", {
                         sortable: x => x.WriteIoOpsTotal ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadThroughputKbTotal != null ? generalUtils.formatNumberToStringFixed(x.ReadThroughputKbTotal, 2) + " KB" : "N/A", "Total Read KB", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.ReadThroughputKbTotal != null ? generalUtils.formatNumberToStringFixed(x.ReadThroughputKbTotal, 2) + " KB" : "N/A", "Read KB Total", "6%", {
                         sortable: x => x.ReadThroughputKbTotal ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteThroughputKbTotal != null ? generalUtils.formatNumberToStringFixed(x.WriteThroughputKbTotal, 2) + " KB" : "N/A", "Total Write KB", "8%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WriteThroughputKbTotal != null ? generalUtils.formatNumberToStringFixed(x.WriteThroughputKbTotal, 2) + " KB" : "N/A", "Write KB Total", "7%", {
                         sortable: x => x.WriteThroughputKbTotal ?? -1,
                         defaultSortOrder: "desc",
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Overall CPU Time", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Total CPU Time", "7%", {
                         sortable: x => x.Duration,
                         defaultSortOrder: "desc"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "Thread Id", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || "n/a") + ")", "TID", "3%", {
                         sortable: x => x.Id
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "5%", {
                         sortable: x => x.StartingTime
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "10%", {
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.State, "State", "2%", {
                         sortable: "string"
                     }),
-                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "10%")
+                    new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.WaitReason, "Wait reason", "5%")
                 ];
             }
         );
