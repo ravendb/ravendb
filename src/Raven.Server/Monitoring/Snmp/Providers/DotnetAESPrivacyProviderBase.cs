@@ -105,7 +105,7 @@ public abstract class DotnetAESPrivacyProviderBase : IPrivacyProvider
     /// Engine IDs.
     /// </summary>
     /// <remarks>This is an optional field, and only used by TRAP v2 authentication.</remarks>
-    public ICollection<OctetString>? EngineIds { get; set; }
+    public ICollection<OctetString> EngineIds { get; set; }
 
     /// <summary>
     /// Encrypt scoped PDU using AES encryption protocol
