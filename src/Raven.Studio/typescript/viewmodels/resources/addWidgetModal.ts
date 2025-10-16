@@ -75,9 +75,9 @@ class addWidgetModal extends dialogViewModelBase {
             icon: require("../../../wwwroot/Content/img/widgets/graph-icon.svg"),
             type: "GcInfo"
         }, {
-            name: "Notifications Summary",
+            name: "Databases Notifications",
             icon: require("../../../wwwroot/Content/img/widgets/list-icon.svg"),
-            type: "NotificationsSummary"
+            type: "DatabasesNotifications"
         }
     ]
     

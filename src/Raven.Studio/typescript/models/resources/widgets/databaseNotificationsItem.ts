@@ -1,4 +1,4 @@
-class databaseNotificationsSummaryItem implements databaseAndNodeAwareStats {
+class databaseNotificationsItem implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
     
@@ -29,14 +29,14 @@ class databaseNotificationsSummaryItem implements databaseAndNodeAwareStats {
         }
     }
 
-    static noData(nodeTag: string, database: string): databaseNotificationsSummaryItem {
-        const item = new databaseNotificationsSummaryItem(nodeTag, null);
+    static noData(nodeTag: string, database: string): databaseNotificationsItem {
+        const item = new databaseNotificationsItem(nodeTag, null);
         item.database = database;
         return item;
     }
 
-    static commonData(item: databaseNotificationsSummaryItem) {
-        const commonItem = new databaseNotificationsSummaryItem(null, null);
+    static commonData(item: databaseNotificationsItem) {
+        const commonItem = new databaseNotificationsItem(null, null);
 
         commonItem.database = item.database;
         commonItem.alertsCount = item.alertsCount;
@@ -80,4 +80,4 @@ class databaseNotificationsSummaryItem implements databaseAndNodeAwareStats {
     }
 }
 
-export = databaseNotificationsSummaryItem;
+export = databaseNotificationsItem;

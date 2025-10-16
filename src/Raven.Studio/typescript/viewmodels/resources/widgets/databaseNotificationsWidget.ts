@@ -6,12 +6,12 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 import DatabaseUtils = require("components/utils/DatabaseUtils");
-import databaseNotificationsSummaryItem = require("models/resources/widgets/databaseNotificationsSummaryItem");
+import databaseNotificationsItem = require("models/resources/widgets/databaseNotificationsItem");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import DatabaseNotificationsSummaryWidgetModals = require("components/pages/resources/clusterDashboard/widgets/DatabaseNotificationsSummaryWidgetModals");
+import DatabaseNotificationsWidgetModals = require("components/pages/resources/clusterDashboard/widgets/DatabaseNotificationsWidgetModals");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 
-const { SummaryAlertsModal, SummaryPerformanceHintsModal } = DatabaseNotificationsSummaryWidgetModals;
+const { SummaryAlertsModal, SummaryPerformanceHintsModal } = DatabaseNotificationsWidgetModals;
 
 type DatabaseNotificationsSummaryPayload = Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.DatabaseNotificationsSummaryPayload;
 
@@ -23,10 +23,10 @@ interface StatusSummary {
 
 class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTableWidget<
     DatabaseNotificationsSummaryPayload,
-    perNodeStatItems<databaseNotificationsSummaryItem>,
-    databaseNotificationsSummaryItem
+    perNodeStatItems<databaseNotificationsItem>,
+    databaseNotificationsItem
 > {
-    view = require("views/resources/widgets/databaseNotificationsSummaryWidget.html");
+    view = require("views/resources/widgets/databaseNotificationsWidget.html");
 
     statusSummary = ko.observable<StatusSummary>();
     
@@ -39,14 +39,14 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
     filteredNotifications = ko.observable(["Alerts", "Performance Hints"]);
 
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
-        return "NotificationsSummary";
+        return "DatabasesNotifications";
     }
 
     constructor(controller: clusterDashboard) {
         super(controller);
 
         for (const node of this.controller.nodes()) {
-            const stats = new perNodeStatItems<databaseNotificationsSummaryItem>(node.tag());
+            const stats = new perNodeStatItems<databaseNotificationsItem>(node.tag());
             this.nodeStats.push(stats);
         }
 
@@ -84,8 +84,8 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         this.setStatusSummary(data.NotificationsSummary);
     }
     
-    protected prepareGridData(): JQueryPromise<pagedResult<databaseNotificationsSummaryItem>> {
-        let items: databaseNotificationsSummaryItem[] = [];
+    protected prepareGridData(): JQueryPromise<pagedResult<databaseNotificationsItem>> {
+        let items: databaseNotificationsItem[] = [];
         
         this.nodeStats().forEach(nodeStat => {
             items.push(...nodeStat.items);
@@ -143,15 +143,15 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         this.statusSummary(summary);
     }
 
-    protected createNoDataItem(nodeTag: string, databaseName: string): databaseNotificationsSummaryItem {
-        return databaseNotificationsSummaryItem.noData(nodeTag, databaseName);
+    protected createNoDataItem(nodeTag: string, databaseName: string): databaseNotificationsItem {
+        return databaseNotificationsItem.noData(nodeTag, databaseName);
     }
 
-    protected mapItems(nodeTag: string, data: DatabaseNotificationsSummaryPayload): databaseNotificationsSummaryItem[] {
-        return data.NotificationsSummary.map((x) => new databaseNotificationsSummaryItem(nodeTag, x));
+    protected mapItems(nodeTag: string, data: DatabaseNotificationsSummaryPayload): databaseNotificationsItem[] {
+        return data.NotificationsSummary.map((x) => new databaseNotificationsItem(nodeTag, x));
     }
 
-    protected manageItems(items: databaseNotificationsSummaryItem[]): databaseNotificationsSummaryItem[] {
+    protected manageItems(items: databaseNotificationsItem[]): databaseNotificationsItem[] {
         if (items.length) {
             let commonItem;
             let prevDbName = "";
@@ -161,7 +161,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
                 const currentDbName = item.database;
 
                 if (currentDbName !== prevDbName) {
-                    commonItem = databaseNotificationsSummaryItem.commonData(item);
+                    commonItem = databaseNotificationsItem.commonData(item);
                     items.splice(i++, 0, commonItem);
                     prevDbName = currentDbName;
                 }
@@ -171,7 +171,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         return items;
     }
 
-    protected applyPerDatabaseStripes(items: databaseNotificationsSummaryItem[]) {
+    protected applyPerDatabaseStripes(items: databaseNotificationsItem[]) {
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
 
@@ -187,18 +187,18 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
     protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         const columns: virtualColumn[] = [
-            new textColumn<databaseNotificationsSummaryItem>(
+            new textColumn<databaseNotificationsItem>(
                 grid,
                 (x) => (x.hideDatabaseName ? "" : DatabaseUtils.default.formatName(x.database)),
                 "Database",
                 "40%"
             ),
-            new nodeTagColumn<databaseNotificationsSummaryItem>(grid, (item) => this.prepareUrl(item, "Documents View")),
+            new nodeTagColumn<databaseNotificationsItem>(grid, (item) => this.prepareUrl(item, "Documents View")),
         ];
 
         if (this.filteredNotifications().includes("Alerts")) {
             columns.push(
-                new actionColumn<databaseNotificationsSummaryItem>(
+                new actionColumn<databaseNotificationsItem>(
                     grid,
                     (item) => this.showAlertsDetails(item),
                     "Alerts",
@@ -215,7 +215,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
 
         if (this.filteredNotifications().includes("Performance Hints")) {
             columns.push(
-                new actionColumn<databaseNotificationsSummaryItem>(
+                new actionColumn<databaseNotificationsItem>(
                     grid,
                     (item) => this.showPerformanceHintsDetails(item),
                     "Perf. hints",
@@ -232,7 +232,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         return columns;
     }
 
-    private showAlertsDetails(details: databaseNotificationsSummaryItem) {
+    private showAlertsDetails(details: databaseNotificationsItem) {
         this.alertsModal({
             component: SummaryAlertsModal,
             props: {
@@ -245,7 +245,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         });
     }
 
-    private showPerformanceHintsDetails(details: databaseNotificationsSummaryItem) {
+    private showPerformanceHintsDetails(details: databaseNotificationsItem) {
         this.performanceHintsModal({
             component: SummaryPerformanceHintsModal,
             props: {
