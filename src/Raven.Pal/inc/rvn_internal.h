@@ -17,3 +17,6 @@ EXPORT int32_t rvn_get_pal_ver();
 
 PRIVATE
 int io_ring_setup_successful(void);
+
+PRIVATE
+int64_t nearest_size_to_allocation_granularity(int64_t size);
