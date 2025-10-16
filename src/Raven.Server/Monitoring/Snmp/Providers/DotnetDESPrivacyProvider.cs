@@ -30,7 +30,6 @@ namespace Raven.Server.Monitoring.Snmp.Providers;
 /// Privacy provider for DES.
 /// </summary>
 /// <remarks>Ported from SNMP#NET PrivacyDES class.</remarks>
-[Obsolete("DES is no longer secure. Please use a more secure provider.")]
 public sealed class DotnetDESPrivacyProvider : IPrivacyProvider
 {
     private readonly SaltGenerator _salt = new();
@@ -91,7 +90,7 @@ public sealed class DotnetDESPrivacyProvider : IPrivacyProvider
     /// Engine IDs.
     /// </summary>
     /// <remarks>This is an optional field, and only used by TRAP v2 authentication.</remarks>
-    public ICollection<OctetString>? EngineIds { get; set; }
+    public ICollection<OctetString> EngineIds { get; set; }
 
     /// <summary>
     /// Encrypt scoped PDU using DES encryption protocol

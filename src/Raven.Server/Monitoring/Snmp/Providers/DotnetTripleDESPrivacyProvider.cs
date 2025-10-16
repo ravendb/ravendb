@@ -33,7 +33,6 @@ namespace Raven.Server.Monitoring.Snmp.Providers;
 /// <p>Ported from SNMP#NET Privacy3DES class.</p>
 /// <p>Originally defined in a draft https://datatracker.ietf.org/doc/html/draft-reeder-snmpv3-usm-3desede-00</p>
 /// </remarks>
-[Obsolete("3DES is no longer secure. Please use a more secure provider.")]
 public sealed class DotnetTripleDESPrivacyProvider : IPrivacyProvider
 {
 #if NET6_0_OR_GREATER
@@ -78,7 +77,7 @@ public sealed class DotnetTripleDESPrivacyProvider : IPrivacyProvider
     /// Engine IDs.
     /// </summary>
     /// <remarks>This is an optional field, and only used by TRAP v2 authentication.</remarks>
-    public ICollection<OctetString>? EngineIds { get; set; }
+    public ICollection<OctetString> EngineIds { get; set; }
 
     /// <summary>
     /// Encrypt scoped PDU using DES encryption protocol
