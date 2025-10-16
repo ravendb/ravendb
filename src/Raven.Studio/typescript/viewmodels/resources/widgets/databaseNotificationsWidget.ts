@@ -202,7 +202,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
                     grid,
                     (item) => this.showAlertsDetails(item),
                     "Alerts",
-                    (item) => `<i class="icon-warning"></i> ${item.alertsCount.toLocaleString()}`,
+                    (item) => item.alertsCount ? `<i class="icon-warning"></i> ${item.alertsCount.toLocaleString()}` : "",
                     "20%",
                     {
                         title: () => "Show alerts",
@@ -219,7 +219,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
                     grid,
                     (item) => this.showPerformanceHintsDetails(item),
                     "Perf. hints",
-                    (x) => `<i class="icon-performance"></i> ${x.performanceHintsCount.toLocaleString()}`,
+                    (x) => x.performanceHintsCount ? `<i class="icon-performance"></i> ${x.performanceHintsCount.toLocaleString()}` : "",
                     "20%",
                     {
                         title: () => "Show performance hints",
