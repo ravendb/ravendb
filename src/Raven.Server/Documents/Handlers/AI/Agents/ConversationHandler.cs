@@ -224,7 +224,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 int newPromptTokensCount = aiUsage.PromptTokens;
 
                 int lastRemovableIndex = 0;
-                int messagesSinceLastUsage = 0;
 
                 var messages = _document.Messages;
                 int lastIndex = messages.Count - 1;
@@ -243,16 +242,14 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                         continue;
                     }
 
-
-
                     if (i < lastIndex && nextMessageIsUser)
                         lastRemovableIndex = i;
 
-                    if (usageJson.TryGet(nameof(aiUsage.TotalTokens), out int removedMessageTotalTokens))
-                    {
-                        newTotalTokensCount -= removedMessageTotalTokens;
-                        newPromptTokensCount -= removedMessageTotalTokens;
-                    }
+                    if (!usageJson.TryGet(nameof(aiUsage.TotalTokens), out int removedMessageTotalTokens)) 
+                        continue;
+
+                    newTotalTokensCount -= removedMessageTotalTokens;
+                    newPromptTokensCount -= removedMessageTotalTokens;
                 }
 
                 int maxRemovable = lastRemovableIndex;
