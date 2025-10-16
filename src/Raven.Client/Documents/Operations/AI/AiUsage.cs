@@ -25,6 +25,14 @@ public class AiUsage : IDynamicJsonValueConvertible
             if (promptDetails.TryGet("cached_tokens", out int cachedTokens))
                 CachedTokens += cachedTokens;
         }
+
+        if ((json.TryGet("completion_tokens_details", out BlittableJsonReaderObject completionTokensDetails) || completionTokensDetails == null) == false)
+            return;
+        if ((completionTokensDetails != null && completionTokensDetails.TryGet("reasoning_tokens", out int reasoningTokens)) == false)
+            return;
+        
+        CompletionTokens -= reasoningTokens;
+        TotalTokens -= reasoningTokens;
     }
 
     public DynamicJsonValue ToJson()
@@ -42,7 +50,7 @@ public class AiUsage : IDynamicJsonValueConvertible
     {
         return new AiUsage
         {
-            PromptTokens = usage2.PromptTokens - usage1.PromptTokens,
+            PromptTokens = usage2.PromptTokens - usage1.TotalTokens,
             TotalTokens = usage2.TotalTokens - usage1.TotalTokens,
             CachedTokens = usage2.CachedTokens, // we don't want to subtract cached tokens, as they are only for the last response
             CompletionTokens = usage2.CompletionTokens, // we don't want to subtract completion tokens, as they are only for the last response
