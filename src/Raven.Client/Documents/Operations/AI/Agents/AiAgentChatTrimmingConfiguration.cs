@@ -168,32 +168,32 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     }
 
     /// <summary>
-    /// Configuration for truncating the AI chat history based on message count.
+    /// Configuration for truncating the AI chat history based on tokens count.
     /// </summary>
     /// <remarks>
-    /// When the number of chat messages exceeds the specified maximum, the oldest messages are removed
+    /// When the number of chat tokens exceeds the specified maximum, the oldest tokens are removed
     /// and optionally archived into a separate history section.
     /// </remarks>
     public class AiAgentTruncateChat
     {
-        private const int DefaultMessagesLengthBeforeTruncate = 500;
+        private const int DefaultMessagesTokensBeforeTruncate = 500;
 
         /// <summary>
-        /// Maximum number of messages allowed before delete the old messages
+        /// Maximum number of tokens allowed before delete the old messages
         /// </summary>
-        public int MessagesLengthBeforeTruncate { get; set; } = DefaultMessagesLengthBeforeTruncate;
+        public int MessagesTokensBeforeTruncate { get; set; } = DefaultMessagesTokensBeforeTruncate;
 
         /// <summary>
-        /// Number of messages after delete the old messages
+        /// Number of tokens after delete the old messages
         /// </summary>
-        public int MessagesLengthAfterTruncate { get; set; } = DefaultMessagesLengthBeforeTruncate / 2;
+        public int MessagesTokensAfterTruncate { get; set; } = DefaultMessagesTokensBeforeTruncate / 2;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(MessagesLengthBeforeTruncate)] = MessagesLengthBeforeTruncate,
-                [nameof(MessagesLengthAfterTruncate)] = MessagesLengthAfterTruncate
+                [nameof(MessagesTokensBeforeTruncate)] = MessagesTokensBeforeTruncate,
+                [nameof(MessagesTokensAfterTruncate)] = MessagesTokensAfterTruncate
             };
         }
     }

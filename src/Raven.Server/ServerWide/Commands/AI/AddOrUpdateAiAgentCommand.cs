@@ -111,19 +111,19 @@ namespace Raven.Server.ServerWide.Commands.AI
 
                 if (reduction.Truncate != null)
                 {
-                    var after = reduction.Truncate.MessagesLengthAfterTruncate;
-                    var before = reduction.Truncate.MessagesLengthBeforeTruncate;
+                    var after = reduction.Truncate.MessagesTokensAfterTruncate;
+                    var before = reduction.Truncate.MessagesTokensBeforeTruncate;
                     if (after > before)
                         throw new InvalidOperationException(
-                            $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be less of equal then {nameof(reduction.Truncate.MessagesLengthBeforeTruncate)} ({before})");
+                            $"{nameof(reduction.Truncate.MessagesTokensAfterTruncate)} ({after}) must be less of equal then {nameof(reduction.Truncate.MessagesTokensBeforeTruncate)} ({before})");
 
                     if (after <= 0)
                         throw new InvalidOperationException(
-                            $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be greater then 0");
+                            $"{nameof(reduction.Truncate.MessagesTokensAfterTruncate)} ({after}) must be greater then 0");
 
                     if (before <= 0)
                         throw new InvalidOperationException(
-                            $"{nameof(reduction.Truncate.MessagesLengthBeforeTruncate)} ({before}) must be greater then 0");
+                            $"{nameof(reduction.Truncate.MessagesTokensBeforeTruncate)} ({before}) must be greater then 0");
                 }
 
                 if (reduction.Tokens != null)

@@ -217,16 +217,59 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         if (reduction.Truncate != null)
         {
-            if (_document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
+            if (aiUsage.TotalTokens > reduction.Truncate.MessagesTokensBeforeTruncate)
             {
-                var truncateCount = _document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
-                truncateCount = int.Min(truncateCount, _document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
-                if (truncateCount > 0)
+                int truncateCount = 0;
+                int newTotalTokensCount = aiUsage.TotalTokens;
+                int newPromptTokensCount = aiUsage.PromptTokens;
+
+                int lastRemovableIndex = 0;
+                int messagesSinceLastUsage = 0;
+
+                var messages = _document.Messages;
+                int lastIndex = messages.Count - 1;
+                for (int i = 1; i < messages.Count; i++)
                 {
-                    var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
-                    _document.Messages.RemoveRange(1, truncateCount);
-                    return chatBefore;
+                    bool nextMessageIsUser = i < lastIndex && messages[i + 1].TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) && role == "user";
+
+                    if (newTotalTokensCount <= reduction.Truncate.MessagesTokensAfterTruncate && nextMessageIsUser)
+                        break;
+
+                    truncateCount++;
+
+                    var msg = messages[i];
+                    if (msg.TryGet("usage", out BlittableJsonReaderObject usageJson) == false)
+                    {
+                        continue;
+                    }
+
+
+
+                    if (i < lastIndex && nextMessageIsUser)
+                        lastRemovableIndex = i;
+
+                    if (usageJson.TryGet(nameof(aiUsage.TotalTokens), out int removedMessageTotalTokens))
+                    {
+                        newTotalTokensCount -= removedMessageTotalTokens;
+                        newPromptTokensCount -= removedMessageTotalTokens;
+                    }
                 }
+
+                int maxRemovable = lastRemovableIndex;
+
+                truncateCount = Math.Min(truncateCount, maxRemovable); // prevent out-of-bounds
+
+                if (truncateCount <= 0) 
+                    return null;
+                var chatBefore = reduction.History == null
+                    ? null
+                    : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
+
+                _document.Messages.RemoveRange(1, truncateCount);
+                aiUsage.TotalTokens = newTotalTokensCount;
+                aiUsage.PromptTokens = newPromptTokensCount;
+
+                return chatBefore;
             }
         }
         else if (reduction.Tokens != null)

@@ -42,7 +42,7 @@ public class AiUsage : IDynamicJsonValueConvertible
     {
         return new AiUsage
         {
-            PromptTokens = usage2.PromptTokens - usage1.PromptTokens,
+            PromptTokens = usage2.PromptTokens - usage1.TotalTokens,
             TotalTokens = usage2.TotalTokens - usage1.TotalTokens,
             CachedTokens = usage2.CachedTokens, // we don't want to subtract cached tokens, as they are only for the last response
             CompletionTokens = usage2.CompletionTokens, // we don't want to subtract completion tokens, as they are only for the last response

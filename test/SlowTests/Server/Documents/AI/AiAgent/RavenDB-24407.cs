@@ -53,8 +53,8 @@ public class RavenDB_24407 : RavenTestBase
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true], Skip = "RavenDB-24806")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false], Skip = "RavenDB-24806")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
     public async Task CanResumeConversationWithSummarization(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
         using var store = GetDocumentStore(options);
@@ -126,8 +126,8 @@ public class RavenDB_24407 : RavenTestBase
             {
                 Truncate = new AiAgentTruncateChat()
                 {
-                    MessagesLengthBeforeTruncate = 2,
-                    MessagesLengthAfterTruncate = 2
+                    MessagesTokensBeforeTruncate = 1,
+                    MessagesTokensAfterTruncate = 1
                 }
             };
         }
@@ -144,7 +144,7 @@ public class RavenDB_24407 : RavenTestBase
         Assert.NotNull(r.Answer);
 
         chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(summarization ? 3 : 2, chatDoc.Messages.Count);
+        Assert.Equal(summarization ? 3 : 5, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
 
         if (withHistory)
@@ -169,7 +169,7 @@ public class RavenDB_24407 : RavenTestBase
         Assert.NotNull(r.Answer);
 
         chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(summarization ? 3 : 2, chatDoc.Messages.Count);
+        Assert.Equal(summarization ? 3 : 5, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
 
         // resume
@@ -218,8 +218,8 @@ public class RavenDB_24407 : RavenTestBase
             {
                 Truncate = new AiAgentTruncateChat()
                 {
-                    MessagesLengthBeforeTruncate = 2,
-                    MessagesLengthAfterTruncate = 2
+                    MessagesTokensBeforeTruncate = 1,
+                    MessagesTokensAfterTruncate = 1
                 }
             };
         }
@@ -268,21 +268,24 @@ public class RavenDB_24407 : RavenTestBase
 
         r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
+
         // can be answer *OR* another tool call
         chatDoc = await GetChat(store, chat.Id);
+
         if (r.Status == AiConversationResult.ActionRequired)
         {
             // if it is 'Tool Requests' is shouldn't be summarized
-            Assert.True(2 < chatDoc.Messages.Count);
+            Assert.True((summarization? 2 : 5) < chatDoc.Messages.Count);
             Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
             Assert.Equal(0, chatDoc.LinkedConversations.Count);
         }
         else
         {
             // if it is 'Answer' is should be summarized
-            Assert.Equal(2, chatDoc.Messages.Count);
+            Assert.Equal((summarization ? 2 : 5), chatDoc.Messages.Count);
             Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-            Assert.Equal(withHistory ? 1 : 0, chatDoc.LinkedConversations.Count);
+
+            Assert.Equal(withHistory ? (summarization ? 1 : 0) : 0, chatDoc.LinkedConversations.Count);
         }
     }
 
