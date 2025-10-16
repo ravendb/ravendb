@@ -80,3 +80,9 @@ uint64_t nextPowerOf2(uint64_t n)
 
     return n + 1;
 }
+
+PRIVATE
+int64_t nearest_size_to_allocation_granularity(int64_t size)
+{
+    return (size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1);
+}

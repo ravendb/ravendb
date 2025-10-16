@@ -169,6 +169,8 @@ rvn_writer rvn_get_writer(void *handle)
     case rvn_write_mode_io_ring:
         return rvn_write_io_ring;
     case rvn_write_mode_mmap:
+        if (handle_ptr->global_state->open_flags & OPEN_FILE_DO_NOT_MAP)
+            return rvn_write_mmap32;
         return rvn_write_invalid_setup;
     default:
         return io_ring_setup_successful() ? rvn_write_io_ring : rvn_write_vectored_file_io;
