@@ -13,7 +13,7 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected ValidateSchemaValidationOperation.Parameters Parameters;
+    protected ValidateSchemaOperation.Parameters Parameters;
 
     protected AbstractSchemaValidationHandlerProcessorForValidate([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
@@ -61,7 +61,7 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
         if (Parameters.MaxDocumentsToValidate is <= 0)
             errors.Add($"Parameter '{nameof(Parameters.MaxDocumentsToValidate)}' must be greater than 0.");
 
-        throw new BadRequestException("Invalid schema validation parameters:" + string.Join(", ", errors));
+        throw new BadRequestException("Invalid schema validation parameters:\n" + string.Join("\n", errors));;
     }
 
     protected abstract void StartValidationOperation(long operationId, OperationCancelToken token);

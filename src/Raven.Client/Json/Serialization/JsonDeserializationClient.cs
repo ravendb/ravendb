@@ -202,7 +202,7 @@ namespace Raven.Client.Json.Serialization
         
         internal static readonly Func<BlittableJsonReaderObject, ConfigureSchemaValidationOperationResult> ConfigureSchemaValidationOperationResult = GenerateJsonDeserializationRoutine<ConfigureSchemaValidationOperationResult>();
         
-        internal static readonly Func<BlittableJsonReaderObject, StartValidateSchemaValidationOperationResult> StartValidateSchemaValidationOperationResult = GenerateJsonDeserializationRoutine<StartValidateSchemaValidationOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, StartValidateSchemaOperationResult> StartValidateSchemaOperationResult = GenerateJsonDeserializationRoutine<StartValidateSchemaOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, DocumentCompressionConfigurationResult> DocumentCompressionConfigurationOperationResult = GenerateJsonDeserializationRoutine<DocumentCompressionConfigurationResult>();
 

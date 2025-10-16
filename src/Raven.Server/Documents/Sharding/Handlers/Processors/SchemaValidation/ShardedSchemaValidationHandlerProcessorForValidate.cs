@@ -18,19 +18,19 @@ internal sealed class ShardedSchemaValidationHandlerProcessorForValidate : Abstr
 
     protected override void StartValidationOperation(long operationId, OperationCancelToken token)
     {
-        if (Parameters.Etag != null)
-            throw new BadRequestException($"Parameter '{nameof(Parameters.Etag)}' is not supported for schema validation on a sharded database.");
+        if (Parameters.StartEtag != null)
+            throw new BadRequestException($"Parameter '{nameof(Parameters.StartEtag)}' is not supported for schema validation on a sharded database.");
         
         Parameters.MaxErrorMessages = Parameters.MaxErrorMessages.HasValue 
             ? Math.Max(1, Parameters.MaxErrorMessages.Value / RequestHandler.DatabaseContext.ShardCount) 
             : null;
         
-        _ = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartValidateSchemaValidationOperationResult>, ValidateSchemaValidationResult, ValidateSchemaValidationProgress>(
+        _ = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartValidateSchemaOperationResult>, ValidateSchemaResult, ValidateSchemaValidationProgress>(
                 operationId,
                 OperationType.ValidateSchemaValidation,
                 $"Schema validation for collection '{Parameters.Collection}' '{RequestHandler.DatabaseName}'",
                 detailedDescription: null,
-                commandFactory: (_, _) => new ValidateSchemaValidationOperation.ValidateSchemaValidationCommand(RequestHandler.ShardExecutor.Conventions, Parameters, operationId),
+                commandFactory: (_, _) => new ValidateSchemaOperation.ValidateSchemaCommand(RequestHandler.ShardExecutor.Conventions, Parameters, operationId),
                 token)
             .ContinueWith(_ => { token.Dispose(); });
     }

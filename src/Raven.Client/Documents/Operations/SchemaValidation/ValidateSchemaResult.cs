@@ -37,7 +37,7 @@ public class ValidateSchemaValidationProgress : IOperationProgress
     }
 }
 
-public sealed class ValidateSchemaValidationResult : ValidateSchemaValidationProgress, IOperationResult
+public sealed class ValidateSchemaResult : ValidateSchemaValidationProgress, IOperationResult
 {
     public Dictionary<string, string> Errors { get; set; }
     
@@ -65,7 +65,7 @@ public sealed class ValidateSchemaValidationResult : ValidateSchemaValidationPro
 
     void IOperationResult.MergeWith(IOperationResult result)
     {
-        if (result is not ValidateSchemaValidationResult r)
+        if (result is not ValidateSchemaResult r)
             return;
         ErrorCount += r.ErrorCount;
         ValidatedCount += r.ValidatedCount;

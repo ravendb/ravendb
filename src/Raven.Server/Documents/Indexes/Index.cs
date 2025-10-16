@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Indexes
         public bool IsOnBeforeExecuteIndexing { get; private set; }
 
         public TestIndexRun TestRun;
-        internal (SchemaValidator validator, IDisposable retrunCtx) _schemaValidator;
+        internal (SchemaValidator validator, IDisposable returnCtx) _schemaValidator;
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Indexes
 
             exceptionAggregator.Execute(() => { _mre?.Dispose(); });
             
-            exceptionAggregator.Execute(() =>_schemaValidator.retrunCtx?.Dispose());
+            exceptionAggregator.Execute(() =>_schemaValidator.returnCtx?.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -875,7 +875,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (Definition.SchemaValidation != null)
                 {
-                    _schemaValidator.retrunCtx = _contextPool.AllocateOperationContext(out TransactionOperationContext context);
+                    _schemaValidator.returnCtx = _contextPool.AllocateOperationContext(out TransactionOperationContext context);
                     var blittable = context.Sync.ReadForMemory(Definition.SchemaValidation, "schema-validation");
                     
                     _schemaValidator.validator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, Definition.SchemaValidation);

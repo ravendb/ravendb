@@ -396,7 +396,7 @@ namespace Raven.Server.Json
 
             public static readonly Func<BlittableJsonReaderObject, AdoptOrphanedRevisionsOperation.Parameters> AdoptOrphanedRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<AdoptOrphanedRevisionsOperation.Parameters>();
             
-            public static readonly Func<BlittableJsonReaderObject, ValidateSchemaValidationOperation.Parameters> ValidateSchemaValidationOperationParameters = GenerateJsonDeserializationRoutine<ValidateSchemaValidationOperation.Parameters>();
+            public static readonly Func<BlittableJsonReaderObject, ValidateSchemaOperation.Parameters> ValidateSchemaValidationOperationParameters = GenerateJsonDeserializationRoutine<ValidateSchemaOperation.Parameters>();
         }
     }
 }

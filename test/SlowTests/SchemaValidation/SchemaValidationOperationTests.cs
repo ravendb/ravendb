@@ -43,12 +43,12 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             await session.SaveChangesAsync();
         }
         
-        var operation = await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
+        var operation = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs"
         }));
-        var result = await operation.WaitForCompletionAsync<ValidateSchemaValidationResult>(TimeSpan.FromMinutes(1));
+        var result = await operation.WaitForCompletionAsync<ValidateSchemaResult>(TimeSpan.FromMinutes(1));
         Assert.Equal(1, result.ErrorCount);
         Assert.Equal(2, result.ValidatedCount);
         Assert.Equal(1, result.Errors.Count);
@@ -83,7 +83,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             }
         }
         
-        var operation = await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
+        var operation = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
@@ -91,7 +91,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             
         }));
         
-        var result = await operation.WaitForCompletionAsync<ValidateSchemaValidationResult>(TimeSpan.FromMinutes(1));
+        var result = await operation.WaitForCompletionAsync<ValidateSchemaResult>(TimeSpan.FromMinutes(1));
         Assert.Equal(errorDocumentCount, result.ErrorCount);
         Assert.Equal(errorDocumentCount, result.ValidatedCount);
 
@@ -133,26 +133,26 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             await session.StoreAsync(new TestObj { Prop = "0123456789ab"}, id2);
         }
 
-        var operation1 = await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
+        var operation1 = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
             MaxDocumentsToValidate = 1
         }));
 
-        var result1 = await operation1.WaitForCompletionAsync<ValidateSchemaValidationResult>(TimeSpan.FromMinutes(1));
+        var result1 = await operation1.WaitForCompletionAsync<ValidateSchemaResult>(TimeSpan.FromMinutes(1));
         Assert.Equal(id1, result1.Errors.First().Key);
         Assert.StartsWith("The length of the value '0123456789a' at 'Prop' should not exceed 10, but its actual length is 11.", result1.Errors.First().Value);
 
-        var operation2 = await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
+        var operation2 = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
-            Etag = result1.LastEtag + 1
+            StartEtag = result1.LastEtag + 1
 
         }));
 
-        var result2 = await operation2.WaitForCompletionAsync<ValidateSchemaValidationResult>(TimeSpan.FromMinutes(1));
+        var result2 = await operation2.WaitForCompletionAsync<ValidateSchemaResult>(TimeSpan.FromMinutes(1));
         Assert.Equal(id2, result2.Errors.First().Key);
         Assert.StartsWith("The length of the value '0123456789ab' at 'Prop' should not exceed 10, but its actual length is 12.", result2.Errors.First().Value);
     }
@@ -175,11 +175,11 @@ public class SchemaValidationOperationTests : ReplicationTestBase
         
         var e = await Assert.ThrowsAnyAsync<BadRequestException>(async () =>
         {
-            await store.Maintenance.SendAsync(new ValidateSchemaValidationOperation(new ValidateSchemaValidationOperation.Parameters
+            await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
             {
                 SchemaDefinition = schemaDefinition,
                 Collection = "TestObjs",
-                Etag = 1
+                StartEtag = 1
             }));
         });
         Assert.Contains("Parameter 'Etag' is not supported for schema validation on a sharded database.", e.Message);

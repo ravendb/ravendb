@@ -35,7 +35,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
     {
         var maxErrorsMsg = Parameters.MaxErrorMessages ?? 1024;
         var maxToValidate = Parameters.MaxDocumentsToValidate ?? long.MaxValue;
-        var etag = Parameters.Etag ?? 0L;
+        var etag = Parameters.StartEtag ?? 0L;
         
         var maxReadTrxTime = TimeSpan.FromSeconds(16);
         
@@ -108,7 +108,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
                         break;
                 }
             }
-            return Task.FromResult<IOperationResult>(new ValidateSchemaValidationResult
+            return Task.FromResult<IOperationResult>(new ValidateSchemaResult
             {
                 Errors = errors,
                 ErrorCount = actualErrorCount,
