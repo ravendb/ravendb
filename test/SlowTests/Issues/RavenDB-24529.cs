@@ -30,7 +30,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             .AddBinding(0, "id()", analyzer)
             .AddBinding(1, "Int", analyzer)
             .Build();
-        
+
         long doc1Id, doc2Id, doc3Id;
         using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
         {
@@ -63,7 +63,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
 
             writer.Commit();
         }
-        
+
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
             Span<long> ids = stackalloc long[16];
@@ -75,11 +75,11 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             var reader = indexSearcher.GetEntryTermsReader(doc1Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
@@ -93,10 +93,10 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"));
                 builder.EndWriting();
             }
-            
+
             writer.Commit();
         }
-        
+
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
             Span<long> ids = stackalloc long[16];
@@ -108,17 +108,17 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             var reader = indexSearcher.GetEntryTermsReader(doc1Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.False(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
     public void CanMixNumericalAndTextualValuesWithExactlyTheSameTextualRepresentation()
     {
@@ -170,11 +170,11 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             var reader = indexSearcher.GetEntryTermsReader(doc1Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.False(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
@@ -185,30 +185,30 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             Assert.True(writer.TryDeleteEntry("doc1"));
             writer.Commit();
         }
-        
+
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
             Span<long> ids = stackalloc long[16];
 
             Assert.Equal(2, indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, "1").Fill(ids));
             Assert.DoesNotContain(doc1Id, ids[..2].ToArray());
-            
+
             Assert.Equal(2, indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, 1L).Fill(ids));
             Assert.DoesNotContain(doc1Id, ids[..2].ToArray());
 
             Page p = default;
             var rootPageForInt = indexSearcher.GetRootPageByFieldName(mapping.GetByFieldId(1).Metadata.FieldName);
-           
+
             var reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
-            
+
             reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
             Assert.True(reader.FindNext(rootPageForInt));
             Assert.True(reader.HasNumeric);
         }
     }
-    
+
 
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
     public void CanMixNumericalAndTextualValuesWithExactlyTheSameTextualRepresentationBigScenario()
@@ -219,7 +219,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             .AddBinding(0, "id()", analyzer)
             .AddBinding(1, "Int", analyzer)
             .Build();
-        
+
         var commands = ReadAllLines($"RavenDB_24529.RavenDB_24529.replay").ToList();
         IndexWriter writer = null;
         IndexWriter.IndexEntryBuilder builder = null;
@@ -383,7 +383,83 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             }
         }
     }
-    
+
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
+    public void ReadSmallPostingListAndUpdate()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        var analyzer = Analyzer.CreateLowercaseAnalyzer(bsc);
+        using var mapping = IndexFieldsMappingBuilder.CreateForWriter(isDynamic: false)
+            .AddBinding(0, "id()", analyzer)
+            .AddBinding(1, "Int", analyzer)
+            .Build();
+
+        var allNumerical = new List<long>();
+
+        using (var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All))
+        {
+            using (var builder = indexWriter.Index("doc1"))
+            {
+                builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc1"));
+                builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"));
+                builder.EndWriting();
+            }
+
+            for (int i = 2; i < 266; ++i)
+            {
+                using (var builder = indexWriter.Index($"doc{i}"))
+                {
+                    builder.Write(0, "id()", Encodings.Utf8.GetBytes($"doc{i}"));
+                    builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1L, 1D);
+                    allNumerical.Add(builder.EntryId);
+                    builder.EndWriting();
+                }
+            }
+
+            indexWriter.Commit();
+        }
+
+        using (var indexSearcher = new IndexSearcher(Env, mapping))
+        {
+            Span<long> ids = new long[300];
+            var tm = indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, 1L);
+            int total = 0;
+            while (tm.Fill(ids[total..]) is var read and > 0)
+                total += read;
+
+            allNumerical.Sort();
+            ids[..total].Sort();
+            Assert.True(ids[..total].SequenceEqual(CollectionsMarshal.AsSpan(allNumerical)));
+        }
+
+        using (var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All))
+        {
+            using (var builder = indexWriter.Update("doc1"u8))
+            {
+                builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc1"));
+                builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1L, 1D);
+                allNumerical.Add(builder.EntryId);
+                builder.EndWriting();
+            }
+
+            indexWriter.Commit();
+        }
+
+        using (var indexSearcher = new IndexSearcher(Env, mapping))
+        {
+            Span<long> ids = new long[300];
+            var tm = indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, 1L);
+            int total = 0;
+            while (tm.Fill(ids[total..]) is var read and > 0)
+                total += read;
+
+            allNumerical.Sort();
+            ids[..total].Sort();
+            
+            Assert.True(ids[..total].SequenceEqual(CollectionsMarshal.AsSpan(allNumerical)));
+        }
+    }
+
     private static IEnumerable<string> ReadAllLines(string name)
     {
         using (var stream = typeof(RavenDB_24529).Assembly.GetManifestResourceStream("SlowTests.Data." + name))

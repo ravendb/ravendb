@@ -91,7 +91,6 @@ public partial class IndexWriter
 
         public void WriteNonExistingMarker(int fieldId, string path)
         {
-           //Console.WriteLine(nameof(WriteNonExistingMarker));
             var field = GetField(fieldId, path);
 
             if (field.ShouldIndex)
@@ -306,7 +305,6 @@ public partial class IndexWriter
 
         public void Write(int fieldId, string path, string value)
         {
-           //Console.WriteLine(nameof(Write) + $"(int fieldId, string path, string value)");
             using var _ = Slice.From(_parent._entriesAllocator, value, out var slice);
             Write(fieldId, path, slice);
         }
