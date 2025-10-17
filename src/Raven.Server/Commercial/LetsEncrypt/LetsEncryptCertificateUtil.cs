@@ -57,7 +57,7 @@ public sealed class LetsEncryptCertificateUtil
         string keyPem;
         var privateKey = cert.GetExportableRsaPrivateKey();
         if (privateKey != null)
-            keyPem = privateKey.ExportPkcs8PrivateKeyPem();
+            keyPem = privateKey.ExportRSAPrivateKeyPem();
         else
             throw new CryptographicException("No RSA private key found");
         
