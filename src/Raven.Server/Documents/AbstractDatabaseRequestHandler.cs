@@ -1,4 +1,5 @@
-﻿using Raven.Server.ServerWide;
+﻿using System;
+using Raven.Server.ServerWide;
 using Raven.Server.Web;
 ﻿using System.Threading.Tasks;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -39,8 +40,22 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
     public TOperationContext GetContextScopedToRequest()
     {
         if (_context == null)
+        {
             RegisterForDisposal(ContextPool.AllocateOperationContext(out _context));
+            RegisterForDisposal(new ContextCleanUp(this));
+        }
         
         return _context;
+    }
+
+    /// <summary>
+    /// Cleans up the context from the handler so that it's not misused. Just for assertion.
+    /// </summary>
+    private sealed class ContextCleanUp(AbstractDatabaseRequestHandler<TOperationContext> handler) : IDisposable
+    {
+        public void Dispose()
+        {
+            handler._context = null;
+        }
     }
 }
