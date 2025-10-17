@@ -81,7 +81,7 @@ internal abstract class
         else if (_method == HttpMethod.Post)
             parameters.Ids = _ids;
         else
-            throw new NotSupportedException($"Unhandled method type: {_method}");
+            return ValueTask.FromException(new NotSupportedException($"Unhandled method type: {_method}"));
 
         if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
             RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
