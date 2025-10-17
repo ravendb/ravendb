@@ -635,7 +635,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    private long GetRootPageByFieldName(Slice fieldName)
+    internal long GetRootPageByFieldName(Slice fieldName)
     {
         var it = _fieldsTree.Iterate(false);
         var result = _fieldsTree.Read(fieldName);

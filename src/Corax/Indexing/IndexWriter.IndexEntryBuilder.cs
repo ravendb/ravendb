@@ -86,15 +86,16 @@ public partial class IndexWriter
             }
 
             if (field.ShouldIndex)
-                ExactInsert(field, Constants.NullValueSlice);
+                ExactInsert(field, Constants.NullValueSlice, InserterMode.ExactInsert);
         }
 
         public void WriteNonExistingMarker(int fieldId, string path)
         {
+           //Console.WriteLine(nameof(WriteNonExistingMarker));
             var field = GetField(fieldId, path);
 
             if (field.ShouldIndex)
-                ExactInsert(field, Constants.NonExistingValueSlice);
+                ExactInsert(field, Constants.NonExistingValueSlice, InserterMode.ExactInsert);
         }
 
         private IndexedField GetField(int fieldId, string path)
@@ -110,7 +111,7 @@ public partial class IndexWriter
             if (field.Analyzer != null)
                 AnalyzeInsert(field, value);
             else
-                ExactInsert(field, value);
+                ExactInsert(field, value, InserterMode.ExactInsert);
         }
 
         public ReadOnlySpan<byte> AnalyzeSingleTerm(int fieldId, ReadOnlySpan<byte> value)
@@ -144,7 +145,7 @@ public partial class IndexWriter
                     _parent.ThrowInvalidTokenFoundOnBuffer(field, value, wordsBuffer, tokens, token);
 
                 var word = new Span<byte>(_parent._analyzersContext.EncodingBufferHandler, token.Offset, (int)token.Length);
-                ExactInsert(field, word);
+                ExactInsert(field, word, InserterMode.ExactInsert);
             }
         }
 
@@ -167,7 +168,7 @@ public partial class IndexWriter
             }
         }
 
-        ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value)
+        ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value, InserterMode inserterMode)
         {
             Debug.Assert(field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
             
@@ -189,7 +190,7 @@ public partial class IndexWriter
             }
 
             ref var term = ref field.Storage.GetAsRef(termLocation);
-            term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
+            term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1, inserterMode);
 
             // Creates a mapping for PhraseQuery
             if (field.FieldSupportsPhraseQuery)
@@ -254,10 +255,10 @@ public partial class IndexWriter
             }
 
             ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
-            doublesTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
+            doublesTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1, InserterMode.Numerical);
 
             ref var longsTerm = ref field.Storage.GetAsRef(longsTermsLocation);
-            longsTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1);
+            longsTerm.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1, InserterMode.Numerical);
         }
 
         private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
@@ -299,12 +300,13 @@ public partial class IndexWriter
                 }
 
                 if (field.ShouldIndex)
-                    ExactInsert(field, Constants.EmptyStringSlice);
+                    ExactInsert(field, Constants.EmptyStringSlice, InserterMode.ExactInsert);
             }
         }
 
         public void Write(int fieldId, string path, string value)
         {
+           //Console.WriteLine(nameof(Write) + $"(int fieldId, string path, string value)");
             using var _ = Slice.From(_parent._entriesAllocator, value, out var slice);
             Write(fieldId, path, slice);
         }
@@ -329,7 +331,7 @@ public partial class IndexWriter
 
             if (field.ShouldIndex)
             {
-                ref var term = ref ExactInsert(field, value);
+                ref var term = ref ExactInsert(field, value, InserterMode.Numerical);
                 term.Long = longValue;
                 term.Double = dblValue;
                 NumericInsert(field, longValue, dblValue);
@@ -350,7 +352,7 @@ public partial class IndexWriter
             var len = Encoding.UTF8.GetBytes(entry.Geohash, buffer.ToSpan());
             for (int i = 1; i <= len; ++i)
             {
-                ExactInsert(field, buffer.ToReadOnlySpan()[..i]);
+                ExactInsert(field, buffer.ToReadOnlySpan()[..i], InserterMode.ExactInsert);
             }
         }
 

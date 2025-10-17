@@ -587,7 +587,7 @@ namespace Corax.Indexing
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
                 scope.Dispose();
 
                 if (reader.HasNumeric == false)
@@ -601,7 +601,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -611,7 +611,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
             }
         }
 
@@ -626,7 +626,7 @@ namespace Corax.Indexing
             }
 
             ref var term = ref field.Storage.GetAsRef(termLocation);
-            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
+            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
         }
 
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
@@ -1308,7 +1308,10 @@ namespace Corax.Indexing
                 }
 
                 if (isIncluded == false)
-                    entries.Addition(_entriesAllocator, existingEntryId, -1, existingFrequency);
+                {
+                    // We are not processing recorded terms for this document because it already exists on the disk. We do not have to know the actual term type.
+                    entries.Addition(_entriesAllocator, existingEntryId, -1, existingFrequency, InserterMode.Ignore); 
+                }
             }
 
 
