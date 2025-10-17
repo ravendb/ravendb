@@ -43,8 +43,6 @@ internal abstract class
 
     private readonly HttpMethod _method;
 
-    protected readonly List<IDisposable> Disposables = new();
-
     protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
         if (method != HttpMethod.Get && method != HttpMethod.Post)
@@ -501,16 +499,6 @@ internal abstract class
         }
 
         return hs;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-
-        for (int i = Disposables.Count - 1; i >= 0; i--)
-        {
-            Disposables[i].Dispose();
-        }
     }
 
     public static async ValueTask<List<ReadOnlyMemory<char>>> GetIdsFromRequestBodyAsync(TOperationContext context, TRequestHandler requestHandler)

@@ -160,7 +160,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 
         var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, CancellationToken);
 
-        Disposables.Add(streams);
+        RegisterForDisposal(streams);
 
         IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> documents;
         if (startsWith != null)

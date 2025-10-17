@@ -73,7 +73,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (compareExchangeValues.Count > 0 || clusterWideTx)
         {
             includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(RequestHandler.Database, compareExchangeValues);
-            Disposables.Add(includeCompareExchangeValues);
+            RegisterForDisposal(includeCompareExchangeValues);
         }
 
         long lastModifiedIndex = RequestHandler.Database.ClusterWideTransactionIndexWaiter.LastIndex;
