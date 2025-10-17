@@ -59,9 +59,7 @@ internal abstract class
 
     protected abstract CancellationToken CancellationToken { get; }
 
-    public override ValueTask ExecuteAsync() => throw new NotImplementedException();
-    
-    public Task ExecuteAsTaskAsync()
+    public sealed override ValueTask ExecuteAsync()
     {
         // The reason behind this is to avoid awaiting execution in the handler and do it directly in the router code.
         // This reduces AsyncStateMachine size by avoiding creating state in the handler code.
@@ -134,7 +132,7 @@ internal abstract class
         if (getDocumentsAsync.IsCompletedSuccessfully)
         {
             HandleGetDocumentResult(getDocumentsAsync.Result, parameters, actionName, pageSize, sw);
-            return Task.CompletedTask;
+            return ValueTask.CompletedTask;
         }
             
         // Slow async path requires careful scope considerations that are delegated with RegisterForDisposal and GetOrLeaseScopedOperationContext
@@ -159,7 +157,7 @@ internal abstract class
         }
     }
 
-    private async Task HandleGetDocumentResultAsync(ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> responseWriteStats,
+    private async ValueTask HandleGetDocumentResultAsync(ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> responseWriteStats,
         QueryStringParameters parameters, string actionName, int pageSize,
         Stopwatch sw)
     {

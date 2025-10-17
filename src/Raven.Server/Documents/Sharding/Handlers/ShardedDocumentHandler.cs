@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "GET")]
         public Task Get()
         {
-            return new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsTaskAsync();
+            return new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsync().AsTask();
         }
 
         [RavenShardedAction("/databases/*/docs", "POST")]
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
             TransactionOperationContext context = GetContextScopedToRequest();
             List<ReadOnlyMemory<char>> ids = await ShardedDocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this);
-            await new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this, ids).ExecuteAsTaskAsync();
+            await new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this, ids).ExecuteAsync().AsTask();
         }
 
         [RavenShardedAction("/databases/*/docs", "DELETE")]
