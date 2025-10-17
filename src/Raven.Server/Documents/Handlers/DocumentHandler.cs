@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
@@ -44,7 +45,8 @@ namespace Raven.Server.Documents.Handlers
         {
             // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
             DocumentsOperationContext context = GetContextScopedToRequest();
-            await new DocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync(await DocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this));
+            List<ReadOnlyMemory<char>> ids = await DocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this);
+            await new DocumentHandlerProcessorForGet(HttpMethod.Post, this, ids).ExecuteAsTaskAsync();
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]

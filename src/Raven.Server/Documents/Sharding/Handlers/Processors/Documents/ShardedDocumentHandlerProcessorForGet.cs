@@ -27,7 +27,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 {
     private readonly OperationCancelToken _operationCancelToken;
 
-    public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler) : base(method, requestHandler)
+    public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(method, requestHandler, ids)
     {
         _operationCancelToken = requestHandler.CreateHttpRequestBoundOperationToken();
     }

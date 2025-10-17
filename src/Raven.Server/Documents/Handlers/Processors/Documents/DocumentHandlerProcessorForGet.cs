@@ -26,7 +26,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 {
     private readonly OperationCancelToken _cts;
 
-    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler) : base(method, requestHandler)
+    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(method, requestHandler, ids)
     {
         _cts = RequestHandler.CreateHttpRequestBoundOperationToken();
     }

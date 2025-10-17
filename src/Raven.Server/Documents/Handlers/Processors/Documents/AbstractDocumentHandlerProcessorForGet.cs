@@ -43,12 +43,16 @@ internal abstract class
 
     private readonly HttpMethod _method;
 
-    protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    [CanBeNull]
+    private readonly List<ReadOnlyMemory<char>> _ids;
+
+    protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(requestHandler)
     {
         if (method != HttpMethod.Get && method != HttpMethod.Post)
             throw new InvalidOperationException($"The processor is supposed to handle GET and POST methods while '{method}' was specified");
 
         _method = method;
+        _ids = ids;
     }
 
     protected abstract bool SupportsShowingRequestInTrafficWatch { get; }
@@ -57,7 +61,7 @@ internal abstract class
 
     public override ValueTask ExecuteAsync() => throw new NotImplementedException();
     
-    public Task ExecuteAsTaskAsync([CanBeNull] List<ReadOnlyMemory<char>> ids = null)
+    public Task ExecuteAsTaskAsync()
     {
         // The reason behind this is to avoid awaiting execution in the handler and do it directly in the router code.
         // This reduces AsyncStateMachine size by avoiding creating state in the handler code.
@@ -77,7 +81,7 @@ internal abstract class
             // no-op - this was parses via QueryStringParameters few lines up
         }
         else if (_method == HttpMethod.Post)
-            parameters.Ids = ids;
+            parameters.Ids = _ids;
         else
             throw new NotSupportedException($"Unhandled method type: {_method}");
 
@@ -145,7 +149,7 @@ internal abstract class
             for (int i = 0; i < ids.Count; i++)
             {
                 if (i != 0)
-                    sb.Append(",");
+                    sb.Append(',');
 
                 ReadOnlyMemory<char> id = ids[i];
                 sb.Append(id);
