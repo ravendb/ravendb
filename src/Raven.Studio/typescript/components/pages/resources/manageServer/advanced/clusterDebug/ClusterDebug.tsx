@@ -45,7 +45,7 @@ export default function ClusterDebug() {
 
     return (
         <div className="flex-window padding-xs">
-            <div id="cluster-debug" className="bs5">
+            <div id="cluster-debug" className="bs5 cluster-debug">
                 <div className="flex-shrink-0 hstack gap-2 align-items-start">
                     <AboutViewHeading title="Cluster Debug" icon="cluster-debug" />
                     <FlexGrow />
