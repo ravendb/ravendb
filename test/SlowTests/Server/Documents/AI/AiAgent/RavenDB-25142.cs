@@ -33,8 +33,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task Can_recreate_negative_total_tokens_with_truncation(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
-            config.Connection.OpenAiSettings.Model = "gpt-5-mini";
-            config.Connection.OpenAiSettings.Temperature = 1;
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
             var agentConfig = new AiAgentConfiguration("agent-007", config.ConnectionStringName, "you are agent used to help with finding orders")
