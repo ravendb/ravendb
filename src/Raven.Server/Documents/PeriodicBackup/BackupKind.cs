@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.Documents.Operations.Backups;
+﻿namespace Raven.Server.Documents.PeriodicBackup;
 
 public enum BackupKind
 {
