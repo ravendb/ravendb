@@ -12,6 +12,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

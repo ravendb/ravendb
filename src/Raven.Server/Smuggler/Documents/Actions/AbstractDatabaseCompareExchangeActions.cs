@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
