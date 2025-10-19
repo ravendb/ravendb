@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
@@ -10,7 +9,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Web.Studio;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -33,6 +31,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public DateTime LastMessageAt;
     public DateTime CreatedAt = DateTime.UtcNow;
     public TimeSpan? Expires;
+
+    internal int NumberOfRepeatedToolCalls;
 
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
     {
@@ -188,7 +188,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(LastMessageAt)] = LastMessageAt,
             [nameof(CreatedAt)] = CreatedAt,
             [nameof(Expires)] = Expires,
-            [nameof(CurrentUsage)] = CurrentUsage
+            [nameof(CurrentUsage)] = CurrentUsage,
+            [nameof(NumberOfRepeatedToolCalls)] = NumberOfRepeatedToolCalls
         };
     }
 
@@ -226,6 +227,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
         if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
             throw new ArgumentException($"Missing Expires in '{id}' conversation document");
+        if (document.TryGet(nameof(NumberOfRepeatedToolCalls), out int numOfRepeatedToolCalls) == false)
+            throw new ArgumentException($"Missing NumberOfRepeatedToolCalls in '{id}' conversation document");
 
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
@@ -244,12 +247,13 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             LastMessageAt = lastMessageAt,
             CreatedAt = createAt,
             Expires = expires,
+            NumberOfRepeatedToolCalls = numOfRepeatedToolCalls
         };
 
         if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsageBlittable))
         {
             conversation.CurrentUsage = JsonDeserializationClient.AiUsage(currentUsageBlittable);
-    }
+        }
         return conversation;
     }
 

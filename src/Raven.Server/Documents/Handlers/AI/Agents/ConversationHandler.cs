@@ -181,12 +181,17 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             if (r.Type is AiResponseType.Result)
             {
+                _document.NumberOfRepeatedToolCalls = 0;
                 shouldContinueConversation = false;
             }
             else
             {
                 await HandleQueryToolCallsAsync(context, r.ToolCalls);
-                shouldContinueConversation = TryGetUserTools(context, r.ToolCalls) == false;
+                if (TryGetUserTools(context, r.ToolCalls))
+                {
+                    _document.NumberOfRepeatedToolCalls++;
+                    shouldContinueConversation = false;
+                }
             }
 
             _document.CurrentUsage = talker.AiUsage;
