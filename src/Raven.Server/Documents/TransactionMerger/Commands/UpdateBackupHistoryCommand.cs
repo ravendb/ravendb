@@ -28,8 +28,13 @@ public sealed class UpdateBackupHistoryCommand : MergedTransactionCommand<Cluste
         return 1;
     }
 
-    public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
+    public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, UpdateBackupHistoryCommand> ToDto(ClusterOperationContext context) =>
+        new UpdateBackupHistoryCommandDto(_databaseName, _status, _result, _cutoffTime);
+
+    private sealed record UpdateBackupHistoryCommandDto(string DatabaseName, PeriodicBackupStatus Status, BackupResult Result, DateTime CutoffTime)
+        : IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, UpdateBackupHistoryCommand>
     {
-        throw new NotImplementedException();
+        public UpdateBackupHistoryCommand ToCommand(ClusterOperationContext context, DocumentDatabase database) =>
+            new(DatabaseName, Status, Result, CutoffTime);
     }
 }

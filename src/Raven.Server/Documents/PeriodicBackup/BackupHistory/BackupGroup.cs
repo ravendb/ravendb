@@ -9,6 +9,11 @@ namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 public class BackupGroup
 {
     public BackupGroup() { }
+
+    public BackupGroup(long taskId)
+    {
+        TaskId = taskId;
+    }
     
     public BackupGroup(BackupHistoryEntry entry, long taskId)
     {

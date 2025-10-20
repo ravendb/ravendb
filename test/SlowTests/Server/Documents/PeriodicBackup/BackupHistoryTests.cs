@@ -516,7 +516,7 @@ public class BackupHistoryTests : ClusterTestBase
     private static BackupResult GetBackupResultFromEndpoint(JsonOperationContext context, DocumentStore store, string databaseName, long taskId, DateTime createdAt)
     {
         var client = store.GetRequestExecutor().HttpClient;
-        var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/periodic-backup/result?database={databaseName}&taskId={taskId}&id={createdAt.Ticks}"));
+        var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/periodic-backup/result?database={databaseName}&taskId={taskId}&backupTicks={createdAt.Ticks}"));
         string result = response.Content.ReadAsStringAsync().Result;
 
         var resultBjro = context.Sync.ReadForMemory(result, "Result");
@@ -541,9 +541,8 @@ public class BackupHistoryTests : ClusterTestBase
             switch (backupKind)
             {
                 case BackupKind.Full:
-                    backupGroup = new BackupGroup
+                    backupGroup = new BackupGroup(taskId)
                     {
-                        TaskId = taskId,
                         FullBackup = new BackupHistoryEntry { NodeTag = server.ServerStore.NodeTag, BackupKind = BackupKind.Full }
                     };
 
@@ -553,7 +552,7 @@ public class BackupHistoryTests : ClusterTestBase
                 case BackupKind.Incremental:
                     if (backupGroup == null)
                     {
-                        backupGroup = new BackupGroup { TaskId = taskId };
+                        backupGroup = new BackupGroup(taskId);
                         existingBackupHistory.Groups.Add(backupGroup);
                     }
                     backupGroup.AddIncrementalBackup(new BackupHistoryEntry { NodeTag = server.ServerStore.NodeTag, BackupKind = BackupKind.Incremental});

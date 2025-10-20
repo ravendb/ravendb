@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 
@@ -34,7 +34,7 @@ public class BackupHistory
                 break;
             
             case BackupKind.Incremental:
-                var groupToAdd = Groups.FirstOrDefault(group => group.FullBackup?.LastFullBackup == entry.LastFullBackup);
+                var groupToAdd = Groups.FirstOrDefault(group => group.FullBackup?.LastFullBackup == entry.LastFullBackup && group.TaskId == taskId);
                 if (groupToAdd == null)
                 {
                     groupToAdd = new BackupGroup(entry, taskId);
@@ -48,19 +48,32 @@ public class BackupHistory
         }
     }
     
-    public void UpdateTaskNames(DatabaseRecord databaseRecord)
+    public void UpdateTaskNames(DatabaseRecord databaseRecord, Logger logger)
     {
         foreach (var backupGroup in Groups)
         {
-            var taskName = databaseRecord.PeriodicBackups.FirstOrDefault(x => x.TaskId == backupGroup.TaskId)?.Name;
-            if (taskName != null && backupGroup.TaskName != taskName)
-                // Task name was changed, we need to update the backup group
-                backupGroup.TaskName = taskName;
-            else if (backupGroup.TaskName == null && taskName == null)
-                // Task name was not set, and we don't have a task name in the database record, shouldn't happen
-                backupGroup.TaskName = "N/A";
-            
-            // Else, the task name is already set, and we don't need to update it
+            var taskNameFromDbRecord = databaseRecord.PeriodicBackups.FirstOrDefault(x => x.TaskId == backupGroup.TaskId)?.Name;
+            if (taskNameFromDbRecord == null)
+            {
+                // task was removed from the database record
+                if (backupGroup.TaskName == null)
+                {
+                    // we don't have a task name in the backup group, this is an inconsistent state
+                    if (logger.IsInfoEnabled)
+                        logger.Info($"Task name for backup group with task ID '{backupGroup.TaskId}' could not be determined. " +
+                                  $"It was not found in the database record for '{DatabaseName}' and was not previously set in the backup history. " +
+                                  "Assigning a placeholder name '<Unknown Task>'.");
+
+                    backupGroup.TaskName = "<Unknown Task>";
+                }
+
+                // we keep the existing task name in the backup group
+                continue;
+            }
+
+            // the task name was changed, we need to update the backup group
+            if (backupGroup.TaskName != taskNameFromDbRecord)
+                backupGroup.TaskName = taskNameFromDbRecord;
         }
     }
 

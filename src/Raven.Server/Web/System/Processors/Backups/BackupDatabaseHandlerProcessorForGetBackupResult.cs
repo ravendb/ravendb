@@ -19,7 +19,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupResult : Abstrac
         var databaseName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("database");
 
         var taskId = RequestHandler.GetLongQueryString("taskId");
-        var createdAtTicksAsId = RequestHandler.GetLongQueryString("id");
+        var backupTicks = RequestHandler.GetLongQueryString("backupTicks");
 
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -27,7 +27,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupResult : Abstrac
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupResult));
 
-            var json = BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, createdAtTicksAsId);
+            var json = BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, backupTicks);
             writer.WriteObject(json);
 
             writer.WriteEndObject();

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
@@ -40,8 +39,8 @@ public class BackupHistoryStorage
     {
         using (StorageEnvironment.GetStaticContext(out var ctx))
         {
-            Slice.From(ctx, "by-backup-kind", out ByBackupKindSlice);
-            Slice.From(ctx, "by-full-backup-id", out ByFullBackupIdSlice);
+            Slice.From(ctx, "ByBackupKind", out ByBackupKindSlice);
+            Slice.From(ctx, "ByFullBackupId", out ByFullBackupIdSlice);
         }
 
         BackupHistoryTableSchema.DefineKey(new TableSchema.IndexDef
@@ -146,8 +145,7 @@ public class BackupHistoryStorage
         {
             var latestFullBackupValue = backupHistoryTable.SeekOneBackwardFrom(BackupHistoryTableSchema.Indexes[ByBackupKindSlice], fullBackupPrefixSlice, fullBackupLastSlice);
             var latestFullBackupCreatedAtTicks = Bits.SwapBytes(*(long*)latestFullBackupValue.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.CreatedAtTicks, out _));
-            Console.WriteLine();
-            Console.WriteLine($"Latest full backup created at: {new DateTime(latestFullBackupCreatedAtTicks):O}.");
+
             foreach (var fullBackupSeekResult in backupHistoryTable.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByBackupKindSlice], fullBackupStartSlice, fullBackupPrefixSlice, skip: 0))
             {
                 var fullBackupCreatedAtTicks = Bits.SwapBytes(*(long*)fullBackupSeekResult.Result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.CreatedAtTicks, out _));
@@ -155,11 +153,8 @@ public class BackupHistoryStorage
                 // If the full backup is the latest one, we won't delete it
                 if (fullBackupCreatedAtTicks >= cutoffTime.Ticks || fullBackupCreatedAtTicks == latestFullBackupCreatedAtTicks)
                 {
-                    Console.WriteLine($"Full backup created at: {new DateTime(fullBackupCreatedAtTicks):O} is newer than the cutoff time: {cutoffTime:O}, fullBackupCreatedAtTicks == latestFullBackupCreatedAtTicks: {fullBackupCreatedAtTicks == latestFullBackupCreatedAtTicks}.");
                     break;
                 }
-
-                Console.WriteLine($"Full backup created at: {new DateTime(fullBackupCreatedAtTicks):O} is older than the cutoff time: {cutoffTime:O}, fullBackupCreatedAtTicks == latestFullBackupCreatedAtTicks: {fullBackupCreatedAtTicks == latestFullBackupCreatedAtTicks}.");
 
                 var fullBackupResultDetailsId = -1L;
                 if (TryGetBackupResultDetailsReader(tx, databaseName, taskId, fullBackupCreatedAtTicks, out var fullBackupReader))
@@ -173,7 +168,6 @@ public class BackupHistoryStorage
                     foreach (var incrementalBackupSeekResult in backupHistoryTable.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByFullBackupIdSlice], firstSlice, prefixSlice, skip: 0))
                     {
                         var incrementalBackupCreatedAtTicks = Bits.SwapBytes(*(long*)incrementalBackupSeekResult.Result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.CreatedAtTicks, out _));
-                        Console.WriteLine($"Incremental backup created at: {new DateTime(incrementalBackupCreatedAtTicks):O}.");
 
                         var incrementalBackupResultDetailsId = -1L;
                         if (TryGetBackupResultDetailsReader(tx, databaseName, taskId, incrementalBackupCreatedAtTicks, out var incrementalBackupReader))
@@ -227,14 +221,14 @@ public class BackupHistoryStorage
     }
 
     internal static void UpdateBackupHistoryWithRetries(
-    int maxRetries,
-    string databaseName,
-    ServerStore serverStore,
-    PeriodicBackupStatus status,
-    BackupResult backupResult,
-    Action<IOperationProgress> onProgress,
-    Logger logger,
-    OperationCancelToken operationCancelToken)
+        int maxRetries,
+        string databaseName,
+        ServerStore serverStore,
+        PeriodicBackupStatus status,
+        BackupResult backupResult,
+        Action<IOperationProgress> onProgress,
+        Logger logger,
+        OperationCancelToken operationCancelToken)
     {
         var retries = 0;
         const int throttleDelay = 1_000;
@@ -248,7 +242,7 @@ public class BackupHistoryStorage
                 operationCancelToken?.Token.ThrowIfCancellationRequested();
 
                 if (retries > 0)
-                    Task.Delay(throttleDelay, operationCancelToken?.Token ?? CancellationToken.None).Wait();
+                    (operationCancelToken?.Token ?? CancellationToken.None).WaitHandle.WaitOne(throttleDelay);
 
                 backupResult?.AddInfo("Updating the backup history");
                 onProgress?.Invoke(backupResult?.Progress);
@@ -287,10 +281,10 @@ public class BackupHistoryStorage
         }
     }
 
-    public static BlittableJsonReaderObject GetBackupHistory(
-        TransactionOperationContext context,
+    public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context,
         DatabaseRecord databaseRecord,
         bool includeIncrementals,
+        Logger logger,
         long? requestedTaskId = null,
         long? requestedFullBackupCreatedAtTicks = null)
     {
@@ -306,7 +300,7 @@ public class BackupHistoryStorage
                 PopulateBackupHistory(backupHistory, context, table, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
         }
 
-        backupHistory.UpdateTaskNames(databaseRecord);
+        backupHistory.UpdateTaskNames(databaseRecord, logger);
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
     }
 
@@ -382,7 +376,7 @@ public class BackupHistoryStorage
     private static class BackupHistorySchema
     {
         public const string TableName = "BackupHistoryTable";
-        private const string ValuesPrefix = "values/";
+        public const string BackupsPrefix = "backups/";
 
         public enum BackupHistoryColumns
         {
@@ -394,7 +388,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key structure: values/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{createdAtTicks}
+        /// Key structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{createdAtTicks}
         /// </summary>
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrimaryKey(
             ByteStringContext allocator,
@@ -408,7 +402,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key prefix structure: values/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}
+        /// Key prefix structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}
         /// </summary>
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrimaryKeyPrefix(
             ByteStringContext allocator,
@@ -423,7 +417,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key structure: values/{databaseName}/{taskId}/{backupKindValue}/{fullBackupCreatedAtTicks}/{createdAtTicks}
+        /// Key structure: backups/{databaseName}/{taskId}/{backupKindValue}/{fullBackupCreatedAtTicks}/{createdAtTicks}
         /// </summary>
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByBackupKindIndexKey(
             ByteStringContext allocator,
@@ -438,7 +432,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key prefix structure: values/{databaseName}/{taskId}/{backupKindValue}
+        /// Key prefix structure: backups/{databaseName}/{taskId}/{backupKindValue}
         /// </summary>
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByBackupKindIndexKeyPrefix(
             ByteStringContext allocator,
@@ -451,7 +445,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key structure: values/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{backupKindValue}/{createdAtTicks}
+        /// Key structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{backupKindValue}/{createdAtTicks}
         /// </summary>
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByFullBackupIdIndexKey(
             ByteStringContext allocator,
@@ -466,7 +460,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key prefix structure: values/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{BackupKind}
+        /// Key prefix structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{BackupKind}
         /// </summary>
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByFullBackupIdIndexKeyPrefix(
             ByteStringContext allocator,
@@ -531,10 +525,10 @@ public class BackupHistoryStorage
             Span<long> values,
             out Slice keySlice)
         {
-            var prefixLength = Encoding.UTF8.GetByteCount(ValuesPrefix);
+            var prefixLength = Encoding.UTF8.GetByteCount(BackupsPrefix);
             var dbNameLength = Encoding.UTF8.GetByteCount(databaseName);
-            var numbersLength = sizeof(long) * (1 + values.Length);
-            var separatorsLength = 1 + values.Length;
+            var separatorsLength = 1 + values.Length; // 1 - is a separator
+            var numbersLength = sizeof(long) * separatorsLength;
 
             var totalLength = prefixLength + dbNameLength + numbersLength + separatorsLength;
 
@@ -542,7 +536,7 @@ public class BackupHistoryStorage
 
             var pos = buffer.Ptr;
 
-            foreach (var ch in ValuesPrefix)
+            foreach (var ch in BackupsPrefix)
                 *pos++ = (byte)char.ToLowerInvariant(ch);
 
             foreach (var ch in databaseName)
@@ -575,7 +569,7 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key structure: values/{databaseName}/{taskId}/{createdAtTicks}
+        /// Key structure: backups/{databaseName}/{taskId}/{createdAtTicks}
         /// </summary>
         public static string GenerateKey(string databaseName, PeriodicBackupStatus status)
         {
@@ -587,10 +581,10 @@ public class BackupHistoryStorage
         }
 
         /// <summary>
-        /// Key structure: values/{databaseName}/{taskId}/{createdAtTicks}
+        /// Key structure: backups/{databaseName}/{taskId}/{createdAtTicks}
         /// </summary>
         public static string GenerateKey(string databaseName, long taskId, long createdAtTicks) =>
-            $"values/{databaseName}/{taskId}/{createdAtTicks}";
+            $"{BackupHistorySchema.BackupsPrefix}/{databaseName}/{taskId}/{createdAtTicks}";
     }
 
     internal TestingStuff _forTestingPurposes;
