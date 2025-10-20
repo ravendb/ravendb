@@ -35,18 +35,6 @@ class databaseNotificationsItem implements databaseAndNodeAwareStats {
         return item;
     }
 
-    static commonData(item: databaseNotificationsItem) {
-        const commonItem = new databaseNotificationsItem(null, null);
-
-        commonItem.database = item.database;
-        commonItem.alertsCount = item.alertsCount;
-        commonItem.alerts = item.alerts;
-        commonItem.performanceHintsCount = item.performanceHintsCount;
-        commonItem.performanceHints = item.performanceHints;
-
-        return commonItem;
-    }
-
     alertsDataForHtml(): iconPlusText[] {
         if (!this.alerts?.length) {
             return [];

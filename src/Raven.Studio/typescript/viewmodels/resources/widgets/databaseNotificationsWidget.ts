@@ -81,7 +81,6 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
 
     onData(nodeTag: string, data: DatabaseNotificationsSummaryPayload) {
         super.onData(nodeTag, data);
-        this.setStatusSummary(data.NotificationsSummary);
     }
     
     protected prepareGridData(): JQueryPromise<pagedResult<databaseNotificationsItem>> {
@@ -89,10 +88,6 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         
         this.nodeStats().forEach(nodeStat => {
             items.push(...nodeStat.items);
-        });
-
-        items = items.filter(item => {
-            return this.filteredNodes().includes(item.nodeTag);
         });
         
         const nodesPerDatabase = new Map<string, string[]>();
@@ -116,6 +111,11 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         });
 
         this.sortGridData(items);
+        this.setStatusSummary(items);
+
+        items = items.filter(item => {
+            return this.filteredNodes().includes(item.nodeTag);
+        });
         
         items = this.manageItems(items);
         
@@ -127,17 +127,17 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
         });
     }
 
-    private setStatusSummary(items: Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.DatabaseNotificationsSummary[]) {
+    private setStatusSummary(items: databaseNotificationsItem[]) {
         const summary: StatusSummary = {
             total: 0,
             alerts: 0,
             performanceHints: 0,
         };
 
-        for (const item of items) {
-            summary.total += item.AlertsCount + item.PerformanceHintsCount;
-            summary.alerts += item.AlertsCount;
-            summary.performanceHints += item.PerformanceHintsCount;
+        for (const item of items.filter(item => item.nodeTag)) {
+            summary.total += item.alertsCount + item.performanceHintsCount;
+            summary.alerts += item.alertsCount;
+            summary.performanceHints += item.performanceHintsCount;
         }
 
         this.statusSummary(summary);
@@ -152,21 +152,28 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
     }
 
     protected manageItems(items: databaseNotificationsItem[]): databaseNotificationsItem[] {
-        if (items.length) {
-            let commonItem;
-            let prevDbName = "";
+        const uniqueDbNames = [...new Set(items.map(item => item.database))];
 
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const currentDbName = item.database;
+        uniqueDbNames.forEach(database => {
+            const itemsForDatabase = items.filter(item => item.database === database);
+            const notificationsItemForDb = new databaseNotificationsItem(null, {
+                DatabaseName: database,
+                Alerts: [],
+                AlertsCount: 0,
+                PerformanceHints: [],
+                PerformanceHintsCount: 0,
+            });
 
-                if (currentDbName !== prevDbName) {
-                    commonItem = databaseNotificationsItem.commonData(item);
-                    items.splice(i++, 0, commonItem);
-                    prevDbName = currentDbName;
-                }
-            }
-        }
+            itemsForDatabase.forEach(item => {
+                notificationsItemForDb.alertsCount += item.alertsCount;
+                notificationsItemForDb.alerts.push(...item.alerts);
+                notificationsItemForDb.performanceHintsCount += item.performanceHintsCount;
+                notificationsItemForDb.performanceHints.push(...item.performanceHints);
+            })
+
+            const firstItemForDbIndex = items.findIndex(x => x.database === database);
+            items.splice(firstItemForDbIndex, 0, notificationsItemForDb);
+        });
 
         return items;
     }
