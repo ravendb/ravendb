@@ -395,11 +395,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _persistedDynamicTreeAnalyzer ??= _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
         if (_persistedDynamicTreeAnalyzer == null)
             return FieldIndexingMode.Normal; 
-        var readResult = _persistedDynamicTreeAnalyzer.Read(name);
-        if (readResult.HasValue == false)
+        if (_persistedDynamicTreeAnalyzer.TryRead(name, out var result) == false)
             return FieldIndexingMode.Normal;
 
-        var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
+        var mode = (FieldIndexingMode)result.Reader.ReadByte();
         return mode;
     }
 
@@ -675,8 +674,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return false;
         }
         
-        var result = _fieldsTree.Read(fieldName);
-        if (result.HasValue == false)
+        if (_fieldsTree.TryRead(fieldName, out var result) == false)
         {
             rootPage = notFound;
             return false;

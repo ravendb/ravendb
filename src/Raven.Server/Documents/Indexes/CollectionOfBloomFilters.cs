@@ -119,8 +119,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal static long GetVersion(Tree tree, bool isNew)
         {
-            var read = tree.Read(VersionSlice);
-            if (read.HasValue)
+            if (tree.TryRead(VersionSlice, out var read))
                 return read.Reader.ReadLittleEndianInt64();
 
             return isNew
@@ -130,12 +129,10 @@ namespace Raven.Server.Documents.Indexes
 
         private static long GetCount(Tree tree, ref Mode mode)
         {
-            var read = tree.Read(mode == Mode.X64 ? Count64Slice : Count32Slice);
-            if (read.HasValue)
+            if (tree.TryRead(mode == Mode.X64 ? Count64Slice : Count32Slice, out var read))
                 return read.Reader.ReadLittleEndianInt64();
 
-            read = tree.Read(mode == Mode.X64 ? Count32Slice : Count64Slice);
-            if (read.HasValue)
+            if (tree.TryRead(mode == Mode.X64 ? Count32Slice : Count64Slice, out read))
             {
                 mode = mode == Mode.X64 ? Mode.X86 : Mode.X64;
                 return read.Reader.ReadLittleEndianInt64();
@@ -484,8 +481,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Slice.From(_allocator, $"{_key:D5}/{number:D4}", out Slice partitionKey);
 
-                var read = _tree.Read(partitionKey);
-                if (read.HasValue)
+                if (_tree.TryRead(partitionKey, out var read))
                 {
                     return _partitions[number] = new Partition
                     {

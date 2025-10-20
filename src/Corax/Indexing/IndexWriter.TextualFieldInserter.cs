@@ -494,9 +494,7 @@ public unsafe partial class IndexWriter
         {
             // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
             // then we'll insert data to it as if it was any other term
-            var entry = tree.Read(_indexedField.Name);
-
-            if (entry.HasValue)
+            if (tree.TryRead(_indexedField.Name, out var entry))
             {
                 Debug.Assert(sizeof(long) * 2 == sizeof((long, long)));
                 Debug.Assert(entry.Reader.Length == sizeof((long, long)));

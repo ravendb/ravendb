@@ -56,7 +56,7 @@ namespace Voron.Benchmark.BTree
                 var count = 0;
                 for (int i = 0; i < OpsCount; i++)
                 {
-                    if (tree.Read(KeyValueSlice).HasValue)
+                    if (tree.TryRead(KeyValueSlice, out _))
                         count++;
                 }
                 return count;

@@ -774,8 +774,7 @@ namespace Raven.Server.Documents.Indexes
                     var configurationTree = tx.ReadTree(IndexStorage.IndexSchema.ConfigurationTree);
                     if (configurationTree != null)
                     {
-                        var result = configurationTree.Read(IndexStorage.IndexSchema.SearchEngineType);
-                        if (result.HasValue)
+                        if (configurationTree.TryRead(IndexStorage.IndexSchema.SearchEngineType, out var result))
                             if (Enum.TryParse(result.Reader.ToStringValue(), out searchEngineTypeFromSchema) == false)
                                 searchEngineTypeFromSchema = SearchEngineType.None;
                     }

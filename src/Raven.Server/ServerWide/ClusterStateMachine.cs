@@ -3116,8 +3116,7 @@ namespace Raven.Server.ServerWide
             where TTransaction : RavenTransaction
         {
             var localState = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
-            var read = localState.Read(thumbprint);
-            if (read.HasValue == false)
+            if (localState.TryRead(thumbprint, out var read) == false)
                 return null;
             
             BlittableJsonReaderObject localStateBlittable = new(read.Reader.Base, read.Reader.Length, context);

@@ -395,8 +395,7 @@ namespace Raven.Server.Documents.Indexes
         protected static Stream GetIndexDefinitionStream(StorageEnvironment environment, Transaction tx)
         {
             var tree = tx.CreateTree("Definition");
-            var result = tree.Read(DefinitionSlice);
-            if (result.HasValue == false)
+            if (tree.TryRead(DefinitionSlice, out var result) == false)
                 return null;
 
             var stream = result.Reader.AsStream();

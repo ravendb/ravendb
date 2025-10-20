@@ -450,8 +450,7 @@ namespace Raven.Server.Documents
         {
             var tx = context.Transaction.InnerTransaction;
             var tree = tx.ReadTree(GlobalTreeSlice);
-            var val = tree.Read(GlobalFullChangeVectorSlice);
-            return val.HasValue ? Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length) : GetDatabaseChangeVector(context);
+            return tree.TryRead(GlobalFullChangeVectorSlice, out var val) ? Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length) : GetDatabaseChangeVector(context);
         }
 
         public void SetFullDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
@@ -649,9 +648,7 @@ namespace Raven.Server.Documents
             if (tx == null)
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(GlobalTreeSlice);
-            var val = tree.Read(FixCountersLastKeySlice);
-
-            return val.HasValue ? Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length) : null;
+            return tree.TryRead(FixCountersLastKeySlice, out var val) ? Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length) : null;
         }
 
         public void SetLastFixedCounterKey(DocumentsOperationContext context, string lastKey)

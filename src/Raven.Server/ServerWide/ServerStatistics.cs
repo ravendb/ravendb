@@ -129,8 +129,7 @@ namespace Raven.Server.ServerWide
                     if (tree == null)
                         return;
 
-                    var result = tree.Read(nameof(ServerStatistics));
-                    if (result.HasValue == false)
+                    if (tree.TryRead(nameof(ServerStatistics), out var result) == false)
                         return;
 
                     using (var json = context.Sync.ReadForMemory(result.Reader.AsStream(), nameof(ServerStatistics)))

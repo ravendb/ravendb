@@ -1148,7 +1148,7 @@ namespace Voron.Data.BTrees
 
             return new TreeIterator(this, _llt, prefetch);
         }
-
+        
         public ReadResult Read(Slice key)
         {
             AssertNotDisposed();
@@ -1156,6 +1156,30 @@ namespace Voron.Data.BTrees
             var p = FindPageFor(key, out TreeNodeHeader* node);
 
             return p.LastMatch != 0 ? ReadResult.Null : new ReadResult(GetValueReaderFromHeader(node));
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public bool TryRead(string key, out ReadResult result)
+        {
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            {
+                return TryRead(keySlice, out result);
+            }
+        }
+        
+        public bool TryRead(Slice key, out ReadResult result)
+        {
+            AssertNotDisposed();
+
+            var p = FindPageFor(key, out TreeNodeHeader* node);
+
+            if (p.LastMatch != 0)
+            {
+                Unsafe.SkipInit(out result);
+                return false;
+            }
+            result= new ReadResult(GetValueReaderFromHeader(node));
+            return false;
         }
 
         public bool Exists(Slice key)

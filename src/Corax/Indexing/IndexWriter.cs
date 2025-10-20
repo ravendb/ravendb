@@ -675,8 +675,7 @@ namespace Corax.Indexing
 
             if (_indexMetadata != null)
             {
-                ReadResult entry = _indexMetadata.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice);
-                if (entry.HasValue)
+                if (_indexMetadata.TryRead(Constants.IndexWriter.VectorFieldsRootPagesSlice, out var entry))
                 {
                     persistedVectorRootPages = entry.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray();
                 }

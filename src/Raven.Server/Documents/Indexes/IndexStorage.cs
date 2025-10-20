@@ -132,8 +132,7 @@ namespace Raven.Server.Documents.Indexes
                 using (Slice.External(context.Allocator, (byte*)&sourceTypeInt, sizeof(int), out Slice tmpSlice))
                     statsTree.Add(IndexSchema.SourceTypeSlice, tmpSlice);
 
-                var createdTimestampResult = statsTree.Read(IndexSchema.CreatedTimestampSlice);
-                if (createdTimestampResult.HasValue == false)
+                if (statsTree.TryRead(IndexSchema.CreatedTimestampSlice, out var createdTimestampResult) == false)
                 {
                     var binaryDate = CreatedTimestampAsBinary = SystemTime.UtcNow.ToBinary();
                     using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice tmpSlice))
@@ -172,9 +171,8 @@ namespace Raven.Server.Documents.Indexes
 
                 void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
                 {
-                    var result = configurationTree.Read(configurationKey);
                     string persistedConfigurationValue = null;
-                    if (result.HasValue)
+                    if (configurationTree.TryRead(configurationKey, out var result))
                         persistedConfigurationValue = result.Reader.ToStringValue();
                     else if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.Analyzers)
                         persistedConfigurationValue = defaultAnalyzer;
@@ -199,8 +197,7 @@ namespace Raven.Server.Documents.Indexes
 
                     if (defaultEngineType == SearchEngineType.None)
                         throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationName}.");
-                    var result = configurationTree.Read(configurationKey);
-                    if (result.HasValue)
+                    if (configurationTree.TryRead(configurationKey, out var result))
                     {
                         if (Enum.TryParse(result.Reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
                         {
@@ -228,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
                         configurationTree.Add(configurationKey, _index.Definition.ArchivedDataProcessingBehavior.ToString());
                     else
                     {
-                        if (configurationTree.Read(configurationKey).HasValue)
+                        if (configurationTree.TryRead(configurationKey, out _))
                             return; // do not overwrite default value if it exists already
                         
                         configurationTree.Add(configurationKey, defaultBehavior.ToString());
@@ -244,8 +241,7 @@ namespace Raven.Server.Documents.Indexes
                     if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior)
                         configuredBehavior = _index.Configuration.CoraxStaticIndexComplexFieldIndexingBehavior;
 
-                    var result = configurationTree.Read(configurationKey);
-                    if (result.HasValue)
+                    if (configurationTree.TryRead(configurationKey, out var result))
                     {
                         var behaviorStringValue = result.Reader.ToStringValue();
 
@@ -318,8 +314,7 @@ namespace Raven.Server.Documents.Indexes
         public static IndexState ReadState(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-            var state = statsTree.Read(IndexSchema.StateSlice);
-            return state.HasValue ? (IndexState)state.Reader.ReadLittleEndianInt32() : IndexState.Normal;
+            return statsTree.TryRead(IndexSchema.StateSlice, out var state) ? (IndexState)state.Reader.ReadLittleEndianInt32() : IndexState.Normal;
         }
 
         public void DeleteErrors()
@@ -401,8 +396,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-            var lastQueryTimeSlice = statsTree.Read(IndexSchema.ElapsedSinceQueriedSlice);
-            return lastQueryTimeSlice.HasValue ? new TimeSpan(ticks: lastQueryTimeSlice.Reader.ReadLittleEndianInt64()) : null;
+            return statsTree.TryRead(IndexSchema.ElapsedSinceQueriedSlice, out var result) ? new TimeSpan(ticks: result.Reader.ReadLittleEndianInt64()) : null;
         }
 
         public void WriteElapsedSinceQueried(TimeSpan value)
@@ -426,9 +420,7 @@ namespace Raven.Server.Documents.Indexes
         public static DateTime? ReadLastIndexingTime(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-
-            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
-            return lastIndexingTime.HasValue ? DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64()) : null;
+            return statsTree.TryRead(IndexSchema.LastIndexingTimeSlice, out var result) ? DateTime.FromBinary(result.Reader.ReadLittleEndianInt64()) : null;
         }
 
         public bool IsIndexInvalid(RavenTransaction tx)
@@ -468,7 +460,7 @@ namespace Raven.Server.Documents.Indexes
                 ErrorsCount = (int)(table?.NumberOfEntries ?? 0)
             };
 
-            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+          
 
             stats.Collections = new Dictionary<string, IndexStats.CollectionStats>();
             foreach (var collection in _index.Definition.Collections)
@@ -480,10 +472,8 @@ namespace Raven.Server.Documents.Indexes
                 };
             }
 
-            ReadResult entriesResult = statsTree.Read(IndexSchema.EntriesCount);
-            
             long? entriesCount = null;
-            if (entriesResult.HasValue)
+            if (statsTree.TryRead(IndexSchema.EntriesCount, out var entriesResult))
             {
                 var entriesCountReader = entriesResult.Reader;
                 var entriesCountSize = entriesCountReader.Length;
@@ -503,7 +493,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (lastIndexingTime.HasValue)
+            if (statsTree.TryRead(IndexSchema.LastIndexingTimeSlice, out var lastIndexingTime))
             {
                 stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
                 stats.MapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();

@@ -102,10 +102,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTree);
 
-            var result = tree.Read(reduceResultId);
-
             // ReSharper disable once UseNullPropagation
-            if (result.HasValue) 
+            if (tree.TryRead(reduceResultId, out var result)) 
                 return result.Reader.ReadString(result.Reader.Length);
             
             // pattern id can be null here if it was invalid for a given reduce result
