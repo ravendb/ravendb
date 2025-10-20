@@ -49,8 +49,12 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
     }
 
     /// <summary>
-    /// Cleans up the context from the handler so that it's not misused. Just for assertion.
+    /// Cleans up the context from the handler so that it's not misused.
     /// </summary>
+    /// <remarks>
+    /// This is just for asserting correctness.
+    /// The context should never be used after the handler is disposed, so we should be able just to remove it if needed.
+    /// </remarks>
     private sealed class ContextCleanUp(AbstractDatabaseRequestHandler<TOperationContext> handler) : IDisposable
     {
         public void Dispose()
