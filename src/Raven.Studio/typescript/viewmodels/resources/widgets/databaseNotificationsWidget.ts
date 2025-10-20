@@ -36,7 +36,7 @@ class databaseNotificationsSummaryWidget extends abstractDatabaseAndNodeAwareTab
     
     performanceHintsModal = ko.observable<ReactInKnockoutOptions<typeof SummaryPerformanceHintsModal>>(null);
     allNotifications = ["Alerts", "Performance Hints"];
-    filteredNotifications = ko.observable(["Alerts", "Performance Hints"]);
+    filteredNotifications = ko.observable(this.allNotifications);
 
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabasesNotifications";

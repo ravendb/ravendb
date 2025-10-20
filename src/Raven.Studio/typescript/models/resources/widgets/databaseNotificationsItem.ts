@@ -10,12 +10,11 @@ class databaseNotificationsItem implements databaseAndNodeAwareStats {
 
     noData: boolean;
 
-    hideDatabaseName: boolean;
+    hideDatabaseName = false;
     even = false;
 
     constructor(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.DatabaseNotificationsSummary) {
         this.nodeTag = nodeTag;
-        this.hideDatabaseName = false;
 
         if (data) {
             this.noData = false;

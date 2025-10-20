@@ -195,7 +195,7 @@ function useColumns(width: number, databaseName: string, onClose: () => void): C
     const openNotificationCenterForDatabase = useCallback(() => {
         const db = databasesManager.default.getDatabaseByName(databaseName);
         if (!db) {
-            return;
+            throw new Error("Cannot open notification center for database: " + databaseName);
         }
 
         databasesManager.default.activate(db, { waitForNotificationCenterWebSocket: true });
