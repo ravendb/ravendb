@@ -5,6 +5,7 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
@@ -27,17 +28,16 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(BackupHistory));
+            writer.WriteStartObject();
+            writer.WritePropertyName(nameof(BackupHistory));
 
-                var json = BackupHistoryStorage.GetBackupHistory(context, database.ReadDatabaseRecord(), includeIncrementals, requestedTaskId, fullBackupTicks);
-                writer.WriteObject(json);
+            var logger = LoggingSource.Instance.GetLogger(databaseName, GetType().FullName);
+            var json = BackupHistoryStorage.GetBackupHistory(context, database.ReadDatabaseRecord(), includeIncrementals, logger, requestedTaskId, fullBackupTicks);
+            writer.WriteObject(json);
 
-                writer.WriteEndObject();
-            }
+            writer.WriteEndObject();
         }
     }
 }
