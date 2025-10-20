@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.AI;
@@ -28,7 +27,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -176,6 +174,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     {
         OutputSchema = Configuration.JsonSchema,
         SampleObject = Configuration.SampleObject,
+        Queries = Configuration.Queries
     };
 
     private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope)
