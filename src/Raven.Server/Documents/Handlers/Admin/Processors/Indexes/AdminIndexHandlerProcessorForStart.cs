@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
@@ -22,6 +23,10 @@ internal sealed class AdminIndexHandlerProcessorForStart : AbstractAdminIndexHan
         if (type == null && name == null)
         {
             RequestHandler.Database.IndexStore.StartIndexing();
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", "Started all indexing.");
+
             return ValueTask.CompletedTask;
         }
 
@@ -30,16 +35,26 @@ internal sealed class AdminIndexHandlerProcessorForStart : AbstractAdminIndexHan
             if (string.Equals(type, "map", StringComparison.OrdinalIgnoreCase))
             {
                 RequestHandler.Database.IndexStore.StartMapIndexes();
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", "Started all Map indexes.");
             }
             else if (string.Equals(type, "map-reduce", StringComparison.OrdinalIgnoreCase))
             {
                 RequestHandler.Database.IndexStore.StartMapReduceIndexes();
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", "Started all Map-Reduce indexes.");
             }
 
             return ValueTask.CompletedTask;
         }
 
         RequestHandler.Database.IndexStore.StartIndex(name);
+
+        if (LoggingSource.AuditLog.IsInfoEnabled)
+            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Started indexing for index '{name}'.");
+
         return ValueTask.CompletedTask;
     }
 

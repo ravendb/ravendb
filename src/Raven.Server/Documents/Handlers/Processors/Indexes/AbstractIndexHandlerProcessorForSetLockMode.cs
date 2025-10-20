@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -41,6 +42,9 @@ internal abstract class AbstractIndexHandlerProcessorForSetLockMode<TRequestHand
             {
                 var indexName = parameters.IndexNames[index];
                 await processor.SetLockAsync(indexName, parameters.Mode, $"{raftRequestId}/{index}");
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Set lock mode to '{parameters.Mode}' for index: '{indexName}'");
             }
         }
 
