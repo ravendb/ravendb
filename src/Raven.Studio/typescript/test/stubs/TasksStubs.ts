@@ -912,8 +912,9 @@ namespace Orders
                     ModelOutput: {
                         Usage: {
                             PromptTokens: 22,
-                            CompletionTokens: 48,
+                            CompletionTokens: 28,
                             CachedTokens: 10,
+                            ReasoningTokens: 20,
                             TotalTokens: 80,
                         },
                         Output: {
@@ -937,8 +938,9 @@ namespace Orders
                     ModelOutput: {
                         Usage: {
                             PromptTokens: 23,
-                            CompletionTokens: 78,
+                            CompletionTokens: 28,
                             CachedTokens: 10,
+                            ReasoningTokens: 20,
                             TotalTokens: 111,
                         },
                         Output: {
@@ -1000,8 +1002,9 @@ namespace Orders
                     ModelOutput: {
                         Usage: {
                             PromptTokens: 22,
-                            CompletionTokens: 48,
+                            CompletionTokens: 28,
                             CachedTokens: 10,
+                            ReasoningTokens: 20,
                             TotalTokens: 80,
                         },
                         Output: {
@@ -1025,8 +1028,9 @@ namespace Orders
                     ModelOutput: {
                         Usage: {
                             PromptTokens: 23,
-                            CompletionTokens: 78,
+                            CompletionTokens: 58,
                             CachedTokens: 10,
+                            ReasoningTokens: 20,
                             TotalTokens: 111,
                         },
                         Output: {

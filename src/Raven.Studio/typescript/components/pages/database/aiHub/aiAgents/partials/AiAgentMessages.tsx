@@ -333,9 +333,11 @@ function AgentMessage({
                                     prompt={agentMessage.usage.PromptTokens}
                                     completion={agentMessage.usage.CompletionTokens}
                                     cached={agentMessage.usage.CachedTokens}
+                                    reasoning={agentMessage.usage.ReasoningTokens}
                                     total={agentMessage.usage.TotalTokens}
                                 />
                             }
+                            placement="left"
                         >
                             <Icon icon="info" />
                         </PopoverWithHoverWrapper>

@@ -145,6 +145,7 @@ function TotalUsageBadge({ usage }: { usage: Raven.Client.Documents.Operations.A
                         prompt={usage.PromptTokens}
                         completion={usage.CompletionTokens}
                         cached={usage.CachedTokens}
+                        reasoning={usage.ReasoningTokens}
                         total={usage.TotalTokens}
                     />
                 }

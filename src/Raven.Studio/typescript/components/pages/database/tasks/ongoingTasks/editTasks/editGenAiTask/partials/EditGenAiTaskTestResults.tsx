@@ -119,9 +119,11 @@ function ModelUsage() {
                         prompt={modelUsage.data.promptTokens}
                         completion={modelUsage.data.completionTokens}
                         cached={modelUsage.data.cachedTokens}
+                        reasoning={modelUsage.data.reasoningTokens}
                         total={modelUsage.data.totalTokens}
                     />
                 }
+                placement="left"
             >
                 <Badge bg="info">
                     <Icon icon="info" />

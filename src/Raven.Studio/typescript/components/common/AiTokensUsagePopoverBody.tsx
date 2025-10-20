@@ -3,11 +3,18 @@ import genUtils from "common/generalUtils";
 interface AiTokensUsagePopoverBodyProps {
     prompt: number;
     completion: number;
+    reasoning: number;
     cached: number;
     total: number;
 }
 
-export default function AiTokensUsagePopoverBody({ prompt, completion, cached, total }: AiTokensUsagePopoverBodyProps) {
+export default function AiTokensUsagePopoverBody({
+    prompt,
+    completion,
+    cached,
+    reasoning,
+    total,
+}: AiTokensUsagePopoverBodyProps) {
     return (
         <div>
             <div className="hstack justify-content-between gap-3">
@@ -17,6 +24,10 @@ export default function AiTokensUsagePopoverBody({ prompt, completion, cached, t
             <div className="hstack justify-content-between gap-3">
                 <span>Completion tokens</span>
                 <span>{genUtils.formatAiTokens(completion)}</span>
+            </div>
+            <div className="hstack justify-content-between gap-3">
+                <span>Reasoning tokens</span>
+                <span>{genUtils.formatAiTokens(reasoning)}</span>
             </div>
             <div className="hstack justify-content-between gap-3">
                 <span>Cached tokens</span>
