@@ -44,12 +44,12 @@ namespace Raven.Server.Web
         {
             var disposables = _disposables;
            
-            if (ReferenceEquals(disposables, DisposedSentinel))
+            if (ReferenceEquals(disposables, DisposedSentinel) || disposables == null)
                 return;
 
             _disposables = DisposedSentinel;
 
-            disposables?.Dispose();
+            disposables.Dispose();
         }
     }
 }

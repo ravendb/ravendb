@@ -5,12 +5,12 @@ namespace Sparrow.Server.Utils
 {
     public sealed class DisposableScope : IDisposable
     {
-        private readonly LinkedList<IDisposable> _disposables = new();
+        private readonly Stack<IDisposable> _disposables = new();
         private int _delayedDispose;
 
         public void EnsureDispose(IDisposable toDispose)
         {
-            _disposables.AddFirst(toDispose);
+            _disposables.Push(toDispose);
         }
 
         public void Dispose()
@@ -18,8 +18,8 @@ namespace Sparrow.Server.Utils
             if (_delayedDispose-- > 0)
                 return;
 
-            List<Exception> errors = null; 
-            foreach (var disposable in _disposables)
+            List<Exception> errors = null;
+            while (_disposables.TryPop(out var disposable))
             {
                 try
                 {
@@ -36,10 +36,13 @@ namespace Sparrow.Server.Utils
                 throw new AggregateException(errors);
         }
 
+        /// <summary>
+        /// Delays the disposal and provides the scope that should be disposed first.
+        /// </summary>
+        /// <returns>An additional disposable scope.</returns>
         public IDisposable Delay()
         {
             _delayedDispose++;
-
             return this;
         }
     }
