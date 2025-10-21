@@ -101,17 +101,17 @@ namespace SlowTests.Issues
                     {
                         var currentTime = database.Time.GetUtcNow();
 
-                        DatabaseRecord dbRecord;
+                        DatabaseTopology topology;
                         string nodeTag;
                         
                         using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                         using (serverContext.OpenReadTransaction())
                         {
-                            dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
+                            topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
                             nodeTag = database.ServerStore.NodeTag;
                         }
                         
-                        var options = new BackgroundWorkParameters(context, currentTime, dbRecord, nodeTag, batchSize);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, RetiredAttachments: null, AmountToTake: batchSize);
                         var totalCount = 0;
                         var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
                         Assert.Equal(expected, totalCount);

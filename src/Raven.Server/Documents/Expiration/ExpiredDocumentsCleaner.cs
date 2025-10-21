@@ -135,13 +135,13 @@ namespace Raven.Server.Documents.Expiration
             
             try
             {
-                DatabaseRecord dbRecord;
+                DatabaseTopology topology;
 
                 string nodeTag;
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
-                    dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
+                    topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
                     nodeTag = _database.ServerStore.NodeTag;
                 }
 
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Expiration
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new BackgroundWorkParameters(context, currentTime, dbRecord, nodeTag, batchSize, maxItemsToProcess);
+                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, RetiredAttachments: null, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                             expired =
                                 forExpiration

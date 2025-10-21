@@ -16,8 +16,6 @@ public class RetireAttachmentParameters : IDynamicJson
     public RetireAttachmentParameters()
     {
         // Parameterless constructor for serialization
-
-        //TODO: egor make this ctor internal when we fix failing tests in DocumentSessionRetiredAttachmentsAsyncTests
     }
 
     /// <summary>
@@ -50,7 +48,7 @@ public class RetireAttachmentParameters : IDynamicJson
     /// <summary>
     /// Gets or sets the flags that control the retirement behavior of the attachment.
     /// </summary>
-    public RetiredAttachmentFlags Flags { get; set; }
+    internal RetiredAttachmentFlags Flags { get; set; }
 
     /// <summary>
     /// Converts the current instance to a <see cref="DynamicJsonValue"/> for serialization.

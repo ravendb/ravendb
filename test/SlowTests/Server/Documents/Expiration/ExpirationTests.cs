@@ -254,19 +254,20 @@ namespace SlowTests.Server.Documents.Expiration
                 }
 
                 var database = await GetDatabase(store.Database);
-                DatabaseRecord dbRecord;
+                DatabaseTopology topology;
+
                 string nodeTag;
                         
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
-                    dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
+                    topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
                     nodeTag = database.ServerStore.NodeTag;
                 }
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), dbRecord, nodeTag, 10, MaxItemsToProcess: long.MaxValue);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
                     var totalCount = 0;
 
                     var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -309,13 +310,14 @@ namespace SlowTests.Server.Documents.Expiration
                     await session.SaveChangesAsync();
                 }
 
-                DatabaseRecord dbRecord;
+                DatabaseTopology topology;
+
                 string nodeTag;
                         
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
-                    dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
+                    topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
                     nodeTag = database.ServerStore.NodeTag;
                 }
 
@@ -323,7 +325,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new BackgroundWorkParameters(context, time, dbRecord, nodeTag, 10, MaxItemsToProcess: long.MaxValue);
+                    var options = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
                     var totalCount = 0;
 
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -662,13 +664,14 @@ namespace SlowTests.Server.Documents.Expiration
 
                 await RefreshHelper.SetupExpiration(store, Server.ServerStore, config, database.Name);
 
-                DatabaseRecord dbRecord;
+                DatabaseTopology topology;
+
                 string nodeTag;
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
-                    dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
+                    topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
                     nodeTag = database.ServerStore.NodeTag;
                 }
 
@@ -676,7 +679,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var refreshOptions = new BackgroundWorkParameters(context, time, dbRecord, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var refreshOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(refreshOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(10, totalCount);
@@ -688,7 +691,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var refreshOptions = new BackgroundWorkParameters(context, time, dbRecord, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var refreshOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(refreshOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, totalCount);

@@ -2,13 +2,13 @@
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Attachments;
-using Raven.Server.Documents.Indexes.Static.Attachments;
 using Raven.Server.Exceptions.Attachments;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public sealed class DynamicAttachment : AbstractDynamicObject, IAttachmentIndexObject
+    public sealed class DynamicAttachment : AbstractDynamicObject, IAttachmentObject
     {
         private readonly Attachment _attachment;
 
@@ -66,13 +66,13 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public dynamic RetireAt
+        public DateTime? RetireAt
         {
             get
             {
                 if (_attachment.RetireParameters == null)
                 {
-                    return DynamicNullObject.ExplicitNull;
+                    return DateTime.MaxValue;
                 }
 
                 return _attachment.RetireParameters.At;

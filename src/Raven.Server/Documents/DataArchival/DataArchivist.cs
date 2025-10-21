@@ -104,11 +104,11 @@ public class DataArchivist : BackgroundWorkBase
         try
         {
             string nodeTag;
-            DatabaseRecord databaseRecord;
+            DatabaseTopology topology;
             using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
-                databaseRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
+                topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
                 nodeTag = _database.ServerStore.NodeTag;
             }
 
@@ -125,7 +125,7 @@ public class DataArchivist : BackgroundWorkBase
 
                     using (context.OpenReadTransaction())
                     {
-                        var options = new BackgroundWorkParameters(context, currentTime, databaseRecord, nodeTag, batchSize, maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, RetiredAttachments: null, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                         toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
 

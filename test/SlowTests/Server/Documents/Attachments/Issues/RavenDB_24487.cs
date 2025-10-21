@@ -156,8 +156,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                             Identifier = id
                         }
                     }
-                },
-                RetireFrequencyInSec = 1
+                }
             };
             await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(conf));
 

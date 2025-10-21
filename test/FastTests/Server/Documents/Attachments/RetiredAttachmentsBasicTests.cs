@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.Indexes.Static.Attachments;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,6 +15,42 @@ namespace FastTests.Server.Documents.Attachments
     {
         public RetiredAttachmentsBasicTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanPutAndRetiredAttachmentsConfigurationWithDefaultRetireFrequencyInSec()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "S3-Users", new RetiredAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new S3Settings()
+                                {
+                                    BucketName = "testS3Bucket-Users"
+                                },
+                                Disabled = false,
+                                Identifier = "S3-Users"
+                            }
+                        }
+                    },
+                    MaxItemsToProcess = 1,
+                }));
+
+                var config = await store.Maintenance.SendAsync(new GetRetireAttachmentsConfigurationOperation());
+                var destination = config.Destinations.FirstOrDefault();
+                Assert.Equal(1, config.Destinations.Count);
+                Assert.NotNull(destination);
+                Assert.Equal("S3-Users", destination.Key);
+                Assert.Equal("S3-Users", destination.Value.Identifier);
+                Assert.Equal("testS3Bucket-Users", destination.Value.S3Settings.BucketName);
+                Assert.Equal(false, destination.Value.Disabled);
+                Assert.Equal(null, config.RetireFrequencyInSec);
+            }
         }
 
         [RavenFact(RavenTestCategory.Attachments)]
@@ -288,26 +322,6 @@ namespace FastTests.Server.Documents.Attachments
                 Assert.Contains("Max items to process must be greater than 0.", e.Message);
                 
                 e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
-                {
-                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
-                    {
-                        {
-                            "test", new RetiredAttachmentsDestinationConfiguration()
-                            {
-                                S3Settings = new S3Settings()
-                                {
-                                    BucketName = "testS3Bucket"
-                                },
-                                Disabled = disabled,
-                                Identifier = "test"
-                            }
-                        }
-                    },
-                    MaxItemsToProcess = 0,
-                })));
-                Assert.Contains("RetireFrequencyInSec must have a value.", e.Message);
-              
-                e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
 
                 {
 
@@ -365,24 +379,22 @@ namespace FastTests.Server.Documents.Attachments
                                 },
                                 Identifier = "conf-identifier",
                             }
+                        },
+                        {
+                            "s3-conf-identifier", new RetiredAttachmentsDestinationConfiguration()
+                            {
+                                Disabled = false,
+                                AzureSettings  = new AzureSettings()
+                                {
+                                    AccountName = "testAzureAccount", StorageContainer = "testAzureContainer"
+                                },
+                                Identifier = "s3-conf-identifier",
+                            }
                         }
                     },
                     RetireFrequencyInSec = 1
                 })));
                 Assert.Contains("Identifier 'conf-identifier' does not match the key 'test'", e.Message);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Attachments)]
-        public void All_IAttachmentObject_properties_exist_in_IAttachmentIndexObject()
-        {
-            var attObjProps = typeof(IAttachmentObject).GetProperties();
-            var attObjIndexProps = typeof(IAttachmentIndexObject).GetProperties();
-            var attObjIndexPropNames = new HashSet<string>(attObjIndexProps.Select(p => p.Name));
-
-            foreach (var prop in attObjProps)
-            {
-                Assert.True(attObjIndexPropNames.Contains(prop.Name), $"Property '{prop.Name}' is missing in {nameof(IAttachmentIndexObject)}");
             }
         }
     }

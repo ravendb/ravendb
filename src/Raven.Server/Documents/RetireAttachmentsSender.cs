@@ -92,14 +92,15 @@ namespace Raven.Server.Documents
                     using (var tx = context.OpenReadTransaction())
                     using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
                     {
-                        DatabaseRecord dbRecord;
+                        DatabaseTopology topology;
+
                         using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                         using (serverContext.OpenReadTransaction())
                         {
-                            dbRecord = _database.ServerStore.Cluster.ReadDatabase(serverContext, _database.Name);
+                            topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
                         }
 
-                        var options = new BackgroundWorkParameters(context, currentTime, dbRecord, _database.ServerStore.NodeTag, batchSize, maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, _database.ServerStore.NodeTag, RetiredAttachments: Configuration, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                         var toRetire = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(options, ref totalCount, out duration, _token.Token);
 
