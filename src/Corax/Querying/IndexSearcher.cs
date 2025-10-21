@@ -191,7 +191,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal void ApplyAnalyzerMultiTerms(in FieldMetadata binding, ReadOnlySpan<byte> originalTerm, ref ContextBoundNativeList<Slice> terms)
     {
         Analyzer analyzer = binding.Analyzer;
-        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
+        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No) && analyzer is null)
         {
             analyzer = _fieldMapping.DefaultAnalyzer;
         }

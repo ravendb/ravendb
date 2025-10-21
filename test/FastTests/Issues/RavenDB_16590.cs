@@ -85,6 +85,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
                 "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
                 "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
+                "Indexing.Corax.ForceDynamicFieldSearchAnalyzerWhenMissingExplicitFieldConfiguration",
                 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",

@@ -1105,7 +1105,8 @@ public static class CoraxQueryBuilder
         }
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
-            builderParameters.DynamicFields, handleSearch: true, hasBoost: builderParameters.HasBoost);
+            builderParameters.DynamicFields, handleSearch: true, hasBoost: builderParameters.HasBoost
+            , forceDefaultSearchAnalyzer: builderParameters.Index.Configuration.ForceDynamicFieldsSearchAnalyzerForMissingExplicitFieldConfiguration);
 
         // Wildcard queries:
         if (searchQueryOptions is IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments && valueAsString.Length >= 1 && (valueAsString[0] == '*' || (valueAsString.Length >= 2 && valueAsString[^1] == '*')))
