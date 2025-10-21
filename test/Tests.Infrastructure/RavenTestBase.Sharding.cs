@@ -409,7 +409,9 @@ public partial class RavenTestBase
             Assert.True(server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(name, out var db));
             var database = await db;
             var handler = new ShardedOngoingTasksHandler();
-            var ctx = new RequestHandlerContext { RavenServer = server, DatabaseContext = database, HttpContext = new DefaultHttpContext() };
+            // The ctor does nothing. Totally safe to use initializer.
+            // ReSharper disable once UsingStatementResourceInitialization
+            using var ctx = new RequestHandlerContext { RavenServer = server, DatabaseContext = database, HttpContext = new DefaultHttpContext() };
             handler.InitForOfflineOperation(ctx);
             return new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(handler);
         }

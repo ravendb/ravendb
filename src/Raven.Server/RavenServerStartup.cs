@@ -164,7 +164,7 @@ namespace Raven.Server
 
         private async Task RequestHandler(HttpContext context)
         {
-            var requestHandlerContext = new RequestHandlerContext
+            using var requestHandlerContext = new RequestHandlerContext
             {
                 HttpContext = context
             };

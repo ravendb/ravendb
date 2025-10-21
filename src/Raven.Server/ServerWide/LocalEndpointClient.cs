@@ -32,7 +32,9 @@ namespace Raven.Server.ServerWide
         public async Task<HttpResponse> InvokeAsync(RouteInformation route, 
             Dictionary<string, StringValues> parameters = null, CancellationToken cancellationToken = default)
         {
-            var requestContext = new RequestHandlerContext
+            // The ctor does nothing. Totally safe to use initializer.
+            // ReSharper disable once UsingStatementResourceInitialization
+            using var requestContext = new RequestHandlerContext
             {
                 HttpContext = new LocalInvocationCustomHttpContext(route.Method, route.Path),
                 RavenServer = _server,

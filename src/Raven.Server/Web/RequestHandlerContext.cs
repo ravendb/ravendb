@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
@@ -8,7 +9,7 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Web
 {
-    public sealed class RequestHandlerContext
+    public sealed class RequestHandlerContext : IDisposable
     {
         private static readonly DisposableScope DisposedSentinel = new();
         private DisposableScope _disposables;
@@ -23,7 +24,7 @@ namespace Raven.Server.Web
         public string DatabaseName => Database?.Name ?? DatabaseContext?.DatabaseName;
         public MetricCounters DatabaseMetrics => Database?.Metrics ?? DatabaseContext?.Metrics;
         public string ClusterTransactionId => Database?.ClusterTransactionId ?? DatabaseContext?.DatabaseRecord.GetClusterTransactionId();
-        
+
         public void RegisterForDisposal(IDisposable disposable)
         {
             if (ReferenceEquals(_disposables, DisposedSentinel))
