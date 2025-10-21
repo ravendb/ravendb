@@ -37,6 +37,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Error(string message, params object[] args)
+        {
+        }
+
         public void Error(string message, Exception exception)
         {
         }
@@ -58,6 +62,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         }
 
         public void Info(string message)
+        {
+        }
+
+        public void Info(string message, params object[] args)
         {
         }
 
@@ -85,6 +93,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Debug(string message, params object[] args)
+        {
+        }
+
         public void Debug(string message, Exception exception)
         {
         }
@@ -106,6 +118,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         }
 
         public void Warn(string message)
+        {
+        }
+
+        public void Warn(string message, params object[] args)
         {
         }
 
@@ -133,6 +149,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
+        public void Fatal(string message, params object[] args)
+        {
+        }
+
         public void Fatal(string message, Exception exception)
         {
         }
@@ -154,6 +174,10 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         }
 
         public void Trace(string message)
+        {
+        }
+
+        public void Trace(string message, params object[] args)
         {
         }
 

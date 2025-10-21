@@ -31,6 +31,11 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Error(message);
     }
 
+    public void Error(string message, params object[] args)
+    {
+        _logger.Error(message, args);
+    }
+
     public void Error(string message, Exception exception)
     {
         _logger.Error(exception, message);
@@ -59,6 +64,11 @@ public sealed class RavenLogger : IRavenLogger
     public void Info(string message)
     {
         _logger.Info(message);
+    }
+
+    public void Info(string message, params object[] args)
+    {
+        _logger.Info(message, args);
     }
 
     public void Info(string message, Exception exception)
@@ -91,6 +101,11 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Debug(message);
     }
 
+    public void Debug(string message, params object[] args)
+    {
+        _logger.Debug(message, args);
+    }
+
     public void Debug(string message, Exception exception)
     {
         _logger.Debug(exception, message);
@@ -119,6 +134,11 @@ public sealed class RavenLogger : IRavenLogger
     public void Warn(string message)
     {
         _logger.Warn(message);
+    }
+
+    public void Warn(string message, params object[] args)
+    {
+        _logger.Warn(message, args);
     }
 
     public void Warn(string message, Exception exception)
@@ -153,6 +173,11 @@ public sealed class RavenLogger : IRavenLogger
         Console.Error.WriteLine(message);
     }
 
+    public void Fatal(string message, params object[] args)
+    {
+        _logger.Fatal(message, args);
+    }
+
     public void Fatal(string message, Exception exception)
     {
         _logger.Fatal(exception, message);
@@ -183,6 +208,11 @@ public sealed class RavenLogger : IRavenLogger
     public void Trace(string message)
     {
         _logger.Trace(message);
+    }
+
+    public void Trace(string message, params object[] args)
+    {
+        _logger.Trace(message, args);
     }
 
     public void Trace(string message, Exception exception)
