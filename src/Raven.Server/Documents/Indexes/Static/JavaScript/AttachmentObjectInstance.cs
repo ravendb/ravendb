@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (property == nameof(IAttachmentObject.RetireFlags))
                     value = new PropertyDescriptor(new JsString(_attachment.RetireFlags.ToString()), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.RetireAt))
-                    value = _attachment.RetireAt is DateTime dt ? new PropertyDescriptor(new JsDate(_engine, dt), writable: false, enumerable: false, configurable: false) : null;
+                    value = _attachment.RetireAt != DateTime.MaxValue ? new PropertyDescriptor(new JsDate(_engine, _attachment.RetireAt!.Value), writable: false, enumerable: false, configurable: false) : null;
                 else if (property == nameof(IAttachmentObject.RetireIdentifier))
                     value = string.IsNullOrEmpty(_attachment.RetireIdentifier)
                         ? null

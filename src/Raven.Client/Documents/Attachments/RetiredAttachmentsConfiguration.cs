@@ -103,9 +103,6 @@ namespace Raven.Client.Documents.Attachments
                 kvp.Value.AssertConfiguration(kvp.Key, databaseName);
             }
 
-            if (RetireFrequencyInSec == null)
-                throw new InvalidOperationException($"{nameof(RetireFrequencyInSec)}{databaseNameStr} must have a value.");
-
             if (RetireFrequencyInSec <= 0)
                 throw new InvalidOperationException($"Retire attachments frequency{databaseNameStr} must be greater than 0.");
             if (MaxItemsToProcess <= 0)

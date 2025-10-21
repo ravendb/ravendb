@@ -583,7 +583,8 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 using (database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(ctx))
                 {
                     var totalCount = 0;
-                    var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, database.ReadDatabaseRecord(), "A", int.MaxValue), ref totalCount, out var _, default);
+                    var dbRecord = database.ReadDatabaseRecord();
+                    var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, dbRecord.Topology, "A", dbRecord.RetiredAttachments, int.MaxValue), ref totalCount, out var _, default);
                     Assert.Equal(1, toRetire.Count);
                 }
 
@@ -906,14 +907,11 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     {
                         var totalCount = 0;
 
-                        var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, new DatabaseRecord
-                        {
-                            Topology = new DatabaseTopology()
+                        var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, new DatabaseTopology()
                             {
                                 Members = [node.ServerStore.NodeTag]
-                            },
-                            RetiredAttachments = database.ReadDatabaseRecord().RetiredAttachments
-                        }, database.ServerStore.NodeTag, int.MaxValue), ref totalCount, out var _, default);
+                            }
+                       , database.ServerStore.NodeTag, database.ReadDatabaseRecord().RetiredAttachments, int.MaxValue), ref totalCount, out var _, default);
                         Assert.Equal(attachmentsCount, toRetire.Count);
                     }
                 }

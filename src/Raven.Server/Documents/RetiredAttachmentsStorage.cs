@@ -196,7 +196,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null, DocumentExpirationInfoStatus.Delete);
             }
 
-            if (ShouldSkipItem(options.DatabaseRecord.RetiredAttachments, identifier))
+            if (ShouldSkipItem(options.RetiredAttachments, identifier))
             {
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: identifier, DocumentExpirationInfoStatus.Skip);
             }
@@ -261,12 +261,12 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
-        if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+        if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
             return;
 
-        (bool allExpired, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, clonedId);
+        (bool allShouldRetire, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, clonedId);
 
-        if (allExpired)
+        if (allShouldRetire)
         {
             expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id, DocumentExpirationInfoStatus.Process));
             totalCount++;
@@ -292,7 +292,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    private unsafe (bool AllExpired, string Id) GetConflictedRetiredAttachment(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
+    private unsafe (bool AllHasPassed, string Id) GetConflictedRetiredAttachment(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
     {
         var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(clonedId.Content.Ptr, clonedId.Size));
         using (var docId = _documentInfoHelper.GetDocumentId(clonedId, sizeOfIdentifier + 1))
@@ -302,7 +302,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             if (conflicts.Count <= 0)
                 return (true, null);
 
-            var allExpired = true;
+            var allHashPassed = true;
             LazyStringValue identifier = null;
 
             foreach (var conflict in conflicts)
@@ -347,12 +347,12 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                     if (hasPassed)
                         continue;
 
-                    allExpired = false;
+                    allHashPassed = false;
                     break;
                 }
             }
 
-            return (allExpired, identifier);
+            return (allHashPassed, identifier);
         }
     }
 

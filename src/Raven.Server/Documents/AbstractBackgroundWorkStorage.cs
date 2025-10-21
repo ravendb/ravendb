@@ -123,7 +123,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 return true;
             }
 
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
                 return false;
 
             if (item.Status == DocumentExpirationInfoStatus.Skip)

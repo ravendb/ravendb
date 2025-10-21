@@ -163,9 +163,14 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     if (cmd.RetireParameters.IsLocalAttachment())
                     {
                         var attachmentStream = GetAttachmentStream(attachmentIterator, out stream);
-                        cmd.Hash = attachmentStream.Hash;
-
+                        Debug.Assert(cmd.Hash == null, "cmd.Hash == null");
                         Debug.Assert(cmd.SizeInBytes == stream.Length, "cmd.SizeInBytes == stream.Length");
+
+                        cmd.Hash = attachmentStream.Hash;
+                    }
+                    else
+                    {
+                        Debug.Assert(string.IsNullOrEmpty(cmd.Hash) == false, "string.IsNullOrEmpty(cmd.Hash) == false");
                     }
 
                     var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);

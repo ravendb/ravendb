@@ -526,9 +526,9 @@ namespace SlowTests.Server.Documents.Attachments
                     nodeTag = database.ServerStore.NodeTag;
                 }
 
-                var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord, nodeTag, int.MaxValue);
+                var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord.Topology, nodeTag, dbRecord.RetiredAttachments, int.MaxValue);
                 // need to sort the list so current checked node is first in topology, since only the "first topology node is checked in GetDocuments() method
-                options.DatabaseRecord.Topology.Members = options.DatabaseRecord.Topology.Members.OrderByDescending(x => x == nodeTag).ToList();
+                options.DatabaseTopology.Members = options.DatabaseTopology.Members.OrderByDescending(x => x == nodeTag).ToList();
 
                 var totalCount = 0;
 
