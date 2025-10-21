@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
         private readonly UnmanagedStringArray.UnmanagedString[] _values;
         private readonly string _field;
         private UnmanagedStringArray.UnmanagedString _bottom;
-        private int[] _order;
+        private IArray<int> _order;
         private UnmanagedStringArray _lookup;
         private static readonly UnmanagedStringArray.UnmanagedString NullValue = GetNullValueUnmanagedString();
 
