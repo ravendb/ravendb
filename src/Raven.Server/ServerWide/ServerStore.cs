@@ -1016,7 +1016,7 @@ namespace Raven.Server.ServerWide
                 Configuration.Security.AuditLogCompress);
 
             var auditLog = LoggingSource.AuditLog.GetLogger("ServerStartup", "Audit");
-            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.ServerCertificate?.Subject} ({_server.Certificate?.ServerCertificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
+            auditLog.Operations($"Server started up, listening to {string.Join(", ", Configuration.Core.ServerUrls)} with certificate {_server.Certificate?.ServerCertificate?.GetDisplayName()} ({_server.Certificate?.ServerCertificate?.Thumbprint}), public url: {Configuration.Core.PublicServerUrl}");
         }
 
         private void AssertCanWriteToAuditLogDirectory()

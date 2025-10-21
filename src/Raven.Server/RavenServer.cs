@@ -1912,7 +1912,7 @@ namespace Raven.Server
                     else
                     {
                         authLogMessage =
-                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                             "Certificate's *issuer* is trusted by the cluster. " +
                             "Rejecting the connection based on certificate SAN not matching server domain.";
                         authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
@@ -1921,7 +1921,7 @@ namespace Raven.Server
                 else 
                 {
                     authLogMessage =
-                        $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                         "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster. " +
                         $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
                     authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
@@ -2002,7 +2002,7 @@ namespace Raven.Server
             if (certWithSameHash == null)
             {
                 if (_authAuditLog.IsInfoEnabled)
-                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                                        "Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
                                        $"Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.");
 
@@ -2047,7 +2047,7 @@ namespace Raven.Server
 
             if (_authAuditLog.IsInfoEnabled)
                 _authAuditLog.Info(
-                    $"Connection from {remoteAddress} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    $"Connection from {remoteAddress} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     "Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the cluster. " +
                     $"Registering the new certificate explicitly based on permissions of existing certificate '{certWithSameHash.Thumbprint}'. Security Clearance: {newCertDef.SecurityClearance}, " +
                     $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
@@ -2328,13 +2328,13 @@ namespace Raven.Server
                                 if (tcpAuditLog != null)
                                 {
                                     tcpAuditLog.Info(
-                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
+                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Error: {e}");
                                 }
                                 throw;
                             }
 
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
+                                tcpAuditLog.Info($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
 
                             if (ShouldUseDataCompression(header))
                             {
@@ -2368,7 +2368,7 @@ namespace Raven.Server
                         finally
                         {
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                                tcpAuditLog.Info($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'.");
                         }
                     }
                 }
@@ -2458,7 +2458,7 @@ namespace Raven.Server
                         {
                             if (tcpAuditLog != null)
                                 tcpAuditLog.Info(
-                                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
+                                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
 
                             if (Logger.IsInfoEnabled)
                             {
@@ -2478,7 +2478,7 @@ namespace Raven.Server
                     {
                         var msg = $"Protocol '{header.OperationVersion}' for '{header.Operation}' was not found.";
                         if (tcpAuditLog != null)
-                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. {msg}");
+                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. {msg}");
 
                         if (Logger.IsInfoEnabled)
                         {
@@ -2519,7 +2519,7 @@ namespace Raven.Server
                 {
                     if (tcpAuditLog != null)
                         tcpAuditLog.Info(
-                            $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
+                            $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
 
                     if (Logger.IsInfoEnabled)
                     {
@@ -2540,7 +2540,7 @@ namespace Raven.Server
 
             if (tcpAuditLog != null)
                 tcpAuditLog.Info(
-                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
+                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
             return header;
         }
 
@@ -3058,7 +3058,7 @@ namespace Raven.Server
 
             if (_authAuditLog.IsInfoEnabled)
                 _authAuditLog.Info(
-                    $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     $"Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the replication hub. Old certificate: {replicationHubAccess.Thumbprint} ");
         }
 
