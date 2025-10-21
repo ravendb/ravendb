@@ -48,7 +48,7 @@ public class RetireAttachmentParameters : IDynamicJson
     /// <summary>
     /// Gets or sets the flags that control the retirement behavior of the attachment.
     /// </summary>
-    internal RetiredAttachmentFlags Flags { get; set; }
+    public RetiredAttachmentFlags Flags { get; set; }
 
     /// <summary>
     /// Converts the current instance to a <see cref="DynamicJsonValue"/> for serialization.
