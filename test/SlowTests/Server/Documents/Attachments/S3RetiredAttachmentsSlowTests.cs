@@ -1355,5 +1355,223 @@ namespace SlowTests.Server.Documents.Attachments
                 }
             }
         }
+
+        [AmazonS3RetryFact]
+        public async Task CanRetireAttachmentThenRename()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
+                var docId = "Orders/1";
+                var attachmentName = "test.png";
+                var newAttachmentName = "renamed_test.png";
+
+                // Create document and attachment
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = docId });
+                    await session.SaveChangesAsync();
+                }
+
+                using var attachmentStream = new MemoryStream([1, 2, 3]);
+                await store.Operations.SendAsync(new PutAttachmentOperation(docId, new StoreAttachmentParameters(attachmentName, attachmentStream)
+                {
+                    RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                    ContentType = "image/png"
+                }));
+
+                // Verify attachment exists and has retire parameters
+                var attachment = await store.Operations.SendAsync(new GetAttachmentOperation(docId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(attachmentName, attachment.Details.Name);
+                Assert.NotNull(attachment.Details.RetireParameters);
+                Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+
+                // Retire the attachment
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                // Verify attachment is retired
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                var retiredAttachment = await store.Operations.SendAsync(new GetAttachmentOperation(docId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(RetiredAttachmentFlags.Retired, retiredAttachment.Details.RetireParameters.Flags);
+
+                // Now try to rename the retired attachment
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Attachments.Rename(docId, attachmentName, newAttachmentName);
+                    session.SaveChanges();
+                }
+
+                // Verify the attachment was renamed
+                using (var session = store.OpenSession())
+                {
+                    Assert.False(session.Advanced.Attachments.Exists(docId, attachmentName));
+                    Assert.True(session.Advanced.Attachments.Exists(docId, newAttachmentName));
+                }
+
+                // Verify renamed attachment is still retired and accessible
+                var renamedAttachment = await store.Operations.SendAsync(new GetAttachmentOperation(docId, newAttachmentName, AttachmentType.Document, null));
+                Assert.Equal(newAttachmentName, renamedAttachment.Details.Name);
+                Assert.Equal(RetiredAttachmentFlags.Retired, renamedAttachment.Details.RetireParameters.Flags);
+
+                // Verify we can still read the content
+                using var ms = new MemoryStream();
+                await renamedAttachment.Stream.CopyToAsync(ms);
+                Assert.Equal([1, 2, 3], ms.ToArray());
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanRetireAttachmentThenCopy()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
+                var sourceDocId = "Orders/1";
+                var destinationDocId = "Orders/2";
+                var attachmentName = "test.png";
+                var copiedAttachmentName = "copied_test.png";
+
+                // Create documents and attachment
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = sourceDocId });
+                    await session.StoreAsync(new Order { Id = destinationDocId });
+                    await session.SaveChangesAsync();
+                }
+
+                using var attachmentStream = new MemoryStream([1, 2, 3]);
+                await store.Operations.SendAsync(new PutAttachmentOperation(sourceDocId, new StoreAttachmentParameters(attachmentName, attachmentStream)
+                {
+                    RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                    ContentType = "image/png"
+                }));
+
+                // Verify attachment exists and has retire parameters
+                var attachment = await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(attachmentName, attachment.Details.Name);
+                Assert.NotNull(attachment.Details.RetireParameters);
+                Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+
+                // Retire the attachment
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                // Verify attachment is retired
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                var retiredAttachment = await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(RetiredAttachmentFlags.Retired, retiredAttachment.Details.RetireParameters.Flags);
+
+                // Now try to copy the retired attachment
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Attachments.Copy(sourceDocId, attachmentName, destinationDocId, copiedAttachmentName);
+                    session.SaveChanges();
+                }
+
+                // Verify both attachments exist
+                using (var session = store.OpenSession())
+                {
+                    Assert.True(session.Advanced.Attachments.Exists(sourceDocId, attachmentName));
+                    Assert.True(session.Advanced.Attachments.Exists(destinationDocId, copiedAttachmentName));
+                }
+
+                // Verify source attachment is still retired
+                var sourceAttachmentAfterCopy = await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(RetiredAttachmentFlags.Retired, sourceAttachmentAfterCopy.Details.RetireParameters.Flags);
+
+                // Verify copied attachment has the same retirement parameters
+                var copiedAttachment = await store.Operations.SendAsync(new GetAttachmentOperation(destinationDocId, copiedAttachmentName, AttachmentType.Document, null));
+                Assert.Equal(copiedAttachmentName, copiedAttachment.Details.Name);
+                Assert.Equal(RetiredAttachmentFlags.Retired, copiedAttachment.Details.RetireParameters.Flags);
+                Assert.Equal(retiredAttachment.Details.RetireParameters.Identifier, copiedAttachment.Details.RetireParameters.Identifier);
+
+                // Verify we can still read the content from both
+                using var sourceMs = new MemoryStream();
+                await sourceAttachmentAfterCopy.Stream.CopyToAsync(sourceMs);
+                Assert.Equal([1, 2, 3], sourceMs.ToArray());
+
+                using var copiedMs = new MemoryStream();
+                await copiedAttachment.Stream.CopyToAsync(copiedMs);
+                Assert.Equal([1, 2, 3], copiedMs.ToArray());
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanRetireAttachmentThenMove()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
+                var sourceDocId = "Orders/1";
+                var destinationDocId = "Orders/2";
+                var attachmentName = "test.png";
+                var movedAttachmentName = "moved_test.png";
+
+                // Create documents and attachment
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = sourceDocId });
+                    await session.StoreAsync(new Order { Id = destinationDocId });
+                    await session.SaveChangesAsync();
+                }
+
+                using var attachmentStream = new MemoryStream([1, 2, 3]);
+                await store.Operations.SendAsync(new PutAttachmentOperation(sourceDocId, new StoreAttachmentParameters(attachmentName, attachmentStream)
+                {
+                    RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                    ContentType = "image/png"
+                }));
+
+                // Verify attachment exists and has retire parameters
+                var attachment = await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(attachmentName, attachment.Details.Name);
+                Assert.NotNull(attachment.Details.RetireParameters);
+                Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+
+                // Retire the attachment
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                // Verify attachment is retired
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                var retiredAttachment = await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null));
+                Assert.Equal(RetiredAttachmentFlags.Retired, retiredAttachment.Details.RetireParameters.Flags);
+
+                // Now try to move the retired attachment
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Attachments.Move(sourceDocId, attachmentName, destinationDocId, movedAttachmentName);
+                    session.SaveChanges();
+                }
+
+                // Verify attachment was moved
+                using (var session = store.OpenSession())
+                {
+                    Assert.False(session.Advanced.Attachments.Exists(sourceDocId, attachmentName));
+                    Assert.True(session.Advanced.Attachments.Exists(destinationDocId, movedAttachmentName));
+                }
+
+                // Verify moved attachment retains retirement properties
+                var movedAttachment = await store.Operations.SendAsync(new GetAttachmentOperation(destinationDocId, movedAttachmentName, AttachmentType.Document, null));
+                Assert.Equal(movedAttachmentName, movedAttachment.Details.Name);
+                Assert.Equal(RetiredAttachmentFlags.Retired, movedAttachment.Details.RetireParameters.Flags);
+                Assert.Equal(retiredAttachment.Details.RetireParameters.Identifier, movedAttachment.Details.RetireParameters.Identifier);
+
+                // Verify we can still read the content
+                using var ms = new MemoryStream();
+                await movedAttachment.Stream.CopyToAsync(ms);
+                Assert.Equal([1, 2, 3], ms.ToArray());
+
+                // Verify source attachment no longer exists
+                Assert.Null(await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null))); 
+            }
+        }
     }
 }
