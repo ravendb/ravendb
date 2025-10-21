@@ -411,6 +411,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
+                tx.InnerTransaction.LowLevelTransaction.DisableLastWorkTimeUpdate();
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
                 WriteElapsedSinceQueriedToStatsTree(context.Allocator, value, statsTree);
                 tx.Commit();
