@@ -13,12 +13,8 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 
-public class GrowableBitArrayTests : NoDisposalNeeded
+public class GrowableBitArrayTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    public GrowableBitArrayTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
     [RavenFact(RavenTestCategory.Corax)]
     public void CanCreateEmptyBitmap()
     {
@@ -76,7 +72,7 @@ public class GrowableBitArrayTests : NoDisposalNeeded
         }
     }
     
-    [RavenTheory(RavenTestCategory.Corax)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     [InlineData((long)int.MaxValue - 1)]
     [InlineData((long)int.MaxValue )]
     [InlineData((long)int.MaxValue + 1)]
