@@ -150,6 +150,8 @@ namespace Raven.Server
 
             configuration.Initialize();
 
+            HybridArray.UseOnlyManagedArray = PlatformDetails.Is32Bits || configuration.Storage.ForceUsing32BitsPager;
+
             GlobalFlushingBehavior.NumberOfConcurrentSyncsPerPhysicalDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
 
             EncryptionBuffersPool.Instance.Disabled = configuration.Storage.DisableEncryptionBuffersPooling;
