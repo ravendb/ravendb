@@ -492,7 +492,7 @@ namespace Sparrow.Json
             if (field == null)
                 return null;
 
-            return GetLazyString(field, field, longLived: false);
+            return GetLazyString(field.AsSpan(), field, longLived: false);
         }
 
         private LazyStringValue GetLazyString(StringSegment field, bool longLived)
