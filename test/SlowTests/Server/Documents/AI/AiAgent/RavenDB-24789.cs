@@ -27,7 +27,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldRaiseServerAlertOnExceededActionToolResponse(Options options, GenAiConfiguration config)
         {
-            options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";
+            options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "50";
 
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));

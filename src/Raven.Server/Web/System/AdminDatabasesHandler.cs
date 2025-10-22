@@ -681,7 +681,7 @@ namespace Raven.Server.Web.System
                                     {
                                         clientCertificate ??= GetCurrentCertificate();
 
-                                        Logger.Warn($"Attempt to delete '{databaseName}' database was prevented due to lock mode set to '{rawRecord.LockMode}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.Subject} ({clientCertificate?.Thumbprint})");
+                                        Logger.Warn($"Attempt to delete '{databaseName}' database was prevented due to lock mode set to '{rawRecord.LockMode}'. IP: '{HttpContext.Connection.RemoteIpAddress}'. Certificate: {clientCertificate?.GetDisplayName()} ({clientCertificate?.Thumbprint})");
                                     }
 
                                     continue;

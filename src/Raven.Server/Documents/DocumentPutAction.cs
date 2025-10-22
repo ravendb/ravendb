@@ -181,7 +181,10 @@ namespace Raven.Server.Documents
                     newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
                     
                     // if doc was Archived and isn't currently unarchived, leave the Archived flag
-                    if (oldFlags.Contain(DocumentFlags.Archived) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.Unarchive) == false)
+                    // unless it is a replication operation, in which case we want to replicate the drop of the Archived flag
+                    if (oldFlags.Contain(DocumentFlags.Archived) && 
+                        nonPersistentFlags.Contain(NonPersistentDocumentFlags.Unarchive) == false && 
+                        nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
                         newFlags |= DocumentFlags.Archived;
                     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -334,7 +335,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
 
-            _scale = $" scale {value}";
+            var valueAsDouble = (double)value;
+
+            _scale = $" scale {valueAsDouble.ToString(CultureInfo.InvariantCulture)}";
         }
 
         private void TimeSeriesCall(MethodCallExpression mce)
@@ -598,7 +601,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesGrouping.StandardDeviation):
                     if (_selectFields.Length > 0)
                         _selectFields.Append(", ");
-                    _selectFields.Append($"{name.ToLower()}({value})");
+                    _selectFields.Append($"{name.ToLower()}({value?.ToString(CultureInfo.InvariantCulture)})");
                     break;
 
                 default:

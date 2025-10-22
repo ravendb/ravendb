@@ -130,6 +130,12 @@ class eventsCollector {
         });
     }
 
+    reportCustomEvent(eventName: string, parametersObject: Record<string, string | number | boolean>) {
+        this.report((gtagProxy: gtagFn) => {
+            gtagProxy('event', eventName, parametersObject);
+        });
+    }
+
     private report(action: (gtagProxy: gtagFn) => void) {
         if (!this.initialized) {
             this.preInitializationQueue.push(action);
