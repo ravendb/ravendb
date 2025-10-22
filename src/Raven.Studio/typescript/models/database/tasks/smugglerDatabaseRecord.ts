@@ -44,6 +44,7 @@ class smugglerDatabaseRecord {
     includeAiConnectionStrings = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeEmbeddingsGeneration = ko.observable<boolean>(this.isAdminAccessOrAbove());
     includeGenAi = ko.observable<boolean>(this.isAdminAccessOrAbove());
+    includeAiAgents = ko.observable<boolean>(this.isAdminAccessOrAbove());
 
     hasIncludes: KnockoutComputed<boolean>;
 
@@ -205,6 +206,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeGenAi()) {
             result.push("GenAiEtls")
+        }
+        if (this.includeAiAgents()) {
+            result.push("AiAgents")
         }
 
         return result;
