@@ -2,12 +2,11 @@
 using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
 using Raven.Server.Commercial;
-using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
 
@@ -15,15 +14,15 @@ internal class AiAssistantGiveConsentProcessor([NotNull] RequestHandler requestH
 {
     public override async ValueTask ExecuteAsync()
     {
-        var requestMetadata = new AiAssistantRequestAuthentication();
-        FulfillRequestMetadata(requestMetadata);
-
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
+            var requestMetadata = context.ReadObject(new DynamicJsonValue(), null);
+            requestMetadata = FulfillRequestMetadata(requestMetadata, context);
+            
             var response = await ApiHttpClient.PostAsync(
                     requestUri: "/api/v1/ai/give-consent",
-                    content: new StringContent(JsonConvert.SerializeObject(requestMetadata), Encoding.UTF8, "application/json"),
+                    content: new StringContent(requestMetadata.ToString(), Encoding.UTF8, "application/json"),
                     token: token.Token)
                 .ConfigureAwait(false);
             
