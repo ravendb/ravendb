@@ -13,12 +13,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 internal class Talker(ConversationHandler handler, JsonOperationContext context, AiAgentConfiguration configuration, ConversationDocument document, string firstStreamPropertyPath, Func<Memory<byte>, Task> streaming) : IDisposable
 {
-    private const int DefaultMaxModelIterationsPerCall = 16;
-
-    private int _maxModelIterationsPerCall;
     private string _schema;
     private List<BlittableJsonReaderObject> _tools;
-    private int _remainingToolIterations;
 
     public AiUsage AiUsage;
     public ChatCompletionClient Client;
@@ -29,9 +25,6 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
 
         _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
         _tools = ConversationDocument.GenerateTools(context, configuration);
-        
-        _maxModelIterationsPerCall = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
-        _remainingToolIterations = _maxModelIterationsPerCall - document.NumberOfRepeatedToolCalls;
 
         Client = handler.CreateClient();
     }
@@ -39,7 +32,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
     public HttpRequestMessage CreateCompletionRequest(List<AiAttachment> attachments)
     {
         AiUsage = new();
-        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: _remainingToolIterations-- > 0, streaming != null, _schema);
+        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: document.RemainingToolIterations-- > 0, streaming != null, _schema);
     }
 
     public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, HttpRequestMessage request, CancellationToken token)

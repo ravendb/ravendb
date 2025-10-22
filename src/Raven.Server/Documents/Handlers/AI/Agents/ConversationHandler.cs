@@ -29,14 +29,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 internal class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
+    public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
+
     protected ConversationDocument _document;
     private string _conversationId;
     private RequestBody _request;
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
+    private int _maxModelIterationsPerCall;
 
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
@@ -45,6 +48,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         _configuration = configuration;
         _changeVector = changeVector;
         _raftId = raftId;
+        _maxModelIterationsPerCall = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
     }
 
     protected virtual async Task InitializeDocument(DocumentsOperationContext context)
@@ -88,7 +92,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
         else
         {
-            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data);
+            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
+
             if (_document.Agent != agentId)
             {
                 throw new InvalidOperationException(
@@ -181,7 +186,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             if (r.Type is AiResponseType.Result)
             {
-                _document.NumberOfRepeatedToolCalls = 0;
+                _document.RemainingToolIterations = _maxModelIterationsPerCall;
                 shouldContinueConversation = false;
             }
             else
@@ -189,7 +194,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 await HandleQueryToolCallsAsync(context, r.ToolCalls);
                 if (TryGetUserTools(context, r.ToolCalls))
                 {
-                    _document.NumberOfRepeatedToolCalls++;
                     shouldContinueConversation = false;
                 }
             }

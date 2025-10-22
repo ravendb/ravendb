@@ -32,7 +32,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public DateTime CreatedAt = DateTime.UtcNow;
     public TimeSpan? Expires;
 
-    internal int NumberOfRepeatedToolCalls;
+    public int RemainingToolIterations;
 
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
     {
@@ -65,6 +65,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(configuration)
             }, "system/msg"), usage: null);
         }
+
+        RemainingToolIterations = configuration.MaxModelIterationsPerCall ?? ConversationHandler.DefaultMaxModelIterationsPerCall;
     }
 
     public List<AiToolCall> InitialQueries(JsonOperationContext context, AiAgentConfiguration configuration)
@@ -189,7 +191,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(CreatedAt)] = CreatedAt,
             [nameof(Expires)] = Expires,
             [nameof(CurrentUsage)] = CurrentUsage,
-            [nameof(NumberOfRepeatedToolCalls)] = NumberOfRepeatedToolCalls
+            [nameof(RemainingToolIterations)] = RemainingToolIterations
         };
     }
 
@@ -207,7 +209,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         LastMessageAt = currentDate;
     }
 
-    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
+    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, AiAgentConfiguration config)
     {
         if (document.TryGet(nameof(Agent), out string agent) == false)
             throw new ArgumentException($"Missing Agent in '{id}' conversation document");
@@ -227,8 +229,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
         if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
             throw new ArgumentException($"Missing Expires in '{id}' conversation document");
-        if (document.TryGet(nameof(NumberOfRepeatedToolCalls), out int numOfRepeatedToolCalls) == false)
-            throw new ArgumentException($"Missing NumberOfRepeatedToolCalls in '{id}' conversation document");
+        if (document.TryGet(nameof(RemainingToolIterations), out int remainingToolIterations) == false)
+            remainingToolIterations = config.MaxModelIterationsPerCall ?? ConversationHandler.DefaultMaxModelIterationsPerCall;
 
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
@@ -247,7 +249,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             LastMessageAt = lastMessageAt,
             CreatedAt = createAt,
             Expires = expires,
-            NumberOfRepeatedToolCalls = numOfRepeatedToolCalls
+            RemainingToolIterations = remainingToolIterations
         };
 
         if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsageBlittable))

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.AI;
@@ -31,21 +32,20 @@ public class RavenDB_24984 : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        const string systemPrompt = "your whole purpose is to run the tool called 'MyTool'";
-        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
-        agent.Identifier = "shopping-assistant";
-
-        agent.Actions =
-        [
-            new AiAgentToolAction
+        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, "your whole purpose is to run the tool called 'MyTool'")
+        {
+            Identifier = "shopping-assistant",
+            Actions =
+            [
+                new AiAgentToolAction
                 {
                     Name = "MyTool",
                     Description =  "returns an integer",
                     ParametersSampleObject = "{}"
                 }
-        ];
-
-        agent.MaxModelIterationsPerCall = maxModelIterationsPerCall;
+            ],
+            MaxModelIterationsPerCall = maxModelIterationsPerCall
+        };
 
         await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance);
         var chat = store.AI.Conversation(
@@ -58,7 +58,8 @@ public class RavenDB_24984 : RavenTestBase
 
         chat.SetUserPrompt("call the 'MyTool' tool until it returns the string '10' (or greater)");
 
-        var result = await chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        var result = await chat.RunAsync<AiAgentBasics.OutputSchema>(cts.Token);
 
         Assert.Equal(AiConversationResult.Done, result.Status);
 
@@ -69,8 +70,8 @@ public class RavenDB_24984 : RavenTestBase
         using (var session = store.OpenSession())
         {
             var conversationDoc = session.Load<BlittableJsonReaderObject>(chat.Id);
-            Assert.True(conversationDoc.TryGet(nameof(ConversationDocument.NumberOfRepeatedToolCalls), out int numOfRepeatedToolCalls));
-            Assert.Equal(0, numOfRepeatedToolCalls); // should be reset after successful completion
+            Assert.True(conversationDoc.TryGet(nameof(ConversationDocument.RemainingToolIterations), out int remainingToolIterations));
+            Assert.Equal(maxModelIterationsPerCall, remainingToolIterations); // should be reset after successful completion
         }
     }
 }
