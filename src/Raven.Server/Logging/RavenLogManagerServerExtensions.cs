@@ -15,6 +15,7 @@ using NLog.Targets.Wrappers;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Utils;
 #if !RVN
 using System.Diagnostics;
 using System.Runtime.Loader;
@@ -543,7 +544,7 @@ internal static class RavenLogManagerServerExtensions
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
             var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
-            auditLog.Audit($"Server started up, listening to {string.Join(", ", configuration.Core.ServerUrls)} with certificate {server.Certificate?.ServerCertificate?.Subject} ({server.Certificate?.ServerCertificate?.Thumbprint}), public url: {configuration.Core.PublicServerUrl}");
+            auditLog.Audit($"Server started up, listening to {string.Join(", ", configuration.Core.ServerUrls)} with certificate {server.Certificate?.ServerCertificate?.GetDisplayName()} ({server.Certificate?.ServerCertificate?.Thumbprint}), public url: {configuration.Core.PublicServerUrl}");
         }
 
         return;

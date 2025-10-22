@@ -82,6 +82,7 @@
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\2.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_24529\RavenDB_24529.replay" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">

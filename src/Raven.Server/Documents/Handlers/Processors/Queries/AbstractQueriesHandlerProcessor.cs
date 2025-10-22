@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -17,6 +18,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
+    internal const string CannotUseFilterClauseInPatchOrDeleteByQueryOperationExceptionMessage = "Filter clause is not supported for PATCH/DELETE by query operation. Please use WHERE clause instead.";
     protected readonly QueryMetadataCache QueryMetadataCache;
     private readonly int _start, _pageSize;
     private readonly HttpContext _httpContext;
@@ -69,5 +71,13 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         return await IndexQueryServerSide.CreateAsync(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties);
+    }
+    
+    protected static void AssertQueryDoesNotUseFilterClause(IndexQueryServerSide query)
+    {
+        if (query.Metadata.FilterScript != null)
+        {
+            throw new NotSupportedException(CannotUseFilterClauseInPatchOrDeleteByQueryOperationExceptionMessage);
+        }
     }
 }

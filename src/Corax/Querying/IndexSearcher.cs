@@ -680,7 +680,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    private bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
+    internal bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
     {
         var result = _fieldsTree?.Read(fieldName);
         if (result is null)

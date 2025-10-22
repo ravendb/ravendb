@@ -38,13 +38,17 @@ namespace Corax.Indexing
     public unsafe partial class IndexWriter : IDisposable // single threaded, controlled by caller
     {
         public long EntriesAllocatorTotalAllocationsInBytes => _entriesAllocator?._totalAllocated ?? 0;
-
+        private readonly IndexEntryBuilder _entryBuilder;
         private long _numberOfModifications;
         private readonly HashSet<Slice> _indexedEntries = new(SliceComparer.Instance);
-        private List<(long EntryId, float Boost)> _boostedDocs;
         private readonly IndexFieldsMapping _fieldsMapping;
         private readonly SupportedFeatures _supportedFeatures;
+        
+        // Structures used for document boosting. BoostedDocs is an in-memory cache for all documents that have been boosted during indexing.
+        // DocumentBoost is a fixed tree that contains persisted boost values.
         private FixedSizeTree _documentBoost;
+        private List<(long EntryId, float Boost)> _boostedDocs;
+        
         private Tree _indexMetadata;
         private long _numberOfTermModifications;
 
@@ -61,13 +65,12 @@ namespace Corax.Indexing
 
         private ContextBoundNativeList<long> _smallPostingListWorkingBuffer;
 
-
+        // For testing purposes only. 
         private bool _ownsTransaction;
+        
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
-        private Token[] _tokensBufferHandler;
-        private byte[] _encodingBufferHandler;
-        private byte[] _utf8ConverterBufferHandler;
+
 
         private bool _hasSuggestions;
         private readonly IndexedField[] _knownFieldsTerms;
@@ -84,6 +87,45 @@ namespace Corax.Indexing
 
         private long _compactTreeDictionaryId = Constants.IndexSearcher.InvalidId;
         private EntriesToTermsTracker _entriesToTermsTracker;
+        
+        //Number of entries persisted on the disk on index writer initialization.
+        private long _initialNumberOfEntries;
+        
+        private readonly IndexOperationsDumper _indexDebugDumper;
+
+        // Encoder for the posting list.
+        private FastPForEncoder _pForEncoder;
+        
+        // The last entry id (with the highest ID) that was added to the index.
+        private long _lastEntryId;
+        
+        private ContextBoundNativeList<long> _tempListBuffer;
+
+        // This is used for keeping track terms per document. The value is an entry ID of an indexed document, where the index is a reference to the actual list of terms.
+        // _termsPerEntryIds and _termsPerEntryId are concatenated by index.
+        // Example:
+        // _termsPerEntryIds: [(Index: 0, Value: 1 (docId))]
+        // _termsPerEntryId: [0: [(id(): "Doc1"), (Field1: "Term1")], ...]
+        private NativeList<long> _termsPerEntryIds;
+        private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
+        
+        // Private context used by the index writer to store temporary data during an indexing process. We do not want to grow transaction's allocator too much for temporary data.
+        private ByteStringContext _entriesAllocator;
+        
+        // Tree that contains mapping Field -> LookupTree
+        private Tree _fieldsTree;
+        
+        // Used to keep track of ids of documents that have null value under certain field.
+        // Mapping: [Field] -> [List of ids that have null under a field]
+        private Tree _nullEntriesPostingListsTree;
+        
+        // Used to keep track of ids of documents that have no-value under certain field.
+        // Mapping: [Field] -> [List of ids that have no-value under a field]
+        private Tree _nonExistingEntriesPostingListsTree;
+
+        public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
+
+        private int[] _suggestionsTermsLengths;
 
         /// <summary>
         /// Container of deleted entries' IDs. Even if we're not bulk-removing them in the Commit phase,
@@ -103,8 +145,19 @@ namespace Corax.Indexing
         private HashSet<long> _nonExistingTermsMarkers;
         private Dictionary<long, IndexedField> _fieldsByRootPage;
         
+        /// <summary>
+        /// Context used by analyzers during indexing.
+        /// </summary>
+        private readonly AnalyzersContext _analyzersContext;
+        
         internal EntryIdPaginationSupportStatus PaginationBasedOnEntryIdSupportStatus { get; private set; }
         
+        
+        private FieldBuffers<Slice, CompactTree.CompactKeyLookup> _textualFieldBuffers;
+        private FieldBuffers<long, Int64LookupKey> _longFieldBuffers;
+        private FieldBuffers<double, DoubleLookupKey> _doubleFieldBuffers;
+        private FastPForDecoder _pforDecoder;
+
         /// <summary>
         /// Method to update dynamic mapping in runtime. 
         /// </summary>
@@ -134,13 +187,11 @@ namespace Corax.Indexing
         private IndexWriter(IndexFieldsMapping fieldsMapping, SupportedFeatures supportedFeatures)
         {
             _indexDebugDumper = new IndexOperationsDumper(fieldsMapping);
-            _builder = new IndexEntryBuilder(this);
+            _entryBuilder = new IndexEntryBuilder(this);
             _fieldsMapping = fieldsMapping;
             _supportedFeatures = supportedFeatures; // if not explicitly set - all features are available
-            _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
-            _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
-            _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
             _dynamicFieldsTerms = new Dictionary<Slice, IndexedField>(SliceComparer.Instance); // avoids NRE in cases where the index does not contain a dynamic field
+            _analyzersContext = new AnalyzersContext(fieldsMapping.MaximumOutputSize);
 
             var bufferSize = fieldsMapping!.Count;
             _knownFieldsTerms = new IndexedField[bufferSize];
@@ -200,8 +251,8 @@ namespace Corax.Indexing
             {
                 PaginationBasedOnEntryIdSupportStatus = (EntryIdPaginationSupportStatus)paginationBasedOnEntryIdSupportStatus.Value;
             }
-            
-            _lastEntryId =  _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
+
+            _lastEntryId = _indexMetadata?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
             _documentBoost = _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
             _nullEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NullPostingLists);
             _nonExistingEntriesPostingListsTree = _transaction.CreateTree(Constants.IndexWriter.NonExistingPostingLists);
@@ -246,9 +297,7 @@ namespace Corax.Indexing
                 field.TermsVectorFieldRootPage = _fieldsCache.GetFieldRootPage(storedName, _fieldsTree);
             }
         }
-
-        private readonly IndexEntryBuilder _builder;
-
+        
         public IndexEntryBuilder Update(ReadOnlySpan<byte> key)
         {
             // We do not dispose because we will be storing the slice in the hash set.
@@ -262,11 +311,13 @@ namespace Corax.Indexing
             {
                 entryId = InitBuilder();
             }
+            
+
 
             _indexedEntries.Add(keySlice); // Register entry by key.
             int index = InsertTermsPerEntry(entryId);
-            _builder.Init(entryId, index, keySlice);
-            return _builder;
+            _entryBuilder.Init(entryId, index, keySlice);
+            return _entryBuilder;
         }
 
         private int InsertTermsPerEntry(long entryId)
@@ -287,14 +338,13 @@ namespace Corax.Indexing
 
             // We do not dispose because we will be storing the slice in the hash set.
             Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
-            var isUnique = _indexedEntries.Add(keySlice);  // Register entry by key.
+            var isUnique = _indexedEntries.Add(keySlice); // Register entry by key.
             if (isUnique == false && PaginationBasedOnEntryIdSupportStatus == EntryIdPaginationSupportStatus.Supported)
                 DisablePaginationBasedOnEntryIdSupport();
 
             int index = InsertTermsPerEntry(entryId);
-            _builder.Init(entryId, index, keySlice);
-
-            return _builder;
+            _entryBuilder.Init(entryId, index, keySlice);
+            return _entryBuilder;
         }
 
         private void DisablePaginationBasedOnEntryIdSupport()
@@ -305,7 +355,7 @@ namespace Corax.Indexing
 
         private long InitBuilder()
         {
-            if (_builder.Active)
+            if (_entryBuilder.Active)
                 ThrowPreviousBuilderIsNotDisposed();
 
             _numberOfModifications++;
@@ -407,25 +457,7 @@ namespace Corax.Indexing
                 return field;
             }
         }
-
-        private long _initialNumberOfEntries;
-        private readonly IndexOperationsDumper _indexDebugDumper;
-        private FastPForDecoder _pforDecoder;
-        private long _lastEntryId;
-        private ContextBoundNativeList<long> _tempListBuffer;
-        private FastPForEncoder _pForEncoder;
-
-        private NativeList<long> _termsPerEntryIds;
-        private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
-        private ByteStringContext _entriesAllocator;
-        private Tree _fieldsTree;
-        private Tree _nullEntriesPostingListsTree;
-        private Tree _nonExistingEntriesPostingListsTree;
-
-        public long GetNumberOfEntries() => _initialNumberOfEntries + _numberOfModifications;
-
-        private int[] _suggestionsTermsLengths;
-
+        
         private void AddSuggestions(IndexedField field, Slice slice)
         {
             _hasSuggestions = true;
@@ -610,7 +642,7 @@ namespace Corax.Indexing
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
                 scope.Dispose();
 
                 if (reader.HasNumeric == false)
@@ -624,7 +656,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -634,7 +666,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
             }
         }
 
@@ -649,7 +681,7 @@ namespace Corax.Indexing
             }
 
             ref var term = ref field.Storage.GetAsRef(termLocation);
-            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency);
+            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
         }
 
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
@@ -835,7 +867,6 @@ namespace Corax.Indexing
             _nullTermsMarkers = null;
             _nonExistingTermsMarkers = null;
             _fieldsByRootPage = null;
-
             foreach (var term in _knownFieldsTerms)
             {
                 term.Clear();
@@ -1202,9 +1233,6 @@ namespace Corax.Indexing
             }
         }
 
-        private FieldBuffers<Slice, CompactTree.CompactKeyLookup> _textualFieldBuffers;
-        private FieldBuffers<long, Int64LookupKey> _longFieldBuffers;
-        private FieldBuffers<double, DoubleLookupKey> _doubleFieldBuffers;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ref NativeList<RecordedTerm> GetEntryTerms(int termsPerEntryIndex)
@@ -1368,7 +1396,7 @@ namespace Corax.Indexing
                         isIncluded = true;
                 }
 
-                //User may wants to delete it.
+                //User may want to delete it.
                 for (int idX = 0; idX < entries.Removals.Count && isIncluded == false; ++idX)
                 {
                     if (entries.Removals[idX].EntryId == existingEntryId)
@@ -1376,7 +1404,10 @@ namespace Corax.Indexing
                 }
 
                 if (isIncluded == false)
-                    entries.Addition(_entriesAllocator, existingEntryId, -1, existingFrequency);
+                {
+                    // We are not processing recorded terms for this document because it already exists on the disk. We do not have to know the actual term type.
+                    entries.Addition(_entriesAllocator, existingEntryId, -1, existingFrequency, InserterMode.Ignore); 
+                }
             }
 
 
@@ -1495,23 +1526,6 @@ namespace Corax.Indexing
             termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
         }
 
-        private void UnlikelyGrowAnalyzerBuffer(int newBufferSize, int newTokenSize)
-        {
-            if (newBufferSize > _encodingBufferHandler.Length)
-            {
-                Analyzer.BufferPool.Return(_encodingBufferHandler);
-                _encodingBufferHandler = null;
-                _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
-            }
-
-            if (newTokenSize > _tokensBufferHandler.Length)
-            {
-                Analyzer.TokensPool.Return(_tokensBufferHandler);
-                _tokensBufferHandler = null;
-                _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
-            }
-        }
-
         public void Dispose()
         {
             _compactKeyScope.Dispose();
@@ -1530,27 +1544,9 @@ namespace Corax.Indexing
             if (_ownsTransaction)
                 _transaction?.Dispose();
 
-
-            if (_encodingBufferHandler != null)
-            {
-                Analyzer.BufferPool.Return(_encodingBufferHandler);
-                _encodingBufferHandler = null;
-            }
-
-            if (_tokensBufferHandler != null)
-            {
-                Analyzer.TokensPool.Return(_tokensBufferHandler);
-                _tokensBufferHandler = null;
-            }
-
-            if (_utf8ConverterBufferHandler != null)
-            {
-                Analyzer.BufferPool.Return(_utf8ConverterBufferHandler);
-                _utf8ConverterBufferHandler = null;
-            }
-
+            _analyzersContext.Dispose();
             _indexDebugDumper.Dispose();
-            _builder.Clean();
+            _entryBuilder.Clean();
         }
 
         public void ReduceModificationCount()

@@ -74,10 +74,13 @@ public class RavenDB_24495 : ClusterTestBase
         var bcResult = ms2.ToArray();
 
         string dnExtractedCert = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(dnResult, $"{certName}.crt"));
-        string bcextractedCert = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(bcResult, $"{certName}.crt"));
+        string bcExtractedCert = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(bcResult, $"{certName}.crt"));
+        
+        string dnExtractedKey = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(dnResult, $"{certName}.key"));
+        string bcExtractedKey = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(bcResult, $"{certName}.key"));
 
-        // Checking only cert here because the private key is saved in PKCS8 now while in BouncyCastle it is saved in PKCS1
-        Assert.Equal(bcextractedCert, dnExtractedCert);
+        Assert.Equal(bcExtractedCert, dnExtractedCert);
+        Assert.Equal(bcExtractedKey, dnExtractedKey);
     }
 
     [RavenFact(RavenTestCategory.Certificates)]

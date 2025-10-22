@@ -2425,6 +2425,9 @@ class ongoingTasksStats extends shardViewModelBase {
                                 const promptTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.PromptTokens ?? 0);
                                 tooltipHtml += `<div class="tooltip-li">Prompt tokens: <div class="value">${promptTokens} </div></div>`;
 
+                                const reasoningTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.ReasoningTokens ?? 0);
+                                tooltipHtml += `<div class="tooltip-li">Reasoning tokens: <div class="value">${reasoningTokens} </div></div>`;
+
                                 const cachedTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.CachedTokens ?? 0);
                                 tooltipHtml += `<div class="tooltip-li">Cached tokens: <div class="value">${cachedTokens} </div></div>`;
                             }
@@ -2458,6 +2461,7 @@ class ongoingTasksStats extends shardViewModelBase {
                             tooltipHtml += `<div class="tooltip-li">Total tokens used: <div class="value">${elementWithData.Usage?.TotalTokens ?? 0} </div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Completion tokens used: <div class="value">${elementWithData.Usage?.CompletionTokens ?? 0} </div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Prompt tokens used: <div class="value">${elementWithData.Usage?.PromptTokens ?? 0} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Reasoning tokens used: <div class="value">${elementWithData.Usage?.ReasoningTokens ?? 0} </div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Cached tokens used: <div class="value">${elementWithData.Usage?.CachedTokens ?? 0} </div></div>`;
                             break;
                         }

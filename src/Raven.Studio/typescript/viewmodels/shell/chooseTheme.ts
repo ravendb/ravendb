@@ -1,4 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import eventsCollector = require("common/eventsCollector");
 
 class chooseTheme extends dialogViewModelBase {
 
@@ -30,6 +31,11 @@ class chooseTheme extends dialogViewModelBase {
     }
     
     useTheme(theme: string) {
+        eventsCollector.default.reportCustomEvent("theme_change", {
+            previous_theme: this.currentTheme(),
+            new_theme: theme
+        });
+
         localStorage.setItem(chooseTheme.themeLocalStorageKey, theme);
         this.updateStylesheet(chooseTheme.themeToStylesheet[theme]);
         document.body.setAttribute("data-theme", theme);
