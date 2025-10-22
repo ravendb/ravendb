@@ -1,13 +1,14 @@
 @use "Content/scss/colors";
 
 .ai-assistant-button {
-    background: linear-gradient(
+    background-color: var(--well-bg) !important;
+    background-image: linear-gradient(
         270deg,
         rgba(56, 142, 233, 0.05) 0%,
         rgba(86, 115, 243, 0.2) 75%,
         rgba(123, 81, 254, 0.3) 100%
     );
-    color: var(--ai-assistant-button-text-color) !important;
+    color: var(--text-color) !important;
 
     &:hover {
         background-color: var(--bs-gray-500) !important;
