@@ -63,11 +63,9 @@ export default function EditGenAiTaskModelFields() {
                     {isAiAssistOpen && (
                         <AiAssistantWindow
                             data={{
-                                OperationType: "RefineGenAiPrompt",
-                                ContextGenerationScript: formValues.script,
-                                OutputStructure: formValues.jsonSchema || formValues.sampleObject || "",
-                                SourceCollectionName: formValues.collectionName,
-                                Prompt: formValues.prompt,
+                                OperationType: "RefinePrompt",
+                                View: "GenAI",
+                                Message: getRefinePromptMessage(formValues),
                             }}
                             acceptResult={(text) => setValue("prompt", text)}
                             successMessage="AI refined your prompt based on your input and information from the previous steps."
@@ -146,4 +144,18 @@ function JsonSchemaSyntaxHelp() {
             <Code code={code} elementToCopy={code} language="json" />
         </div>
     );
+}
+
+function getRefinePromptMessage(formValues: EditGenAiTaskFormData) {
+    return `## Original prompt
+${formValues.prompt}
+
+## Source collection name
+${formValues.collectionName}
+
+## Context generation script
+${formValues.script}
+
+## Output structure
+${formValues.jsonSchema || formValues.sampleObject || ""}`;
 }

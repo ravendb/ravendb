@@ -52,7 +52,7 @@ function AiAssistantWindowStoryComponent() {
                 <AiAssistantWindow
                     closeWindow={() => {}}
                     acceptResult={setAssistantResultText}
-                    data={{ OperationType: "RefineText", Text: textToRefine }}
+                    data={{ OperationType: "RefinePrompt", View: "AI Agents", Message: textToRefine }}
                     successMessage="AI refined your prompt based on your input."
                 />
             </div>

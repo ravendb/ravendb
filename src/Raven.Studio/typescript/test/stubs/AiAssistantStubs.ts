@@ -9,7 +9,6 @@ export class AiAssistantStubs {
             OutputTokenCount: 20,
             UsagePercentage: 1,
             RefinedPrompt: "This is your refined prompt",
-            RefinedText: "This is your refined text",
             Status: "Success",
         };
     }

@@ -205,7 +205,11 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                 )}
                                 {isAiAssistOpen && (
                                     <AiAssistantWindow
-                                        data={{ OperationType: "RefineText", Text: formValues.systemPrompt }}
+                                        data={{
+                                            OperationType: "RefinePrompt",
+                                            View: "AI Agents",
+                                            Message: getRefinePromptMessage(formValues),
+                                        }}
                                         acceptResult={(text) => setValue("systemPrompt", text)}
                                         successMessage="AI refined your prompt based on your input."
                                         closeWindow={toggleIsAiAssistOpen}
@@ -324,3 +328,9 @@ const JsonSchemaSyntaxHelp = () => {
         </div>
     );
 };
+
+function getRefinePromptMessage(formValues: EditAiAgentFormData) {
+    return `## Original prompt
+${formValues.systemPrompt}
+`;
+}

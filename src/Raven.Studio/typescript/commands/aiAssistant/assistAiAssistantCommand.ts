@@ -1,24 +1,20 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-type AiAssistantOperationType = Raven.Server.Documents.AI.AiAssistant.AiAssistantOperationType;
-type RefineTextRequest = Raven.Server.Documents.AI.AiAssistant.Requests.RefineTextRequest;
-type RefineGenAiPromptRequest = Raven.Server.Documents.AI.AiAssistant.Requests.RefineGenAiPromptRequest;
+type AiAssistantOperationType = "RefinePrompt" | "Chatbot";
+type AiAssistantView = "GenAI" | "AI Agents";
 
-type AiRequest<T extends AiAssistantOperationType, R> = {
-    OperationType: Extract<AiAssistantOperationType, T>;
-} & Omit<R, "OperationType" | "CertificateThumbprint" | "License">;
-
-export type AssistAiAssistantRequestDto =
-    | AiRequest<"RefineText", RefineTextRequest>
-    | AiRequest<"RefineGenAiPrompt", RefineGenAiPromptRequest>;
+export interface AssistAiAssistantRequestDto {
+    OperationType: AiAssistantOperationType;
+    View: AiAssistantView;
+    Message: string;
+};
 
 export interface AssistAiAssistantResultDto {
     InputTokenCount: number;
     OutputTokenCount: number;
     Status: AiAssistantResponseStatus;
     UsagePercentage: number;
-    RefinedText?: string;
     RefinedPrompt?: string;
 }
 

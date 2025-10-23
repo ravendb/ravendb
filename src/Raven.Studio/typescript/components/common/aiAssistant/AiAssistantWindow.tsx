@@ -49,15 +49,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
             return null;
         }
 
-        if (data.OperationType === "RefineGenAiPrompt") {
-            return asyncAssist.result.RefinedPrompt;
-        }
-
-        if (data.OperationType === "RefineText") {
-            return asyncAssist.result.RefinedText;
-        }
-
-        return null;
+        return asyncAssist.result.RefinedPrompt;
     };
 
     const assistResultText = getAssistResultText();
