@@ -170,7 +170,7 @@ namespace Sparrow.Json
 
         private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
-        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(default(LazyStringValueStructComparer));
+        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;

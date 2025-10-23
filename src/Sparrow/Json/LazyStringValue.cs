@@ -18,7 +18,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue x, LazyStringValue y)
         {
-            if (x == y)
+            if (ReferenceEquals(x,y))
                 return true;
             if (x == null || y == null)
                 return false;
@@ -29,31 +29,6 @@ namespace Sparrow.Json
         public int GetHashCode(LazyStringValue obj)
         {
             return obj.GetHashCode();
-        }
-    }
-
-    internal struct LazyStringValueStructComparer : IEqualityComparer<LazyStringValue>
-    {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(LazyStringValue x, LazyStringValue y)
-        {
-            if (x == y)
-                return true;
-            if (x == null || y == null)
-                return false;
-            return x.CompareTo(y) == 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(LazyStringValue obj)
-        {
-            unsafe
-            {
-                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.
-                if (IntPtr.Size == 4)
-                    return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
-                return (int)Hashing.XXHash64.CalculateInline(obj.Buffer, (ulong)obj.Size);
-            }
         }
     }
 
@@ -166,8 +141,6 @@ namespace Sparrow.Json
 
             return _context.GetLazyString(_buffer, _size, longLived: false);
         }
-
-        public bool HasStringValue => _string != null;
 
         [ThreadStatic]
         private static char[] _lazyStringTempBuffer;
