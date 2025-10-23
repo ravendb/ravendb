@@ -34,7 +34,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public int RemainingToolIterations;
 
-    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
+    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, bool resetRemainingToolIterations = true)
     {
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
@@ -65,6 +65,9 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(configuration)
             }, "system/msg"), usage: null);
         }
+
+        if (resetRemainingToolIterations == false)
+            return;
 
         RemainingToolIterations = configuration.MaxModelIterationsPerCall ?? ConversationHandler.DefaultMaxModelIterationsPerCall;
     }

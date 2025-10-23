@@ -85,6 +85,7 @@ public class RavenDB_24407 : RavenTestBase
                     ParametersSampleObject = "{}"
                 }
         ];
+        agent.MaxModelIterationsPerCall = 5;
 
         var identifier = (await store.AI.CreateAgentAsync<OutputSampleObject>(agent, OutputSampleObject.Instance)).Identifier;
         // start chat
@@ -134,8 +135,6 @@ public class RavenDB_24407 : RavenTestBase
         if (withHistory)
             agent.ChatTrimming.History = new();
         
-        agent.MaxModelIterationsPerCall = 5;
-
         await store.AI.CreateAgentAsync(agent, OutputSampleObject.Instance);
 
         chat.SetUserPrompt("can you give me a cheaper alternative?");

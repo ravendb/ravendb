@@ -305,7 +305,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         oldChat.Messages.Clear();
 
-        oldChat.Initialize(context, configuration);
+        oldChat.Initialize(context, configuration, resetRemainingToolIterations: false);
+
         oldChat.AddMessage(context,
             context.ReadObject(
                 new DynamicJsonValue
