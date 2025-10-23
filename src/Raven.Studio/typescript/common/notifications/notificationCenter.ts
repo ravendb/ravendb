@@ -64,6 +64,9 @@ import complexFieldsAlertDetails = require("viewmodels/common/notificationCenter
 import cpuCreditsBalanceDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/cpuCreditsBalanceDetails");
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
 import typeUtils = require("common/typeUtils");
+import storeCompat = require("components/storeCompat");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
@@ -247,6 +250,14 @@ class notificationCenter {
         });
         this.noNewNotifications = ko.pureComputed(() => {
             return this.totalItemsCount() === 0;
+        });
+
+        ko.computed(() => {
+            if (this.showNotifications() && !this.pinNotifications()) {
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.absoluteNotificationsWidthSet($("#notification-center").width()));
+            } else {
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.absoluteNotificationsWidthSet(0));
+            }
         });
     }
 

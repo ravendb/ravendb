@@ -21,6 +21,7 @@ import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/edi
 import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
 import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
 import { aiAssistantSlice } from "./common/shell/aiAssistantSlice";
+import { chatbotSlice } from "./shell/chatbot/store/chatbotSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -45,6 +46,7 @@ export function createStoreConfiguration() {
             editAiAgent: editAiAgentSlice.reducer,
             chatAiAgent: chatAiAgentSlice.reducer,
             aiAssistant: aiAssistantSlice.reducer,
+            chatbot: chatbotSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

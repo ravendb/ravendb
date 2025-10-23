@@ -41,6 +41,11 @@
                         <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                     </a>
                 </li>
+                <li>
+                    <a href="#" title="Chatbot" class="btn-toggle no-decor" data-bind="click: $root.openChatbot">
+                        <i class="icon-question"></i>
+                    </a>
+                </li>
             </ul>
         </div><!--/.nav-collapse -->
     </nav>
@@ -175,8 +180,12 @@
         </button>
     </nav>
     <div id="page-host-root" class="content-container">
-        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
-        <div data-bind="react: $root.helpAndResourcesWidgetView, visible: $root.isHelpAndResourcesWidgetVisible" class="bs5" style="z-index: 9999;"></div>
+        <div class="d-flex h-100">
+            <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+            <!-- TODO -->
+            <!-- <div data-bind="react: $root.helpAndResourcesWidgetView, visible: $root.isHelpAndResourcesWidgetVisible" class="bs5" style="z-index: 9999;"></div> -->
+            <div data-bind="react: $root.chatbotView" class="bs5"></div>
+        </div>
     </div>
     <div class="notification-center-container bs3" data-bind="compose: notificationCenterView"></div>
 

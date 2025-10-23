@@ -62,6 +62,8 @@ import StudioSearchWithDatabaseSwitcher = require("components/shell/studioSearch
 import ProtractedRequestMessage = require("components/shell/partials/ProtractedRequestMessage");
 import HelpAndResourcesWidget = require("components/common/helpAndResources/HelpAndResourcesWidget");
 import typeUtils = require("common/typeUtils");
+import Chatbot = require("components/shell/chatbot/Chatbot")
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
 
 class shell extends viewModelBase {
 
@@ -138,6 +140,8 @@ class shell extends viewModelBase {
     isHelpAndResourcesWidgetVisible: KnockoutComputed<boolean>;
     logoSrc: KnockoutObservable<string>;
     logoClass: KnockoutComputed<string>;
+
+    chatbotView: ReactInKnockout<typeof Chatbot.default>;
     
     constructor() {
         super();
@@ -308,6 +312,8 @@ class shell extends viewModelBase {
             }
             return "main-logo";
         });
+
+        this.chatbotView = ko.pureComputed(() => ({ component: Chatbot.default }));
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -747,6 +753,10 @@ class shell extends viewModelBase {
                       
             return canHandleOperation ? "" : accessManager.getDisableReasonHtml(requiredAccess);
         })
+    }
+
+    openChatbot() {
+        storeCompat.globalDispatch(chatbotSlice.chatbotActions.isOpenSet(true));
     }
 }
 

@@ -74,6 +74,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
     return {
         refs,
         isSearchDropdownOpen,
+        setIsDropdownOpen,
         searchQuery,
         setSearchQuery,
         matchStatus,

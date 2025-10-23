@@ -10,12 +10,32 @@ import StudioSearchSwitchToDatabaseResults from "./bits/StudioSearchSwitchToData
 import StudioSearchServerResults from "./bits/StudioSearchServerResults";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useOS } from "hooks/useOS";
+import { Icon } from "components/common/Icon";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import { useAppDispatch } from "components/store";
 
 export default function StudioSearch(props: { menuItems?: menuItem[] }) {
-    const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem } =
-        useStudioSearch(props.menuItems);
+    const {
+        refs,
+        isSearchDropdownOpen,
+        setIsDropdownOpen,
+        searchQuery,
+        setSearchQuery,
+        matchStatus,
+        results,
+        activeItem,
+    } = useStudioSearch(props.menuItems);
 
     const operatingSystem = useOS();
+
+    const dispatch = useAppDispatch();
+
+    const handleAskAi = () => {
+        dispatch(chatbotActions.isOpenSet(true));
+        dispatch(chatbotActions.startChat({ message: searchQuery }));
+        setIsDropdownOpen(false);
+    };
+
     return (
         <>
             <Dropdown
@@ -37,6 +57,26 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                 </Dropdown.Toggle>
                 <Dropdown.Menu className="studio-search__results">
                     <Row className="m-0">
+                        {searchQuery && (
+                            <>
+                                <Dropdown.Header className="studio-search__database-col__header--sticky">
+                                    <span className="small-label">Knowledge center</span>
+                                </Dropdown.Header>
+                                <div className="p-2">
+                                    <Dropdown.Item
+                                        onClick={handleAskAi}
+                                        className="d-flex align-items-center studio-search__dropdown-item bg-body border border-secondary"
+                                        active={false}
+                                        id="ask-ai"
+                                    >
+                                        <Icon icon="ai" />
+                                        <span>
+                                            Ask AI &#8226; <span className="text-muted">{searchQuery}</span>
+                                        </span>
+                                    </Dropdown.Item>
+                                </div>
+                            </>
+                        )}
                         <div
                             className={classNames(
                                 "col-sm-12 studio-search__database-col p-0",
@@ -47,6 +87,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                             <Dropdown.Header className="studio-search__database-col__header--sticky">
                                 <span className="small-label">Active database</span>
                             </Dropdown.Header>
+
                             <StudioSearchDatabaseResults
                                 hasDatabaseMatch={matchStatus.hasDatabaseMatch}
                                 databaseResults={results.database}
