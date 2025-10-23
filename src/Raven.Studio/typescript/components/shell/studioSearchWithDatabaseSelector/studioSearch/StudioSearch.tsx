@@ -32,7 +32,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
 
     const handleAskAi = () => {
         dispatch(chatbotActions.isOpenSet(true));
-        dispatch(chatbotActions.startChat({ message: searchQuery }));
+        dispatch(chatbotActions.runChat({ message: searchQuery }));
         setIsDropdownOpen(false);
     };
 

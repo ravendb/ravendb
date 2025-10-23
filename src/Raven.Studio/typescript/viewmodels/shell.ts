@@ -60,7 +60,6 @@ import serverSettings = require("common/settings/serverSettings");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import StudioSearchWithDatabaseSwitcher = require("components/shell/studioSearchWithDatabaseSelector/StudioSearchWithDatabaseSwitcher");
 import ProtractedRequestMessage = require("components/shell/partials/ProtractedRequestMessage");
-import HelpAndResourcesWidget = require("components/common/helpAndResources/HelpAndResourcesWidget");
 import typeUtils = require("common/typeUtils");
 import Chatbot = require("components/shell/chatbot/Chatbot")
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
@@ -136,7 +135,6 @@ class shell extends viewModelBase {
     studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher.default>;
 
     protractedRequestMessageView: ReactInKnockout<typeof ProtractedRequestMessage.default>;
-    helpAndResourcesWidgetView: ReactInKnockout<typeof HelpAndResourcesWidget.HelpAndResourcesWidget>;
     isHelpAndResourcesWidgetVisible: KnockoutComputed<boolean>;
     logoSrc: KnockoutObservable<string>;
     logoClass: KnockoutComputed<string>;
@@ -290,8 +288,6 @@ class shell extends viewModelBase {
             component: ProtractedRequestMessage.default,
         }));
         
-        this.helpAndResourcesWidgetView = ko.pureComputed(() => ({ component: HelpAndResourcesWidget.HelpAndResourcesWidget }));
-
         this.isHelpAndResourcesWidgetVisible = ko.pureComputed(() => {
             const routesToHide: string[] = ["databases/ai/agents/edit", "databases/ai/agents/chat"];
             const route = genUtils.getSingleRoute(router.activeInstruction()?.config?.route);

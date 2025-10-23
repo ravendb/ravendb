@@ -17,11 +17,7 @@ $btn-default-dimension: 36px;
     inherits: false;
 }
 
-.bottom-right-tools-container {
-    position: fixed;
-    right: sizes.$gutter-sm;
-    bottom: 31px + sizes.$gutter-sm; // height of the footer + gutter-sm
-
+.chatbot-panel-resources {
     .btn-help-widget,
     .btn-hide-widget {
         display: flex;
@@ -90,7 +86,7 @@ $btn-default-dimension: 36px;
 
             &::before {
                 content: "";
-                background-image: url("../../../../wwwroot/Content/img/rook/with-coffee.svg");
+                background-image: url("../../../../../../wwwroot/Content/img/rook/with-coffee.svg");
                 position: absolute;
                 right: sizes.$gutter-md;
                 bottom: 0;

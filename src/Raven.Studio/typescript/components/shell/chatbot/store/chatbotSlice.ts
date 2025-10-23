@@ -2,7 +2,8 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 
 export type ChatbotRole = "system" | "user" | "assistant" | "tool";
-type Tab = "askAi" | "whatsNew" | "news" | "resources";
+type ChatbotTab = "askAi" | "whatsNew" | "news" | "resources";
+type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
 export interface ChatbotMessage {
     id: string;
@@ -16,7 +17,8 @@ export interface ChatbotMessage {
 interface ChatbotState {
     isOpen: boolean;
     isPinned: boolean;
-    activeTab: Tab;
+    chatbotTab: ChatbotTab;
+    chatbotResourcesTab: ChatbotResourcesTab;
     messages: ChatbotMessage[];
     absoluteNotificationsWidth: number;
 }
@@ -24,7 +26,8 @@ interface ChatbotState {
 const initialState: ChatbotState = {
     isOpen: false, // TODO change to false
     isPinned: false,
-    activeTab: "askAi",
+    chatbotTab: "askAi",
+    chatbotResourcesTab: "Help and resources",
     messages: [],
     absoluteNotificationsWidth: 0,
 };
@@ -39,8 +42,11 @@ export const chatbotSlice = createSlice({
         isPinnedSet: (state, action: PayloadAction<boolean>) => {
             state.isPinned = action.payload;
         },
-        activeTabSet: (state, action: PayloadAction<Tab>) => {
-            state.activeTab = action.payload;
+        chatbotTabSet: (state, action: PayloadAction<ChatbotTab>) => {
+            state.chatbotTab = action.payload;
+        },
+        chatbotResourcesTabSet: (state, action: PayloadAction<ChatbotResourcesTab>) => {
+            state.chatbotResourcesTab = action.payload;
         },
         messagesSet: (state, action: PayloadAction<ChatbotMessage[]>) => {
             state.messages = action.payload;
@@ -72,7 +78,6 @@ const runChat = createAsyncThunk(
                 PromptTokens: 100,
                 CompletionTokens: 100,
                 CachedTokens: 100,
-                ReasoningTokens: 0
             },
         };
 
@@ -105,7 +110,6 @@ const runChat = createAsyncThunk(
                 PromptTokens: 100,
                 CompletionTokens: 100,
                 CachedTokens: 100,
-                ReasoningTokens: 0
             },
         };
     }
@@ -123,7 +127,8 @@ export const chatbotActions = {
 export const chatbotSelectors = {
     isOpen: (state: RootState) => state.chatbot.isOpen,
     isPinned: (state: RootState) => state.chatbot.isPinned,
+    chatbotTab: (state: RootState) => state.chatbot.chatbotTab,
+    chatbotResourcesTab: (state: RootState) => state.chatbot.chatbotResourcesTab,
     messages: (state: RootState) => state.chatbot.messages,
-    activeTab: (state: RootState) => state.chatbot.activeTab,
     absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
 };
