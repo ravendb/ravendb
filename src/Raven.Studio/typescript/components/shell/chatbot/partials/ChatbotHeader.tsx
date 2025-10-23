@@ -75,7 +75,7 @@ function HeaderTitle() {
     if (chatbotTab === "askAi") {
         return (
             <div>
-                <Icon icon="ai" />
+                <Icon icon="chatbot" />
                 Ask AI
             </div>
         );

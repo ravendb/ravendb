@@ -17,7 +17,7 @@ export default function ChatbotFooter() {
             })}
         >
             <FooterItem
-                icon="ai"
+                icon="chatbot"
                 title="Ask AI"
                 isActive={chatbotTab === "askAi"}
                 handleClick={() => dispatch(chatbotActions.chatbotTabSet("askAi"))}

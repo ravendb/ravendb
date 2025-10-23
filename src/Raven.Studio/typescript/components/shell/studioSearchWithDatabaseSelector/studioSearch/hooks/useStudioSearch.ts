@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import useBoolean from "components/hooks/useBoolean";
 import { StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
 import { useStudioSearchAsyncRegister } from "./useStudioSearchAsyncRegister";
@@ -7,6 +7,8 @@ import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
 import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
 import { useStudioSearchMouseEvents } from "./useStudioSearchMouseEvents";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import { useAppDispatch } from "components/store";
 
 export function useStudioSearch(menuItems: menuItem[]) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
@@ -20,6 +22,15 @@ export function useStudioSearch(menuItems: menuItem[]) {
     const [activeItem, setActiveItem] = useState<StudioSearchResultItem>(null);
 
     const { register, results } = useStudioSearchOmniSearch(searchQuery);
+
+    const dispatch = useAppDispatch();
+
+    const handleAskAi = useCallback(() => {
+        dispatch(chatbotActions.runChat({ message: searchQuery }));
+        dispatch(chatbotActions.isOpenSet(true));
+        setSearchQuery("");
+        setIsDropdownOpen(false);
+    }, [searchQuery]);
 
     const refs = {
         inputRef,
@@ -54,7 +65,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
         activeItem,
         setIsDropdownOpen,
         setActiveItem,
-        setSearchQuery,
+        handleAskAi,
     });
 
     useStudioSearchMouseEvents({
@@ -80,6 +91,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
         matchStatus,
         results,
         activeItem,
+        handleAskAi,
     };
 }
 

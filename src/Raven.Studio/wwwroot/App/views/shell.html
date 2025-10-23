@@ -43,7 +43,7 @@
                 </li>
                 <li>
                     <a href="#" title="Chatbot" class="btn-toggle no-decor" data-bind="click: $root.openChatbot">
-                        <i class="icon-question"></i>
+                        <i class="icon-chatbot"></i>
                     </a>
                 </li>
             </ul>
@@ -181,7 +181,7 @@
     </nav>
     <div id="page-host-root" class="content-container">
         <div class="d-flex h-100">
-            <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+            <div id="page-host" class="page-host overflow-scroll" data-bind="router: { cacheViews: false }"></div>
             <div data-bind="react: $root.chatbotView" class="bs5"></div>
         </div>
     </div>

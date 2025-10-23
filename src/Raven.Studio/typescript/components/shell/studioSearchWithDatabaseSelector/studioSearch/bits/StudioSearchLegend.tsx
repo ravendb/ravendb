@@ -2,6 +2,7 @@ import React from "react";
 import Col from "react-bootstrap/Col";
 import { useOS } from "components/hooks/useOS";
 import Dropdown from "react-bootstrap/Dropdown";
+import { Icon } from "components/common/Icon";
 
 const KeyboardShortcuts = () => {
     const os = useOS();
@@ -30,6 +31,9 @@ const KeyboardShortcuts = () => {
                     </div>
                     <div className="d-flex align-items-center gap-1">
                         <kbd>Esc</kbd> <span>Close</span>
+                    </div>
+                    <div className="d-flex align-items-center gap-1">
+                        <kbd>{isMac ? "⌘" : "Ctrl"}</kbd> <kbd>/</kbd> <Icon icon="chatbot" margin="m-0" /> Ask AI
                     </div>
                 </Dropdown.Header>
             </div>

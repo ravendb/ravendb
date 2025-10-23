@@ -11,30 +11,12 @@ import StudioSearchServerResults from "./bits/StudioSearchServerResults";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useOS } from "hooks/useOS";
 import { Icon } from "components/common/Icon";
-import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
-import { useAppDispatch } from "components/store";
 
 export default function StudioSearch(props: { menuItems?: menuItem[] }) {
-    const {
-        refs,
-        isSearchDropdownOpen,
-        setIsDropdownOpen,
-        searchQuery,
-        setSearchQuery,
-        matchStatus,
-        results,
-        activeItem,
-    } = useStudioSearch(props.menuItems);
+    const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem, handleAskAi } =
+        useStudioSearch(props.menuItems);
 
     const operatingSystem = useOS();
-
-    const dispatch = useAppDispatch();
-
-    const handleAskAi = () => {
-        dispatch(chatbotActions.isOpenSet(true));
-        dispatch(chatbotActions.runChat({ message: searchQuery }));
-        setIsDropdownOpen(false);
-    };
 
     return (
         <>
