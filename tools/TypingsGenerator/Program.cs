@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -64,8 +63,6 @@ using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
-using Raven.Server.Documents.AI.AiAssistant;
-using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
@@ -76,12 +73,9 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
-using Raven.Server.Documents.ETL.Providers.Raven.Test;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -97,7 +91,6 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
@@ -610,9 +603,6 @@ namespace TypingsGenerator
 
             // AI
             scripter.AddType(typeof(AiModelsRequest));
-            scripter.AddType(typeof(AiAssistantOperationType));
-            scripter.AddType(typeof(RefineGenAiPromptRequest));
-            scripter.AddType(typeof(RefineTextRequest));
 
             // AI Agent
             scripter.AddType(typeof(AiAgentConfiguration));

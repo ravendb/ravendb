@@ -84,7 +84,6 @@ using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
-using Raven.Server.Documents.AI.AiAssistant.Requests;
 
 namespace Raven.Server.Json
 {
@@ -359,10 +358,6 @@ namespace Raven.Server.Json
         
         internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();
 
-        internal static readonly Func<BlittableJsonReaderObject, RefineTextRequest> RefineTextRequest = GenerateJsonDeserializationRoutine<RefineTextRequest>();
-        
-        internal static readonly Func<BlittableJsonReaderObject, RefineGenAiPromptRequest> RefineGenAiPromptRequest = GenerateJsonDeserializationRoutine<RefineGenAiPromptRequest>();
-        
         public sealed class Parameters
         {
             private Parameters()

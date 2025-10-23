@@ -2,9 +2,7 @@
 using JetBrains.Annotations;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
@@ -27,17 +25,9 @@ internal abstract class AiAssistantHandlerProcessorBase : AbstractHandlerProcess
         _certificateThumbprint = RequestHandler.GetCurrentCertificate()?.Thumbprint;
     }
 
-    protected BlittableJsonReaderObject FulfillRequestMetadata(BlittableJsonReaderObject requestBody, TransactionOperationContext context)
+    protected void FulfillRequestMetadata(DynamicJsonValue requestBody)
     {
-        requestBody.Modifications = new DynamicJsonValue()
-        {
-            [LicensePropertyName] = _license.ToJson(),
-            [CertificateThumbprintPropertyName] = _certificateThumbprint,
-        };
-
-        requestBody = context.ReadObject(requestBody, null);
-        requestBody.Modifications = null;
-
-        return requestBody;
+        requestBody[LicensePropertyName] = _license.ToJson();
+        requestBody[CertificateThumbprintPropertyName] = _certificateThumbprint;
     }
 }

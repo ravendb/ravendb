@@ -17,12 +17,12 @@ internal class AiAssistantCheckUsageProcessor([NotNull] RequestHandler requestHa
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
-            var requestMetadata = context.ReadObject(new DynamicJsonValue(), null);
-            requestMetadata = FulfillRequestMetadata(requestMetadata, context);
+            var request = new DynamicJsonValue();
+            FulfillRequestMetadata(request);
             
             var response = await ApiHttpClient.PostAsync(
                     requestUri: "/api/v1/ai/check-usage",
-                    content: new StringContent(requestMetadata.ToString(), Encoding.UTF8, "application/json"),
+                    content: new StringContent(context.ReadObject(request,"check-usage").ToString(), Encoding.UTF8, "application/json"),
                     token: token.Token)
                 .ConfigureAwait(false);
 
