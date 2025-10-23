@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Patch
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
 
-                ScriptEngine.SetValue("load", new ClrFunction(ScriptEngine, "load", LoadDocument));
+                SetFunc("load", LoadDocument);
                 ScriptEngine.SetValue("LoadDocument", new ClrFunction(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
 
                 ScriptEngine.SetValue("loadPath", new ClrFunction(ScriptEngine, "loadPath", LoadDocumentByPath));
@@ -378,6 +378,8 @@ namespace Raven.Server.Documents.Patch
                     ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
                 }
             }
+
+            private void SetFunc(string name, Func<JsValue, JsValue[], JsValue> func) => ScriptEngine.SetValue(name, new ClrFunction(ScriptEngine, name, func));
 
             private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(JsValue docArg, string signature)
             {
