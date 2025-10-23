@@ -2870,6 +2870,8 @@ namespace Raven.Server.Documents.Revisions
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
+            BlittableJsonReaderObject.BlittableValidation(context, ptr, size);
+            
             var result = new Document
             {
                 StorageId = tvr.Id,
