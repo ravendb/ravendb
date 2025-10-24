@@ -283,14 +283,14 @@ namespace Raven.Server.Documents.Patch
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
-                SetFunc(GetMetadataMethod, JavaScriptUtils.GetMetadata);
-                SetFunc("metadataFor", JavaScriptUtils.GetMetadata);
-                SetFunc("id", JavaScriptUtils.GetDocumentId);
-                SetFunc("count", JavaScriptUtils.Count);
-                SetFunc("key", JavaScriptUtils.Key);
-                SetFunc("sum", JavaScriptUtils.Sum);
+                ScriptEngine.SetFunc(GetMetadataMethod, JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetFunc("metadataFor", JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetFunc("id", JavaScriptUtils.GetDocumentId);
+                ScriptEngine.SetFunc("count", JavaScriptUtils.Count);
+                ScriptEngine.SetFunc("key", JavaScriptUtils.Key);
+                ScriptEngine.SetFunc("sum", JavaScriptUtils.Sum);
 
-                SetFunc("output", OutputDebug);
+                ScriptEngine.SetFunc("output", OutputDebug);
 
                 //console.log
                 ObjectInstance consoleObject = new JsObject(ScriptEngine);
@@ -323,41 +323,41 @@ namespace Raven.Server.Documents.Patch
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
 
-                SetFunc("load", LoadDocument);
-                SetFunc("LoadDocument", ThrowOnLoadDocument);
+                ScriptEngine.SetFunc("load", LoadDocument);
+                ScriptEngine.SetFunc("LoadDocument", ThrowOnLoadDocument);
 
-                SetFunc("loadPath", LoadDocumentByPath);
-                SetFunc("del", DeleteDocument);
-                SetFunc("DeleteDocument", ThrowOnDeleteDocument);
-                SetFunc("put", PutDocument);
-                SetFunc("PutDocument", ThrowOnPutDocument);
-                SetFunc("cmpxchg", CompareExchange);
+                ScriptEngine.SetFunc("loadPath", LoadDocumentByPath);
+                ScriptEngine.SetFunc("del", DeleteDocument);
+                ScriptEngine.SetFunc("DeleteDocument", ThrowOnDeleteDocument);
+                ScriptEngine.SetFunc("put", PutDocument);
+                ScriptEngine.SetFunc("PutDocument", ThrowOnPutDocument);
+                ScriptEngine.SetFunc("cmpxchg", CompareExchange);
 
-                SetFunc("counter", GetCounter);
-                SetFunc("counterRaw", GetCounterRaw);
-                SetFunc("incrementCounter", IncrementCounter);
-                SetFunc("deleteCounter", DeleteCounter);
+                ScriptEngine.SetFunc("counter", GetCounter);
+                ScriptEngine.SetFunc("counterRaw", GetCounterRaw);
+                ScriptEngine.SetFunc("incrementCounter", IncrementCounter);
+                ScriptEngine.SetFunc("deleteCounter", DeleteCounter);
 
-                SetFunc("lastModified", GetLastModified);
+                ScriptEngine.SetFunc("lastModified", GetLastModified);
 
-                SetFunc("startsWith", StartsWith);
-                SetFunc("endsWith", EndsWith);
-                SetFunc("regex", Regex);
+                ScriptEngine.SetFunc("startsWith", StartsWith);
+                ScriptEngine.SetFunc("endsWith", EndsWith);
+                ScriptEngine.SetFunc("regex", Regex);
 
-                SetFunc("Raven_ExplodeArgs", ExplodeArgs);
-                SetFunc("Raven_Min", Raven_Min);
-                SetFunc("Raven_Max", Raven_Max);
+                ScriptEngine.SetFunc("Raven_ExplodeArgs", ExplodeArgs);
+                ScriptEngine.SetFunc("Raven_Min", Raven_Min);
+                ScriptEngine.SetFunc("Raven_Max", Raven_Max);
 
-                SetFunc("convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString);
-                SetFunc("convertToTimeSpanString", ConvertToTimeSpanString);
-                SetFunc("compareDates", CompareDates);
+                ScriptEngine.SetFunc("convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString);
+                ScriptEngine.SetFunc("convertToTimeSpanString", ConvertToTimeSpanString);
+                ScriptEngine.SetFunc("compareDates", CompareDates);
 
-                SetFunc("toStringWithFormat", ToStringWithFormat);
+                ScriptEngine.SetFunc("toStringWithFormat", ToStringWithFormat);
 
-                SetFunc("scalarToRawString", ScalarToRawString);
+                ScriptEngine.SetFunc("scalarToRawString", ScalarToRawString);
 
                 //TimeSeries
-                SetFunc("timeseries", TimeSeries);
+                ScriptEngine.SetFunc("timeseries", TimeSeries);
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
                 foreach (var script in scriptsSource)
@@ -378,8 +378,6 @@ namespace Raven.Server.Documents.Patch
                     ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
                 }
             }
-
-            private void SetFunc(string name, Func<JsValue, JsValue[], JsValue> func) => ScriptEngine.SetValue(name, new ClrFunction(ScriptEngine, name, func));
 
             private (string Id, BlittableJsonReaderObject Doc) GetIdAndDocFromArg(JsValue docArg, string signature)
             {
