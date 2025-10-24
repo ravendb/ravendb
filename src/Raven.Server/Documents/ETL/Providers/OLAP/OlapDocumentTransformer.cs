@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 database, updateServerWideSettingsFunc: null, serverWide: false);
 
             _localFilePath = localSettings?.FolderPath ??
-                           (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
+                             (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).FullPath;
 
             _fileNameSuffix = ParquetTransformedItems.GetSafeNameForRemoteDestination($"{database.Name}-{_config.Name}-{transformation.Name}");
 
@@ -54,17 +54,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             base.Initialize(debugMode);
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.LoadTo, LoadToFunctionTranslator);
 
             foreach (var table in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + table;
-                DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,
-                    (self, args) => LoadToFunctionTranslator(table, args)));
+                DocumentScript.ScriptEngine.SetClrFunc(name, (self, args) => LoadToFunctionTranslator(table, args));
             }
 
-            DocumentScript.ScriptEngine.SetValue("partitionBy", new ClrFunction(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
-            DocumentScript.ScriptEngine.SetValue("noPartition", new ClrFunction(DocumentScript.ScriptEngine, "noPartition", NoPartition));
+            DocumentScript.ScriptEngine.SetClrFunc("partitionBy", PartitionBy);
+            DocumentScript.ScriptEngine.SetClrFunc("noPartition", NoPartition);
 
             var customPartitionValue = _config.CustomPartitionValue != null
                 ? new JsString(_config.CustomPartitionValue)
@@ -211,8 +210,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                         $"{methodSignature} items in array {PartitionKeys} of argument 'key' must be array instances of size 2, but got '{tuple.Length}'");
 
                 sb.Append('/');
-                string val = tuple[1].IsDate() 
-                    ? tuple[1].AsDate().ToDateTime().ToString(DateFormat) 
+                string val = tuple[1].IsDate()
+                    ? tuple[1].AsDate().ToDateTime().ToString(DateFormat)
                     : tuple[1].ToString();
 
                 var partition = $"{tuple[0]}={val}";
