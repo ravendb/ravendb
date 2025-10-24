@@ -2,6 +2,7 @@ import { Icon } from "components/common/Icon";
 import { ChatbotMessage } from "../store/chatbotSlice";
 import { LazyLoad } from "components/common/LazyLoad";
 import moment from "moment";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface ChatbotMessagesProps {
     messages: ChatbotMessage[];
@@ -9,9 +10,11 @@ interface ChatbotMessagesProps {
 
 export default function ChatbotMessages({ messages }: ChatbotMessagesProps) {
     return (
-        <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
+        <div className="flex-grow-1 overflow-y-auto vstack gap-2">
             {messages.map((message) => (
-                <AiAgentMessage key={message.id} message={message} />
+                <div key={message.id} className="px-2">
+                    <AiAgentMessage message={message} />
+                </div>
             ))}
         </div>
     );
@@ -22,36 +25,14 @@ interface AiAgentMessageProps {
 }
 
 function AiAgentMessage({ message }: AiAgentMessageProps) {
-    return (
-        <div>
-            {message.role === "system" && <SystemMessage message={message} />}
-            {message.role === "user" && <UserMessage message={message} />}
-            {message.role === "assistant" && <AgentMessage message={message} />}
-        </div>
-    );
-}
-
-interface SystemMessageProps {
-    message: ChatbotMessage;
-}
-
-function SystemMessage({ message }: SystemMessageProps) {
-    // TODO show time?
-
-    return (
-        <div className="text-muted">
-            {/* <div className="text-center md-label">{message.date}</div> */}
-            <div className="p-2 border-start border-secondary d-flex vstack">
-                <small>
-                    <Icon icon="system" size="xs" />
-                    System prompt
-                </small>
-                <small className="mt-2 overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
-                    {message.content}
-                </small>
-            </div>
-        </div>
-    );
+    switch (message.role) {
+        case "user":
+            return <UserMessage message={message} />;
+        case "assistant":
+            return <AgentMessage message={message} />;
+        default:
+            return assertUnreachable(message.role);
+    }
 }
 
 interface UserMessageProps {

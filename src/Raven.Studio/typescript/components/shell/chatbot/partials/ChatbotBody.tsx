@@ -9,7 +9,7 @@ export default function ChatbotBody() {
     const chatbotTab = useAppSelector(chatbotSelectors.chatbotTab);
 
     return (
-        <div className="vstack flex-grow-1">
+        <div className="vstack flex-grow-1" style={{ minHeight: 0 }}>
             {chatbotTab === "askAi" && <ChatbotPanelAskAi />}
             {chatbotTab === "whatsNew" && <ChatbotPanelWhatsNew />}
             {chatbotTab === "news" && <ChatbotPanelNews />}

@@ -5,16 +5,21 @@ interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
     View: string;
     Message: string;
+    ConversationId?: string;
 };
 
 export type RunChatbotAiAssistantViewData = Omit<RunChatbotAssistAiAssistantRequestDto, "OperationType">;
 
 export interface RunChatbotAiAssistantResultDto {
+    ConversationId: string;
     InputTokenCount: number;
     OutputTokenCount: number;
     Status: AiAssistantResponseStatus;
     UsagePercentage: number;
-    RefinedPrompt?: string;
+    Response: {
+        Answer: string;
+        RelevantLinks: string[]
+    };
 }
 
 export default class runChatbotAiAssistantCommand extends commandBase {
@@ -29,6 +34,7 @@ export default class runChatbotAiAssistantCommand extends commandBase {
             OperationType: "Chatbot",
             View: this.viewData.View,
             Message: this.viewData.Message,
+            ConversationId: this.viewData.ConversationId,
         };
 
         return this.post<RunChatbotAiAssistantResultDto>(url, JSON.stringify(dto)).fail((response: JQueryXHR) =>

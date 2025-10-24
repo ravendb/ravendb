@@ -9,6 +9,11 @@ export default function ChatbotHeader() {
 
     const isPinned = useAppSelector(chatbotSelectors.isPinned);
 
+    const resetConversation = () => {
+        dispatch(chatbotActions.messagesSet([]));
+        dispatch(chatbotActions.conversationIdSet(null));
+    };
+
     return (
         <div
             className={classNames(
@@ -22,12 +27,7 @@ export default function ChatbotHeader() {
                 <HeaderTitle />
             </h4>
             <div className="hstack">
-                <Button
-                    variant="link"
-                    size="sm"
-                    className="text-reset"
-                    onClick={() => dispatch(chatbotActions.messagesSet([]))}
-                >
+                <Button variant="link" size="sm" className="text-reset" onClick={resetConversation}>
                     <Icon icon="plus" margin="m-0" />
                 </Button>
                 {isPinned ? (

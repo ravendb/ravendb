@@ -3,7 +3,7 @@ import { RunChatbotAiAssistantViewData } from "commands/aiAssistant/runChatbotAi
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 
-export type ChatbotRole = "system" | "user" | "assistant" | "tool";
+export type ChatbotRole = "user" | "assistant";
 type ChatbotTab = "askAi" | "whatsNew" | "news" | "resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
@@ -21,6 +21,7 @@ interface ChatbotState {
     isPinned: boolean;
     chatbotTab: ChatbotTab;
     chatbotResourcesTab: ChatbotResourcesTab;
+    conversationId: string;
     messages: ChatbotMessage[];
     absoluteNotificationsWidth: number;
 }
@@ -30,6 +31,7 @@ const initialState: ChatbotState = {
     isPinned: false,
     chatbotTab: "askAi",
     chatbotResourcesTab: "Help and resources",
+    conversationId: null,
     messages: [],
     absoluteNotificationsWidth: 0,
 };
@@ -55,6 +57,9 @@ export const chatbotSlice = createSlice({
         },
         messageAdded: (state, action: PayloadAction<ChatbotMessage>) => {
             state.messages.push(action.payload);
+        },
+        conversationIdSet: (state, action: PayloadAction<string>) => {
+            state.conversationId = action.payload;
         },
         absoluteNotificationsWidthSet: (state, action: PayloadAction<number>) => {
             state.absoluteNotificationsWidth = action.payload;
@@ -108,28 +113,25 @@ const runChat = createAsyncThunk(
         const result = await services.aiAssistantService.runChatbot({
             View: payload.data.View,
             Message: payload.data.Message,
+            ConversationId: payload.conversationId,
         });
 
-        console.log("kalczur result", result);
+        dispatch(chatbotActions.conversationIdSet(result.ConversationId));
 
         return {
             ...assistantMessage,
-            content: mockedResponseContent,
+            content: result.Response.Answer,
             state: "success",
             thinkingTimeInMs: new Date().getTime() - startThinkingTime,
             usage: {
-                TotalTokens: 100,
-                PromptTokens: 100,
-                CompletionTokens: 100,
-                CachedTokens: 100,
+                TotalTokens: result.InputTokenCount,
+                PromptTokens: result.InputTokenCount,
+                CompletionTokens: result.OutputTokenCount,
+                CachedTokens: 0, // TODO?
             },
         };
     }
 );
-
-const mockedResponseContent = `Indexes are server-side, persisted structures that precompute queryable fields so reads don’t scan entire collections. RavenDB creates auto-indexes for ad-hoc queries; for recurring/high-traffic patterns, use static indexes - Map for filtering/sorting and Map-Reduce for pre-aggregations. They update asynchronously as documents change (with optional staleness control).
-
-Recommendation: identify your top queries (filters, sorts, aggregates) and create static indexes for those; use Map-Reduce where you need rollups (e.g., per day/month totals).`;
 
 export const chatbotActions = {
     ...chatbotSlice.actions,
@@ -142,5 +144,6 @@ export const chatbotSelectors = {
     chatbotTab: (state: RootState) => state.chatbot.chatbotTab,
     chatbotResourcesTab: (state: RootState) => state.chatbot.chatbotResourcesTab,
     messages: (state: RootState) => state.chatbot.messages,
+    conversationId: (state: RootState) => state.chatbot.conversationId,
     absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
 };

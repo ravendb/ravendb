@@ -135,7 +135,6 @@ class shell extends viewModelBase {
     studioSearchWithDatabaseSwitcherView: ReactInKnockout<typeof StudioSearchWithDatabaseSwitcher.default>;
 
     protractedRequestMessageView: ReactInKnockout<typeof ProtractedRequestMessage.default>;
-    isHelpAndResourcesWidgetVisible: KnockoutComputed<boolean>;
     logoSrc: KnockoutObservable<string>;
     logoClass: KnockoutComputed<string>;
 
@@ -288,13 +287,6 @@ class shell extends viewModelBase {
             component: ProtractedRequestMessage.default,
         }));
         
-        this.isHelpAndResourcesWidgetVisible = ko.pureComputed(() => {
-            const routesToHide: string[] = ["databases/ai/agents/edit", "databases/ai/agents/chat"];
-            const route = genUtils.getSingleRoute(router.activeInstruction()?.config?.route);
-
-            return !routesToHide.includes(route);
-        });
-
         this.logoSrc = ko.pureComputed(() => {
             if (license.getStatusValue("Type") === "EnterpriseAi") {
                 return require("../../wwwroot/Content/img/ravendb-ai_logo.svg");
