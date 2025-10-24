@@ -179,11 +179,11 @@
             <i class="icon-arrow-right"></i>
         </button>
     </nav>
-    <div id="page-host-root" class="content-container">
-        <div class="d-flex h-100">
+    <div class="content-container-wrapper">
+        <div id="page-host-root" class="content-container">
             <div id="page-host" class="page-host overflow-scroll" data-bind="router: { cacheViews: false }"></div>
-            <div data-bind="react: $root.chatbotView" class="bs5"></div>
         </div>
+        <div data-bind="react: $root.chatbotView" class="bs5"></div>
     </div>
     <div class="notification-center-container bs3" data-bind="compose: notificationCenterView"></div>
 
