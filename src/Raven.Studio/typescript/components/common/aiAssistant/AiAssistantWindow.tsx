@@ -5,7 +5,7 @@ import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
 import { useAsync } from "react-async-hook";
-import { AssistAiAssistantRequestDto } from "commands/aiAssistant/assistAiAssistantCommand";
+import { RefinePromptAiAssistantViewData } from "commands/aiAssistant/refinePromptAiAssistantCommand";
 import { ReactNode, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { aiAssistantActions, aiAssistantSelectors } from "../shell/aiAssistantSlice";
@@ -17,7 +17,7 @@ import { aiAssistantConstants } from "./aiAssistantConstants";
 interface AiAssistWindowProps {
     closeWindow: () => void;
     acceptResult: (text: string) => void;
-    data: AssistAiAssistantRequestDto;
+    data: RefinePromptAiAssistantViewData;
     successMessage: ReactNode;
 }
 
@@ -41,7 +41,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
             return null;
         }
 
-        return await aiAssistantService.assist(data);
+        return await aiAssistantService.refinePrompt(data);
     }, [isConsentSuccess]);
 
     const getAssistResultText = () => {

@@ -20,7 +20,7 @@ export default function ChatbotPanelAskAi() {
     });
 
     const handleSend = async () => {
-        await dispatch(chatbotActions.runChat({ message: formValues.prompt, isContinuation: true })).unwrap();
+        await dispatch(chatbotActions.runChat({ data: { View: "TODO", Message: formValues.prompt } })).unwrap();
         reset();
     };
 

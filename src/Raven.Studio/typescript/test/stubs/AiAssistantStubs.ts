@@ -1,9 +1,9 @@
-import { AssistAiAssistantResultDto } from "commands/aiAssistant/assistAiAssistantCommand";
+import { RefinePromptAiAssistantResultDto } from "commands/aiAssistant/refinePromptAiAssistantCommand";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
 
 export class AiAssistantStubs {
-    static assistSuccess(): AssistAiAssistantResultDto {
+    static refinePromptSuccess(): RefinePromptAiAssistantResultDto {
         return {
             InputTokenCount: 10,
             OutputTokenCount: 20,

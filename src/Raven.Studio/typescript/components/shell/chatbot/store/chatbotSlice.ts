@@ -1,4 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { RunChatbotAiAssistantViewData } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 
 export type ChatbotRole = "system" | "user" | "assistant" | "tool";
@@ -67,11 +69,16 @@ export const chatbotSlice = createSlice({
 
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
-    async (payload: { message: string; isContinuation?: boolean }, { dispatch }): Promise<ChatbotMessage> => {
+    async (
+        payload: { data: RunChatbotAiAssistantViewData; conversationId?: string },
+        { dispatch }
+    ): Promise<ChatbotMessage> => {
+        const userId = _.uniqueId();
+
         const userMessage: ChatbotMessage = {
-            id: "1",
+            id: userId,
             role: "user",
-            content: payload.message,
+            content: payload.data.Message,
             state: "success",
             usage: {
                 TotalTokens: 100,
@@ -81,7 +88,7 @@ const runChat = createAsyncThunk(
             },
         };
 
-        if (payload.isContinuation) {
+        if (payload.conversationId) {
             dispatch(chatbotActions.messageAdded(userMessage));
         } else {
             dispatch(chatbotActions.messagesSet([userMessage]));
@@ -98,7 +105,12 @@ const runChat = createAsyncThunk(
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
-        await new Promise((resolve) => setTimeout(resolve, Math.random() * 2000 + 1000));
+        const result = await services.aiAssistantService.runChatbot({
+            View: payload.data.View,
+            Message: payload.data.Message,
+        });
+
+        console.log("kalczur result", result);
 
         return {
             ...assistantMessage,

@@ -18,7 +18,7 @@ export const EditAiAgentStory: StoryObj = {
         databases.withActiveDatabase();
 
         aiAssistantService.withCheckConsent();
-        aiAssistantService.withAssist();
+        aiAssistantService.withRefinePrompt();
 
         return <EditAiAgent />;
     },

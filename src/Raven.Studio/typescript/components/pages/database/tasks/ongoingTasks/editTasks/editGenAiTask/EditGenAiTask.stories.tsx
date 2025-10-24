@@ -34,7 +34,7 @@ export const Basic: StoryObj = {
         tasksService.withTestGenAi();
 
         aiAssistantService.withCheckConsent();
-        aiAssistantService.withAssist();
+        aiAssistantService.withRefinePrompt();
 
         license.with_License({
             HasGenAi: true,

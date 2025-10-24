@@ -206,7 +206,6 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                 {isAiAssistOpen && (
                                     <AiAssistantWindow
                                         data={{
-                                            OperationType: "RefinePrompt",
                                             View: "AI Agents",
                                             Message: getRefinePromptMessage(formValues),
                                         }}

@@ -1,4 +1,4 @@
-import { AssistAiAssistantResultDto } from "commands/aiAssistant/assistAiAssistantCommand";
+import { RefinePromptAiAssistantResultDto } from "commands/aiAssistant/refinePromptAiAssistantCommand";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
 import AiAssistantService from "components/services/AiAssistantService";
@@ -10,8 +10,8 @@ export default class MockAiAssistantService extends AutoMockService<AiAssistantS
         super(new AiAssistantService());
     }
 
-    withAssist(dto?: MockedValue<AssistAiAssistantResultDto>) {
-        return this.mockResolvedValue(this.mocks.assist, dto, AiAssistantStubs.assistSuccess());
+    withRefinePrompt(dto?: MockedValue<RefinePromptAiAssistantResultDto>) {
+        return this.mockResolvedValue(this.mocks.refinePrompt, dto, AiAssistantStubs.refinePromptSuccess());
     }
 
     withCheckConsent(dto?: MockedValue<CheckConsentAiAssistantResultDto>) {

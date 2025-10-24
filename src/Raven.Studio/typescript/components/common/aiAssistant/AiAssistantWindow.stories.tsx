@@ -21,7 +21,7 @@ export const AiAssistantWindowStory: StoryObj<AiAssistantWindowStoryArgs> = {
         const { aiAssistantService } = mockServices;
 
         aiAssistantService.withCheckConsent({ Status: args.consentStatus });
-        aiAssistantService.withAssist((dto) => {
+        aiAssistantService.withRefinePrompt((dto) => {
             dto.Status = args.assistStatus;
         });
 
@@ -52,7 +52,7 @@ function AiAssistantWindowStoryComponent() {
                 <AiAssistantWindow
                     closeWindow={() => {}}
                     acceptResult={setAssistantResultText}
-                    data={{ OperationType: "RefinePrompt", View: "AI Agents", Message: textToRefine }}
+                    data={{ View: "AI Agents", Message: textToRefine }}
                     successMessage="AI refined your prompt based on your input."
                 />
             </div>

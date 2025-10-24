@@ -63,7 +63,6 @@ export default function EditGenAiTaskModelFields() {
                     {isAiAssistOpen && (
                         <AiAssistantWindow
                             data={{
-                                OperationType: "RefinePrompt",
                                 View: "GenAI",
                                 Message: getRefinePromptMessage(formValues),
                             }}
