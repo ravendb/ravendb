@@ -52,6 +52,12 @@ namespace Raven.Server.Documents.Patch
         private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
         private static readonly string AllowStringCompilationKey = RavenConfiguration.GetKey(x => x.Patching.AllowStringCompilation);
 
+        /// <summary>
+        /// This class holds a <see cref="SingleRun"/> with its underlying <see cref="Engine"/>.
+        ///
+        /// It uses one of the two fields to hold it. It's either <see cref="Value"/> that is a strong reference or
+        /// <see cref="WeakValue"/> that the value might be moved to when <see cref="RunIdleOperations"/> is performed.
+        /// </summary>
         public sealed class Holder
         {
             public Holder(long generation)
@@ -65,17 +71,17 @@ namespace Raven.Server.Documents.Patch
             public WeakReference<SingleRun> WeakValue;
         }
 
-        private readonly ConcurrentQueue<Holder> _cache = new ConcurrentQueue<Holder>();
+        private readonly ConcurrentQueue<Holder> _cache = new();
         private readonly ScriptRunnerCache _parent;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
-        public readonly List<Prepared<Script>> ScriptsSource = new List<Prepared<Script>>();
+        private readonly List<Prepared<Script>> _scriptsSource = new();
 
         public int NumberOfCachedScripts => _cache.Count(x =>
             x.Value != null ||
             x.WeakValue?.TryGetTarget(out _) == true);
 
-        internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
+        private readonly Dictionary<string, DeclaredFunction> _timeSeriesDeclaration = new();
 
         public long Runs;
         private DateTime _lastRun;
@@ -100,7 +106,7 @@ namespace Raven.Server.Documents.Patch
                 ["CachedScriptsCount"] = _cache.Count
             };
             if (detailed)
-                djv["ScriptsSource"] = ScriptsSource;
+                djv["ScriptsSource"] = _scriptsSource;
 
             return djv;
         }
@@ -115,7 +121,7 @@ namespace Raven.Server.Documents.Patch
                     // we cannot be sure about projected elements, they might use strict mode reserved words like 'package'
                     strict = false;
                 }
-                ScriptsSource.Add(Engine.PrepareScript(script, strict: strict));
+                _scriptsSource.Add(Engine.PrepareScript(script, strict: strict));
             }
             catch (Exception e)
             {
@@ -125,7 +131,7 @@ namespace Raven.Server.Documents.Patch
 
         public void AddTimeSeriesDeclaration(DeclaredFunction func)
         {
-            TimeSeriesDeclaration.Add(func.Name, func);
+            _timeSeriesDeclaration.Add(func.Name, func);
         }
 
         public ReturnRun GetRunner(bool ignoreValidationErrors, out SingleRun run)
@@ -150,7 +156,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, ScriptsSource, ignoreValidationErrors);
+                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, _scriptsSource, ignoreValidationErrors);
                 }
             }
 
@@ -373,7 +379,7 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
 
-                foreach (var ts in runner.TimeSeriesDeclaration)
+                foreach (var ts in runner._timeSeriesDeclaration)
                 {
                     ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
                 }
@@ -1011,7 +1017,7 @@ namespace Raven.Server.Documents.Patch
 
             public override string ToString()
             {
-                return string.Join(Environment.NewLine, _runner.ScriptsSource);
+                return string.Join(Environment.NewLine, _runner._scriptsSource);
             }
 
             private static JsValue GetLastModified(JsValue self, JsValue[] args)
@@ -1628,7 +1634,7 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("InvokeTimeSeriesFunction");
 
-                if (_runner.TimeSeriesDeclaration.TryGetValue(name, out var func) == false)
+                if (_runner._timeSeriesDeclaration.TryGetValue(name, out var func) == false)
                     throw new InvalidOperationException($"Failed to invoke time series function. Unknown time series name '{name}'.");
 
                 object[] tsFunctionArgs = GetTimeSeriesFunctionArgs(name, args, out string docId, out var lazyIds);
@@ -2093,7 +2099,7 @@ namespace Raven.Server.Documents.Patch
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
-            private JsValue[] _args = Array.Empty<JsValue>();
+            private JsValue[] _args = [];
             private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
             public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null, CancellationToken token = default)
