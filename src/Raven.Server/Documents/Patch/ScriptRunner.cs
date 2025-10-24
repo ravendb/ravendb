@@ -25,7 +25,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
@@ -82,6 +81,7 @@ namespace Raven.Server.Documents.Patch
             x.WeakValue?.TryGetTarget(out _) == true);
 
         private readonly Dictionary<string, DeclaredFunction> _timeSeriesDeclaration = new();
+        private Dictionary<string, Func<JsValue, JsValue[], JsValue>> _clrFunctions = null;
 
         public long Runs;
         private DateTime _lastRun;
@@ -132,6 +132,16 @@ namespace Raven.Server.Documents.Patch
         public void AddTimeSeriesDeclaration(DeclaredFunction func)
         {
             _timeSeriesDeclaration.Add(func.Name, func);
+        }
+
+        /// <summary>
+        /// Sets a clr function <paramref name="func"/> under <see cref="name"/>.
+        /// If the function was set before, it will be overwritten.
+        /// </summary>
+        public void SetClrFunction(string name, Func<JsValue, JsValue[], JsValue> func)
+        {
+            _clrFunctions ??= new Dictionary<string, Func<JsValue, JsValue[], JsValue>>();
+            _clrFunctions[name] = func;
         }
 
         public ReturnRun GetRunner(bool ignoreValidationErrors, out SingleRun run)
@@ -365,6 +375,15 @@ namespace Raven.Server.Documents.Patch
                 //TimeSeries
                 ScriptEngine.SetClrFunc("timeseries", TimeSeries);
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
+
+                // Clr Functions, apply if any
+                if (runner._clrFunctions != null)
+                {
+                    foreach ((string name, Func<JsValue, JsValue[], JsValue> value) in runner._clrFunctions)
+                    {
+                        ScriptEngine.SetClrFunc(name, value);
+                    }
+                }
 
                 foreach (var script in scriptsSource)
                 {
