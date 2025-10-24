@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Patch
             _fstDocumentConflict = docs[0];
         }
 
-        public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
+        public bool TryResolveConflict(DocumentsOperationContext context, ConflictPatchRequest patch, out BlittableJsonReaderObject resolved)
         {
             using (_database.Scripts.GetScriptRunner(patch, false, out var run))
             using (var result = run.Run(context, context, "resolve", [_docs, _hasTombstone, TombstoneResolverValue]))
