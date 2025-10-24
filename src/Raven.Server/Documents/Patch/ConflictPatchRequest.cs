@@ -1,4 +1,10 @@
-﻿namespace Raven.Server.Documents.Patch;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Jint.Native;
+
+namespace Raven.Server.Documents.Patch;
 
 /// <summary>
 /// Represents a <see cref="PatchRequest"/> that resolves a conflict between documents.
@@ -7,6 +13,22 @@ public sealed class ConflictPatchRequest : ScriptRunnerCache.Key
 {
     private readonly string _script;
 
+    /// <summary>
+    /// Functions that are forbidden when performing a conflict resolution script.
+    /// </summary>
+    private static readonly string[] ForbiddenFunctionsNames =
+    [
+        "put",
+        "del",
+        "load",
+        "loadPath",
+    ];
+
+    private static readonly (string name, Func<JsValue, JsValue[], JsValue> func)[] ForbiddenFunctions =
+        ForbiddenFunctionsNames
+            .Select<string, (string name, Func<JsValue, JsValue[], JsValue> func)>(name => (name, (_, _) => throw new InvalidOperationException($"Calling '{name}' in conflict resolution script is forbidden.")))
+            .ToArray();
+    
     public ConflictPatchRequest(string script)
     {
         _script = script;
@@ -14,6 +36,12 @@ public sealed class ConflictPatchRequest : ScriptRunnerCache.Key
 
     public override void GenerateScript(ScriptRunner runner)
     {
+        // override forbidden
+        foreach ((string name, Func<JsValue, JsValue[], JsValue> func) in ForbiddenFunctions)
+        {
+            runner.SetClrFunction(name, func);
+        }
+        
         runner.AddScript($@"
 function resolve(docs, hasTombstone, resolveToTombstone){{ 
 
