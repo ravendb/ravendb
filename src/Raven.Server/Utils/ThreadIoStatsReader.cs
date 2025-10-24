@@ -14,7 +14,7 @@ namespace Raven.Server.Utils
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ThreadIoStatsReader>(nameof(ThreadIoStatsReader));
         private readonly ConcurrentDictionary<int, Stats> _stats = new ConcurrentDictionary<int, Stats>();
         private readonly ConcurrentDictionary<int, PrevSample> _prevSamples = new ConcurrentDictionary<int, PrevSample>();
-        private readonly Timer _timer;
+        private Timer _timer;
         private int _collecting;
 
         public sealed class Stats
@@ -120,11 +120,15 @@ namespace Raven.Server.Utils
             try
             {
                 _timer?.Dispose();
+                _timer = null;
             }
             catch
             {
                 // ignore
             }
+            
+            _stats.Clear();
+            _prevSamples.Clear();
         }
 
         private void CollectOnce()
