@@ -27,7 +27,7 @@ interface ChatbotState {
 }
 
 const initialState: ChatbotState = {
-    isOpen: false, // TODO change to false
+    isOpen: false,
     isPinned: false,
     chatbotTab: "askAi",
     chatbotResourcesTab: "Help and resources",

@@ -76,7 +76,7 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
                         <Icon icon="copy-to-clipboard" margin="ms-1" />
                     </Button>
                 </div>
-                <div className="mt-2 text-truncate" title={config.SystemPrompt}>
+                <div className="mt-2 text-truncate" title={config.SystemPrompt} style={{ maxWidth: "300px" }}>
                     {config.SystemPrompt}
                 </div>
                 <div className="hstack justify-content-between mt-2">
