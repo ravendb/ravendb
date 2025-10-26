@@ -22,12 +22,22 @@ public class AiAgentParameter : IDynamicJson
         Description = description;
     }
 
-    public AiAgentParameter(string name, string description, bool? sendToModel = null) : this(name)
+    /// <summary>
+    /// Initializes a new agent parameter and controls whether its value should be sent to the LLM.
+    /// Use this overload when you need to explicitly hide sensitive values (e.g. userId/tenant/company) from the model.
+    /// </summary>
+    /// <param name="name">The parameter name. Cannot be null or empty.</param>
+    /// <param name="description">
+    /// A human-readable description. May be null or empty when using this overload.
+    /// </param>
+    /// <param name="sendToModel">
+    /// When <c>false</c>, the parameter is hidden from the model (it will not be included in prompts/echo messages).
+    /// When <c>true</c>, the parameter is exposed to the model.
+    /// If you do not call this overload, the default is <see langword="null"/> (treated as exposed).
+    /// </param>
+    public AiAgentParameter(string name, string description, bool sendToModel) : this(name)
     {
-        if (string.IsNullOrEmpty(description) == false)
-        {
-            Description = description;
-        }
+        Description = description;
         SendToModel = sendToModel;
     }
 

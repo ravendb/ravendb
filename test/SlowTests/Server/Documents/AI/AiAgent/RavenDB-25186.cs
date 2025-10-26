@@ -123,7 +123,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping assistant", csName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Parameters.Add(new AiAgentParameter("company", "Tenant company id", exposed));
+            if (exposed.HasValue == false)
+                agent.Parameters.Add(new AiAgentParameter("company", "Tenant company id"));
+            else
+                agent.Parameters.Add(new AiAgentParameter("company", "Tenant company id", exposed.Value));
+
 
             agent.Queries =
             [

@@ -39,7 +39,18 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
 
-        var relevantParameters = configuration.Parameters.Where(p => p.SendToModel != false).ToList();
+        List<AiAgentParameter> relevantParameters = [];
+        var parameters = configuration.Parameters;
+
+        if (parameters != null)
+        {
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                var p = parameters[i];
+                if (p.SendToModel != false)
+                    relevantParameters.Add(p);
+            }
+        }
 
         foreach (var parameter in relevantParameters)
         {
