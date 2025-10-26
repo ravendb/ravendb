@@ -39,14 +39,16 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
 
-        foreach (var parameter in configuration.Parameters)
+        var relevantParameters = configuration.Parameters.Where(p => p.SendToModel != false).ToList();
+
+        foreach (var parameter in relevantParameters)
         {
             if (Parameters == null || Parameters.TryGet(parameter.Name, out object _) == false)
                 throw new ArgumentException($"Parameter '{parameter.Name}' is missing.");
         }
 
         var promptMessage = configuration.SystemPrompt;
-        if (TryCreateParameterDescriptionMessage(configuration, out string message))
+        if (TryCreateParameterDescriptionMessage(relevantParameters, out string message))
         {
             promptMessage += "\n" + message;
         }
@@ -57,12 +59,12 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [ChatCompletionClient.Constants.RequestFields.Content] = promptMessage
         }, "system/msg"), usage: null);
 
-        if (configuration.Parameters.Count > 0)
+        if (relevantParameters.Count > 0)
         {
             AddMessage(context, context.ReadObject(new DynamicJsonValue
             {
                 [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
-                [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(configuration)
+                [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(relevantParameters)
             }, "system/msg"), usage: null);
         }
 
@@ -122,10 +124,10 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }
     }
 
-    private string ParametersToString(AiAgentConfiguration configuration)
+    private string ParametersToString(List<AiAgentParameter> parameters)
     {
         var sb = new StringBuilder("AI Agent Parameters:\n");
-        foreach (var parameter in configuration.Parameters)
+        foreach (var parameter in parameters)
         {
             var value = Parameters[parameter.Name];
             sb.AppendLine($"{parameter.Name} = {value.ToString()}");
@@ -313,12 +315,12 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }
     }
 
-    private static bool TryCreateParameterDescriptionMessage(AiAgentConfiguration configuration, out string message)
+    private static bool TryCreateParameterDescriptionMessage(List<AiAgentParameter> parameters, out string message)
     {
         var hasDescription = false;
         var sb = new StringBuilder();
         sb.AppendLine("\nThe parameters for this conversation are described as follows:");
-        foreach (var parameter in configuration.Parameters)
+        foreach (var parameter in parameters)
         {
             if (string.IsNullOrEmpty(parameter.Description))
                 continue;

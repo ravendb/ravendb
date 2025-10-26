@@ -22,6 +22,16 @@ public class AiAgentParameter : IDynamicJson
         Description = description;
     }
 
+    public AiAgentParameter(string name, string description, bool? sendToModel = null) : this(name)
+    {
+        if (string.IsNullOrEmpty(description) == false)
+        {
+            Description = description;
+        }
+        SendToModel = sendToModel;
+    }
+
+    public bool? SendToModel { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
     public DynamicJsonValue ToJson()
@@ -29,7 +39,8 @@ public class AiAgentParameter : IDynamicJson
         return new DynamicJsonValue
         {
             [nameof(Name)] = Name,
-            [nameof(Description)] = Description
+            [nameof(Description)] = Description,
+            [nameof(SendToModel)] = SendToModel
         };
     }
 }
