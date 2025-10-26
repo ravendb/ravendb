@@ -142,15 +142,6 @@ loadToOrders" + IndexSuffix + @"(orderData);";
             }
         }
 
-        protected async Task AssertEtlDoneAsync(AsyncManualResetEvent etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
-        {
-            if (await etlDone.WaitAsync(timeout) == false)
-            {
-                var loadError = await Etl.TryGetLoadErrorAsync(databaseName, config);
-                var transformationError = await Etl.TryGetTransformationErrorAsync(databaseName, config);
-
-                Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
-            }
-        }
+        protected Task AssertEtlDoneAsync(AsyncManualResetEvent etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config) => Etl.AssertEtlDoneAsync(etlDone, timeout, databaseName, config);
     }
 }

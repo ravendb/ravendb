@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -32,7 +33,10 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         AiAgentHelpers.AddDefaultValues(body.Configuration, RequestHandler.Configuration.Ai);
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, body.Configuration);
 
-        var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, body);
+        var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, body)
+        {
+            Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
+        };
         await ExecuteInternalAsync(handler, context, body.Configuration, "TestConversation", req, changeVector: null, streaming: streaming, token: token);
     }
 

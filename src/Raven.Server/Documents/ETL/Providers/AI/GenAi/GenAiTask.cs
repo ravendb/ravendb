@@ -205,7 +205,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 string json = item.ContextOutput.Context.ToString();
                 Task<(string Result, AiUsage Usage)> task;
 
-                var handler = new GenAiConversationHandler(Database.ServerStore, Database);
+                var handler = new GenAiConversationHandler(Database.ServerStore, Database)
+                {
+                    // GenAI task uses full access
+                    Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
+                };
                 handler.Initialize(Agent, $"GenAI/{item.DocumentId}", new RequestBody
                 {
                     CreationOptions = new AiConversationCreationOptions(),

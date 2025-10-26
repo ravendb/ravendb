@@ -348,6 +348,16 @@ namespace FastTests
                 return string.Join(Environment.NewLine, stats.Select(JsonConvert.SerializeObject));
             }
 
+            public async Task AssertEtlDoneAsync<T>(AsyncManualResetEvent etlDone, TimeSpan timeout, string databaseName, EtlConfiguration<T> config) where T : ConnectionString
+            {
+                if (await etlDone.WaitAsync(timeout) == false)
+                {
+                    var loadError = await TryGetLoadErrorAsync(databaseName, config);
+                    var transformationError = await TryGetTransformationErrorAsync(databaseName, config);
+
+                    Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+                }
+            }
             public void Dispose()
             {
                 try

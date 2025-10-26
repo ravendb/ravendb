@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
@@ -41,6 +42,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     private string _raftId;
     private int _maxModelIterationsPerCall;
 
+    public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
         _conversationId = conversationId;
@@ -402,6 +404,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             RavenServer = server.Server,
             HttpContext = new DefaultHttpContext()
         });
+
+        multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
 
         using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
         using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
