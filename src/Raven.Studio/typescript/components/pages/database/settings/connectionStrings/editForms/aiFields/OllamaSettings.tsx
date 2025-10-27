@@ -95,11 +95,45 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     isLoading={asyncGetModelOptions.loading}
                 />
             </div>
+
             {formValues.modelType === "Chat" && (
                 <div className="mb-2">
                     <FormLabel>
                         Thinking mode
-                        <PopoverWithHoverWrapper message="Controls whether thinking models engage their reasoning process. When enabled, models perform internal reasoning before responding (uses more tokens, slower, better quality for complex tasks). When disabled, they respond directly (fewer tokens, faster, may reduce quality for complex reasoning). Choose based on task complexity vs speed/cost requirements.">
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    Controls whether the model outputs its internal reasoning steps before returning the
+                                    final answer.
+                                    <ul className="mb-1">
+                                        <li className="mt-1">
+                                            <strong>When "Enabled":</strong>
+                                            <br />
+                                            The model outputs a series of intermediate reasoning steps before the final
+                                            answer. This may improve output quality for complex tasks, but increases
+                                            response time and token usage.
+                                        </li>
+                                        <li className="mt-1">
+                                            <strong>When "Disabled":</strong>
+                                            <br />
+                                            The model returns only the final answer, without exposing intermediate
+                                            steps. This is typically faster and more cost-effective (uses fewer tokens),
+                                            but may reduce quality on complex reasoning.
+                                        </li>
+                                        <li className="mt-1">
+                                            <strong> When setting to “Default”:</strong>
+                                            <br />
+                                            The model&apos;s built-in default will be used. This value may vary
+                                            depending on the selected model.
+                                        </li>
+                                    </ul>
+                                    <p>
+                                        Set this parameter based on the trade-off between task complexity and speed/cost
+                                        requirements.
+                                    </p>
+                                </>
+                            }
+                        >
                             <Icon icon="info" color="info" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
