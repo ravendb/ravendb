@@ -143,10 +143,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                             <ConsentStatusItem consentStatus={aiAssistantConsentStatus} />
                         </OverallInfoItem>
                         {aiAssistantConsentStatus.data === "ConsentRequired" && <AiAssistantGiveConsentButton />}
-                        {(aiAssistantConsentStatus.status === "failure" ||
-                            aiAssistantConsentStatus.data === "InvalidCredentials") && (
-                            <AiAssistantRetryCheckConsentButton />
-                        )}
+                        {aiAssistantConsentStatus.status === "failure" && <AiAssistantRetryCheckConsentButton />}
                     </Row>
                 </div>
             </Card.Body>
