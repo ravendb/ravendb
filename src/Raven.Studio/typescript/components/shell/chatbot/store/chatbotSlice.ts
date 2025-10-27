@@ -24,6 +24,7 @@ interface ChatbotState {
     conversationId: string;
     messages: ChatbotMessage[];
     absoluteNotificationsWidth: number;
+    lastRunChatData: RunChatbotAiAssistantViewData;
 }
 
 const initialState: ChatbotState = {
@@ -34,6 +35,7 @@ const initialState: ChatbotState = {
     conversationId: null,
     messages: [],
     absoluteNotificationsWidth: 0,
+    lastRunChatData: null,
 };
 
 export const chatbotSlice = createSlice({
@@ -61,13 +63,22 @@ export const chatbotSlice = createSlice({
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
+        lastRunChatDataSet: (state, action: PayloadAction<RunChatbotAiAssistantViewData>) => {
+            state.lastRunChatData = action.payload;
+        },
         absoluteNotificationsWidthSet: (state, action: PayloadAction<number>) => {
             state.absoluteNotificationsWidth = action.payload;
         },
     },
     extraReducers: (builder) => {
-        builder.addCase(runChat.fulfilled, (state, action) => {
-            state.messages = state.messages.map((x) => (x.id === action.payload.id ? action.payload : x));
+        builder.addCase(runChat.fulfilled, (state, { payload }) => {
+            if ("failedResponseId" in payload) {
+                state.messages = state.messages.map((x) =>
+                    x.id === payload.failedResponseId ? { ...x, state: "error" } : x
+                );
+            } else {
+                state.messages = state.messages.map((x) => (x.id === payload.id ? payload : x));
+            }
         });
     },
 });
@@ -75,9 +86,17 @@ export const chatbotSlice = createSlice({
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (
-        payload: { data: RunChatbotAiAssistantViewData; conversationId?: string },
-        { dispatch }
-    ): Promise<ChatbotMessage> => {
+        payload: { data: RunChatbotAiAssistantViewData },
+        { dispatch, getState }
+    ): Promise<ChatbotMessage | { failedResponseId: string }> => {
+        const { aiAssistant, chatbot } = getState() as RootState;
+
+        dispatch(chatbotActions.lastRunChatDataSet(payload.data));
+
+        if (aiAssistant.consentStatus.data !== "Success") {
+            throw new Error("AI Assistant consent is required");
+        }
+
         const userId = _.uniqueId();
 
         const userMessage: ChatbotMessage = {
@@ -93,7 +112,7 @@ const runChat = createAsyncThunk(
             },
         };
 
-        if (payload.conversationId) {
+        if (chatbot.conversationId) {
             dispatch(chatbotActions.messageAdded(userMessage));
         } else {
             dispatch(chatbotActions.messagesSet([userMessage]));
@@ -110,32 +129,46 @@ const runChat = createAsyncThunk(
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
-        const result = await services.aiAssistantService.runChatbot({
-            View: payload.data.View,
-            Message: payload.data.Message,
-            ConversationId: payload.conversationId,
-        });
+        try {
+            const result = await services.aiAssistantService.runChatbot({
+                View: payload.data.View,
+                Message: payload.data.Message,
+                ConversationId: chatbot.conversationId,
+            });
 
-        dispatch(chatbotActions.conversationIdSet(result.ConversationId));
+            dispatch(chatbotActions.conversationIdSet(result.ConversationId));
 
-        return {
-            ...assistantMessage,
-            content: result.Response.Answer,
-            state: "success",
-            thinkingTimeInMs: new Date().getTime() - startThinkingTime,
-            usage: {
-                TotalTokens: result.InputTokenCount,
-                PromptTokens: result.InputTokenCount,
-                CompletionTokens: result.OutputTokenCount,
-                CachedTokens: 0, // TODO?
-            },
-        };
+            return {
+                ...assistantMessage,
+                content: result.Response.Answer,
+                state: "success",
+                thinkingTimeInMs: new Date().getTime() - startThinkingTime,
+                usage: {
+                    TotalTokens: result.InputTokenCount,
+                    PromptTokens: result.InputTokenCount,
+                    CompletionTokens: result.OutputTokenCount,
+                    CachedTokens: 0, // TODO server-side
+                },
+            };
+        } catch {
+            return {
+                failedResponseId: responseId,
+            };
+        }
     }
 );
+
+const retryRunChat = createAsyncThunk(chatbotSlice.name + "/retryRunChat", async (_, { dispatch, getState }) => {
+    const { chatbot } = getState() as RootState;
+    const { lastRunChatData } = chatbot;
+
+    return await dispatch(runChat({ data: lastRunChatData }));
+});
 
 export const chatbotActions = {
     ...chatbotSlice.actions,
     runChat,
+    retryRunChat,
 };
 
 export const chatbotSelectors = {
@@ -146,4 +179,5 @@ export const chatbotSelectors = {
     messages: (state: RootState) => state.chatbot.messages,
     conversationId: (state: RootState) => state.chatbot.conversationId,
     absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
+    lastRunChatData: (state: RootState) => state.chatbot.lastRunChatData,
 };

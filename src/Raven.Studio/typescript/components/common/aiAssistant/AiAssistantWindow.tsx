@@ -32,7 +32,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
         }
 
         return await aiAssistantService.refinePrompt(data);
-    }, [isConsentSuccess]);
+    }, []);
 
     const getAssistResultText = () => {
         if (!asyncAssist.result || asyncAssist.result.Status !== "Success") {
@@ -69,7 +69,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                         <Icon icon="close" margin="m-0" />
                     </Button>
                 </div>
-                <AiAssistantConsentStatusChecker />
+                <AiAssistantConsentStatusChecker onConsentGiven={asyncAssist.execute} />
                 {isConsentSuccess && asyncAssist.loading && (
                     <div className="hstack align-items-center gap-1">
                         <Spinner size="sm" variant="progress" />

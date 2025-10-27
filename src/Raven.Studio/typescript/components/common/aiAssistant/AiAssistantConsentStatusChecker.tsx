@@ -10,9 +10,13 @@ import { AiAssistantEulaModal } from "./AiAssistantEulaModal";
 
 interface AiAssistantConsentStatusCheckerProps {
     className?: string;
+    onConsentGiven?: () => void;
 }
 
-export default function AiAssistantConsentStatusChecker({ className }: AiAssistantConsentStatusCheckerProps) {
+export default function AiAssistantConsentStatusChecker({
+    className,
+    onConsentGiven,
+}: AiAssistantConsentStatusCheckerProps) {
     const dispatch = useAppDispatch();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const { value: isEulaOpen, toggle: toggleEulaOpen } = useBoolean(false);
@@ -58,7 +62,7 @@ export default function AiAssistantConsentStatusChecker({ className }: AiAssista
                     )}
                 </div>
             )}
-            {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
+            {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} onConsentGiven={onConsentGiven} />}
         </>
     );
 }

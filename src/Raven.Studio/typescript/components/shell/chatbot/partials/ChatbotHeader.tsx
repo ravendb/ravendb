@@ -6,7 +6,7 @@ import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
-
+    const chatbotTab = useAppSelector(chatbotSelectors.chatbotTab);
     const isPinned = useAppSelector(chatbotSelectors.isPinned);
 
     const resetConversation = () => {
@@ -27,9 +27,11 @@ export default function ChatbotHeader() {
                 <HeaderTitle />
             </h4>
             <div className="hstack">
-                <Button variant="link" size="sm" className="text-reset" onClick={resetConversation}>
-                    <Icon icon="plus" margin="m-0" />
-                </Button>
+                {chatbotTab === "Ask AI" && (
+                    <Button variant="link" size="sm" className="text-reset" onClick={resetConversation}>
+                        <Icon icon="plus" margin="m-0" />
+                    </Button>
+                )}
                 {isPinned ? (
                     <Button
                         variant="link"

@@ -1,5 +1,5 @@
 import { Icon } from "components/common/Icon";
-import { ChatbotMessage } from "../store/chatbotSlice";
+import { chatbotActions, ChatbotMessage } from "../store/chatbotSlice";
 import { LazyLoad } from "components/common/LazyLoad";
 import moment from "moment";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -8,6 +8,9 @@ import Table from "react-bootstrap/Table";
 import Code, { CodeLanguage } from "components/common/Code";
 import { isValidElement } from "react";
 import remarkGfm from "remark-gfm";
+import Button from "react-bootstrap/Button";
+import RichAlert from "components/common/RichAlert";
+import { useAppDispatch } from "components/store";
 
 interface ChatbotMessagesProps {
     messages: ChatbotMessage[];
@@ -64,11 +67,24 @@ interface AgentMessageProps {
 }
 
 function AgentMessage({ message }: AgentMessageProps) {
+    const dispatch = useAppDispatch();
+
     if (message.state === "loading") {
         return (
             <LazyLoad active>
                 <div style={{ height: "100px", width: "100%" }}>Loading...</div>
             </LazyLoad>
+        );
+    }
+
+    if (message.state === "error") {
+        return (
+            <RichAlert variant="danger">
+                Failed to get response from AI Assistant.{" "}
+                <Button variant="link" className="px-0" onClick={() => dispatch(chatbotActions.retryRunChat())}>
+                    Please try again
+                </Button>
+            </RichAlert>
         );
     }
 

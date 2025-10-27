@@ -11,8 +11,8 @@ import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAss
 export default function ChatbotPanelAskAi() {
     const dispatch = useAppDispatch();
     const messages = useAppSelector(chatbotSelectors.messages);
-    const conversationId = useAppSelector(chatbotSelectors.conversationId);
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
+    const lastRunChatData = useAppSelector(chatbotSelectors.lastRunChatData);
 
     const isConsentSuccess = consentStatus.data === "Success";
 
@@ -31,17 +31,22 @@ export default function ChatbotPanelAskAi() {
         await dispatch(
             chatbotActions.runChat({
                 data: { View: viewTitle, Message: formValues.prompt },
-                conversationId,
             })
         ).unwrap();
         reset();
+    };
+
+    const onConsentGiven = () => {
+        if (lastRunChatData) {
+            dispatch(chatbotActions.retryRunChat());
+        }
     };
 
     const isPromptDisabled = formState.isSubmitting || !isConsentSuccess;
 
     return (
         <div className="vstack flex-grow py-2 h-100">
-            <AiAssistantConsentStatusChecker className="p-2 flex-grow" />
+            <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
             <ChatbotMessages messages={messages} />
             <div className="position-relative flex-shrink-0 px-2 pt-2">
                 <FormInput

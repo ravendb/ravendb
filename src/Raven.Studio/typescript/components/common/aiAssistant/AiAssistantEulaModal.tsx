@@ -11,16 +11,20 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 
 interface AiAssistantEulaModalProps {
     close: () => void;
+    onConsentGiven?: () => void;
 }
 
-export function AiAssistantEulaModal({ close }: AiAssistantEulaModalProps) {
+export function AiAssistantEulaModal({ close, onConsentGiven }: AiAssistantEulaModalProps) {
     const dispatch = useAppDispatch();
 
     const { value: isAccepted, toggle: toggleAccepted } = useBoolean(false);
 
     const asyncHandleConsent = useAsyncCallback(async () => {
-        await dispatch(aiAssistantActions.giveConsent()).unwrap();
-        close();
+        const result = await dispatch(aiAssistantActions.giveConsent()).unwrap();
+        if (result === "Success") {
+            onConsentGiven?.();
+            close();
+        }
     });
 
     return (
