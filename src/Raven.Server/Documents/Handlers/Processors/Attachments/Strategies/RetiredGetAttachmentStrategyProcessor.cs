@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         {
             using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(attachment, tcs);
             await using var stream = await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment.Base64Hash.ToString());
-            await WriteAttachmentToResponseStream(context, stream, attachment, bytesRemaining: null, tcs.Token);
+            await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
         }
     }
 }

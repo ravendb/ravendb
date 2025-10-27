@@ -163,10 +163,12 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     if (cmd.RetireParameters.IsLocalStorageAttachment())
                     {
                         var attachmentStream = GetAttachmentStream(attachmentIterator, out stream);
-                        Debug.Assert(cmd.Hash == null, "cmd.Hash == null");
-                        Debug.Assert(cmd.SizeInBytes == stream.Length, "cmd.SizeInBytes == stream.Length");
 
-                        cmd.Hash = attachmentStream.Hash;
+                        if (cmd.FromEtl == false)
+                        {
+                            cmd.Hash = attachmentStream.Hash;
+                            cmd.SizeInBytes = stream.Length;
+                        }
                     }
                     else
                     {
@@ -174,9 +176,10 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                         Debug.Assert(string.IsNullOrEmpty(cmd.Hash) == false, "string.IsNullOrEmpty(cmd.Hash) == false");
                         Debug.Assert(cmd.FromEtl == true, "cmd.FromEtl == true");
+                        Debug.Assert(cmd.SizeInBytes.HasValue == true, "cmd.SizeInBytes.HasValue == true");
                     }
 
-                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes.Value, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue

@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
-            public long SizeInBytes;
+            public long? SizeInBytes;
             public RetireAttachmentParameters RetireParameters;
             public string Hash;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only

@@ -13,13 +13,11 @@ namespace Raven.Client.Documents.Commands.Batches
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
             : this(documentId, name, stream, contentType, changeVector, size: null, retireAttachmentParameters: null, hash: null, fromEtl: false)
         {
-            SizeInBytes = stream.Length;
         }
 
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, RetireAttachmentParameters retireAttachmentParameters) 
             : this(documentId, name, stream, contentType, changeVector, size: null, retireAttachmentParameters: retireAttachmentParameters, hash: null, fromEtl: false)
         {
-            SizeInBytes = stream.Length;
         }
 
         internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, long? size, RetireAttachmentParameters retireAttachmentParameters, string hash, bool fromEtl)
@@ -38,8 +36,8 @@ namespace Raven.Client.Documents.Commands.Batches
             RetireParameters = retireAttachmentParameters;
             Hash = hash;
 
-            if (size != null)
-                SizeInBytes = size.Value;
+            // when this is called from ETL we know the size in advance
+            SizeInBytes = size;
 
             PutAttachmentCommandHelper.TryValidateStream(stream, RetireParameters);
         }
@@ -50,14 +48,14 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
-        internal bool FromEtl { get; }
         public RetireAttachmentParameters RetireParameters { get; }
-        public long SizeInBytes { get; }
         public string Hash { get; }
+        internal bool FromEtl { get; }
+        internal long? SizeInBytes { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DynamicJsonValue
+            var djv = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
                 [nameof(Name)] = Name,
@@ -66,10 +64,15 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Type)] = Type.ToString(),
                 [nameof(FromEtl)] = FromEtl,
                 [nameof(RetireParameters)] = RetireParameters?.ToJson(),
-                [nameof(SizeInBytes)] = SizeInBytes,
                 [nameof(Hash)] = Hash
-
             };
+
+            if (SizeInBytes.HasValue)
+            {
+                djv[nameof(SizeInBytes)] = SizeInBytes.Value;
+            }
+
+            return djv;
         }
 
         public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
