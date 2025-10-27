@@ -11,6 +11,7 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             bool streaming, OperationCancelToken token)
         {
             handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery());
-            (BlittableJsonReaderObject Response, AiUsage Usage) r;
+            (BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc) r;
 
             if (streaming)
             {
@@ -61,8 +62,21 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 r = await handler.HandleRequest(context, token.Token);
             }
 
+            var timeUtc = r.CreatedUtc ?? DateTime.UtcNow;
+            var status = handler.CurrentStatus;
+
+            var aiAnswer = new DynamicJsonValue
+            {
+                [nameof(AiAnswer<object>.Answer)] = r.Response,
+                [nameof(AiAnswer<object>.Status)] = status.ToString(),
+                [nameof(AiAnswer<object>.Usage)] = (r.Usage ?? new AiUsage()).ToJson(),
+                [nameof(AiAnswer<object>.Time)] = timeUtc
+            };
+
+            var aiAnswerBjo = context.ReadObject(aiAnswer, "ai/answer");
+
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
-            context.Write(writer, handler.GetConversationResponse(context, r.Response));
+            context.Write(writer, handler.GetConversationResponse(context, aiAnswerBjo));
         }
 
 

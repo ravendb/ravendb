@@ -9,6 +9,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -132,7 +133,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> StreamingTalkAsync(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> StreamingTalkAsync(
         JsonOperationContext context,
         string firstStreamPropertyPath,
         Func<Memory<byte>, Task> streaming,
@@ -142,7 +143,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return await RunInternalAsync(context, talker, token);
     }
         
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> TalkAsync(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> TalkAsync(
         JsonOperationContext context,
         CancellationToken token = default)
     {
@@ -150,7 +151,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return await RunInternalAsync(context, talker, token);
     }
 
-    private async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> RunInternalAsync(
+    private async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> RunInternalAsync(
         JsonOperationContext context,
         Talker talker, CancellationToken token)
     {
@@ -213,7 +214,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         _conversationId = await TryPersistAsync(context, historyDocs);
 
-        return (r.Result, talker.AiUsage);
+        return (r.Result, talker.AiUsage, r.CreatedUtc);
     }
 
     private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiUsage aiUsage, CancellationToken token)
@@ -533,7 +534,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return true;
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> HandleRequest(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> HandleRequest(
         DocumentsOperationContext context,
         CancellationToken token)
     {
@@ -552,7 +553,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return (r.Response.ToString(), r.Usage);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> HandleStreamingRequest(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> HandleStreamingRequest(
         DocumentsOperationContext context,
         Stream outputStream,
         string streamPropertyPath,
@@ -579,6 +580,11 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     {
         public string Answer = "Summary of the following chat messages history";
     }
+
+    public bool HasOpenActions => _document.OpenActionCalls.Count > 0;
+
+    public AiConversationResult CurrentStatus =>
+        HasOpenActions ? AiConversationResult.ActionRequired : AiConversationResult.Done;
 
     public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response)
     {
