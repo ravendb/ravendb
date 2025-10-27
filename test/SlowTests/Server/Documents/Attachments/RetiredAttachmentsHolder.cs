@@ -56,7 +56,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             var t = Attachments.FirstOrDefault(x =>
                 x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
-                (x.RetireParameters.IsLocalAttachment()) &&
+                (x.RetireParameters.IsLocalStorageAttachment()) &&
                 x.Hash == attachment.Base64Hash.ToString());
             Assert.NotNull(t);
             Attachments.Remove(t);

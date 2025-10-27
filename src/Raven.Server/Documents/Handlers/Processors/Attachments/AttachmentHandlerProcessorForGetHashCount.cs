@@ -22,7 +22,7 @@ internal sealed class AttachmentHandlerProcessorForGetHashCount : AbstractAttach
             return ValueTask.FromResult(new GetAttachmentHashCountCommand.Response
             {
                 Hash = hash,
-                RegularCount = count.RegularHashes,
+                LocalCount = count.RegularHashes,
                 RetiredCount = count.RetiredHashes,
                 Count = count.TotalHashes,
             });

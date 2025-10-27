@@ -335,7 +335,7 @@ namespace SlowTests.Server.Documents.Attachments
                             {
                                 var newAttachment = Attachments.FirstOrDefault(x =>
                                 x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
-                                (x.RetireParameters.IsLocalAttachment()) &&
+                                (x.RetireParameters.IsLocalStorageAttachment()) &&
                                  x.Hash == attachment.Base64Hash.ToString());
 
                                 Assert.NotNull(newAttachment);

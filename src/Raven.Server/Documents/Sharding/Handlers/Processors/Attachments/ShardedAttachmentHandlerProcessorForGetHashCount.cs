@@ -45,7 +45,7 @@ internal sealed class ShardedAttachmentHandlerProcessorForGetHashCount : Abstrac
             var responses = results.Values;
             foreach (var r in responses)
             {
-                response.RegularCount += r.Result.RegularCount;
+                response.LocalCount += r.Result.LocalCount;
                 response.RetiredCount += r.Result.RetiredCount;
                 response.Count += r.Result.Count;
             }
