@@ -100,7 +100,7 @@ function execute(doc, args){{
 }}";
                 
                 case PatchRequestType.Conflict:
-                    throw new Exception($"Use {nameof(ConflictPatchRequest)} to represent a patch request that is a result of a conflict");
+                    throw new NotSupportedException($"Use {nameof(ConflictPatchRequest)} to represent a patch request that is a result of a conflict");
 
                 case PatchRequestType.EtlBehaviorFunctions:
                     return Script;
