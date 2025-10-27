@@ -10,10 +10,10 @@ export default function ChatbotBody() {
 
     return (
         <div className="vstack flex-grow-1" style={{ minHeight: 0 }}>
-            {chatbotTab === "askAi" && <ChatbotPanelAskAi />}
-            {chatbotTab === "whatsNew" && <ChatbotPanelWhatsNew />}
-            {chatbotTab === "news" && <ChatbotPanelNews />}
-            {chatbotTab === "resources" && <ChatbotPanelResources />}
+            {chatbotTab === "Ask AI" && <ChatbotPanelAskAi />}
+            {chatbotTab === "What's new" && <ChatbotPanelWhatsNew />}
+            {chatbotTab === "News" && <ChatbotPanelNews />}
+            {chatbotTab === "Resources" && <ChatbotPanelResources />}
         </div>
     );
 }

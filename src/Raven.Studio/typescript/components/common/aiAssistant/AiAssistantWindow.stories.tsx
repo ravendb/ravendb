@@ -4,6 +4,7 @@ import AiAssistantWindow from "./AiAssistantWindow";
 import { mockServices } from "test/mocks/services/MockServices";
 import { useState } from "react";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
+import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
     title: "Bits/AI Assistant Window",
@@ -19,7 +20,9 @@ export const AiAssistantWindowStory: StoryObj<AiAssistantWindowStoryArgs> = {
     name: "AI Assistant Window",
     render: (args) => {
         const { aiAssistantService } = mockServices;
+        const { aiAssistant } = mockStore;
 
+        aiAssistant.with_consent(args.consentStatus);
         aiAssistantService.withCheckConsent({ Status: args.consentStatus });
         aiAssistantService.withRefinePrompt((dto) => {
             dto.Status = args.assistStatus;

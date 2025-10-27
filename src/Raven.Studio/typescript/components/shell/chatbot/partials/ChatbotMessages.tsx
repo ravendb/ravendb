@@ -14,6 +14,10 @@ interface ChatbotMessagesProps {
 }
 
 export default function ChatbotMessages({ messages }: ChatbotMessagesProps) {
+    if (messages.length === 0) {
+        return null;
+    }
+
     return (
         <div className="flex-grow-1 overflow-y-auto vstack gap-2">
             {messages.map((message) => (

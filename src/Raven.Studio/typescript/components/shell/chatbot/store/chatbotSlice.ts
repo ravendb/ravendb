@@ -4,7 +4,7 @@ import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 
 export type ChatbotRole = "user" | "assistant";
-type ChatbotTab = "askAi" | "whatsNew" | "news" | "resources";
+type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
 export interface ChatbotMessage {
@@ -29,7 +29,7 @@ interface ChatbotState {
 const initialState: ChatbotState = {
     isOpen: false,
     isPinned: false,
-    chatbotTab: "askAi",
+    chatbotTab: "Ask AI",
     chatbotResourcesTab: "Help and resources",
     conversationId: null,
     messages: [],

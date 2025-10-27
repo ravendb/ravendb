@@ -6,13 +6,12 @@ import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
 import { useAsync } from "react-async-hook";
 import { RefinePromptAiAssistantViewData } from "commands/aiAssistant/refinePromptAiAssistantCommand";
-import { ReactNode, useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "components/store";
-import { aiAssistantActions, aiAssistantSelectors } from "../shell/aiAssistantSlice";
-import useBoolean from "components/hooks/useBoolean";
+import { ReactNode } from "react";
+import { useAppSelector } from "components/store";
+import { aiAssistantSelectors } from "../shell/aiAssistantSlice";
 import RichAlert from "../RichAlert";
-import { AiAssistantEulaModal } from "./AiAssistantEulaModal";
 import { aiAssistantConstants } from "./aiAssistantConstants";
+import AiAssistantConsentStatusChecker from "./AiAssistantConsentStatusChecker";
 
 interface AiAssistWindowProps {
     closeWindow: () => void;
@@ -22,19 +21,10 @@ interface AiAssistWindowProps {
 }
 
 export default function AiAssistantWindow({ closeWindow, data, acceptResult, successMessage }: AiAssistWindowProps) {
-    const dispatch = useAppDispatch();
     const { aiAssistantService } = useServices();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
-    const { value: isEulaOpen, toggle: toggleEulaOpen } = useBoolean(false);
 
     const isConsentSuccess = consentStatus.data === "Success";
-
-    // Check consent status if not checked yet
-    useEffect(() => {
-        if (consentStatus.status === "idle") {
-            dispatch(aiAssistantActions.checkConsent());
-        }
-    }, [consentStatus.status]);
 
     const asyncAssist = useAsync(async () => {
         if (!isConsentSuccess) {
@@ -79,31 +69,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                         <Icon icon="close" margin="m-0" />
                     </Button>
                 </div>
-                {consentStatus.status === "loading" && (
-                    <div className="hstack align-items-center gap-1">
-                        <Spinner size="sm" variant="progress" />
-                        Checking consent... Please wait.
-                    </div>
-                )}
-                {consentStatus.status === "failure" && (
-                    <RichAlert variant="danger">{aiAssistantConstants.failedToCheckConsent}</RichAlert>
-                )}
-                {consentStatus.data === "InvalidCredentials" && (
-                    <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>
-                )}
-                {consentStatus.data === "ConsentRequired" && (
-                    <div>
-                        To use our built-in AI features, such as <i>AI Assistant</i>, you need to provide consent. If
-                        you do not accept, the feature will remain unavailable until you do.
-                        <div className="hstack justify-content-end mt-2">
-                            <Button variant="primary" className="rounded-pill" onClick={toggleEulaOpen}>
-                                Review the consent
-                                <Icon icon="open-modal" margin="ms-1" />
-                            </Button>
-                        </div>
-                    </div>
-                )}
-                {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
+                <AiAssistantConsentStatusChecker />
                 {isConsentSuccess && asyncAssist.loading && (
                     <div className="hstack align-items-center gap-1">
                         <Spinner size="sm" variant="progress" />

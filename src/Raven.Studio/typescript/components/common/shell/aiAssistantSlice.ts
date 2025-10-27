@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import { loadableData } from "components/models/common";
 import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
@@ -21,7 +21,11 @@ const initialState: AiAssistantState = {
 export const aiAssistantSlice = createSlice({
     name: "aiAssistant",
     initialState,
-    reducers: {},
+    reducers: {
+        consentStatusSet: (state, action: PayloadAction<CheckConsentAiAssistantResultDto["Status"]>) => {
+            state.consentStatus = createSuccessState(action.payload);
+        },
+    },
     extraReducers: (builder) => {
         builder
             .addCase(checkConsent.pending, (state) => {

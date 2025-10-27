@@ -72,7 +72,7 @@ function HeaderTitle() {
         dispatch(chatbotActions.chatbotResourcesTabSet("Help and resources"));
     };
 
-    if (chatbotTab === "askAi") {
+    if (chatbotTab === "Ask AI") {
         return (
             <div>
                 <Icon icon="chatbot" />
@@ -81,7 +81,7 @@ function HeaderTitle() {
         );
     }
 
-    if (chatbotTab === "resources") {
+    if (chatbotTab === "Resources") {
         if (resourcesTab === "Help and resources") {
             return (
                 <div>
@@ -101,5 +101,5 @@ function HeaderTitle() {
         );
     }
 
-    return null;
+    return <div>{chatbotTab}</div>;
 }

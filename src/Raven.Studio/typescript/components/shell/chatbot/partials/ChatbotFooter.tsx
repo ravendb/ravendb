@@ -19,26 +19,26 @@ export default function ChatbotFooter() {
             <FooterItem
                 icon="chatbot"
                 title="Ask AI"
-                isActive={chatbotTab === "askAi"}
-                handleClick={() => dispatch(chatbotActions.chatbotTabSet("askAi"))}
+                isActive={chatbotTab === "Ask AI"}
+                handleClick={() => dispatch(chatbotActions.chatbotTabSet("Ask AI"))}
             />
             <FooterItem
                 icon="document2"
                 title="What's new"
-                isActive={chatbotTab === "whatsNew"}
-                handleClick={() => dispatch(chatbotActions.chatbotTabSet("whatsNew"))}
+                isActive={chatbotTab === "What's new"}
+                handleClick={() => dispatch(chatbotActions.chatbotTabSet("What's new"))}
             />
             <FooterItem
                 icon="document"
                 title="News"
-                isActive={chatbotTab === "news"}
-                handleClick={() => dispatch(chatbotActions.chatbotTabSet("news"))}
+                isActive={chatbotTab === "News"}
+                handleClick={() => dispatch(chatbotActions.chatbotTabSet("News"))}
             />
             <FooterItem
                 icon="resources"
                 title="Resources"
-                isActive={chatbotTab === "resources"}
-                handleClick={() => dispatch(chatbotActions.chatbotTabSet("resources"))}
+                isActive={chatbotTab === "Resources"}
+                handleClick={() => dispatch(chatbotActions.chatbotTabSet("Resources"))}
             />
         </div>
     );
