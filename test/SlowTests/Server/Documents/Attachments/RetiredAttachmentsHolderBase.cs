@@ -88,7 +88,7 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
 
         if (flags == RetiredAttachmentFlags.None)
         {
-            Assert.True(retired.RetireParameters.IsLocalAttachment());
+            Assert.True(retired.RetireParameters.IsLocalStorageAttachment());
         }
         else
         {

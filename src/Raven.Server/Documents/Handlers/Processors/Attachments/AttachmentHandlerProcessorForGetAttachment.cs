@@ -31,7 +31,7 @@ internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttac
                 return;
             }
 
-            IGetAttachmentStrategy strategy = attachment.RetireParameters.IsRetiredAttachment()
+            IGetAttachmentStrategy strategy = attachment.RetireParameters.IsRetiredStorageAttachment()
                   ? new RetiredGetAttachmentStrategyProcessor(RequestHandler)
                   : new RegularGetAttachmentStrategyProcessor(RequestHandler);
 

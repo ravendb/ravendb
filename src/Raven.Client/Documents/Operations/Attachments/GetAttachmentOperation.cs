@@ -161,17 +161,17 @@ namespace Raven.Client.Documents.Operations.Attachments
                 if (string.IsNullOrEmpty(retireIdentifier) == false)
                 {
                     DateTime attachmentRetireAt = default;
-                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersAt, out IEnumerable<string> dt) == false ||
-                        DateTime.TryParseExact(dt.First(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out attachmentRetireAt) == false)
-                    {
+                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersAt, out IEnumerable<string> dt) == false)
                         ThrowOnMissingHeader(Constants.Headers.AttachmentRetireParametersAt);
-                    }
 
-                    RetiredAttachmentFlags attachmentFlags = default;
-                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersFlags, out IEnumerable<string> flagsVal) == false || Enum.TryParse(flagsVal.First(), out attachmentFlags) == false)
-                    {
+                    if (DateTime.TryParseExact(dt.First(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out attachmentRetireAt) == false)
+                        ThrowOnBadHeader(Constants.Headers.AttachmentRetireParametersAt, dt.First());
+
+                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersFlags, out IEnumerable<string> flagsVal) == false)
                         ThrowOnMissingHeader(Constants.Headers.AttachmentRetireParametersFlags);
-                    }
+
+                    if (Enum.TryParse(flagsVal.First(), out RetiredAttachmentFlags attachmentFlags) == false)
+                        ThrowOnBadHeader(Constants.Headers.AttachmentRetireParametersFlags, flagsVal.First());
 
                     retireParameters = new RetireAttachmentParameters(retireIdentifier, attachmentRetireAt)
                     {
@@ -206,6 +206,11 @@ namespace Raven.Client.Documents.Operations.Attachments
             private void ThrowOnMissingHeader(string header)
             {
                 throw new InvalidOperationException($"Attachment retire parameters header '{header}' is missing for attachment '{_name}' on document '{_documentId}'.");
+            }
+
+            private void ThrowOnBadHeader(string header, string value)
+            {
+                throw new InvalidOperationException($"Attachment retire parameters header '{header}' has invalid value '{value}' for attachment '{_name}' on document '{_documentId}'.");
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)

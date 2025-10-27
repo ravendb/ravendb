@@ -858,7 +858,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (isRevision == false)
                     {
-                        if (retireParams.IsLocalAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
+                        if (retireParams.IsLocalStorageAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
                         attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, retireParams, updateDocument: false, fromSmuggler: true);
                         continue;

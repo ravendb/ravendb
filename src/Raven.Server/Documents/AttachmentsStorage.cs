@@ -98,7 +98,7 @@ namespace Raven.Server.Documents
                 var attachment = TableValueToAttachment(context, ref result.Reader);
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
-                if (stream == null && attachment.RetireParameters.IsRetiredAttachment() == false)
+                if (stream == null && attachment.RetireParameters.IsRetiredStorageAttachment() == false)
                 {
                     ThrowMissingAttachment(context, attachment.Key);
                 }
@@ -774,7 +774,7 @@ namespace Raven.Server.Documents
                 if (attachment == null)
                     continue;
 
-                if (attachment.RetireParameters.IsRetiredAttachment())
+                if (attachment.RetireParameters.IsRetiredStorageAttachment())
                 {
                     yield return attachment;
                 }
@@ -913,7 +913,7 @@ namespace Raven.Server.Documents
                 return null;
             }
 
-            if (attachment.RetireParameters.IsRetiredAttachment())
+            if (attachment.RetireParameters.IsRetiredStorageAttachment())
             {
                 return attachment;
             }
@@ -1109,7 +1109,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 
             var hash = attachment.Base64Hash.ToString();
-            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RetireParameters.IsRetiredAttachment());
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RetireParameters.IsRetiredStorageAttachment());
         }
 
         public MoveAttachmentDetailsServer MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true, bool extractCollectionName = false)
@@ -1129,7 +1129,7 @@ namespace Raven.Server.Documents
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
-            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RetireParameters.IsRetiredAttachment());
+            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RetireParameters.IsRetiredStorageAttachment());
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()

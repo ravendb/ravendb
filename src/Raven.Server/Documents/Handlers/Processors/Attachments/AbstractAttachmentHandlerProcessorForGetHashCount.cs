@@ -35,8 +35,8 @@ internal abstract class AbstractAttachmentHandlerProcessorForGetHashCount<TReque
             writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.Hash));
             writer.WriteString(response.Hash);
             writer.WriteComma();
-            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.RegularCount));
-            writer.WriteInteger(response.RegularCount);
+            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.LocalCount));
+            writer.WriteInteger(response.LocalCount);
             writer.WriteComma();
             writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.RetiredCount));
             writer.WriteInteger(response.RetiredCount);

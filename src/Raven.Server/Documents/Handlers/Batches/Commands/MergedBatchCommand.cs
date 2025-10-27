@@ -160,7 +160,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     Stream stream = null;
 
-                    if (cmd.RetireParameters.IsLocalAttachment())
+                    if (cmd.RetireParameters.IsLocalStorageAttachment())
                     {
                         var attachmentStream = GetAttachmentStream(attachmentIterator, out stream);
                         Debug.Assert(cmd.Hash == null, "cmd.Hash == null");
@@ -170,7 +170,10 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     }
                     else
                     {
+                        // this means we got the remote attachment from RavenDB ETL
+
                         Debug.Assert(string.IsNullOrEmpty(cmd.Hash) == false, "string.IsNullOrEmpty(cmd.Hash) == false");
+                        Debug.Assert(cmd.FromEtl == true, "cmd.FromEtl == true");
                     }
 
                     var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);

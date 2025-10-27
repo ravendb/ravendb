@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string GetContentAsString(Encoding encoding)
         {
-            if (_attachment.RetireParameters.IsRetiredAttachment())
+            if (_attachment.RetireParameters.IsRetiredStorageAttachment())
                 ThrowRetiredAttachmentException(nameof(GetContentAsString));
 
             if (_contentAsString == null)
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Stream GetContentAsStream()
         {
-            if (_attachment.RetireParameters.IsRetiredAttachment())
+            if (_attachment.RetireParameters.IsRetiredStorageAttachment())
                 ThrowRetiredAttachmentException(nameof(GetContentAsStream));
 
             _attachment.Stream.Position = 0;
