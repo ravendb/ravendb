@@ -137,7 +137,7 @@ public partial class AbstractStaticIndexBase
                     BlittableJsonReaderObject b => b,
                     DynamicBlittableJson dbj => dbj.BlittableJson,
                     BlittableObjectInstance boi => boi.Blittable,
-                    _ => throw new InvalidDataException($"Expected BlittableJsonReaderObject, but got {value.GetType().FullName}")
+                    _ => throw new InvalidDataException($"Couldn't extract {nameof(BlittableJsonReaderObject)} from value of type {value.GetType().FullName}")
                 };
                 
                 if (bjro.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vector) && vector is BlittableJsonReaderVector bjrv)
