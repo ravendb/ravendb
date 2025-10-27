@@ -6,7 +6,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import ReactMarkdown, { Components } from "react-markdown";
 import Table from "react-bootstrap/Table";
 import Code, { CodeLanguage } from "components/common/Code";
-import { isValidElement } from "react";
+import { isValidElement, useEffect, useRef } from "react";
 import remarkGfm from "remark-gfm";
 import Button from "react-bootstrap/Button";
 import RichAlert from "components/common/RichAlert";
@@ -17,8 +17,24 @@ interface ChatbotMessagesProps {
 }
 
 export default function ChatbotMessages({ messages }: ChatbotMessagesProps) {
+    const messagesRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to the bottom when messages are updated
+    useEffect(() => {
+        if (!messagesRef.current) {
+            return;
+        }
+
+        if (messagesRef.current) {
+            messagesRef.current.scrollTo({
+                top: messagesRef.current.scrollHeight,
+                behavior: "smooth",
+            });
+        }
+    }, [messages.length]);
+
     return (
-        <div className="flex-grow-1 overflow-y-auto vstack gap-2">
+        <div ref={messagesRef} className="flex-grow-1 overflow-y-auto vstack gap-2">
             {messages.map((message) => (
                 <div key={message.id} className="px-2">
                     <AiAgentMessage message={message} />
