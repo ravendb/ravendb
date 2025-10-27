@@ -14,8 +14,6 @@ export default class checkUsageAiAssistantCommand extends commandBase {
     execute(): JQueryPromise<CheckUsageAiAssistantResultDto> {
         const url = endpoints.global.aiAssistant.assistantCheckUsage;
 
-        return this.query<CheckUsageAiAssistantResultDto>(url, null).fail((response: JQueryXHR) =>
-            this.reportError("Failed to check usage for AI Assistant", response.responseText, response.statusText)
-        );
+        return this.query<CheckUsageAiAssistantResultDto>(url, null);
     }
 }

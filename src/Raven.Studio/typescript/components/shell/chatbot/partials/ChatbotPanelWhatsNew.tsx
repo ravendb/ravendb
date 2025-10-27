@@ -1,3 +1,3 @@
 export default function ChatbotPanelWhatsNew() {
-    return <div>Whats New</div>;
+    return <div>Whats New - TODO</div>;
 }

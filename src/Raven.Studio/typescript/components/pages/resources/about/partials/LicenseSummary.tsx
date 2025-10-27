@@ -114,7 +114,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                     <Row>
                         <OverallInfoItem
                             icon="ai"
-                            isFullWidth
+                            isFullWidth={aiAssistantUsage.status !== "failure"}
                             label={
                                 <>
                                     Tokens usage
@@ -126,6 +126,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                         >
                             <TokensUsageItem usage={aiAssistantUsage} />
                         </OverallInfoItem>
+                        {aiAssistantUsage.status === "failure" && <AiAssistantRetryCheckUsageButton />}
                     </Row>
                     <Row>
                         <OverallInfoItem
@@ -141,7 +142,11 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                         >
                             <ConsentStatusItem consentStatus={aiAssistantConsentStatus} />
                         </OverallInfoItem>
-                        {aiAssistantConsentStatus.data === "ConsentRequired" && <AiAssistantConsentButton />}
+                        {aiAssistantConsentStatus.data === "ConsentRequired" && <AiAssistantGiveConsentButton />}
+                        {(aiAssistantConsentStatus.status === "failure" ||
+                            aiAssistantConsentStatus.data === "InvalidCredentials") && (
+                            <AiAssistantRetryCheckConsentButton />
+                        )}
                     </Row>
                 </div>
             </Card.Body>
@@ -456,7 +461,7 @@ function LicenseExpirationInfoPopover({ date, children }: { date: moment.Moment;
     );
 }
 
-function AiAssistantConsentButton() {
+function AiAssistantGiveConsentButton() {
     const { value: isEulaOpen, toggle: toggleEulaOpen } = useBoolean(false);
 
     return (
@@ -466,6 +471,38 @@ function AiAssistantConsentButton() {
                 <Icon icon="open-modal" margin="ms-1" />
             </Button>
             {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
+        </Col>
+    );
+}
+
+function AiAssistantRetryCheckConsentButton() {
+    const dispatch = useAppDispatch();
+
+    return (
+        <Col className="d-flex align-items-center justify-content-end">
+            <Button
+                variant="outline-secondary"
+                className="rounded-pill"
+                onClick={() => dispatch(aiAssistantActions.checkConsent())}
+            >
+                <Icon icon="refresh" /> Retry
+            </Button>
+        </Col>
+    );
+}
+
+function AiAssistantRetryCheckUsageButton() {
+    const dispatch = useAppDispatch();
+
+    return (
+        <Col className="d-flex align-items-center justify-content-end">
+            <Button
+                variant="outline-secondary"
+                className="rounded-pill"
+                onClick={() => dispatch(aiAssistantActions.checkUsage())}
+            >
+                <Icon icon="refresh" /> Retry
+            </Button>
         </Col>
     );
 }

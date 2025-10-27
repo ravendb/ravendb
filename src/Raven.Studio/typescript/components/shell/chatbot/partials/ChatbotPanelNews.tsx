@@ -1,3 +1,3 @@
 export default function ChatbotPanelNews() {
-    return <div>News</div>;
+    return <div>News - TODO</div>;
 }
