@@ -12,7 +12,7 @@ import threadsInfoWebSocketClient = require("common/threadsInfoWebSocketClient")
 import eventsCollector = require("common/eventsCollector");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 
-type Unit = "" | "%" | "KB" | "KB/s";
+type Unit = "" | "%" | "B" | "KB" | "KB/s";
 type ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
@@ -129,24 +129,28 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         return item.Name.toLocaleLowerCase().includes(filterLowered) ||
                item.Id.toString().includes(filterLowered);
     }
-
-    private getUnitSeparator(unit: Unit): string {
-        if (unit === "KB" || unit === "KB/s") {
-            return " ";
-        }
-
-        return "";
-    }
     
-    private getStringValue(value: number, fractionDigits: number, unit: Unit = ""): string {
+    private getStringValue(value: number, defaultFractionDigits: number, originalUnit: Unit = ""): string {
         if (value == null) {
             return "N/A";
         }
 
-        const unitSeparator = this.getUnitSeparator(unit);
-        const fractionDigitsToUse = value === 0 ? 0 : fractionDigits;
+        const fractionDigits = value === 0 ? 0 : defaultFractionDigits;
 
-        return generalUtils.formatNumberToStringFixed(value, fractionDigitsToUse) + unitSeparator + unit;
+        switch (originalUnit) {
+            case "":
+                return generalUtils.formatNumberToStringFixed(value, fractionDigits);
+            case "%":
+                return generalUtils.formatNumberToStringFixed(value, fractionDigits) + "%";
+            case "B":
+                return generalUtils.formatBytesToSize(value, fractionDigits);
+            case "KB":
+                return generalUtils.formatBytesToSize(value * 1024, fractionDigits);
+            case "KB/s":
+                return generalUtils.formatBytesToSize(value * 1024, fractionDigits) + "/s";
+            default:
+                generalUtils.assertUnreachable(originalUnit);
+        }
     }
 
     private getSortableValue(value: number | string): number | string {
@@ -185,7 +189,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                         defaultSortOrder: "desc",
                         headerTitle: "Current CPU usage percentage",
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.UnmanagedAllocationsInBytes, 2, "KB"), "Unmanaged Alloc.", "7%", {
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.UnmanagedAllocationsInBytes, 2, "B"), "Unmanaged Alloc.", "7%", {
                         sortable: x => this.getSortableValue(x.UnmanagedAllocationsInBytes),
                         headerTitle: "Unmanaged allocations in bytes",
                     }),
