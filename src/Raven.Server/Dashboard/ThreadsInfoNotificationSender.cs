@@ -41,7 +41,10 @@ public sealed class ThreadsInfoNotificationSender : BackgroundWorkBase
                 return;
 
             if (_watchers.IsEmpty)
+            {
+                ThreadIoStatsReader.DisposeInstance();
                 return;
+            }
 
             var threadsInfo = _threadsUsage.Calculate();
             foreach (var watcher in _watchers)

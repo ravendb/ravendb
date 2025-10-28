@@ -68,6 +68,48 @@ namespace Raven.Server.Dashboard
         }
     }
 
+    public sealed class IoStats : IDynamicJson
+    {
+        // Per-thread IO metrics (Linux only, populated when available)
+        // Last measured I/O operations per second (syscr + syscw delta / interval)
+        public double? IoOpsPerSecLast { get; set; }
+        // Last measured throughput in KB/s based on read_bytes+write_bytes delta
+        public double? ThroughputKbPerSecLast { get; set; }
+        // Total number of I/O operations since metering started
+        public long? IoOpsTotal { get; set; }
+        // Total data volume in KB since metering started
+        public double? ThroughputKbTotal { get; set; }
+
+        // Split read/write metrics
+        public double? ReadIoOpsPerSecLast { get; set; }
+        public double? WriteIoOpsPerSecLast { get; set; }
+        public double? ReadThroughputKbPerSecLast { get; set; }
+        public double? WriteThroughputKbPerSecLast { get; set; }
+        public long? ReadIoOpsTotal { get; set; }
+        public long? WriteIoOpsTotal { get; set; }
+        public double? ReadThroughputKbTotal { get; set; }
+        public double? WriteThroughputKbTotal { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(IoOpsPerSecLast)] = IoOpsPerSecLast,
+                [nameof(ThroughputKbPerSecLast)] = ThroughputKbPerSecLast,
+                [nameof(IoOpsTotal)] = IoOpsTotal,
+                [nameof(ThroughputKbTotal)] = ThroughputKbTotal,
+                [nameof(ReadIoOpsPerSecLast)] = ReadIoOpsPerSecLast,
+                [nameof(WriteIoOpsPerSecLast)] = WriteIoOpsPerSecLast,
+                [nameof(ReadThroughputKbPerSecLast)] = ReadThroughputKbPerSecLast,
+                [nameof(WriteThroughputKbPerSecLast)] = WriteThroughputKbPerSecLast,
+                [nameof(ReadIoOpsTotal)] = ReadIoOpsTotal,
+                [nameof(WriteIoOpsTotal)] = WriteIoOpsTotal,
+                [nameof(ReadThroughputKbTotal)] = ReadThroughputKbTotal,
+                [nameof(WriteThroughputKbTotal)] = WriteThroughputKbTotal
+            };
+        }
+    }
+
     public sealed class ThreadInfo : IDynamicJson
     {
         public int Id { get; set; }
@@ -96,6 +138,8 @@ namespace Raven.Server.Dashboard
 
         public ThreadWaitReason? WaitReason { get; set; }
 
+        public IoStats IoStats { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -112,7 +156,8 @@ namespace Raven.Server.Dashboard
                 [nameof(UserProcessorTime)] = UserProcessorTime,
                 [nameof(State)] = State,
                 [nameof(Priority)] = Priority,
-                [nameof(WaitReason)] = WaitReason
+                [nameof(WaitReason)] = WaitReason,
+                [nameof(IoStats)] = IoStats?.ToJson()
             };
         }
     }

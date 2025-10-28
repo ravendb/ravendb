@@ -88,8 +88,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 var creation = new AiConversationCreationOptions().AddParameter("company", "companies/1-A");
                 var blittable = context.ReadObject(creation.ToJson(), "fake-params");
                 blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
-              
-                var x = new EvilLmHandler(Server.ServerStore, database);
+
+                var x = new EvilLmHandler(Server.ServerStore, database)
+                {
+                    Authentication = null
+                };
                 x.Initialize(agent, "Dummy", new RequestBody
                 {
                     Parameters = parameters,

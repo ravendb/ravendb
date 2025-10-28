@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (key.Length != 256 / 8)
                     throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
 
-                if (AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(ServerStore.NodeTag)))
+                if (ServerStore.Server.AllowEncryptedDatabasesOverHttp == false && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(ServerStore.NodeTag)))
                     throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
             }
 

@@ -42,7 +42,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
     // Watch for document changes
     useEffect(() => {
-        if (databaseChangesApi) {
+        if (databaseChangesApi && conversationId) {
             const watchDocument = databaseChangesApi.watchDocument(conversationId, (e) => {
                 if (isLoading || e.ChangeVector === currentDocumentChangeVector) {
                     return;
@@ -150,6 +150,9 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         dispatch(chatAiAgentActions.documentSet(null));
         dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
         dispatch(chatAiAgentActions.activePromptIndexSet(0));
+        dispatch(chatAiAgentActions.hasScrollSet(false));
+        dispatch(chatAiAgentActions.isDocumentDeletedSet(false));
+        dispatch(chatAiAgentActions.isDocumentChangedSet(false));
         chatForm.reset();
     };
 

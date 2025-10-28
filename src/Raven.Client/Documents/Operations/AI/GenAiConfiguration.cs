@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -31,6 +32,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
     public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
 
+    public List<AiAgentToolQuery> Queries { get; set; } = [];
 
     private List<Transformation> _transforms;
 
@@ -117,6 +119,8 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(UpdateScript)] = UpdateScript;
         json[nameof(GenAiTransformation)] = GenAiTransformation.ToJson();
         json[nameof(MaxConcurrency)] = MaxConcurrency;
+        json[nameof(MaxConcurrency)] = MaxConcurrency;
+        json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
 
         return json;
     }

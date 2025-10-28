@@ -55,6 +55,7 @@ namespace Voron.Impl
 
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
+        private bool _updateLastWorkTime = true;
         public Pager.State DataPagerState;
 
         private enum GetPageMethod
@@ -996,7 +997,11 @@ namespace Voron.Impl
 
             if (_writeToJournalState is WriteToJournalState.ModifiedPages or WriteToJournalState.BranchCommits)
             {
-                Environment.LastWorkTime = DateTime.UtcNow;
+                if (_updateLastWorkTime)
+                {
+                    Environment.LastWorkTime = DateTime.UtcNow;
+                }
+                
                 CommitStage2_WriteToJournal();
             }
 
@@ -1120,7 +1125,10 @@ namespace Voron.Impl
             _asyncCommitNextTransaction.UpdateJournal(CurrentStateRecord.Journal.Number, CurrentStateRecord.Journal.Last4KWritePosition);
             
             if (AsyncCommit.Result)
-                Environment.LastWorkTime = DateTime.UtcNow;
+            {
+                if (_updateLastWorkTime)
+                    Environment.LastWorkTime = DateTime.UtcNow;
+            }
 
             BeforeCommitFinalization?.Invoke(this);
             CommitStage3_DisposeTransactionResources();
@@ -1324,6 +1332,15 @@ namespace Voron.Impl
         internal long? LocalPossibleOldestReadTransaction;
         internal RacyConcurrentBag.Node ActiveTransactionNode;
         public Transaction Transaction;
+
+        /// <summary>
+        /// This prevents updating last work time even if the transaction is committed. Useful for updating internal data which is not
+        /// part of work ordered by a user.
+        /// </summary>
+        public void DisableLastWorkTimeUpdate()
+        {
+            _updateLastWorkTime = false;
+        }
 
 #if DEBUG
 

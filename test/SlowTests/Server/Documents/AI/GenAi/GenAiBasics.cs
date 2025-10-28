@@ -21,7 +21,6 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

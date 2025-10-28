@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Documents.AI;
 using Sparrow.Json;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

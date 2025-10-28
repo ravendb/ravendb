@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
@@ -30,6 +31,9 @@ internal abstract class AbstractIndexHandlerProcessorForSetPriority<TRequestHand
             {
                 var indexName = parameters.IndexNames[index];
                 await processor.SetPriorityAsync(indexName, parameters.Priority, $"{raftRequestId}/{index}");
+
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                    RequestHandler.LogAuditForDatabase(RequestHandler.DatabaseName, "CHANGE", $"Set priority to '{parameters.Priority}' for index: '{indexName}'");
             }
         }
 
