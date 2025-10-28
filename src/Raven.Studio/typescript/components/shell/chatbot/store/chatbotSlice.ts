@@ -10,6 +10,8 @@ export type ChatbotRole = "user" | "assistant";
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
+type ChatbotRunChatData = Omit<RunChatbotAiAssistantViewData, "RavenVersion">;
+
 export interface ChatbotMessage {
     id: string;
     role: ChatbotRole;
@@ -28,7 +30,7 @@ interface ChatbotState {
     conversationId: string;
     messages: ChatbotMessage[];
     absoluteNotificationsWidth: number;
-    lastRunChatData: RunChatbotAiAssistantViewData;
+    lastRunChatData: ChatbotRunChatData;
 }
 
 const initialState: ChatbotState = {
@@ -67,7 +69,7 @@ export const chatbotSlice = createSlice({
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
-        lastRunChatDataSet: (state, action: PayloadAction<RunChatbotAiAssistantViewData>) => {
+        lastRunChatDataSet: (state, action: PayloadAction<ChatbotRunChatData>) => {
             state.lastRunChatData = action.payload;
         },
         absoluteNotificationsWidthSet: (state, action: PayloadAction<number>) => {
@@ -90,10 +92,10 @@ export const chatbotSlice = createSlice({
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (
-        payload: { data: RunChatbotAiAssistantViewData },
+        payload: { data: ChatbotRunChatData },
         { dispatch, getState }
     ): Promise<ChatbotMessage | { failedResponseId: string }> => {
-        const { aiAssistant, chatbot } = getState() as RootState;
+        const { aiAssistant, chatbot, cluster } = getState() as RootState;
 
         dispatch(chatbotActions.lastRunChatDataSet(payload.data));
 
@@ -138,6 +140,7 @@ const runChat = createAsyncThunk(
                 View: payload.data.View,
                 Message: payload.data.Message,
                 ConversationId: chatbot.conversationId,
+                RavenVersion: cluster.serverVersion?.ProductVersion ?? "latest",
             });
 
             dispatch(chatbotActions.conversationIdSet(result.ConversationId));

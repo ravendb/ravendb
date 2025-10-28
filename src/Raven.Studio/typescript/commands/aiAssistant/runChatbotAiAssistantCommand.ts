@@ -5,6 +5,7 @@ interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
     View: string;
     Message: string;
+    RavenVersion: string;
     ConversationId?: string;
 };
 
@@ -39,6 +40,7 @@ export default class runChatbotAiAssistantCommand extends commandBase {
             OperationType: "Chatbot",
             View: this.viewData.View,
             Message: this.viewData.Message,
+            RavenVersion: this.viewData.RavenVersion,
             ConversationId: this.viewData.ConversationId,
         };
 
