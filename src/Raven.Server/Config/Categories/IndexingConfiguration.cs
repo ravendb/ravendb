@@ -696,6 +696,12 @@ namespace Raven.Server.Config.Categories
             DefaultSearchAnalyzerType = new Lazy<AnalyzerFactory>(() => LuceneIndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
         }
 
+        public bool IsSharedJournalsPath(string path)
+        {
+            var pathSetting = new PathSetting(path);
+            return SharedJournalsPath.Equals(pathSetting);
+        }
+
         public enum ErrorIndexStartupBehaviorType
         {
             Default,
