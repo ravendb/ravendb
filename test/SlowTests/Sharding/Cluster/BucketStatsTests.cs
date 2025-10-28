@@ -602,7 +602,7 @@ namespace SlowTests.Sharding.Cluster
                 using (Slice.From(ctx.Allocator, hash, out var slice))
                 {
                     var count = db.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
-                    Assert.Equal(3, count.RegularHashes); // document attachment + 2 revision attachments
+                    Assert.Equal(3, count.LocalAttachmentsCount); // document attachment + 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(104859403, stats.Size);
@@ -620,7 +620,7 @@ namespace SlowTests.Sharding.Cluster
                 using (Slice.From(ctx.Allocator, hash, out var slice))
                 {
                     var count = db.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
-                    Assert.Equal(2, count.RegularHashes); // 2 revision attachments
+                    Assert.Equal(2, count.LocalAttachmentsCount); // 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(104859194, stats.Size);
@@ -634,7 +634,7 @@ namespace SlowTests.Sharding.Cluster
                 using (Slice.From(ctx.Allocator, hash, out var slice))
                 {
                     var count = db.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
-                    Assert.Equal(0, count.RegularHashes);
+                    Assert.Equal(0, count.LocalAttachmentsCount);
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(857, stats.Size);

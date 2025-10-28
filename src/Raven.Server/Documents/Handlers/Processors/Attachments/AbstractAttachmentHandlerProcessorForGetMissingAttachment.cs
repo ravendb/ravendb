@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             using (Slice.From(context.Allocator, attachment.Hash, out var hashSlice))
                             {
                                 var count = database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
-                                if (count.TotalHashes == 0)
+                                if (count.Count == 0)
                                 {
                                     attachment.MissingSource = AttachmentHandler.MissingSource.Hash;
                                     attachment.AttachmentType = attachmentType;

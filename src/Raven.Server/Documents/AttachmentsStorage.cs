@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Raven.Server.Documents.Attachments;
+using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -44,13 +45,6 @@ namespace Raven.Server.Documents
         public AttachmentDetails Result;
         public CollectionName SourceCollectionName;
         public CollectionName DestinationCollectionName;
-    }
-
-    public struct AttachmentHashesCount
-    {
-        public long RetiredHashes;
-        public long RegularHashes;
-        public long TotalHashes;
     }
 
     public unsafe partial class AttachmentsStorage
@@ -145,7 +139,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public AttachmentHashesCount GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
+        public GetAttachmentHashCountCommand.Response GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -154,14 +148,15 @@ namespace Raven.Server.Documents
             Memory.Copy(keyMem.Ptr + sizeof(int) + 1, hash.Content.Ptr, hash.Size);
 
             Slice slice;
-            var retiredHashes = GetHashesCount(RetiredAttachmentFlags.Retired);
-            var regularHashes = GetHashesCount(RetiredAttachmentFlags.None);
+            var remoteHashes = GetHashesCount(RetiredAttachmentFlags.Retired);
+            var localHashes = GetHashesCount(RetiredAttachmentFlags.None);
 
-            return new AttachmentHashesCount
+            return new GetAttachmentHashCountCommand.Response
             {
-                RegularHashes = regularHashes,
-                RetiredHashes = retiredHashes,
-                TotalHashes = regularHashes + retiredHashes
+                Hash = hash.ToString(),
+                LocalAttachmentsCount = localHashes,
+                RemoteAttachmentsCount = remoteHashes,
+                Count = localHashes + remoteHashes
             };
 
             long GetHashesCount(RetiredAttachmentFlags flag)
@@ -186,9 +181,9 @@ namespace Raven.Server.Documents
                         Hash = attachment.Base64Hash.ToString(),
                         ContentType = attachment.ContentType,
                         Size = attachment.Size,
-                        RegularHashes = counts.RegularHashes,
-                        RetiredCount = counts.RetiredHashes,
-                        Count = counts.TotalHashes
+                        LocalStorageCount = counts.LocalAttachmentsCount,
+                        RemoteStorageCount = counts.RemoteAttachmentsCount,
+                        Count = counts.Count
                     };
                 }
             }
@@ -727,12 +722,12 @@ namespace Raven.Server.Documents
         {
             var attachmentHashesCount = GetCountOfAttachmentsForHash(context, hash);
 
-            if (attachmentHashesCount.RegularHashes > 0)
+            if (attachmentHashesCount.LocalAttachmentsCount > 0)
             {
                 return;
             }
 
-            Debug.Assert(attachmentHashesCount.TotalHashes == attachmentHashesCount.RetiredHashes);
+            Debug.Assert(attachmentHashesCount.Count == attachmentHashesCount.RemoteAttachmentsCount);
 
             // all attachments are retired or there is no attachments
             DeleteAttachmentStreamInternal(context, hash);

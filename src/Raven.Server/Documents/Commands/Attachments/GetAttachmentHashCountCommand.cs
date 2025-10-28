@@ -8,15 +8,15 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Attachments
 {
-    internal sealed class GetAttachmentHashCountCommand : RavenCommand<GetAttachmentHashCountCommand.Response>
+    public sealed class GetAttachmentHashCountCommand : RavenCommand<GetAttachmentHashCountCommand.Response>
     {
         private readonly string _hash;
 
         public sealed class Response
         {
             public string Hash { get; set; }
-            public long LocalCount { get; set; }
-            public long RetiredCount { get; set; }
+            public long LocalAttachmentsCount { get; set; }
+            public long RemoteAttachmentsCount { get; set; }
             public long Count { get; set; }
         }
 

@@ -35,11 +35,11 @@ internal abstract class AbstractAttachmentHandlerProcessorForGetHashCount<TReque
             writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.Hash));
             writer.WriteString(response.Hash);
             writer.WriteComma();
-            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.LocalCount));
-            writer.WriteInteger(response.LocalCount);
+            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.LocalAttachmentsCount));
+            writer.WriteInteger(response.LocalAttachmentsCount);
             writer.WriteComma();
-            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.RetiredCount));
-            writer.WriteInteger(response.RetiredCount);
+            writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.RemoteAttachmentsCount));
+            writer.WriteInteger(response.RemoteAttachmentsCount);
             writer.WriteComma();
             writer.WritePropertyName(nameof(GetAttachmentHashCountCommand.Response.Count));
             writer.WriteInteger(response.Count);
