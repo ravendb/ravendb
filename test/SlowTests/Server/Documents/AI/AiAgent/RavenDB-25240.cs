@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.AI;
@@ -47,11 +48,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.False(string.IsNullOrWhiteSpace(result.Answer.Answer));
 
             Assert.NotNull(result.Usage);
-
             Assert.True(result.Usage.TotalTokens > 0);
-
-            Assert.True(result.Time.HasValue);
-
+            Assert.True(result.Elapsed != TimeSpan.Zero);
             Assert.Equal(AiConversationResult.Done, result.Status);
         }
 
@@ -85,7 +83,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             Assert.NotNull(r.Usage);
             Assert.True(r.Usage.TotalTokens >= 0);
-            Assert.True(r.Time.HasValue);
+            Assert.True(r.Elapsed != TimeSpan.Zero);
             Assert.Equal(AiConversationResult.Done, r.Status);
         }
     }

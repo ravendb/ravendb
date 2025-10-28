@@ -172,9 +172,6 @@ internal class ChatCompletionClient : IDisposable
         AiUsage usage, CancellationToken token)
     {
         AddDefaultHeaders(request);
-
-        DateTime? createdUtc = null;
-
         // we use a small buffer size since we expect those to be "token" level updates, not very big ones
         const int initialBufferSize = 64;
 
@@ -235,8 +232,6 @@ internal class ChatCompletionClient : IDisposable
                 toolCallState.AddAndReset();
                 break;
             }
-
-            createdUtc ??= TryGetCreatedUtc(sseEvent.Data);
 
             if (sseEvent.Data.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
             {
@@ -316,7 +311,6 @@ internal class ChatCompletionClient : IDisposable
                 [Constants.ResponseFields.Content] = message!.ToString(),
             }, "persisted/streamed/message"),
             Result = message,
-            CreatedUtc = createdUtc
         };
     }
 
@@ -354,23 +348,8 @@ internal class ChatCompletionClient : IDisposable
             return new AiResponse(AiResponseType.Tool) { ToolCalls = tools, Message = responseParser.Message };
         }
 
-        var createdUtc = TryGetCreatedUtc(responseContent);
-
         var result = responseParser.GetContent(context);
-        return new AiResponse(AiResponseType.Result)
-        {
-            Result = result, 
-            Message = responseParser.Message,
-            CreatedUtc = createdUtc
-        };
-    }
-
-    private static DateTime? TryGetCreatedUtc(BlittableJsonReaderObject obj)
-    {
-        if (obj.TryGet("created", out long createdUnix) && createdUnix > 0)
-            return DateTimeOffset.FromUnixTimeSeconds(createdUnix).UtcDateTime;
-
-        return null;
+        return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
     }
 
     private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response, BlittableJsonReaderObject responseContent)

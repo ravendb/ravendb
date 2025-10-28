@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -9,7 +10,6 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
-using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -133,7 +133,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> StreamingTalkAsync(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> StreamingTalkAsync(
         JsonOperationContext context,
         string firstStreamPropertyPath,
         Func<Memory<byte>, Task> streaming,
@@ -143,7 +143,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return await RunInternalAsync(context, talker, token);
     }
         
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> TalkAsync(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> TalkAsync(
         JsonOperationContext context,
         CancellationToken token = default)
     {
@@ -151,7 +151,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return await RunInternalAsync(context, talker, token);
     }
 
-    private async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> RunInternalAsync(
+    private TimeSpan _elapsed;
+
+    private async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> RunInternalAsync(
         JsonOperationContext context,
         Talker talker, CancellationToken token)
     {
@@ -160,7 +162,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         AiResponse r = default;
         List<BlittableJsonReaderObject> historyDocs = default;
         bool shouldContinueConversation = true;
-
+        var sw = Stopwatch.StartNew();
         while (shouldContinueConversation)
         {
             using var request = talker.CreateCompletionRequest(_request.Attachments);
@@ -212,9 +214,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
 
+        _elapsed = sw.Elapsed;
         _conversationId = await TryPersistAsync(context, historyDocs);
 
-        return (r.Result, talker.AiUsage, r.CreatedUtc);
+        return (r.Result, talker.AiUsage);
     }
 
     private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiUsage aiUsage, CancellationToken token)
@@ -534,7 +537,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return true;
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> HandleRequest(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> HandleRequest(
         DocumentsOperationContext context,
         CancellationToken token)
     {
@@ -553,7 +556,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return (r.Response.ToString(), r.Usage);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, DateTime? CreatedUtc)> HandleStreamingRequest(
+    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> HandleStreamingRequest(
         DocumentsOperationContext context,
         Stream outputStream,
         string streamPropertyPath,
@@ -581,11 +584,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         public string Answer = "Summary of the following chat messages history";
     }
 
-    public bool HasOpenActions => _document.OpenActionCalls.Count > 0;
-
-    public AiConversationResult CurrentStatus =>
-        HasOpenActions ? AiConversationResult.ActionRequired : AiConversationResult.Done;
-
     public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response)
     {
         return new DynamicJsonValue
@@ -594,7 +592,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             [nameof(ConversationResult<object>.ChangeVector)] = _document.ChangeVector,
             [nameof(ConversationResult<object>.Response)] = response,
             [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(_document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson()
+            [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson(),
+            [nameof(ConversationResult<object>.Usage)] = _document.CurrentUsage.ToJson(),
+            [nameof(ConversationResult<object>.Elapsed)] = _elapsed
         };
     }
 }

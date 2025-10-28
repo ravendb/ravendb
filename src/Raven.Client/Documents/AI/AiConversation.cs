@@ -255,7 +255,7 @@ internal class AiConversation : IAiConversationOperations
                 Answer = r.Response,
                 Status = _actionRequests.Count > 0 ? AiConversationResult.ActionRequired : AiConversationResult.Done,
                 Usage = r.Usage,
-                Time =r.Time
+                Elapsed = r.Elapsed
             };
         }
         catch (ConcurrencyException e)

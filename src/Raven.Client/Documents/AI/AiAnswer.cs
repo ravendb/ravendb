@@ -21,7 +21,7 @@ public class AiAnswer<TAnswer>
     public AiUsage Usage;
 
     /// <summary>
-    /// The time the answer was produced, model-provided creation time if available, otherwise server time.
+    /// The total time elapsed to produce the answer(measured from the server's request to the LLM until the response was received).
     /// </summary>
-    public DateTime? Time;
+    public TimeSpan Elapsed;
 }
