@@ -52,10 +52,6 @@ public sealed class DotnetDESPrivacyProvider : IPrivacyProvider
     /// </summary>
     public static bool UseLegacy { get; set; }
 #endif
-    /// <summary>
-    /// Flag to force using old ECB cipher mode encryption.
-    /// </summary>
-    public static bool UseEcbEncryption { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="phrase"/> class.
@@ -134,11 +130,6 @@ public sealed class DotnetDESPrivacyProvider : IPrivacyProvider
         // DES uses 8 byte keys but we need 16 to encrypt ScopedPdu. Get first 8 bytes and use them as encryption key
         var outKey = GetKey(key);
 
-        if (UseEcbEncryption)
-        {
-            return EcbEncrypt(outKey, iv, unencryptedData);
-        }
-
         if ((unencryptedData.Length % 8) != 0)
         {
             byte[] tmpBuffer = new byte[8 * ((unencryptedData.Length / 8) + 1)];
@@ -169,49 +160,6 @@ public sealed class DotnetDESPrivacyProvider : IPrivacyProvider
 
         using var transform = des.CreateEncryptor(key, iv);
         return transform.TransformFinalBlock(unencryptedData, 0, unencryptedData.Length);
-    }
-
-    internal static byte[] EcbEncrypt(byte[] key, byte[] iv, byte[] unencryptedData)
-    {
-        var div = (int)Math.Floor(unencryptedData.Length / 8.0);
-        if ((unencryptedData.Length % 8) != 0)
-        {
-            div += 1;
-        }
-
-        var newLength = div * 8;
-        var result = new byte[newLength];
-        var buffer = new byte[newLength];
-
-        var inBuffer = new byte[8];
-        var cipherText = iv;
-        var posIn = 0;
-        var posResult = 0;
-        Buffer.BlockCopy(unencryptedData, 0, buffer, 0, unencryptedData.Length);
-
-        using DES des = DES.Create();
-        des.Mode = CipherMode.ECB;
-        des.Padding = PaddingMode.None;
-
-        using (var transform = des.CreateEncryptor(key, null))
-        {
-            for (var b = 0; b < div; b++)
-            {
-                for (var i = 0; i < 8; i++)
-                {
-                    inBuffer[i] = (byte)(buffer[posIn] ^ cipherText[i]);
-                    posIn++;
-                }
-
-                transform.TransformBlock(inBuffer, 0, inBuffer.Length, cipherText, 0);
-                Buffer.BlockCopy(cipherText, 0, result, posResult, cipherText.Length);
-                posResult += cipherText.Length;
-            }
-        }
-
-        des.Clear();
-
-        return result;
     }
 
     /// <summary>

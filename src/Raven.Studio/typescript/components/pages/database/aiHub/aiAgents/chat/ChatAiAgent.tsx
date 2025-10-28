@@ -41,6 +41,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
     const document = useAppSelector(chatAiAgentSelectors.document);
     const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
+    const isDocumentDeleted = useAppSelector(chatAiAgentSelectors.isDocumentDeleted);
 
     const title = config.data?.Name ?? "AI Agent";
 
@@ -78,7 +79,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                     >
                         <Icon icon="plus" /> New chat
                     </Button>
-                    {conversationId && (
+                    {conversationId && !isDocumentDeleted && (
                         <a
                             href={appUrl.forEditDoc(conversationId, databaseName)}
                             className="btn btn-secondary rounded-pill"

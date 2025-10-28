@@ -14,6 +14,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -129,9 +130,16 @@ public partial class AbstractStaticIndexBase
                 var bjra = value as BlittableJsonReaderArray ?? (BlittableJsonReaderArray)((DynamicArray)value).Inner;
                 return HandleBlittableJsonReaderArray(bjra);
             }
-            case BlittableJsonReaderObject or DynamicBlittableJson:
+            case BlittableJsonReaderObject or DynamicBlittableJson or BlittableObjectInstance:
             {
-                var bjro = value as BlittableJsonReaderObject ?? ((DynamicBlittableJson)value).BlittableJson;
+                var bjro = value switch
+                {
+                    BlittableJsonReaderObject b => b,
+                    DynamicBlittableJson dbj => dbj.BlittableJson,
+                    BlittableObjectInstance boi => boi.Blittable,
+                    _ => throw new InvalidDataException($"Couldn't extract {nameof(BlittableJsonReaderObject)} from value of type {value.GetType().FullName}")
+                };
+                
                 if (bjro.TryGetMember(Sparrow.Global.Constants.Naming.VectorPropertyName, out var vector) && vector is BlittableJsonReaderVector bjrv)
                 {
                     return HandleBlittableJsonReaderVector(bjrv);
@@ -389,6 +397,20 @@ public partial class AbstractStaticIndexBase
                 var values = new object[jsArray.Length];
                 for (var i = 0; i < jsArray.Length; i++)
                     values[i] = HandleJsArray(jsArray[i] as JsArray);
+
+                return values;
+            }
+
+            if (firstItem is BlittableObjectInstance)
+            {
+                
+                var values = new object[jsArray.Length];
+                for (int i  = 0; i < jsArray.Length; i++)
+                {
+                    var currentObject = jsArray[i];
+                    var bjro = currentObject as BlittableObjectInstance;
+                    values[i] = VectorFromEmbedding(currentIndexingField, bjro, isAutoIndex);
+                }
 
                 return values;
             }

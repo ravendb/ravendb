@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -31,7 +32,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             var body = await ReadRequestBodyAsync(context, token.Token);
-            var handler = new ConversationHandler(RequestHandler.ServerStore, RequestHandler.Database);
+            var handler = new ConversationHandler(RequestHandler.ServerStore, RequestHandler.Database)
+            {
+                Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
+            };
 
             await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, token);
         }

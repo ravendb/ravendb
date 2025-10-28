@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
@@ -29,15 +30,19 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 internal class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
+    public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
+
     protected ConversationDocument _document;
     private string _conversationId;
     private RequestBody _request;
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
+    private int _maxModelIterationsPerCall;
 
+    public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
         _conversationId = conversationId;
@@ -45,6 +50,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         _configuration = configuration;
         _changeVector = changeVector;
         _raftId = raftId;
+        _maxModelIterationsPerCall = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
     }
 
     protected virtual async Task InitializeDocument(DocumentsOperationContext context)
@@ -88,7 +94,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
         else
         {
-            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data);
+            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
+
             if (_document.Agent != agentId)
             {
                 throw new InvalidOperationException(
@@ -181,12 +188,16 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             if (r.Type is AiResponseType.Result)
             {
+                _document.RemainingToolIterations = _maxModelIterationsPerCall;
                 shouldContinueConversation = false;
             }
             else
             {
                 await HandleQueryToolCallsAsync(context, r.ToolCalls);
-                shouldContinueConversation = TryGetUserTools(context, r.ToolCalls) == false;
+                if (TryGetUserTools(context, r.ToolCalls))
+                {
+                    shouldContinueConversation = false;
+                }
             }
 
             _document.CurrentUsage = talker.AiUsage;
@@ -296,7 +307,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         oldChat.Messages.Clear();
 
-        oldChat.Initialize(context, configuration);
+        oldChat.Initialize(context, configuration, resetRemainingToolIterations: false);
+
         oldChat.AddMessage(context,
             context.ReadObject(
                 new DynamicJsonValue
@@ -392,6 +404,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             RavenServer = server.Server,
             HttpContext = new DefaultHttpContext()
         });
+
+        multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
 
         using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
         using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))

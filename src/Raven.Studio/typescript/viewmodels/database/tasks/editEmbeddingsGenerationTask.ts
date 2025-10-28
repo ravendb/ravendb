@@ -232,10 +232,13 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         popoverUtils.longWithHover($(".overlap-tokens"),
             {
                 content: `<small class="margin-top-xs no-padding-left">
-                              This value will be used as the default when no specific value is set in the script.
+                              <ul class="padding-left-sm">
+                                  <li>This value will be used as the default when no specific value is set in the script.</li>
+                                  <li>Only applicable when the chunking method is<br/><em>"Plain Text: Split Paragraphs"</em> or <em>"Markdown: Split Paragraphs"</em>.</li>
+                              </ul>
                           </small>`
             });
-    }    
+    }
 
     toggleIsNewConnectionStringOpen() {
         this.isNewConnectionStringOpen(!this.isNewConnectionStringOpen())

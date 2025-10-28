@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -32,11 +33,14 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         AiAgentHelpers.AddDefaultValues(body.Configuration, RequestHandler.Configuration.Ai);
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, body.Configuration);
 
-        var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, body.Document);
+        var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, body)
+        {
+            Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
+        };
         await ExecuteInternalAsync(handler, context, body.Configuration, "TestConversation", req, changeVector: null, streaming: streaming, token: token);
     }
 
-    public class TestConversationHandler(ServerStore server, DocumentDatabase database, BlittableJsonReaderObject document) : ConversationHandler(server, database)
+    public class TestConversationHandler(ServerStore server, DocumentDatabase database, AiAgentTestRequest request) : ConversationHandler(server, database)
     {
         protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
         {
@@ -53,13 +57,13 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
         protected override async Task InitializeDocument(DocumentsOperationContext context)
         {
-            if (document == null)
+            if (request.Document == null)
             {
                 await base.InitializeDocument(context);
                 return;
             }
 
-            _document = ConversationDocument.ToDocument("TestConversation", document);
+            _document = ConversationDocument.ToDocument("TestConversation", request.Document, request.Configuration);
         }
     }
 

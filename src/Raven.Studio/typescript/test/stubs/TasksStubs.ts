@@ -350,6 +350,8 @@ export class TasksStubs {
                     Script: "for(const comment of this.Comments)\r\n{\r\n    ai.genContext({\r\n        Text: `Blog post topic: ${this.Topic}. Comment: ${comment.Text}`, \r\n        AuthorName: comment.Author,\r\n        CommentId: comment.Id\r\n    });\r\n}",
                 },
                 MaxConcurrency: 4,
+                // temporary until UI supports queries
+                Queries: null,
             },
             ChangeVector: null,
         };
