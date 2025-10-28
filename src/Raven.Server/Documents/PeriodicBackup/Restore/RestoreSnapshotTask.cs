@@ -377,6 +377,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 Index index = null;
                 try
                 {
+                    if (database.Configuration.Indexing.IsSharedJournalsPath(indexPath))
+                        continue;
+
                     index = Index.Open(indexPath, database, generateNewDatabaseId: true, out _);
                 }
                 catch (Exception e)
