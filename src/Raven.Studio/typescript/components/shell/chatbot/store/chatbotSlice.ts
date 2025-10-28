@@ -1,5 +1,8 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { RunChatbotAiAssistantViewData } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import {
+    RunChatbotAiAssistantResultDto,
+    RunChatbotAiAssistantViewData,
+} from "commands/aiAssistant/runChatbotAiAssistantCommand";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 
@@ -14,6 +17,7 @@ export interface ChatbotMessage {
     thinkingTimeInMs?: number;
     state?: "loading" | "success" | "error";
     usage?: Raven.Client.Documents.Operations.AI.AiUsage;
+    relevantLinks?: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
 }
 
 interface ChatbotState {
@@ -149,6 +153,7 @@ const runChat = createAsyncThunk(
                     CompletionTokens: result.OutputTokenCount,
                     CachedTokens: 0, // TODO server-side
                 },
+                relevantLinks: result.Response.RelevantLinks,
             };
         } catch {
             return {

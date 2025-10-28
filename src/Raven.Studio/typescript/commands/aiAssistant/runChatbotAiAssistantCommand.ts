@@ -10,6 +10,11 @@ interface RunChatbotAssistAiAssistantRequestDto {
 
 export type RunChatbotAiAssistantViewData = Omit<RunChatbotAssistAiAssistantRequestDto, "OperationType">;
 
+interface RelevantLink {
+    Title: string;
+    Url: string;
+}
+
 export interface RunChatbotAiAssistantResultDto {
     ConversationId: string;
     InputTokenCount: number;
@@ -18,7 +23,7 @@ export interface RunChatbotAiAssistantResultDto {
     UsagePercentage: number;
     Response: {
         Answer: string;
-        RelevantLinks: string[]
+        RelevantLinks: RelevantLink[];
     };
 }
 
