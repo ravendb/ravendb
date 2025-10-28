@@ -5,11 +5,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class GenAiConversationHandler(ServerStore server, DocumentDatabase database) : ConversationHandler(server, database)
+internal class GenAiConversationHandler(ServerStore server, DocumentDatabase database, bool enableTracing) : ConversationHandler(server, database)
 {
     protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
-        // In GenAI mode, we don't persist the conversation document
-        return Task.FromResult(_document.Id);
+        if (enableTracing) 
+            return base.TryPersistAsync(context, null);
+
+        // don't persist the conversation document
+        return Task.FromResult(Document.Id);
     }
 }

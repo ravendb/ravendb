@@ -32,10 +32,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 internal class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
     public const int DefaultMaxModelIterationsPerCall = 16;
+    protected ConversationDocument Document;
+
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
 
-    protected ConversationDocument _document;
     private string _conversationId;
     private RequestBody _request;
     private AiAgentConfiguration _configuration;
@@ -44,6 +45,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     private int _maxModelIterationsPerCall;
 
     public required RavenServer.AuthenticateConnection Authentication;
+    public string PersistedId { get; private set; }
+
+
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
         _conversationId = conversationId;
@@ -79,15 +83,15 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                     $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
             }
 
-            _document = new ConversationDocument(agentId, _request.Parameters);
+            Document = new ConversationDocument(agentId, _request.Parameters);
 
             if (_request.CreationOptions.ExpirationInSec.HasValue)
             {
-                _document.Expires = TimeSpan.FromSeconds(_request.CreationOptions.ExpirationInSec.Value);
+                Document.Expires = TimeSpan.FromSeconds(_request.CreationOptions.ExpirationInSec.Value);
             }
 
-            _document.Initialize(context, _configuration);
-            if (_document.InitialQueries(context, _configuration) is { } queries)
+            Document.Initialize(context, _configuration);
+            if (Document.InitialQueries(context, _configuration) is { } queries)
             {
                 // run initial tool calls...
                 await HandleQueryToolCallsAsync(context, queries);
@@ -95,12 +99,11 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
         else
         {
-            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
-
-            if (_document.Agent != agentId)
+            Document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
+            if (Document.Agent != agentId)
             {
                 throw new InvalidOperationException(
-                    $"The conversation '{_conversationId}' is assigned to agent '{_document.Agent}', " +
+                    $"The conversation '{_conversationId}' is assigned to agent '{Document.Agent}', " +
                     $"but the request is for agent '{agentId}'.");
             }
 
@@ -115,7 +118,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                         Id = _conversationId
                     };
 
-                _document.ChangeVector = conversation.ChangeVector;
+                Document.ChangeVector = conversation.ChangeVector;
             }
         }
     }
@@ -139,7 +142,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         Func<Memory<byte>, Task> streaming,
         CancellationToken token = default)
     {
-        using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath, streaming);
+        using var talker = new Talker(this, context, _configuration, Document, firstStreamPropertyPath, streaming);
         return await RunInternalAsync(context, talker, token);
     }
         
@@ -147,7 +150,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         JsonOperationContext context,
         CancellationToken token = default)
     {
-        using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath: null, streaming: null);
+        using var talker = new Talker(this, context, _configuration, Document, firstStreamPropertyPath: null, streaming: null);
         return await RunInternalAsync(context, talker, token);
     }
 
@@ -169,14 +172,14 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, token);
             
-            var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
+            var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, Document.CurrentUsage);
 
-            _document.AddMessage(context, r.Message, currentTurnUsage);
-            _document.UpdateUsage(talker.AiUsage);
+            Document.AddMessage(context, r.Message, currentTurnUsage);
+            Document.UpdateUsage(talker.AiUsage);
 
             if (currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
             {
-                if (_document.TryGetDetailsOfRecentToolCall(_configuration, out var toolCalls))
+                if (Document.TryGetDetailsOfRecentToolCall(_configuration, out var toolCalls))
                 {
                     ExceededTokenThresholdDetails.Add(
                         database.NotificationCenter,
@@ -191,7 +194,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             if (r.Type is AiResponseType.Result)
             {
-                _document.RemainingToolIterations = _maxModelIterationsPerCall;
+                Document.RemainingToolIterations = _maxModelIterationsPerCall;
                 shouldContinueConversation = false;
             }
             else
@@ -203,7 +206,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 }
             }
 
-            _document.CurrentUsage = talker.AiUsage;
+            Document.CurrentUsage = talker.AiUsage;
 
             // check if we should summarize or truncate the chat history
             var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
@@ -223,7 +226,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiUsage aiUsage, CancellationToken token)
     {
         var reduction = _configuration.ChatTrimming;
-        if (reduction == null || _document.OpenActionCalls.Count > 0)
+        if (reduction == null || Document.OpenActionCalls.Count > 0)
             return null;
 
         TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
@@ -232,14 +235,14 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         if (reduction.Truncate != null)
         {
-            if (_document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
+            if (Document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
             {
-                var truncateCount = _document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
-                truncateCount = int.Min(truncateCount, _document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
+                var truncateCount = Document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
+                truncateCount = int.Min(truncateCount, Document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
                 if (truncateCount > 0)
                 {
-                    var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
-                    _document.Messages.RemoveRange(1, truncateCount);
+                    var chatBefore = reduction.History == null ? null : Document.ToHistoryBlittable(context, _configuration, historyExpiration);
+                    Document.Messages.RemoveRange(1, truncateCount);
                     return chatBefore;
                 }
             }
@@ -253,8 +256,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
             {
-                var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
-                await SummarizeAsync(context, client, _configuration, _document, token);
+                var chatBefore = reduction.History == null ? null : Document.ToHistoryBlittable(context, _configuration, historyExpiration);
+                await SummarizeAsync(context, client, _configuration, Document, token);
                 return chatBefore;
             }
         }
@@ -333,11 +336,11 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             if (_configuration.FindAction(call.Name) == null)
                 continue;
 
-            _document.OpenActionCalls.Add(call.Id,
-                new AiAgentActionRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, _document.Parameters).ToString() });
+            Document.OpenActionCalls.Add(call.Id,
+                new AiAgentActionRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, Document.Parameters).ToString() });
         }
 
-        return _document.OpenActionCalls.Count > 0;
+        return Document.OpenActionCalls.Count > 0;
     }
 
     public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
@@ -393,7 +396,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 [nameof(GetRequest.Content)] = new DynamicJsonValue
                 {
                     [nameof(IndexQuery.Query)] = q.Query,
-                    [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, _document.Parameters)
+                    [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, Document.Parameters)
                 }
             });
         }
@@ -438,7 +441,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
                 RemoveNonEssentialFieldsFromMetadata(queryResult);
 
-                _document.AddMessage(context, context.ReadObject(
+                Document.AddMessage(context, context.ReadObject(
                     new DynamicJsonValue
                     {
                         ["tool_call_id"] = toolCallsIds[i],
@@ -469,7 +472,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
     }
 
-    protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
+    public async Task<string> BuildIdForPersistence()
     {
         if (_conversationId[^1] == '|')
         {
@@ -477,13 +480,21 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             _conversationId = r.ClusterId;
         }
 
-        var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
-        var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
-        await database.TxMerger.Enqueue(cmd);
-        _document.ChangeVector = cmd.PutResult.ChangeVector;
-        return cmd.PutResult.Id;
+        return PersistedId = database.DocumentsStorage.DocumentPut.BuildDocumentId(_conversationId, database.DocumentsStorage.GenerateNextEtag(), out _);
     }
 
+    protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
+    {
+        PersistedId ??= await BuildIdForPersistence();
+
+        var changeVectorLsv = context.GetLazyString(Document.ChangeVector);
+        var cmd = new PutConversationCommand(PersistedId, Document, historyDocs, changeVectorLsv, _configuration, database);
+        await database.TxMerger.Enqueue(cmd);
+
+        Document.ChangeVector = cmd.PutResult.ChangeVector;
+
+        return PersistedId = cmd.PutResult.Id;
+    }
 
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {
@@ -498,10 +509,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             foreach (BlittableJsonReaderObject tool in _request.ActionResponses)
             {
                 var t = JsonDeserializationClient.ActionResponse(tool);
-                if (_document.OpenActionCalls.Remove(t.ToolId) == false)
+                if (Document.OpenActionCalls.Remove(t.ToolId) == false)
                     throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{_conversationId}'");
 
-                _document.AddMessage(context, context.ReadObject(
+                Document.AddMessage(context, context.ReadObject(
                     new DynamicJsonValue
                     {
                         ["tool_call_id"] = t.ToolId,
@@ -512,7 +523,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
 
-        if (_document.OpenActionCalls.Count > 0)
+        if (Document.OpenActionCalls.Count > 0)
         {
             // We have pending tool-call results from the user;
             // skip reduction - persist the document now without history,
@@ -527,7 +538,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         if (RequestBody.HasUserPrompt(_request.Content))
         {
-            _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
+            Document.AddMessage(context, context.ReadObject(new DynamicJsonValue
             {
                 ["role"] = "user",
                 ["content"] = _request.Content
@@ -589,7 +600,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return new DynamicJsonValue
         {
             [nameof(ConversationResult<object>.ConversationId)] = _conversationId,
-            [nameof(ConversationResult<object>.ChangeVector)] = _document.ChangeVector,
+            [nameof(ConversationResult<object>.ChangeVector)] = Document.ChangeVector,
             [nameof(ConversationResult<object>.Response)] = response,
             [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(_document.OpenActionCalls.Select(t => t.Value.ToJson())),
             [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson(),

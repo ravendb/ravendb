@@ -39,6 +39,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 {
     public const string GenAiTaskTag = "Gen/AI";
 
+    public const string ConversationIdPrefix = "GenAI/";
+
     private const string TestDocumentId = "GenAi/TestDocument";
     private int _maxConcurrency;
     private ChatCompletionClient _chatCompletionClient;
@@ -205,17 +207,22 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 string json = item.ContextOutput.Context.ToString();
                 Task<(string Result, AiUsage Usage)> task;
 
-                var handler = new GenAiConversationHandler(Database.ServerStore, Database)
+                var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration.EnableTracing)
                 {
                     // GenAI task uses full access
                     Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
                 };
-                handler.Initialize(Agent, $"GenAI/{item.DocumentId}", new RequestBody
+                handler.Initialize(Agent, $"{ConversationIdPrefix}{item.DocumentId}/", new RequestBody
                 {
-                    CreationOptions = new AiConversationCreationOptions(),
+                    CreationOptions = new AiConversationCreationOptions
+                    {
+                        ExpirationInSec = Configuration.ExpirationInSeconds
+                    },
                     UserPrompt = json,
-                    Attachments = item.ContextOutput.Attachments,
+                    Attachments = item.ContextOutput.Attachments
                 }, changeVector: null);
+
+                item.ConversationDocumentId = handler.BuildIdForPersistence().Result;
 
                 handler.SetClient(_chatCompletionClient);
 
@@ -418,8 +425,19 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 if (exceptions is not null)
                     throw new AggregateException(exceptions);
 
-                // Remove ContextOutputs (as they're unnecessary for the next stage)
-                items.ForEach(item => item.ContextOutput.Attachments = null );
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var item in items)
+                    {
+                        // Remove ContextOutputs (as they're unnecessary for the next stage)
+                        item.ContextOutput.Attachments = null;
+
+                        // add the conversation document to the result item
+                        var conversationDoc = context.DocumentDatabase.DocumentsStorage.Get(context, item.ConversationDocumentId, DocumentFields.Data)?.Data;
+                        using (conversationDoc)
+                            item.ModelOutput.ConversationDocument = conversationDoc?.Clone(context);
+                    }
+                }
                 break;
             case TestStage.ApplyUpdateScript:
                 {
