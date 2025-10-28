@@ -12,8 +12,6 @@ namespace Sparrow.Json
         private UsageMode _mode;
         private WriteToken _writeToken;
 
-        private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
-
         /// <summary>
         /// Allows incrementally building json document
         /// </summary>
@@ -42,7 +40,7 @@ namespace Sparrow.Json
                 State = ContinuationState.ReadArrayDocument,
             };
 
-            var fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
+            var fakeFieldName = _context.GetLazyStringForFieldWithCaching(BlittableJsonReaderArray.RootArrayHolderPropertyNameSegment);
             var prop = _writer.CachedProperties.GetProperty(fakeFieldName);
             currentState.CurrentProperty = prop;
             currentState.MaxPropertyId = prop.PropertyId;
@@ -655,8 +653,7 @@ namespace Sparrow.Json
         public BlittableJsonReaderArray CreateArrayReader()
         {
             var reader = CreateReader();
-            BlittableJsonReaderArray array;
-            if (reader.TryGet("_", out array))
+            if (reader.TryGet(BlittableJsonReaderArray.RootArrayHolderPropertyNameSegment, out BlittableJsonReaderArray array))
                 return array;
             throw new InvalidOperationException("Couldn't find array");
         }
@@ -666,6 +663,5 @@ namespace Sparrow.Json
             _writer.Dispose();
             base.Dispose();
         }
-
     }
 }

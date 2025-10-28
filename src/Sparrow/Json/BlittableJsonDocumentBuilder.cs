@@ -776,7 +776,7 @@ namespace Sparrow.Json
 
             var reader = CreateReader();
             reader.NoCache = noCache;
-            if (reader.TryGet("_", out BlittableJsonReaderArray array))
+            if (reader.TryGet(BlittableJsonReaderArray.RootArrayHolderPropertyNameSegment, out BlittableJsonReaderArray array))
             {
                 array.ArrayIsRoot();
                 return array;

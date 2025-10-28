@@ -10,7 +10,9 @@ namespace Sparrow.Json
 {
     public sealed unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>, IDisposable
     {
-        private bool _disposeParent;
+        private const string RootArrayHolderPropertyName = "_";
+        internal static readonly StringSegment RootArrayHolderPropertyNameSegment = RootArrayHolderPropertyName;
+
         private readonly int _count;
         private readonly byte* _metadataPtr;
         private readonly byte* _dataStart;
@@ -21,7 +23,8 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject Parent => _parent;
 
-        internal void ArrayIsRoot() => _disposeParent = true;
+        internal void ArrayIsRoot() => IsRoot = true;
+        internal bool IsRoot { get; private set; }
 
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
             : base(parent._context)
@@ -71,52 +74,24 @@ namespace Sparrow.Json
             _parent?.BlittableValidation();
         }
 
-        //Todo Fixing the clone implementation to support this situation or throw clear error
+        public BlittableJsonReaderArray Clone(BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        {
+            return Clone(_context, usageMode);
+        }
+        
         public BlittableJsonReaderArray Clone(JsonOperationContext context, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             AssertContextNotDisposed();
-            using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
-            {
-                builder.Reset(usageMode);
-                builder.StartArrayDocument();
-                builder.StartWriteArray();
-                using (var itr = new BlittableJsonArrayEnumerator(this))
-                {
-                    while (itr.MoveNext())
-                    {
-                        switch (itr.Current)
-                        {
-                            case BlittableJsonReaderObject item:
-                                var clone = item.CloneOnTheSameContext();
-                                builder.WriteEmbeddedBlittableDocument(clone.BasePointer, clone.Size);
-                                break;
 
-                            case LazyStringValue item:
-                                builder.WriteValue(item);
-                                break;
-
-                            case long item:
-                                builder.WriteValue(item);
-                                break;
-
-                            case LazyNumberValue item:
-                                builder.WriteValue(item);
-                                break;
-
-                            case LazyCompressedStringValue item:
-                                builder.WriteValue(item);
-                                break;
-
-                            default:
-                                throw new InvalidDataException($"Actual value type is {itr.Current.GetType()}. Should be known serialized type and should not happen. ");
-                        }
-                    }
-                }
-                builder.WriteArrayEnd();
-                builder.FinalizeDocument();
-
-                return builder.CreateArrayReader();
-            }
+            var arrayHolder = IsRoot && Modifications == null
+                ? _parent.Clone(context) 
+                : context.ReadObject(new DynamicJsonValue { [RootArrayHolderPropertyName] = this }, "array holder", usageMode);
+            
+            if(arrayHolder.TryGet(RootArrayHolderPropertyNameSegment, out BlittableJsonReaderArray array) == false)
+                throw new InvalidOperationException("Couldn't find array");
+                
+            array.ArrayIsRoot();
+            return array;
         }
 
         public void Dispose()
@@ -125,7 +100,7 @@ namespace Sparrow.Json
 
             // this is required only in cases that we get a BlittableJsonReaderArray, which is an only child of an BlittableJsonReaderObject and we lose track of it's parent,
             // like in BlittableJsonDocumentBuilder.CreateArrayReader.
-            if (_disposeParent)
+            if (IsRoot)
                 _parent?.Dispose();
         }
 

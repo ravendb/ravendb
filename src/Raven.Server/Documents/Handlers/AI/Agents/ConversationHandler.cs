@@ -410,7 +410,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
         using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
         using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
-        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext clone))
         {
             await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
             memoryStream.Position = 0;
@@ -439,7 +438,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                     {
                         ["tool_call_id"] = toolCallsIds[i],
                         ["role"] = "tool",
-                        ["content"] = queryResult.Clone(clone).ToString()
+                        ["content"] = queryResult.Clone().ToString()
                     }, "tool-call/response"), usage: null);
             }
         }
