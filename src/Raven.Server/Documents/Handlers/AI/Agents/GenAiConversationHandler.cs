@@ -1,18 +1,41 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class GenAiConversationHandler(ServerStore server, DocumentDatabase database, bool enableTracing) : ConversationHandler(server, database)
+internal class GenAiConversationHandler(ServerStore server, DocumentDatabase database, GenAiConfiguration configuration) : ConversationHandler(server, database)
 {
+    public async Task<GenAiHandlerResult> HandleRequest(CancellationToken token)
+    {
+        using var _ = database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
+        var r = await HandleRequest(context, token);
+        return new GenAiHandlerResult
+        {
+            Response = r.Response.ToString(), 
+            Usage = r.Usage, 
+            ConversationDocument = _document.ToBlittable(context).ToString()
+        };
+    }
+
     protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
-        if (enableTracing) 
-            return base.TryPersistAsync(context, null);
+        if (configuration.EnableTracing == false || configuration.TestMode)
+            return Task.FromResult(_document.Id);
 
-        // don't persist the conversation document
-        return Task.FromResult(Document.Id);
+        return base.TryPersistAsync(context, null);
     }
+}
+
+public class GenAiHandlerResult
+{
+    public string Response;
+
+    public AiUsage Usage;
+
+    public string ConversationDocument;
 }

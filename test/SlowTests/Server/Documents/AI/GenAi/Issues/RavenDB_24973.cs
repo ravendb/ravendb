@@ -71,7 +71,7 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(100000)));
+        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
         using (var session = store.OpenSession())
         {
@@ -150,8 +150,6 @@ if($output.Blocked)
 }"
 
                 };
-
-                config.EnableTracing = true;
 
                 var testGenAiScript = new TestGenAiScript
                 {

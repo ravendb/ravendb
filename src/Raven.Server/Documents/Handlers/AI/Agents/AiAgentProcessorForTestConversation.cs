@@ -51,7 +51,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response)
         {
             var r = base.GetConversationResponse(context, response);
-            r["Document"] = Document.ToBlittable(context);
+            r["Document"] = _document.ToBlittable(context);
             return r;
         }
 
@@ -63,7 +63,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
                 return;
             }
 
-            Document = ConversationDocument.ToDocument("TestConversation", request.Document, request.Configuration);
+            _document = ConversationDocument.ToDocument("TestConversation", request.Document, request.Configuration);
         }
     }
 

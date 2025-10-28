@@ -16,8 +16,6 @@ public class GenAiResultItem
 
     internal bool UpdateHash { get; set; } = true;
 
-    internal string ConversationDocumentId { get; set;}
-
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue

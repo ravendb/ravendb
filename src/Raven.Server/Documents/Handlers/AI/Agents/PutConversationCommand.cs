@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
+            _id = _database.DocumentsStorage.DocumentPut.BuildDocumentId(_id, _database.DocumentsStorage.GenerateNextEtag(), out _);
+
             if (_historyDocs != null)
             {
                 foreach (var historyDoc in _historyDocs)
