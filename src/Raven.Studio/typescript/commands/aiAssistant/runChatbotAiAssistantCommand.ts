@@ -38,10 +38,7 @@ export default class runChatbotAiAssistantCommand extends commandBase {
 
         const dto: RunChatbotAssistAiAssistantRequestDto = {
             OperationType: "Chatbot",
-            View: this.viewData.View,
-            Message: this.viewData.Message,
-            RavenVersion: this.viewData.RavenVersion,
-            ConversationId: this.viewData.ConversationId,
+            ...this.viewData
         };
 
         return this.post<RunChatbotAiAssistantResultDto>(url, JSON.stringify(dto)).fail((response: JQueryXHR) =>
