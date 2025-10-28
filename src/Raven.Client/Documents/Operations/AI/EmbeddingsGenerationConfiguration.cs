@@ -109,7 +109,12 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         if (EmbeddingsPathConfigurations is not null)
         {
             foreach (var pathConfiguration in EmbeddingsPathConfigurations)
-                pathConfiguration.ChunkingOptions.Validate(pathConfiguration.Path, errors);
+            {
+                if (pathConfiguration.ChunkingOptions is not null)
+                    pathConfiguration.ChunkingOptions.Validate(pathConfiguration.Path, errors);
+                else
+                    errors.Add($"Path '{pathConfiguration.Path}': {nameof(ChunkingOptions)} must be provided.");
+            }
         }
         
         if (EmbeddingsTransformation?.ValidateScript() == false)
