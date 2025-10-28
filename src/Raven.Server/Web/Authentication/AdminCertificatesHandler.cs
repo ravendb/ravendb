@@ -140,7 +140,7 @@ namespace Raven.Server.Web.Authentication
 
             // this creates a client certificate which is signed by the current server certificate
             var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate.ServerCertificate,
-                serverStore.Server.Certificate.PrivateKey, out var clientCertBytes,
+                serverStore.Server.Certificate.PrivateKey, out _,
                 certificate.NotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition
@@ -176,7 +176,7 @@ namespace Raven.Server.Web.Authentication
                 await using (var s = entry.Open())
                     await s.WriteAsync(certBytes, 0, certBytes.Length);
 
-                await LetsEncryptCertificateUtil.WriteCertificateAsPemToZipArchiveAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
+                await LetsEncryptCertificateUtil.WriteCertificateAsPemToZipArchiveAsync(certificate.Name, certBytes, certificate.Password, archive);
             }
 
             return ms.ToArray();
