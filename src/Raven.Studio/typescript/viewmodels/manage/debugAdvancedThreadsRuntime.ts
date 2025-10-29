@@ -41,15 +41,15 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         "Name",
         "CPU%",
         "Unmanaged Alloc.",
-        "IOPS",
-        "IOPS Read",
-        "IOPS Write",
+        "IO SysCalls",
+        "IO SysCalls Read",
+        "IO SysCalls Write",
         "IO Throughput",
         "IO Throughput Read",
         "IO Throughput Write",
-        "Total IOPS",
-        "Total IOPS Read",
-        "Total IOPS Write",
+        "Total IO SysCalls",
+        "Total IO SysCalls Read",
+        "Total IO SysCalls Write",
         "Total IO Throughput",
         "Total IO Throughput Read",
         "Total IO Throughput Write",
@@ -65,9 +65,9 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         "Name",
         "CPU%",
         "Unmanaged Alloc.",
-        "IOPS",
+        "IO SysCalls",
         "IO Throughput",
-        "Total IOPS",
+        "Total IO SysCalls",
         "Total IO Throughput",
         "Total CPU Time",
         "Thread ID",
@@ -193,14 +193,14 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                         sortable: x => this.getSortableValue(x.UnmanagedAllocationsInBytes),
                         headerTitle: "Unmanaged allocations in bytes",
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoOpsPerSecLast, 0), "IOPS", "7%", {
-                        sortable: x => this.getSortableValue(x.IoStats?.IoOpsPerSecLast),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoSyscallsPerSecLast, 0), "IO SysCalls", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.IoSyscallsPerSecLast),
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoOpsPerSecLast, 0), "IOPS Read", "7%", {
-                        sortable: x => this.getSortableValue(x.IoStats?.ReadIoOpsPerSecLast),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoSyscallsPerSecLast, 0), "IO SysCalls Read", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ReadIoSyscallsPerSecLast),
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoOpsPerSecLast, 0), "IOPS Write", "7%", {
-                        sortable: x => this.getSortableValue(x.IoStats?.WriteIoOpsPerSecLast),
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoSyscallsPerSecLast, 0), "IO SysCalls Write", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.WriteIoSyscallsPerSecLast),
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ThroughputKbPerSecLast, 2, "KB/s"), "IO Throughput", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.ThroughputKbPerSecLast),
@@ -211,17 +211,17 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteThroughputKbPerSecLast, 2, "KB/s"), "IO Throughput Write", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.WriteThroughputKbPerSecLast),
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoOpsTotal, 0), "Total IOPS", "7%", {
-                        sortable: x => this.getSortableValue(x.IoStats?.IoOpsTotal),
-                        headerTitle: "Total IOPS aggregated since this view was open",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoSyscallsTotal, 0), "Total IO SysCalls", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.IoSyscallsTotal),
+                        headerTitle: "Total IO SysCalls aggregated since this view was open",
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoOpsTotal, 0), "Total IOPS Read", "7%", {
-                        sortable: x => this.getSortableValue(x.IoStats?.ReadIoOpsTotal),
-                        headerTitle: "Total IOPS Read aggregated since this view was open",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoSyscallsTotal, 0), "Total IO SysCalls Read", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.ReadIoSyscallsTotal),
+                        headerTitle: "Total IO SysCalls Read aggregated since this view was open",
                     }),
-                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoOpsTotal, 0), "Total IOPS Write", "7%", {
-                        sortable: x => this.getSortableValue(x.IoStats?.WriteIoOpsTotal),
-                        headerTitle: "Total IOPS Write aggregated since this view was open",
+                    new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoSyscallsTotal, 0), "Total IO SysCalls Write", "7%", {
+                        sortable: x => this.getSortableValue(x.IoStats?.WriteIoSyscallsTotal),
+                        headerTitle: "Total IO SysCalls aggregated since this view was open",
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ThroughputKbTotal, 2, "KB"), "Total IO Throughput", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.ThroughputKbTotal),

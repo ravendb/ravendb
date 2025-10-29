@@ -152,17 +152,17 @@ namespace Raven.Server.Utils
                                     {
                                         ti.IoStats = new IoStats
                                         {
-                                            IoOpsPerSecLast = io.OpsPerSecLast,
+                                            IoSyscallsPerSecLast = io.IoSyscallsPerSecLast,
                                             ThroughputKbPerSecLast = io.KbPerSecLast,
-                                            IoOpsTotal = io.OpsTotal,
+                                            IoSyscallsTotal = io.IoSyscallsTotal,
                                             ThroughputKbTotal = io.KbTotal,
 
-                                            ReadIoOpsPerSecLast = io.ReadOpsPerSecLast,
-                                            WriteIoOpsPerSecLast = io.WriteOpsPerSecLast,
+                                            ReadIoSyscallsPerSecLast = io.ReadIoSyscallsPerSecLast,
+                                            WriteIoSyscallsPerSecLast = io.WriteIoSyscallsPerSecLast,
                                             ReadThroughputKbPerSecLast = io.ReadKbPerSecLast,
                                             WriteThroughputKbPerSecLast = io.WriteKbPerSecLast,
-                                            ReadIoOpsTotal = io.ReadOpsTotal,
-                                            WriteIoOpsTotal = io.WriteOpsTotal,
+                                            ReadIoSyscallsTotal = io.ReadSyscallsTotal,
+                                            WriteIoSyscallsTotal = io.WriteSyscallsTotal,
                                             ReadThroughputKbTotal = io.ReadKbTotal,
                                             WriteThroughputKbTotal = io.WriteKbTotal
                                         };
