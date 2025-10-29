@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -13,7 +14,6 @@ using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -24,18 +24,20 @@ using Voron.Global;
 
 namespace Raven.Server.Documents
 {
-    public sealed class RetireAttachmentsSender : BackgroundWorkBase
+    public class RetireAttachmentsSender : BackgroundWorkBase
     {
-        public const int DefaultRetireFrequencyInSec = 60;
-        public static int ReadTransactionMaxOpenTimeInMs = 60_000;
-        internal static long BatchSizeInBytes = PlatformDetails.Is32Bits == false ? 1024 * Constants.Size.Megabyte : 4 * Constants.Size.Megabyte;
-        internal static Size BatchSizeUnit = new Size(BatchSizeInBytes, SizeUnit.Bytes);
-        internal static int BatchSize = PlatformDetails.Is32Bits == false ? 36 : 8;
-        internal static short ConcurrentThreadsNumber = PlatformDetails.Is32Bits == false ? (short)8 : (short)2;
-
+        private static readonly int DefaultRetireFrequencyInSec = 60;
+        private static readonly int ReadTransactionMaxOpenTimeInMs = 60_000;
+        private static readonly long BatchSizeInBytes = PlatformDetails.Is32Bits == false ? 1024 * Constants.Size.Megabyte : 4 * Constants.Size.Megabyte;
+        private static readonly Size BatchSizeUnit = new Size(BatchSizeInBytes, SizeUnit.Bytes);
+        private static readonly int BatchSize = PlatformDetails.Is32Bits == false ? 36 : 8;
+        private static readonly int DefaultConcurrentThreadsNumber = PlatformDetails.Is32Bits == false ? 8 : 2;
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _retirePeriod;
         private readonly OperationCancelToken _token;
+        private readonly List<Exception> _exceptions = new List<Exception>();
+        private long _totalUploaded;
+
         private bool _allHalted => Configuration == null || Configuration.Destinations.Count == 0 || Configuration.Destinations.All(x => x.Value.Disabled == true);
 
         public RetiredAttachmentsConfiguration Configuration { get; }
@@ -74,9 +76,9 @@ namespace Raven.Server.Documents
             }
 
             var totalCount = 0;
-            var totalUploaded = 0L;
-
             var currentTime = _database.Time.GetUtcNow();
+            var directUploaders = new Dictionary<string, AttachmentUploader>();
+
             try
             {
                 using var _ = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
@@ -86,8 +88,9 @@ namespace Raven.Server.Documents
                     context.Renew();
 
                     Stopwatch duration;
-                    var retired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
-                    var exceptions = new List<UploadAttachmentException>();
+                    _totalUploaded = 0L;
+                    _exceptions.Clear();
+                    var processed = new Queue<DocumentExpirationInfo>();
 
                     using (var tx = context.OpenReadTransaction())
                     using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
@@ -100,7 +103,7 @@ namespace Raven.Server.Documents
                             topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
                         }
 
-                        var options = new BackgroundWorkParameters(context, currentTime, topology, _database.ServerStore.NodeTag, RetiredAttachments: Configuration, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, _database.ServerStore.NodeTag, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                         var toRetire = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(options, ref totalCount, out duration, _token.Token);
 
@@ -109,189 +112,106 @@ namespace Raven.Server.Documents
                             return totalCount;
                         }
 
-                        var directUploaders = new Dictionary<string, AttachmentUploader>();
+                        var uploadTasks = Enumerable.Repeat(Task.CompletedTask, Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber).ToArray();
+                        var uploadedItems = new ConcurrentQueue<DocumentExpirationInfo>();
 
                         try
                         {
                             // upload the attachments to cloud and update the document
                             foreach (var doc in toRetire)
                             {
+                                var identifier = doc.Id;
                                 _token.ThrowIfCancellationRequested();
 
-                                if (CanContinueBatch(Logger, duration, totalUploaded, _token) == false)
+                                if (CanContinueBatch(Logger, duration, _totalUploaded, _token) == false)
                                 {
                                     break;
                                 }
 
-                                if (string.IsNullOrEmpty(doc.Id))
+                                if (string.IsNullOrEmpty(identifier))
                                 {
                                     if (Logger.IsDebugEnabled)
-                                        Logger.Debug($"Skipping PutRetire of retired attachment with key: '{doc.LowerId}' because it's identifier '{doc.Id}' IsNullOrEmpty.");
+                                        Logger.Debug($"Skipping PutRetire of retired attachment with key: '{doc.LowerId}' because it's identifier '{identifier}' IsNullOrEmpty.");
 
-                                    // document was deleted, need to remove it from retired tree
-                                    retired.Enqueue(doc);
+                                    // document or attachment was deleted, need to remove it from retired tree
+                                    processed.Enqueue(doc);
                                     continue;
                                 }
 
-                                // get uploader for the attachment
-                                if (directUploaders.TryGetValue(doc.Id, out var directUpload) == false)
+                                if (directUploaders.TryGetValue(identifier, out var directUpload) == false)
                                 {
-                                    // check if we have a destination configuration for the identifier
+                                    // get the destination configuration for the identifier & create new uploader for the attachment
+                                    var destination = Configuration.Destinations[identifier];
+                                    directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
 
-                                    if (Configuration.Destinations.TryGetValue(doc.Id, out var destination) == false)
-                                    {
-                                        // no destination found for the identifier
-                                        if (Logger.IsWarnEnabled)
-                                            Logger.Warn($"No destination found for retired attachment with key: '{doc.LowerId}' and identifier '{doc.Id}'. Will try to retire it again!");
-
-                                        // this will keep the retired attachment in the tree and will try to retire it again afterwards.
-
-                                        totalCount--; // let's decrease the total count in case we have a lot of attachments without destination that we skip
-                                        continue;
-                                    }
-
-                                    if (destination.HasUploader() == false)
-                                    {
-                                        // no uploader for this destination
-                                        if (Logger.IsWarnEnabled)
-                                            Logger.Warn($"No uploader found for destination with identifier '{destination.Identifier}' for attachment with key: '{doc.LowerId}'. Will try to retire it again!");
-
-                                        totalCount--;
-                                        continue;
-                                    }
-
-                                    // create new uploader for the attachment
-                                    directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, doc.Id, destination.S3Settings, destination.AzureSettings, ConcurrentThreadsNumber), Logger, _token)
-                                    {
-                                        OnSuccess = x =>
-                                        {
-                                            totalUploaded += x.AttachmentSize;
-                                            retired.Enqueue(x.Doc);
-                                        },
-                                        OnException = x =>
-                                        {
-                                            var key = x.Doc.LowerId.ToString();
-                                            exceptions.Add(new UploadAttachmentException(x.Doc.Id, key, $"Upload task of retired attachment with key '{key}' and identifier '{x.Doc.Id}' failed.", x.UploadTask.Exception));
-                                        }
-                                    };
-
-                                    directUploaders[doc.Id] = directUpload;
+                                    directUploaders[identifier] = directUpload;
                                 }
 
-                                using var hashSliceDisposable = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, doc.LowerId, out Slice hashSlice);
-                                var hash = hashSlice.ToString();
-
-                                var metadata = directUpload.GetObjectMetadata(string.Empty, hash);
-                                bool shouldUpload = true;
-                                long? attachmentLength = null;
-                                if (metadata != null)
+                                var index = Task.WaitAny(uploadTasks);
+                                var t = uploadTasks[index];
+                                if (t.IsFaulted)
                                 {
-                                    // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
-                                    var objectSizeFromMetadata = directUpload.GetObjectSizeFromMetadata(metadata);
-                                    if (objectSizeFromMetadata.HasValue)
-                                    {
-                                        attachmentLength = AttachmentsStorage.GetAttachmentStreamLength(context, hashSlice);
-
-                                        // Only skip upload if sizes match exactly
-                                        shouldUpload = objectSizeFromMetadata != attachmentLength;
-                                    }
+                                    _exceptions.Add(t.Exception);
                                 }
 
-                                _token.ThrowIfCancellationRequested();
-
-                                if (shouldUpload == false)
-                                {
-                                    // the attachment already exists in the cloud, no need to upload it again
-                                    retired.Enqueue(doc);
-                                    continue;
-                                }
-
-                                // the attachment stream is disposed by the directUpload
-                                Stream attachmentStream;
-                                if (attachmentLength.HasValue == false)
-                                {
-                                    (attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
-                                }
-                                else
-                                {
-                                    attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
-                                }
-
-                                if (attachmentStream == null)
-                                {
-                                    // attachment was deleted, need to remote it from retired tree
-                                    retired.Enqueue(doc);
-                                    continue;
-                                }
-
-                                if (await directUpload.WaitForFinishedTasksIfNeededAsync(duration, _token))
-                                {
-                                    directUpload.CreateUploadTask(_database, doc, attachmentStream, hash, attachmentLength.Value);
-                                }
-                                else
-                                {
-                                    // we cannot continue the batch, need to dispose the attachment stream
-                                    await attachmentStream.DisposeAsync();
-
-                                    if (Logger.IsDebugEnabled)
-                                        Logger.Debug($"Timed out waiting for free slot to upload retired attachments with '{doc.LowerId}', ReadTransactionMaxOpenTimeInMs: {duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the upload will happen on next iteration.");
-                                }
+                                uploadTasks[index] = CreateUploadTaskAsync(directUpload, uploadedItems, doc);
                             }
                         }
                         finally
                         {
-                            // Wait for all direct uploaders to finish
-                            foreach (var uploader in directUploaders.Values)
+                            // Wait for all uploads to complete
+                            await Task.WhenAll(uploadTasks);
+                            foreach (var t in uploadTasks)
                             {
-                                _token.ThrowIfCancellationRequested();
-
-                                uploader.Execute();
+                                if (t.IsFaulted)
+                                {
+                                    _exceptions.Add(t.Exception);
+                                }
+                            }
+                            while (uploadedItems.TryDequeue(out var item))
+                            {
+                                processed.Enqueue(item);
                             }
                         }
 
-                        if (toRetire.Count != retired.Count)
+                        if (toRetire.Count != processed.Count)
                         {
                             // we had skipped items
                             if (Logger.IsDebugEnabled)
-                                Logger.Debug($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                                Logger.Debug($"Skipping retiring of '{toRetire.Count - processed.Count:#,#;;0}' attachments, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => processed.Contains(x) == false))}");
                         }
 
-                        if (retired.Count == 0)
+                        if (processed.Count == 0)
                         {
                             if (Logger.IsDebugEnabled)
-                                Logger.Debug($"Skipping retiring whole batch of '{toRetire.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                                Logger.Debug($"Skipping retiring whole batch of '{toRetire.Count:#,#;;0}' attachments, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => processed.Contains(x) == false))}");
 
-
-                            if (exceptions.Count == 0)
+                            if (_exceptions.Count == 0)
                             {
                                 continue;
                             }
 
                             // we have exceptions and nothing was retired, we need to throw
-                            throw new AggregateException("Failed to upload all attachments.", exceptions);
+                            throw new AggregateException("Failed to upload all attachments.", _exceptions);
                         }
                     }
 
-                    var command = new UpdateRetiredAttachmentsCommand(retired, _database, currentTime);
+                    var command = new UpdateRetiredAttachmentsCommand(processed, _database, currentTime);
                     await _database.TxMerger.Enqueue(command);
 
                     if (Logger.IsInfoEnabled)
                     {
-                        var uploadedSizeText = Client.Util.Size.Humane(totalUploaded);
+                        var uploadedSizeText = Client.Util.Size.Humane(_totalUploaded);
                         var retiredCount = command.RetiredCount;
                         var elapsedMs = duration.ElapsedMilliseconds;
 
-                        if (exceptions.Count == 0)
+                        if (_exceptions.Count == 0)
                         {
                             Logger.Info($"Successfully retired {retiredCount:#,#;;0} attachments in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}");
                         }
                         else
                         {
-                            var failedCount = exceptions.Count;
-                            var failureDetails = BuildFailureDetails(exceptions);
-
-                            Logger.Info($"Partially retired {retiredCount:#,#;;0} attachments in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}. " +
-                                        $"Failed to upload {failedCount:#,#;;0} attachments:{Environment.NewLine}{failureDetails}");
+                            Logger.Info($"Partially retired {retiredCount:#,#;;0} attachments in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}. Failed to upload {_exceptions.Count:#,#;;0} attachments:{Environment.NewLine}{new AggregateException(_exceptions)}");
                         }
                     }
                 }
@@ -309,19 +229,62 @@ namespace Raven.Server.Documents
             return totalCount;
         }
 
-        private static string BuildFailureDetails(List<UploadAttachmentException> exceptions)
+        private async Task CreateUploadTaskAsync(AttachmentUploader uploader, ConcurrentQueue<DocumentExpirationInfo> concurrentItems, DocumentExpirationInfo doc)
         {
-            if (exceptions.Count == 0)
-                return string.Empty;
-
-            var sb = new StringBuilder(exceptions.Count * 64); // Pre-allocate reasonable capacity
-
-            foreach (var ex in exceptions.OrderByDescending(x => x.Identifier))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, doc.LowerId, out Slice hashSlice))
+            using (context.OpenReadTransaction())
             {
-                sb.AppendLine($"Identifier: '{ex.Identifier}', AttachmentKey: {ex.Key}");
+                var hash = hashSlice.ToString();
+                var attachmentStream = GetAttachmentStreamAndStreamLength(context, hashSlice, await uploader.GetObjectSizeAsync(string.Empty, hash), out var attachmentLength);
+                
+                if (attachmentStream == null)
+                {
+                    // attachment was deleted or already exist in cloud, need to remote it from retired tree
+                    concurrentItems.Enqueue(doc);
+
+                    if (Logger.IsDebugEnabled)
+                    {
+                        Logger.Debug($"Skipping upload of attachment with '{hash}' on {uploader.GetBackupDescription()}.");
+                    }
+                }
+                else
+                {
+                    _token.ThrowIfCancellationRequested();
+
+                    await using (attachmentStream)
+                    await using (var stream = uploader.StreamForBackupDestination(_database, string.Empty, hash))
+                    {
+                        if (Logger.IsDebugEnabled)
+                        {
+                            Logger.Debug($"Starting the upload of retired attachment '{hash}' on {uploader.GetBackupDescription()}.");
+                        }
+
+                        await attachmentStream.CopyToAsync(stream, _token.Token);
+                    }
+
+                    Interlocked.Add(ref _totalUploaded, attachmentLength);
+                    concurrentItems.Enqueue(doc);
+                }
+            }
+        }
+
+        private Stream GetAttachmentStreamAndStreamLength(DocumentsOperationContext context, Slice hashSlice, long? objectSizeFromMetadata, out long attachmentLength)
+        {
+            if (objectSizeFromMetadata.HasValue)
+            {
+                // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
+                attachmentLength = AttachmentsStorage.GetAttachmentStreamLength(context, hashSlice);
+                if (objectSizeFromMetadata == attachmentLength)
+                {
+                    return null;
+                }
+
+                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
             }
 
-            return sb.ToString().TrimEnd();
+            (Stream attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
+            return attachmentStream;
         }
 
         internal static bool CanContinueBatch(RavenLogger logger, Stopwatch duration, long totalUploaded, OperationCancelToken token)
@@ -350,13 +313,13 @@ namespace Raven.Server.Documents
 
         internal sealed class UpdateRetiredAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
-            private readonly Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> _retired;
+            private readonly Queue<DocumentExpirationInfo> _retired;
             private readonly DocumentDatabase _database;
             private readonly DateTime _currentTime;
 
             public int RetiredCount;
 
-            public UpdateRetiredAttachmentsCommand(Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> retired, DocumentDatabase database, DateTime currentTime)
+            public UpdateRetiredAttachmentsCommand(Queue<DocumentExpirationInfo> retired, DocumentDatabase database, DateTime currentTime)
             {
                 _retired = retired;
                 _database = database;
@@ -402,16 +365,16 @@ namespace Raven.Server.Documents
     {
         public RetireAttachmentsSender.UpdateRetiredAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var retired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
+            var retired = new Queue<DocumentExpirationInfo>();
             foreach (var item in Retired)
             {
-                retired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
+                retired.Enqueue(new DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
             }
             var command = new RetireAttachmentsSender.UpdateRetiredAttachmentsCommand(retired, database, CurrentTime);
             return command;
         }
 
-        public (Slice, Slice, string, AbstractBackgroundWorkStorage.DocumentExpirationInfoStatus)[] Retired { get; set; }
+        public (Slice, Slice, string, DocumentExpirationInfoStatus)[] Retired { get; set; }
 
         public DateTime CurrentTime { get; set; }
     }

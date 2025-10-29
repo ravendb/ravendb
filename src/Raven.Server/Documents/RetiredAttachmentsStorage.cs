@@ -196,7 +196,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null, DocumentExpirationInfoStatus.Delete);
             }
 
-            if (ShouldSkipItem(options.RetiredAttachments, identifier))
+            if (ShouldSkipItem( identifier))
             {
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: identifier, DocumentExpirationInfoStatus.Skip);
             }
@@ -205,19 +205,19 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    private bool ShouldSkipItem(RetiredAttachmentsConfiguration config, string identifier)
+    private bool ShouldSkipItem(string identifier)
     {
-        if (config?.Destinations == null)
+        if (Configuration?.Destinations == null)
         {
             return true;
         }
 
-        if (config.Destinations.Count == 0)
+        if (Configuration.Destinations.Count == 0)
         {
             return true;
         }
 
-        if (config.Destinations.ContainsKey(identifier) == false)
+        if (Configuration.Destinations.TryGetValue(identifier, out var destination) == false || destination.HasUploader() == false)
         {
             // no destinations, we don't care about this attachment
             return true;
@@ -261,9 +261,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
-        if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-            return;
-
         (bool allShouldRetire, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, clonedId);
 
         if (allShouldRetire)
@@ -284,10 +281,9 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             _logger.Debug($"Skipping retired attachment '{item.LowerId}' with identifier '{item.Id}'");
         }
 
-        //TODO: RavenDB-24862 - rise an alert similar to BlockingTombstonesDetails or HugeDocumentsDetails
         if (_counter++ % 1024 == 0)
         {
-            var alert = AlertRaised.Create(Database.Name, AlertTitle, WarnMessage, AlertType.Attachments_RemoteAttachmentWithoutIdentifier, NotificationSeverity.Warning, key: nameof(AlertType.Attachments_RemoteAttachmentWithoutIdentifier)/*, details: "TODO"*/);
+            var alert = AlertRaised.Create(Database.Name, AlertTitle, WarnMessage, AlertType.Attachments_RemoteAttachmentWithoutIdentifier, NotificationSeverity.Warning, key: nameof(AlertType.Attachments_RemoteAttachmentWithoutIdentifier));
             Database.NotificationCenter.Add(alert);
         }
     }
@@ -365,7 +361,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         if (destination.Disabled)
             throw new InvalidOperationException($"Cannot get retired attachment '{attachment.Key}' because destination for '{attachment.RetireParameters.Identifier}' is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSettingsForAttachments(Database, nameof(AttachmentHandlerProcessorForGetAttachment), destination.S3Settings, destination.AzureSettings, concurrentThreads: 8);
+        var settings = UploaderSettings.GenerateDirectUploaderSettingsForAttachments(Database, nameof(AttachmentHandlerProcessorForGetAttachment), destination.S3Settings, destination.AzureSettings);
         return new DirectFileDownloader(settings, tcs);
     }
 

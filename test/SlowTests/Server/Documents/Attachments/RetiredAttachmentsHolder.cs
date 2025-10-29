@@ -584,7 +584,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 {
                     var totalCount = 0;
                     var dbRecord = database.ReadDatabaseRecord();
-                    var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, dbRecord.Topology, "A", dbRecord.RetiredAttachments, int.MaxValue), ref totalCount, out var _, default);
+                    var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, dbRecord.Topology, "A", int.MaxValue), ref totalCount, out var _, default);
                     Assert.Equal(1, toRetire.Count);
                 }
 
@@ -911,7 +911,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                             {
                                 Members = [node.ServerStore.NodeTag]
                             }
-                       , database.ServerStore.NodeTag, database.ReadDatabaseRecord().RetiredAttachments, int.MaxValue), ref totalCount, out var _, default);
+                       , database.ServerStore.NodeTag, int.MaxValue), ref totalCount, out var _, default);
                         Assert.Equal(attachmentsCount, toRetire.Count);
                     }
                 }

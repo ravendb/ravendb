@@ -267,7 +267,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
                     var totalCount = 0;
 
                     var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -325,7 +325,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
+                    var options = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
                     var totalCount = 0;
 
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -679,7 +679,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var refreshOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var refreshOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(refreshOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(10, totalCount);
@@ -691,7 +691,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var refreshOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var refreshOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(refreshOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, totalCount);

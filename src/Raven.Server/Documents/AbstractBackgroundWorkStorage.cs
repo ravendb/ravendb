@@ -63,7 +63,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
     public Queue<DocumentExpirationInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var currentTicks = options.CurrentTime.Ticks;
-
+        var isFirstInTopology = ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag);
         var entriesTree = options.Context.Transaction.InnerTransaction.ReadTree(_treeName);
         using (var it = entriesTree.Iterate(false))
         {
@@ -93,8 +93,38 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                             if (cancellationToken.IsCancellationRequested)
                                 return toProcess;
 
-                            if (TryEnqueueItemToProcess(options, ref totalCount, multiIt.CurrentKey, ticksAsSlice, toProcess) == false)
-                                break;
+                            var clonedId = multiIt.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
+                            DocumentExpirationInfo item;
+                            try
+                            {
+                                item = GetDocumentAndId(options, clonedId, ticksAsSlice);
+                            }
+                            catch (DocumentConflictException)
+                            {
+                                item = new DocumentExpirationInfo { Status = DocumentExpirationInfoStatus.Conflict };
+                            }
+
+                            switch (item.Status)
+                            {
+                                case DocumentExpirationInfoStatus.Process when isFirstInTopology == false:
+                                case DocumentExpirationInfoStatus.Skip when isFirstInTopology == false:
+                                case DocumentExpirationInfoStatus.Conflict when isFirstInTopology == false:
+                                    break;
+                                case DocumentExpirationInfoStatus.Process:
+                                case DocumentExpirationInfoStatus.Delete:
+                                    toProcess.Enqueue(item);
+                                    totalCount++;
+                                    break;
+                                case DocumentExpirationInfoStatus.Skip:
+                                    HandleSkippedItem(item);
+                                    totalCount++;
+                                    break;
+                                case DocumentExpirationInfoStatus.Conflict:
+                                    HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
 
                         } while (multiIt.MoveNext()
                                  && toProcess.Count < options.AmountToTake
@@ -107,43 +137,6 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
             return toProcess;
         }
-    }
-
-    protected bool TryEnqueueItemToProcess(BackgroundWorkParameters options, ref int totalCount, Slice key, Slice ticksAsSlice, Queue<DocumentExpirationInfo> toProcess)
-    {
-        var clonedId = key.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-
-        try
-        {
-            var item = GetDocumentAndId(options, clonedId, ticksAsSlice);
-            if (item.Status == DocumentExpirationInfoStatus.Delete)
-            {
-                toProcess.Enqueue(item);
-                totalCount++;
-                return true;
-            }
-
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                return false;
-
-            if (item.Status == DocumentExpirationInfoStatus.Skip)
-            {
-                // TODO: RavenDB-24862 - if we skip number of items that is equals to totalCount then we might end up with skips only in the batch, need to handle such scenario
-                totalCount++;
-                HandleSkippedItem(item);
-                return true;
-            }
-
-            toProcess.Enqueue(item);
-            totalCount++;
-            return true;
-        }
-        catch (DocumentConflictException)
-        {
-            HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
-        }
-
-        return false;
     }
 
     protected virtual DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
@@ -229,31 +222,32 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         return processedCount;
     }
 
-    public enum DocumentExpirationInfoStatus
+}
+
+public class DocumentExpirationInfo
+{
+    public Slice Ticks { get; }
+    public Slice LowerId { get; }
+    public string Id { get; }
+    public DocumentExpirationInfoStatus Status { get; set; }
+
+    internal DocumentExpirationInfo()
     {
-        Process,
-        Skip,
-        Delete
     }
 
-    public class DocumentExpirationInfo
+    public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id, DocumentExpirationInfoStatus status)
     {
-        public Slice Ticks { get; }
-        public Slice LowerId { get; }
-        public string Id { get; }
-        public DocumentExpirationInfoStatus Status { get; }
-
-
-        private DocumentExpirationInfo()
-        {
-        }
-
-        public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id, DocumentExpirationInfoStatus status)
-        {
-            Status = status;
-            Ticks = ticks;
-            LowerId = lowerId;
-            Id = id;
-        }
+        Status = status;
+        Ticks = ticks;
+        LowerId = lowerId;
+        Id = id;
     }
+}
+
+public enum DocumentExpirationInfoStatus
+{
+    Process,
+    Skip,
+    Delete,
+    Conflict
 }

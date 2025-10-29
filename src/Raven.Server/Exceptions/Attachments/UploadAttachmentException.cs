@@ -3,7 +3,7 @@
 namespace Raven.Server.Exceptions.Attachments
 {
     [Serializable]
-    internal sealed class UploadAttachmentException : Exception
+    public sealed class UploadAttachmentException : Exception
     {
         public readonly string Identifier;
         public readonly string Key;

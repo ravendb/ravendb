@@ -84,7 +84,7 @@ namespace SlowTests.Server.Documents.DataArchival
                         nodeTag = database.ServerStore.NodeTag;
                     }
 
-                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, null, 10);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10);
                     var totalCount = 0;
 
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -560,7 +560,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(archiveOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(10, totalCount);
@@ -572,7 +572,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, RetiredAttachments: null, AmountToTake: 10, MaxItemsToProcess: 10);
+                    var archiveOptions = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: 10);
                     var totalCount = 0;
                     var toArchive = database.DocumentsStorage.DataArchivalStorage.GetDocuments(archiveOptions, ref totalCount, out _, CancellationToken.None);
                     Assert.Equal(1, totalCount);

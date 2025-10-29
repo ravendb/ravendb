@@ -120,12 +120,12 @@ public class DataArchivist : BackgroundWorkBase
                     context.Reset();
                     context.Renew();
 
-                    Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> toArchive;
+                    Queue<DocumentExpirationInfo> toArchive;
                     Stopwatch duration;
 
                     using (context.OpenReadTransaction())
                     {
-                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, RetiredAttachments: null, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                         toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
 

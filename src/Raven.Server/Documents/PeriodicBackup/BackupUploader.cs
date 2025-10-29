@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Execute();
         }
 
-        public override void Execute()
+        public void Execute()
         {
             foreach (var longRunningWork in _threads)
             {

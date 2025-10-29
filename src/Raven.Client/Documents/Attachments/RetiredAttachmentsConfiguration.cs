@@ -12,6 +12,7 @@ namespace Raven.Client.Documents.Attachments
         public Dictionary<string, RetiredAttachmentsDestinationConfiguration> Destinations { get; set; }
         public long? RetireFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
+        public int? ConcurrentUploads { get; set; }
 
         public override int GetHashCode()
         {
@@ -31,6 +32,7 @@ namespace Raven.Client.Documents.Attachments
 
             hashCode.Add(RetireFrequencyInSec);
             hashCode.Add(MaxItemsToProcess);
+            hashCode.Add(ConcurrentUploads);
 
             return hashCode.ToHashCode();
         }
@@ -49,7 +51,9 @@ namespace Raven.Client.Documents.Attachments
                 return false;
             if (MaxItemsToProcess != other.MaxItemsToProcess)
                 return false;
-
+            if (ConcurrentUploads != other.ConcurrentUploads)
+                return false;
+            
             if (Destinations == null && other.Destinations == null)
                 return true;
 
@@ -85,6 +89,7 @@ namespace Raven.Client.Documents.Attachments
                 [nameof(Destinations)] = Destinations.ToJson(),
                 [nameof(RetireFrequencyInSec)] = RetireFrequencyInSec,
                 [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
+                [nameof(ConcurrentUploads)] = ConcurrentUploads,
             };
         }
 
@@ -107,6 +112,8 @@ namespace Raven.Client.Documents.Attachments
                 throw new InvalidOperationException($"Retire attachments frequency{databaseNameStr} must be greater than 0.");
             if (MaxItemsToProcess <= 0)
                 throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
+            if (ConcurrentUploads <= 0)
+                throw new InvalidOperationException($"Concurrent attachments uploads{databaseNameStr} must be greater than 0.");
 
             if (Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
                                         && BackupConfiguration.CanBackupUsing(x.Value.AzureSettings)))

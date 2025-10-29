@@ -511,7 +511,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        public static void GetToRetireAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>> action = null)
+        public static void GetToRetireAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<DocumentExpirationInfo>> action = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -526,7 +526,7 @@ namespace SlowTests.Server.Documents.Attachments
                     nodeTag = database.ServerStore.NodeTag;
                 }
 
-                var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord.Topology, nodeTag, dbRecord.RetiredAttachments, int.MaxValue);
+                var options = new BackgroundWorkParameters(context, DateTime.MaxValue, dbRecord.Topology, nodeTag, int.MaxValue);
                 // need to sort the list so current checked node is first in topology, since only the "first topology node is checked in GetDocuments() method
                 options.DatabaseTopology.Members = options.DatabaseTopology.Members.OrderByDescending(x => x == nodeTag).ToList();
 

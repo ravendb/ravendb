@@ -21,6 +21,4 @@ public abstract class MultipleFileUploaderBase<T> : DirectFileUploader
         _threads = new LinkedList<T>();
         _exceptions = new ConcurrentSet<Exception>();
     }
-
-    public abstract void Execute();
 }

@@ -10,7 +10,6 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
@@ -30,7 +29,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         string RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
         Size MaxSingleBlockSize { get; set; }
-        IDictionary<string, string> GetObjectMetadata(string key);
         Task<IDictionary<string, string>> GetObjectMetadataAsync(string key);
     }
 

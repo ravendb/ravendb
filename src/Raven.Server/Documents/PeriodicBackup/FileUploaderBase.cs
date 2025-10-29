@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -76,43 +77,39 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
                 _logger.Info($"{ReportDeletion(GoogleCloudName)} storage bucket: {settings.BucketName}");
         }
     }
-
-    protected IDictionary<string, string> GetObjectMetadataFromS3(S3Settings settings, string folderName, string fileName)
+    protected async Task<IDictionary<string, string>> GetObjectMetadataFromS3Async(S3Settings settings, string folderName, string fileName)
     {
         using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
             var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
-            return client.GetObjectMetadata(key);
+            return await client.GetObjectMetadataAsync(key);
         }
     }
 
-    protected IDictionary<string, string> GetObjectMetadataFromAzure(AzureSettings settings, string folderName, string fileName)
+    protected async Task<IDictionary<string, string>> GetObjectMetadataFromAzureAsync(AzureSettings settings, string folderName, string fileName)
     {
         using (IRavenAzureClient client = RavenAzureClient.Create(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
             var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
-            return client.GetObjectMetadata(key);
+            return await client.GetObjectMetadataAsync(key);
         }
     }
 
-    protected IDictionary<string, string> GetObjectMetadataFromGoogleCloud(GoogleCloudSettings settings, string folderName, string fileName)
+    protected async Task<long?> GetObjectSizeS3Async(string folderName, string objKeyName)
     {
-        throw new NotImplementedException();
-    }
-
-    protected long? GetObjectSizeFromMetadataS3(IDictionary<string, string> metadata)
-    {
+        IDictionary<string, string> metadata = await GetObjectMetadataFromS3Async(_settings.S3Settings, folderName, objKeyName);
         return GetObjectSizeFromMetadataInternal(metadata);
     }
 
-    protected long? GetObjectSizeFromMetadataAzure(IDictionary<string, string> metadata)
+    protected async Task<long?> GetObjectSizeAzureAsync(string folderName, string objKeyName)
     {
+        IDictionary<string, string> metadata = await GetObjectMetadataFromAzureAsync(_settings.AzureSettings, folderName, objKeyName);
         return GetObjectSizeFromMetadataInternal(metadata);
     }
 
     private long? GetObjectSizeFromMetadataInternal(IDictionary<string, string> metadata)
     {
-        if (metadata.TryGetValue(Constants.Headers.ContentLength, out var contentLengthStr) &&
+        if (metadata != null && metadata.TryGetValue(Constants.Headers.ContentLength, out var contentLengthStr) &&
             long.TryParse(contentLengthStr, out var cloudSize))
         {
             return cloudSize;

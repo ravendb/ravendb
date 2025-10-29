@@ -29,8 +29,6 @@ public sealed class UploaderSettings
     public BackupType? BackupType;
     public Action OnBackupException;
     internal BackupConfiguration.BackupDestination Destination;
-    public short ConcurrentThreads { get; set; }
-
     public static UploaderSettings GenerateUploaderSettingsForOlap(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
     {
         return new UploaderSettings(database.Configuration.Backup)
@@ -50,7 +48,7 @@ public sealed class UploaderSettings
         };
     }
 
-    public static UploaderSettings GenerateDirectUploaderSettingsForAttachments(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, short concurrentThreads)
+    public static UploaderSettings GenerateDirectUploaderSettingsForAttachments(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings)
     {
         return new UploaderSettings(database.Configuration.Backup)
         {
@@ -61,7 +59,6 @@ public sealed class UploaderSettings
             DatabaseName = database.Name,
             TaskName = taskName,
             Destination = BackupConfigurationHelper.DestinationForDirectUpload(database.Configuration.Backup, s3Settings, azureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null),
-            ConcurrentThreads = concurrentThreads
         };
     }
 

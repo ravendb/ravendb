@@ -111,7 +111,7 @@ namespace SlowTests.Issues
                             nodeTag = database.ServerStore.NodeTag;
                         }
                         
-                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, RetiredAttachments: null, AmountToTake: batchSize);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, AmountToTake: batchSize);
                         var totalCount = 0;
                         var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
                         Assert.Equal(expected, totalCount);

@@ -153,12 +153,12 @@ namespace Raven.Server.Documents.Expiration
                         context.Reset();
                         context.Renew();
 
-                        Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> expired;
+                        Queue<DocumentExpirationInfo> expired;
                         Stopwatch duration;
 
                         using (context.OpenReadTransaction())
                         {
-                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, RetiredAttachments: null, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
+                            var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                             expired =
                                 forExpiration
@@ -199,14 +199,14 @@ namespace Raven.Server.Documents.Expiration
 
         internal sealed class DeleteExpiredDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
-            private readonly Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> _expired;
+            private readonly Queue<DocumentExpirationInfo> _expired;
             private readonly DocumentDatabase _database;
             private readonly bool _forExpiration;
             private readonly DateTime _currentTime;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
+            public DeleteExpiredDocumentsCommand(Queue<DocumentExpirationInfo> expired, DocumentDatabase database, bool forExpiration, DateTime currentTime)
             {
                 _expired = expired;
                 _database = database;
@@ -240,16 +240,16 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var expired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
+            var expired = new Queue<DocumentExpirationInfo>();
             foreach (var item in Expired)
             {
-                expired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
+                expired.Enqueue(new DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
             }
             var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database, ForExpiration, CurrentTime);
             return command;
         }
 
-        public (Slice, Slice, string, AbstractBackgroundWorkStorage.DocumentExpirationInfoStatus)[] Expired { get; set; }
+        public (Slice, Slice, string, DocumentExpirationInfoStatus)[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 
