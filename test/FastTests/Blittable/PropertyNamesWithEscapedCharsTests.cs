@@ -23,6 +23,8 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
 
         using (var withControlCharacter = context.GetLazyString("a\0a"))
         using (var withControlCharacterButEscapedInUserLevel = context.GetLazyString("a\\u0000a"))
+        using (var withNewLineAndBack = context.GetLazyString("a\n\bb"))
+        using (var withNewLineAndBackEscaped = context.GetLazyString("a\\n\\bb"))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
         {
             writer.WriteStartObject();
@@ -32,6 +34,12 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
                 
                 writer.WritePropertyName(withControlCharacterButEscapedInUserLevel);
                 writer.WriteString("someValue2");
+                
+                writer.WritePropertyName(withNewLineAndBack);
+                writer.WriteString("someValue3");
+                
+                writer.WritePropertyName(withNewLineAndBackEscaped);
+                writer.WriteString("someValue4");
             }
             writer.WriteEndObject();
         }
@@ -39,7 +47,8 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
         memoryStream.Seek(0, SeekOrigin.Begin);
         using (var json = await context.ReadForMemoryAsync(memoryStream, "result"))
         {
-            Assert.Equal(2, json.Count);
+            Assert.Equal(4, json.Count);
+            Assert.Equal("{\"a\\u0000a\":\"someValue1\",\"a\\\\u0000a\":\"someValue2\",\"a\\n\\bb\":\"someValue3\",\"a\\\\n\\\\bb\":\"someValue4\"}", json.ToString());
         }
     }
 

@@ -492,8 +492,12 @@ namespace Sparrow.Json
             {
 #endif
                 EnsureNotDisposed();
-                var memory = GetLongLivedMemory(key.Size);
+                var memory = GetLongLivedMemory(key.Size + 1);
                 Memory.Copy(memory.Address, key.Buffer, key.Size);
+                // This is a marker for the numberOfEscapeSequences that follows _after_ the lazy string
+                // The GetLazyStringForFieldWithCachingUnlikely(LazyStringValue) overload is used to process values read directly 
+				// from the parser, without the escapes, and we aren't writing directly from it anyway
+                memory.Address[key.Size] = 0;
                 string keyStr = key;
                 var str = new LazyStringValue(keyStr, memory.Address, key.Size, this)
                 {
