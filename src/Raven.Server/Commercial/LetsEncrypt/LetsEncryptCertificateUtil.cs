@@ -39,7 +39,7 @@ public sealed class LetsEncryptCertificateUtil
 
     public static async Task WriteCertificateAsPemToZipArchiveAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
     {
-        var cert = new X509Certificate2(rawBytes, exportPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+        var cert = CertificateHelper.CreateCertificateFromPfx(rawBytes, exportPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
     
         // Export the certificate to PEM
         var certPem = cert.ExportCertificatePem();

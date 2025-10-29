@@ -10,6 +10,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using System.Security.Cryptography;
+using Raven.Client.Util;
 
 namespace SlowTests.Issues;
 
@@ -126,7 +127,7 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediateBytes);
-        var intermediate = new X509Certificate2(intermediateBytes);
+        var intermediate = CertificateLoaderUtil.CreateCertificateFromPfx(intermediateBytes);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}-2",
@@ -136,7 +137,7 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediate2Bytes);
-        var intermediate2 = new X509Certificate2(intermediate2Bytes);
+        var intermediate2 = CertificateLoaderUtil.CreateCertificateFromPfx(intermediate2Bytes);
 
         var clientKp = RSA.Create(2048);
 
@@ -149,7 +150,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
-        var client = new X509Certificate2(clientBytes);
+        var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientBytes);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -160,7 +161,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
-        var client2 = new X509Certificate2(client2Bytes);
+        var client2 = CertificateLoaderUtil.CreateCertificateFromPfx(client2Bytes);
 
         return (ca, intermediate, intermediate2, client, client2);
     }
@@ -181,7 +182,7 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediateBytes);
-        var intermediate = new X509Certificate2(intermediateBytes);
+        var intermediate = CertificateLoaderUtil.CreateCertificateFromPfx(intermediateBytes);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}-2",
@@ -191,7 +192,7 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediate2Bytes);
-        var intermediate2 = new X509Certificate2(intermediate2Bytes);
+        var intermediate2 = CertificateLoaderUtil.CreateCertificateFromPfx(intermediate2Bytes);
 
         var clientKp = RSA.Create(2048);
 
@@ -204,7 +205,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
-        var client = new X509Certificate2(clientBytes);
+        var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientBytes);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -215,7 +216,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
-        var client2 = new X509Certificate2(client2Bytes);
+        var client2 = CertificateLoaderUtil.CreateCertificateFromPfx(client2Bytes);
 
         return (ca, ca2, intermediate, intermediate2, client, client2);
     }
@@ -233,7 +234,7 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediateBytes);
-        var intermediate = new X509Certificate2(intermediateBytes);
+        var intermediate = CertificateLoaderUtil.CreateCertificateFromPfx(intermediateBytes);
 
         var clientKp = RSA.Create(2048);
 
@@ -246,7 +247,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
-        var client = new X509Certificate2(clientBytes);
+        var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientBytes);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -257,7 +258,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
-        var client2 = new X509Certificate2(client2Bytes);
+        var client2 = CertificateLoaderUtil.CreateCertificateFromPfx(client2Bytes);
 
         return (ca, intermediate, client, client2);
     }
@@ -276,7 +277,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
-        var client = new X509Certificate2(clientBytes);
+        var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientBytes);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -287,7 +288,7 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
-        var client2 = new X509Certificate2(client2Bytes);
+        var client2 = CertificateLoaderUtil.CreateCertificateFromPfx(client2Bytes);
 
         return (client, client2);
     }

@@ -522,7 +522,7 @@ namespace Tests.Infrastructure.Utils
             var stream = new MemoryStream();
             store.Save(stream, Array.Empty<char>(), random);
 
-            return new X509Certificate2(stream.ToArray());
+            return CertificateLoaderUtil.CreateCertificateFromPfx(stream.ToArray());
         }
 
         public static X509Certificate2 CreateClientCertificateFromServerCertificate(X509Certificate2 serverCertificate, out byte[] clientCertBytes)

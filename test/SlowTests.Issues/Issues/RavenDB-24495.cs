@@ -92,8 +92,8 @@ public class RavenDB_24495 : ClusterTestBase
         var bcBytes = BouncyCastleCertificateUtils.CreateSelfSignedTestCertificate(cn, issuerName: null, with2Eku: true);
         var dotnetBytes = CertificateUtils.CreateSelfSignedTestCertificate(cn, issuerName: null, with2Eku: true);
 
-        using var bcCert = new X509Certificate2(bcBytes);
-        using var dnCert = new X509Certificate2(dotnetBytes);
+        using var bcCert = CertificateLoaderUtil.CreateCertificateFromPfx(bcBytes);
+        using var dnCert = CertificateLoaderUtil.CreateCertificateFromPfx(dotnetBytes);
 
         // Assert basic equivalence
         Assert.Equal($"CN={cn}", GetSubjectCN(bcCert));

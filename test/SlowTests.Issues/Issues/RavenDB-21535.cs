@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Utils;
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
                 notAfter: DateTime.UtcNow.Date.AddMonths(1),
                 certBytes: out var clientCertBytes);
 
-            var client = new X509Certificate2(clientCertBytes);
+            var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
             {
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
                 certBytes: out var clientCertBytes,
                 sans: new[] { san });
 
-            var client = new X509Certificate2(clientCertBytes);
+            var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
             {
@@ -105,7 +106,7 @@ namespace SlowTests.Issues
                 certBytes: out var clientCertBytes,
                 sans: new[] { san });
 
-            var client = new X509Certificate2(clientCertBytes);
+            var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
             {
@@ -137,7 +138,7 @@ namespace SlowTests.Issues
                 certBytes: out var clientCertBytes,
                 sans: new[] { LocalDomainName });
 
-            var client = new X509Certificate2(clientCertBytes);
+            var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
             var server = GetNewServer(new ServerCreationOptions
             {
