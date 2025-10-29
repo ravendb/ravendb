@@ -273,7 +273,7 @@ namespace Raven.Server.Utils
             var pfxCollection = new X509Certificate2Collection();
 
             // Import the existing PFX file (client certificate) into the collection
-            pfxCollection.Import(certBytes, null, CertificateLoaderUtil.FlagsForExport);
+            CertificateLoaderUtil.ImportPfx(pfxCollection, certBytes, null, CertificateLoaderUtil.FlagsForExport);
 
             // Add the server certificate to the collection
             pfxCollection.Add(CertificateLoaderUtil.CreateCertificateFromAny(serverCertBytes, flags: CertificateLoaderUtil.FlagsForExport));
@@ -564,7 +564,7 @@ namespace Raven.Server.Utils
                             // Try to create a certificate from this position
                             var certBytes = new byte[rawData.Length - i];
                             Array.Copy(rawData, i, certBytes, 0, certBytes.Length);
-                            serverCertificateFromExtension = new X509Certificate2(certBytes);
+                            serverCertificateFromExtension = CertificateHelper.CreateCertificateFromCert(certBytes);
                             break;
                         }
                         catch
