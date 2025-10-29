@@ -13,13 +13,24 @@ namespace SlowTests.Issues;
 
 public class RavenDB_25119(ITestOutputHelper output) : RavenTestBase(output)
 {
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Data = [true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Data = [false])]
+    private void UseDefaultSearchAnalyzerWhenSearchingDynamicFields(Options options, bool forceSearchDefaultAnalyzer)
+        => UseDefaultSearchAnalyzerWhenSearchingDynamicFieldsBase(options, forceSearchDefaultAnalyzer, new MatchFieldsIndex(forceSearchDefaultAnalyzer));
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Data = [true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, Data = [false])]
-    public void UseDefaultSearchAnalyzerWhenSearchingDynamicFields(Options options, bool forceSearchDefaultAnalyzer)
+    private void UseDefaultSearchAnalyzerWhenSearchingDynamicFieldsJs(Options options, bool forceSearchDefaultAnalyzer)
+        => UseDefaultSearchAnalyzerWhenSearchingDynamicFieldsBase(options, forceSearchDefaultAnalyzer, new MatchFieldsIndexJs(forceSearchDefaultAnalyzer));
+
+    private void UseDefaultSearchAnalyzerWhenSearchingDynamicFieldsBase<TIndex>(Options options, bool forceSearchDefaultAnalyzer, TIndex instance) where TIndex : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
@@ -37,13 +48,12 @@ public class RavenDB_25119(ITestOutputHelper output) : RavenTestBase(output)
 
         session.Store(matchField);
         session.SaveChanges();
-
-        var index = new MatchFieldsIndex(forceSearchDefaultAnalyzer);
+        var index = instance;
         index.Execute(store);
-        Indexes.WaitForIndexing(store);
 
+        Indexes.WaitForIndexing(store);
         var results = session
-            .Query<MatchFieldsIndex.MatchFieldIndexResult, MatchFieldsIndex>()
+            .Query<MatchFieldsIndex.MatchFieldIndexResult, TIndex>()
             .Search(x => x.Name_English, "Noord-Holland")
             .ProjectInto<MatchFieldsIndex.MatchFieldIndexResult>()
             .ToList();
@@ -59,6 +69,29 @@ public class RavenDB_25119(ITestOutputHelper output) : RavenTestBase(output)
     private class NameClass
     {
         public Dictionary<string, string> Translations { get; set; }
+    }
+
+    private class MatchFieldsIndexJs : AbstractJavaScriptIndexCreationTask
+    {
+        public MatchFieldsIndexJs()
+        {
+            //Querying overload
+        }
+
+        public MatchFieldsIndexJs(bool forceSearchDefaultAnalyzer)
+        {
+            Maps =
+            [
+                @"map(""MatchFields"", (matchField) => {
+                    return {
+                        _: Object.keys(matchField.Name.Translations).map(key => createField('Name_' + key, matchField.Name.Translations[key],
+                      {  indexing: 'Search', storage: false, termVector: null }))
+              };
+})"
+            ];
+
+            Configuration[RavenConfiguration.GetKey(x => x.Indexing.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery)] = forceSearchDefaultAnalyzer.ToString();
+        }
     }
 
     private class MatchFieldsIndex : AbstractIndexCreationTask<MatchField>
@@ -87,8 +120,7 @@ public class RavenDB_25119(ITestOutputHelper output) : RavenTestBase(output)
                         }))
                 };
 
-            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
-            Configuration[RavenConfiguration.GetKey(x => x.Indexing.ForceDynamicFieldsSearchAnalyzerForMissingExplicitFieldConfiguration)] = forceSearchDefaultAnalyzer.ToString();
+            Configuration[RavenConfiguration.GetKey(x => x.Indexing.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery)] = forceSearchDefaultAnalyzer.ToString();
             StoreAllFields(FieldStorage.No);
         }
     }

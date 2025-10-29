@@ -47,7 +47,7 @@ class configurationItem {
         "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
         "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
         "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
-        "Indexing.Corax.ForceDynamicFieldSearchAnalyzerWhenMissingExplicitFieldConfiguration"
+        "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery"
         
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
