@@ -32,13 +32,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 internal class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
     public const int DefaultMaxModelIterationsPerCall = 16;
-    public required RavenServer.AuthenticateConnection Authentication;
-
-    protected ConversationDocument _document;
-
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
 
+    protected ConversationDocument _document;
     private string _conversationId;
     private RequestBody _request;
     private AiAgentConfiguration _configuration;
@@ -46,6 +43,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     private string _raftId;
     private int _maxModelIterationsPerCall;
 
+    public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
         _conversationId = conversationId;
@@ -98,6 +96,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         else
         {
             _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
+
             if (_document.Agent != agentId)
             {
                 throw new InvalidOperationException(
@@ -481,11 +480,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
         var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
         await database.TxMerger.Enqueue(cmd);
-
         _document.ChangeVector = cmd.PutResult.ChangeVector;
-
         return cmd.PutResult.Id;
     }
+
 
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {

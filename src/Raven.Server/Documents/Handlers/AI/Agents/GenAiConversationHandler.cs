@@ -13,13 +13,17 @@ internal class GenAiConversationHandler(ServerStore server, DocumentDatabase dat
     public async Task<GenAiHandlerResult> HandleRequest(CancellationToken token)
     {
         using var _ = database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
-        var r = await HandleRequest(context, token);
-        return new GenAiHandlerResult
+        var response = await HandleRequest(context, token);
+        var result = new GenAiHandlerResult
         {
-            Response = r.Response.ToString(), 
-            Usage = r.Usage, 
-            ConversationDocument = _document.ToBlittable(context).ToString()
+            Response = response.Response.ToString(), 
+            Usage = response.Usage, 
         };
+
+        if (configuration.TestMode)
+            result.ConversationDocument = _document.ToBlittable(context).ToString();
+                
+        return result;
     }
 
     protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
