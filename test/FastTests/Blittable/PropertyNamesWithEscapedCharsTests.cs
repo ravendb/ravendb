@@ -18,7 +18,7 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
     public async Task PropertyNameWithControlCharacter_WhenTryToAddUserLevelEscapedVersion_ShouldTreatThemAsDifferentValues()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        
+
         using var memoryStream = new MemoryStream();
 
         using (var withControlCharacter = context.GetLazyString("a\0a"))
@@ -31,13 +31,13 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
             {
                 writer.WritePropertyName(withControlCharacter);
                 writer.WriteString("someValue1");
-                
+
                 writer.WritePropertyName(withControlCharacterButEscapedInUserLevel);
                 writer.WriteString("someValue2");
-                
+
                 writer.WritePropertyName(withNewLineAndBack);
                 writer.WriteString("someValue3");
-                
+
                 writer.WritePropertyName(withNewLineAndBackEscaped);
                 writer.WriteString("someValue4");
             }
@@ -56,7 +56,7 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
     public async Task PropertyNameWithControlCharacter_WhenCache_ShouldNotCacheTwice()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        
+
         using var memoryStream = new MemoryStream();
 
         using (var propNameWithNull = context.GetLazyString("\na\0"))
@@ -74,14 +74,14 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
         using (var _ = await context.ReadForMemoryAsync(memoryStream, "result"))
         {
         }
-    
+
         memoryStream.Seek(0, SeekOrigin.Begin);
         //Fails here while reading.
         using (var _ = await context.ReadForMemoryAsync(memoryStream, "result"))
         {
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Core)]
     public void PropertyNameWithControlCharacter_LoadingDictionaryKeyWithNullChar_ShouldNotThrowException()
     {
@@ -92,6 +92,7 @@ public class PropertyNamesWithEscapedCharsTests : RavenTestBase
                 session.Store(new Doc { Id = "doc-1", StrDict = new Dictionary<string, string> { { "nullChar\0", "value" } } });
                 session.SaveChanges();
             }
+
             using (var session = store.OpenSession())
             {
                 var doc = session.Load<Doc>("doc-1");

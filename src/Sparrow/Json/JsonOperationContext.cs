@@ -448,6 +448,7 @@ namespace Sparrow.Json
                 Debug.Assert(value.IsDisposed == false);
                 return value;
             }
+
             return GetLazyStringForFieldWithCachingUnlikely(field);
         }
 
@@ -471,20 +472,20 @@ namespace Sparrow.Json
             using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
-            EnsureNotDisposed();
-            LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key.Value] = value;
-            _fieldNamesLazyStrings[value] = value;
+                EnsureNotDisposed();
+                LazyStringValue value = GetLazyString(key, longLived: true);
+                _fieldNames[key.Value] = value;
+                _fieldNamesLazyStrings[value] = value;
 
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
 #if DEBUG || VALIDATE
             }
 #endif
         }
-        
-        
+
+
         private unsafe LazyStringValue GetLazyStringForFieldWithCachingUnlikely(LazyStringValue key)
         {
 #if DEBUG || VALIDATE
@@ -496,7 +497,7 @@ namespace Sparrow.Json
                 Memory.Copy(memory.Address, key.Buffer, key.Size);
                 // This is a marker for the numberOfEscapeSequences that follows _after_ the lazy string
                 // The GetLazyStringForFieldWithCachingUnlikely(LazyStringValue) overload is used to process values read directly 
-				// from the parser, without the escapes, and we aren't writing directly from it anyway
+                // from the parser, without the escapes, and we aren't writing directly from it anyway
                 memory.Address[key.Size] = 0;
                 string keyStr = key;
                 var str = new LazyStringValue(keyStr, memory.Address, key.Size, this)
@@ -548,6 +549,7 @@ namespace Sparrow.Json
                 {
                     result.EscapePositions = state.EscapePositions.ToArray();
                 }
+
                 return result;
             }
         }
@@ -576,6 +578,7 @@ namespace Sparrow.Json
             {
                 result.EscapePositions = state.EscapePositions.ToArray();
             }
+
             return result;
         }
 
@@ -681,6 +684,7 @@ namespace Sparrow.Json
                         bytes.Used = 0;
                         parser.SetBuffer(bytes);
                     }
+
                     builder.FinalizeDocument();
                     return builder.CreateReader();
                 }
@@ -746,6 +750,7 @@ namespace Sparrow.Json
                     parser.SetBuffer(buffer, 0, length);
                     lastReadResult = builder.Read();
                 }
+
                 if (lastReadResult == false)
                     throw new EndOfStreamException("Buffer ended without reaching end of json content");
 
@@ -788,12 +793,14 @@ namespace Sparrow.Json
                         bytes.Valid = read.Count;
                         bytes.Used = 0;
                     }
+
                     parser.SetBuffer(bytes);
                     var result = builder.Read();
                     bytes.Used += parser.BufferOffset;
                     if (result)
                         break;
                 }
+
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateReader();
@@ -860,6 +867,7 @@ namespace Sparrow.Json
                     if (result)
                         break;
                 }
+
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateReader();
@@ -1019,7 +1027,7 @@ namespace Sparrow.Json
             await using (var writer = new AsyncBlittableJsonTextWriter(this, stream))
             {
                 writer.WriteObject(json);
-                
+
                 // PERF: Check if flush completed synchronously to avoid async state machine
                 var flushTask = writer.FlushAsync(token);
                 if (flushTask.IsCompletedSuccessfully == false)
@@ -1104,12 +1112,13 @@ namespace Sparrow.Json
 
                 WriteValue(writer, state, parser);
             }
+
             writer.WriteEndObject();
         }
 
 
         private void WriteValue<TWriter>(TWriter writer, JsonParserState state, ObjectJsonParser parser)
-            where TWriter: IBlittableJsonTextWriter
+            where TWriter : IBlittableJsonTextWriter
         {
             switch (state.CurrentTokenType)
             {
@@ -1146,6 +1155,7 @@ namespace Sparrow.Json
 
                         writer.WriteString(lazyStringValue);
                     }
+
                     break;
 
                 case JsonParserToken.Float:
@@ -1175,7 +1185,7 @@ namespace Sparrow.Json
             }
         }
 
-        public void WriteArray<TWriter>( TWriter writer, JsonParserState state, ObjectJsonParser parser)
+        public void WriteArray<TWriter>(TWriter writer, JsonParserState state, ObjectJsonParser parser)
             where TWriter : IBlittableJsonTextWriter
         {
             EnsureNotDisposed();
@@ -1198,6 +1208,7 @@ namespace Sparrow.Json
 
                 WriteValue(writer, state, parser);
             }
+
             writer.WriteEndArray();
         }
 
