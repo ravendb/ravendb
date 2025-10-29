@@ -107,14 +107,14 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                                     final answer.
                                     <ul className="mb-1">
                                         <li className="mt-1">
-                                            <strong>When "Enabled":</strong>
+                                            <strong>When &#34;Enabled&#34;:</strong>
                                             <br />
                                             The model outputs a series of intermediate reasoning steps before the final
                                             answer. This may improve output quality for complex tasks, but increases
                                             response time and token usage.
                                         </li>
                                         <li className="mt-1">
-                                            <strong>When "Disabled":</strong>
+                                            <strong>When &#34;Disabled&#34;:</strong>
                                             <br />
                                             The model returns only the final answer, without exposing intermediate
                                             steps. This is typically faster and more cost-effective (uses fewer tokens),
