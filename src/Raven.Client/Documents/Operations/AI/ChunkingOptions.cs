@@ -25,22 +25,20 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
         };
     }
 
-    public bool Validate(string path, List<string> errors)
+    public void Validate(string source, List<string> errors)
     {
         if (MaxTokensPerChunk <= 0)
-            errors.Add($"Path '{path}': {nameof(MaxTokensPerChunk)} value has to be greater than 0.");
+            errors.Add($"'{source}': {nameof(MaxTokensPerChunk)} value has to be greater than 0.");
         
         if (OverlapTokens < 0)
-            errors.Add($"Path '{path}': {nameof(OverlapTokens)} value cannot be negative.");
+            errors.Add($"'{source}': {nameof(OverlapTokens)} value cannot be negative.");
         
         if (OverlapTokens > MaxTokensPerChunk)
-            errors.Add($"Path '{path}': {nameof(OverlapTokens)} cannot be greater than {nameof(MaxTokensPerChunk)}.");
+            errors.Add($"'{source}': {nameof(OverlapTokens)} cannot be greater than {nameof(MaxTokensPerChunk)}.");
         
         if (OverlapTokens > 0 &&
             MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
-            errors.Add($"Path '{path}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
-        
-        return true;
+            errors.Add($"'{source}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
     }
 }
 

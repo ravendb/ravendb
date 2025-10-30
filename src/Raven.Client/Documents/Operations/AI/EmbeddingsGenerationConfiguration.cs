@@ -111,9 +111,8 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             foreach (var pathConfiguration in EmbeddingsPathConfigurations)
                 pathConfiguration.ChunkingOptions.Validate(pathConfiguration.Path, errors);
         }
-        
-        if (EmbeddingsTransformation?.ValidateScript() == false)
-            errors.Add($"Transformation script must use {EmbeddingsTransformation.GenerateEmbeddingsFunctionName} method.");
+
+        EmbeddingsTransformation?.Validate(errors);
         
         if (Quantization == VectorEmbeddingType.Text)
             errors.Add($"{nameof(Quantization)} cannot be {nameof(VectorEmbeddingType.Text)}");

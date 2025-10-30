@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Raven.Client.Documents.Operations.AI;
 
@@ -12,10 +13,18 @@ public class EmbeddingsTransformation
 
     public ChunkingOptions ChunkingOptions { get; set; } = new() { ChunkingMethod = ChunkingMethod.PlainTextSplit, MaxTokensPerChunk = 256 };
 
-    public bool ValidateScript()
+    public void Validate(List<string> errors)
+    {
+        ValidateScript(errors);
+        
+        ChunkingOptions.Validate(GenerateEmbeddingsFunctionName, errors);
+    }
+
+    private void ValidateScript(List<string> errors)
     {
         var match = EmbeddingsGenerateRegex.Match(Script);
-
-        return match.Length > 0;
+        
+        if (match.Length == 0)
+            errors.Add($"Transformation script must use {GenerateEmbeddingsFunctionName} method.");
     }
 }
