@@ -10,9 +10,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 internal class GenAiConversationHandler(ServerStore server, DocumentDatabase database, GenAiConfiguration configuration) : ConversationHandler(server, database)
 {
+    private readonly DocumentDatabase _database = database;
+
     public async Task<GenAiHandlerResult> HandleRequest(CancellationToken token)
     {
-        using var _ = database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
+        using var _ = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
         var response = await HandleRequest(context, token);
         var result = new GenAiHandlerResult
         {

@@ -39,8 +39,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 {
     public const string GenAiTaskTag = "Gen/AI";
 
-    public const string ConversationIdPrefix = "GenAI/";
-
     private const string TestDocumentId = "GenAi/TestDocument";
     private int _maxConcurrency;
     private ChatCompletionClient _chatCompletionClient;
@@ -212,7 +210,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     // GenAI task uses full access
                     Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
                 };
-                handler.Initialize(Agent, $"{ConversationIdPrefix}{item.DocumentId}/", new RequestBody
+                handler.Initialize(Agent, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
                     CreationOptions = new AiConversationCreationOptions
                     {

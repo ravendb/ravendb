@@ -29,6 +29,7 @@ public class RavenDB_24973(ITestOutputHelper output) : RavenTestBase(output)
 
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
+        config.Identifier = "gen-ai-spam-detection";
         config.Prompt = "Check if the following blog post comment is spam or not";
         config.Collection = "Posts";
 
@@ -75,7 +76,7 @@ for(const comment of this.Comments)
 
         using (var session = store.OpenSession())
         {
-            var docs = session.Advanced.LoadStartingWith<Chat>(GenAiTask.ConversationIdPrefix);
+            var docs = session.Advanced.LoadStartingWith<Chat>($"{config.Identifier}/");
             Assert.Equal(3, docs.Length);
 
             foreach (var doc in docs)
