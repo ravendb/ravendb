@@ -49,10 +49,6 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
-        public void Error<TArgument>(string message, TArgument argument)
-        {
-        }
-
         public void Error<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
         {
         }
@@ -74,10 +70,6 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         }
 
         public void Info(Exception exception, string message, params object[] args)
-        {
-        }
-
-        public void Info<TArgument>(string message, TArgument argument)
         {
         }
 
@@ -105,10 +97,6 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
-        public void Debug<TArgument>(string message, TArgument argument)
-        {
-        }
-
         public void Debug<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
         {
         }
@@ -130,10 +118,6 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         }
 
         public void Warn(Exception exception, string message, params object[] args)
-        {
-        }
-
-        public void Warn<TArgument>(string message, TArgument argument)
         {
         }
 
@@ -161,10 +145,6 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         {
         }
 
-        public void Fatal<TArgument>(string message, TArgument argument)
-        {
-        }
-
         public void Fatal<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
         {
         }
@@ -186,10 +166,6 @@ internal sealed class RavenNullLogManager : IRavenLogManager
         }
 
         public void Trace(Exception exception, string message, params object[] args)
-        {
-        }
-
-        public void Trace<TArgument>(string message, TArgument argument)
         {
         }
 

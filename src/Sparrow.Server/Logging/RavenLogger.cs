@@ -45,12 +45,7 @@ public sealed class RavenLogger : IRavenLogger
     {
         _logger.Error(exception, message, args);
     }
-    
-    public void Error<TArgument>(string message, TArgument argument)
-    {
-        _logger.Error(message, argument);
-    }
-    
+
     public void Error<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
     {
         _logger.Error(message, argument1, argument2);
@@ -79,11 +74,6 @@ public sealed class RavenLogger : IRavenLogger
     public void Info(Exception exception, string message, params object[] args)
     {
         _logger.Info(exception, message, args);
-    }
-
-    public void Info<TArgument>(string message, TArgument argument)
-    {
-        _logger.Info(message, argument);
     }
 
     public void Info<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
@@ -116,11 +106,6 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Debug(exception, message, args);
     }
 
-    public void Debug<TArgument>(string message, TArgument argument)
-    {
-        _logger.Debug(message, argument);
-    }
-
     public void Debug<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
     {
         _logger.Debug(message, argument1, argument2);   
@@ -149,11 +134,6 @@ public sealed class RavenLogger : IRavenLogger
     public void Warn(Exception exception, string message, params object[] args)
     {
         _logger.Warn(exception, message, args);  
-    }
-
-    public void Warn<TArgument>(string message, TArgument argument)
-    {
-        _logger.Warn(message, argument); 
     }
 
     public void Warn<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
@@ -190,11 +170,6 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Fatal(exception, message, args);
     }
 
-    public void Fatal<TArgument>(string message, TArgument argument)
-    {
-        _logger.Fatal(message, argument);
-    }
-
     public void Fatal<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
     {
         _logger.Fatal(message, argument1, argument2);
@@ -223,11 +198,6 @@ public sealed class RavenLogger : IRavenLogger
     public void Trace(Exception exception, string message, params object[] args)
     {
         _logger.Trace(exception, message, args); 
-    }
-
-    public void Trace<TArgument>(string message, TArgument argument)
-    {
-        _logger.Trace(message, argument);
     }
 
     public void Trace<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
