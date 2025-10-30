@@ -17,6 +17,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Client.Attachments;
 using Sparrow.Server;
@@ -168,7 +169,7 @@ namespace SlowTests.Server.Documents.Attachments
                         if (infos == null)
                             return;
 
-                        key = infos.First().LowerId.ToString();
+                        key = infos.First().Key.ToString();
                     });
 
                     await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
@@ -246,7 +247,7 @@ namespace SlowTests.Server.Documents.Attachments
                         if (infos == null)
                             return;
 
-                        key = infos.First().LowerId.ToString();
+                        key = infos.First().Key.ToString();
                     });
 
                     Assert.Equal($"\u0012conf-identifier-s3\0\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
@@ -321,7 +322,7 @@ namespace SlowTests.Server.Documents.Attachments
                             if (arr == null || arr.Length == 0)
                                 return;
 
-                            key = arr.First().LowerId.ToString();
+                            key = arr.First().Key.ToString();
                         });
                         Assert.Equal("\u0012conf-identifier-s3\0\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
                     }
@@ -511,7 +512,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        public static void GetToRetireAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<DocumentExpirationInfo>> action = null)
+        public static void GetToRetireAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<AttachmentRetirementInfo>> action = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())

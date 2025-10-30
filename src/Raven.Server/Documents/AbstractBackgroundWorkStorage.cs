@@ -3,20 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
 using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents;
 
-public abstract unsafe class AbstractBackgroundWorkStorage
+public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : AbstractBackgroundWorkStorageBase
+    where TWorkInfo : BackgroundWorkInfo, new()
 {
     protected readonly DocumentDatabase Database;
     protected readonly string MetadataPropertyName;
@@ -31,18 +30,22 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         MetadataPropertyName = metadataPropertyName;
     }
 
-    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
-    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);
-    protected abstract void HandleSkippedItem(DocumentExpirationInfo item);
+    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice treeKey, string identifier, DateTime currentTime);
+    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<TWorkInfo> expiredDocs, ref int totalCount);
+    protected abstract void HandleSkippedItem(TWorkInfo item);
+    protected abstract TWorkInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice);
 
-    public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
+    [DoesNotReturn]
+    protected abstract void ThrowWrongDateFormat(Slice treeKey, string expirationDate);
+
+    public void Put(DocumentsOperationContext context, Slice treeKey, string processDateString)
     {
         if (DateTime.TryParseExact(processDateString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                 out DateTime processDate) == false)
-            ThrowWrongDateFormat(lowerId, processDateString);
+            ThrowWrongDateFormat(treeKey, processDateString);
 
-        // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
-        // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
+        // We explicitly enable adding items that have already been expired, we have to, because if the time lag is short, it is possible
+        // that we add an item that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
         // and we'll use the normal cleanup routine to clean things up later.
 
         var processDateUniversalTime = processDate.ToUniversalTime();
@@ -50,17 +53,10 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
-            tree.MultiAdd(ticksSlice, lowerId);
-    }
-    
-    [DoesNotReturn]
-    private void ThrowWrongDateFormat(Slice lowerId, string expirationDate)
-    {
-        throw new InvalidOperationException(
-            $"The due date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
+            tree.MultiAdd(ticksSlice, treeKey);
     }
 
-    public Queue<DocumentExpirationInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+    public Queue<TWorkInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var currentTicks = options.CurrentTime.Ticks;
         var isFirstInTopology = ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag);
@@ -73,7 +69,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 return null;
             }
 
-            var toProcess = new Queue<DocumentExpirationInfo>();
+            var toProcess = new Queue<TWorkInfo>();
             duration = Stopwatch.StartNew();
 
             do
@@ -94,14 +90,14 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                 return toProcess;
 
                             var clonedId = multiIt.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-                            DocumentExpirationInfo item;
+                            TWorkInfo item;
                             try
                             {
-                                item = GetDocumentAndId(options, clonedId, ticksAsSlice);
+                                item = GetBackgroundWorkInfo(options, clonedId, ticksAsSlice);
                             }
                             catch (DocumentConflictException)
                             {
-                                item = new DocumentExpirationInfo { Status = DocumentExpirationInfoStatus.Conflict };
+                                item = new TWorkInfo { Status = DocumentExpirationInfoStatus.Conflict };
                             }
 
                             switch (item.Status)
@@ -139,54 +135,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         }
     }
 
-    protected virtual DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
-    {
-        using var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
-        if (document == null ||
-            document.TryGetMetadata(out var metadata) == false ||
-            HasPassed(metadata, options.CurrentTime, MetadataPropertyName) == false)
-        {
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null, DocumentExpirationInfoStatus.Delete);
-        }
-
-        return new DocumentExpirationInfo(ticksSlice, clonedId, id: document.Id, DocumentExpirationInfoStatus.Process);
-    }
-
-    public static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
-    {
-        var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), nodeTag, StringComparison.OrdinalIgnoreCase);
-        if (isFirstInTopology == false)
-        {
-            // this can happen when we are running the expiration/refresh/data archival on a node that isn't 
-            // the primary node for the database. In this case, we still run the cleanup
-            // procedure, but we only account for documents that have already been 
-            // marked for processing, to cleanup the queue. We'll stop on the first
-            // document that is scheduled to be processed (expired/refreshed/archived) and wait until the 
-            // primary node will act on it. In this way, we reduce conflicts between nodes
-            // performing the same action concurrently.     
-            return false;
-        }
-
-        return true;
-    }
-
-    public static bool HasPassed(BlittableJsonReaderObject metadata, DateTime currentTime, string metadataPropertyToCheck)
-    {
-        if (metadata.TryGet(metadataPropertyToCheck, out LazyStringValue dateFromMetadata) == false) 
-            return false;
-        
-        if (LazyStringParser.TryParseDateTime(dateFromMetadata.Buffer, dateFromMetadata.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) != LazyStringParser.Result.DateTime)
-            if (DateTime.TryParseExact(dateFromMetadata.ToString(CultureInfo.InvariantCulture), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind, out date) == false)
-                return false;
-        
-        if (date.Kind != DateTimeKind.Utc) 
-            date = date.ToUniversalTime();
-                
-        return currentTime >= date;
-    }
-    
-    public int ProcessDocuments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> toProcess, DateTime currentTime)
+    public int ProcessDocuments(DocumentsOperationContext context, Queue<TWorkInfo> toProcess, DateTime currentTime)
     {
         var processedCount = 0;
         var dequeueCount = 0;
@@ -194,14 +143,14 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         foreach (var info in toProcess)
         {
-            if (info.Id != null)
+            if (info.GetIdentifier() != null)
             {
-                ProcessDocument(context, info.LowerId, info.Id, currentTime);
+                ProcessDocument(context, info.GetTreeKey(), info.GetIdentifier(), currentTime);
                 processedCount++;
             }
 
             dequeueCount++;
-            docsTree.MultiDelete(info.Ticks, info.LowerId);
+            docsTree.MultiDelete(info.Ticks, info.GetTreeKey());
 
             if (context.CanContinueTransaction == false)
                 break;
@@ -222,32 +171,4 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         return processedCount;
     }
 
-}
-
-public class DocumentExpirationInfo
-{
-    public Slice Ticks { get; }
-    public Slice LowerId { get; }
-    public string Id { get; }
-    public DocumentExpirationInfoStatus Status { get; set; }
-
-    internal DocumentExpirationInfo()
-    {
-    }
-
-    public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id, DocumentExpirationInfoStatus status)
-    {
-        Status = status;
-        Ticks = ticks;
-        LowerId = lowerId;
-        Id = id;
-    }
-}
-
-public enum DocumentExpirationInfoStatus
-{
-    Process,
-    Skip,
-    Delete,
-    Conflict
 }

@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron;
-using static Raven.Server.Documents.AbstractBackgroundWorkStorage;
 
 namespace Raven.Server.Documents.DataArchival;
 

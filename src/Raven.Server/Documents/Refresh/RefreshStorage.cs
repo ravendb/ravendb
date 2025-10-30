@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -11,7 +12,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Refresh
 {
-    public sealed class RefreshStorage : AbstractBackgroundWorkStorage
+    public sealed class RefreshStorage : DocumentBackgroundWorkStorage
     {
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 

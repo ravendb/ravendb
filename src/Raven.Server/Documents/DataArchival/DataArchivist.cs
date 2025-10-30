@@ -5,10 +5,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
-using Raven.Server.Logging;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 using Sparrow.Platform;
 
 namespace Raven.Server.Documents.DataArchival;

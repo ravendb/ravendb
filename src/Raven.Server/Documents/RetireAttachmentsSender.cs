@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.Documents.Attachments;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -90,7 +91,7 @@ namespace Raven.Server.Documents
                     Stopwatch duration;
                     _totalUploaded = 0L;
                     _exceptions.Clear();
-                    var processed = new Queue<DocumentExpirationInfo>();
+                    var processed = new Queue<AttachmentRetirementInfo>();
 
                     using (var tx = context.OpenReadTransaction())
                     using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
@@ -113,14 +114,13 @@ namespace Raven.Server.Documents
                         }
 
                         var uploadTasks = Enumerable.Repeat(Task.CompletedTask, Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber).ToArray();
-                        var uploadedItems = new ConcurrentQueue<DocumentExpirationInfo>();
+                        var uploadedItems = new ConcurrentQueue<AttachmentRetirementInfo>();
 
                         try
                         {
                             // upload the attachments to cloud and update the document
-                            foreach (var doc in toRetire)
+                            foreach (var attachment in toRetire)
                             {
-                                var identifier = doc.Id;
                                 _token.ThrowIfCancellationRequested();
 
                                 if (CanContinueBatch(Logger, duration, _totalUploaded, _token) == false)
@@ -128,23 +128,23 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                if (string.IsNullOrEmpty(identifier))
+                                if (string.IsNullOrEmpty(attachment.RemoteIdentifier))
                                 {
                                     if (Logger.IsDebugEnabled)
-                                        Logger.Debug($"Skipping PutRetire of retired attachment with key: '{doc.LowerId}' because it's identifier '{identifier}' IsNullOrEmpty.");
+                                        Logger.Debug($"Skipping PutRetire of retired attachment with key: '{attachment.Key}' because it's identifier '{attachment.RemoteIdentifier}' IsNullOrEmpty.");
 
                                     // document or attachment was deleted, need to remove it from retired tree
-                                    processed.Enqueue(doc);
+                                    processed.Enqueue(attachment);
                                     continue;
                                 }
 
-                                if (directUploaders.TryGetValue(identifier, out var directUpload) == false)
+                                if (directUploaders.TryGetValue(attachment.RemoteIdentifier, out var directUpload) == false)
                                 {
                                     // get the destination configuration for the identifier & create new uploader for the attachment
-                                    var destination = Configuration.Destinations[identifier];
-                                    directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
+                                    var destination = Configuration.Destinations[attachment.RemoteIdentifier];
+                                    directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, attachment.RemoteIdentifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
 
-                                    directUploaders[identifier] = directUpload;
+                                    directUploaders[attachment.RemoteIdentifier] = directUpload;
                                 }
 
                                 var index = Task.WaitAny(uploadTasks);
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents
                                     _exceptions.Add(t.Exception);
                                 }
 
-                                uploadTasks[index] = CreateUploadTaskAsync(directUpload, uploadedItems, doc);
+                                uploadTasks[index] = CreateUploadTaskAsync(directUpload, uploadedItems, attachment);
                             }
                         }
                         finally
@@ -229,10 +229,10 @@ namespace Raven.Server.Documents
             return totalCount;
         }
 
-        private async Task CreateUploadTaskAsync(AttachmentUploader uploader, ConcurrentQueue<DocumentExpirationInfo> concurrentItems, DocumentExpirationInfo doc)
+        private async Task CreateUploadTaskAsync(AttachmentUploader uploader, ConcurrentQueue<AttachmentRetirementInfo> concurrentItems, AttachmentRetirementInfo attachment)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, doc.LowerId, out Slice hashSlice))
+            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, attachment.Key, out Slice hashSlice))
             using (context.OpenReadTransaction())
             {
                 var hash = hashSlice.ToString();
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents
                 if (attachmentStream == null)
                 {
                     // attachment was deleted or already exist in cloud, need to remote it from retired tree
-                    concurrentItems.Enqueue(doc);
+                    concurrentItems.Enqueue(attachment);
 
                     if (Logger.IsDebugEnabled)
                     {
@@ -264,7 +264,7 @@ namespace Raven.Server.Documents
                     }
 
                     Interlocked.Add(ref _totalUploaded, attachmentLength);
-                    concurrentItems.Enqueue(doc);
+                    concurrentItems.Enqueue(attachment);
                 }
             }
         }
@@ -313,13 +313,13 @@ namespace Raven.Server.Documents
 
         internal sealed class UpdateRetiredAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
-            private readonly Queue<DocumentExpirationInfo> _retired;
+            private readonly Queue<AttachmentRetirementInfo> _retired;
             private readonly DocumentDatabase _database;
             private readonly DateTime _currentTime;
 
             public int RetiredCount;
 
-            public UpdateRetiredAttachmentsCommand(Queue<DocumentExpirationInfo> retired, DocumentDatabase database, DateTime currentTime)
+            public UpdateRetiredAttachmentsCommand(Queue<AttachmentRetirementInfo> retired, DocumentDatabase database, DateTime currentTime)
             {
                 _retired = retired;
                 _database = database;
@@ -337,7 +337,7 @@ namespace Raven.Server.Documents
             {
                 return new UpdateRetiredAttachmentsCommandDto
                 {
-                    Retired = _retired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id, Status: x.Status)).ToArray(),
+                    Retired = _retired.Select(x => (Ticks: x.Ticks, AttachmentKey: x.Key, Id: x.RemoteIdentifier, Status: x.Status)).ToArray(),
                     CurrentTime = _currentTime
                 };
             }
@@ -365,10 +365,10 @@ namespace Raven.Server.Documents
     {
         public RetireAttachmentsSender.UpdateRetiredAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var retired = new Queue<DocumentExpirationInfo>();
+            var retired = new Queue<AttachmentRetirementInfo>();
             foreach (var item in Retired)
             {
-                retired.Enqueue(new DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
+                retired.Enqueue(new AttachmentRetirementInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
             }
             var command = new RetireAttachmentsSender.UpdateRetiredAttachmentsCommand(retired, database, CurrentTime);
             return command;

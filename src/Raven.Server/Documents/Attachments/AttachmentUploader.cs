@@ -9,7 +9,7 @@ using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Attachments;
 
-public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUploadToCloudHolder>
+public sealed class AttachmentUploader : DirectFileUploader
 {
     private readonly string _backupDescription;
 

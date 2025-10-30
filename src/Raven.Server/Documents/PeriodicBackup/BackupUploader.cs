@@ -17,6 +17,7 @@ using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -25,11 +26,16 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public sealed class BackupUploader : MultipleFileUploaderBase<PoolOfThreads.LongRunningWork>
+    public sealed class BackupUploader : DirectFileUploader
     {
+        private readonly List<PoolOfThreads.LongRunningWork> _threads;
+        private readonly ConcurrentSet<Exception> _exceptions;
+
         public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
             base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
         {
+            _threads = new List<PoolOfThreads.LongRunningWork>();
+            _exceptions = new ConcurrentSet<Exception>();
         }
 
         public bool AnyUploads => BackupConfiguration.CanBackupUsing(_settings.S3Settings)
@@ -242,7 +248,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
             }, null, ThreadNames.ForUploadBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
-            _threads.AddLast(thread);
+            _threads.Add(thread);
         }
 
         private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T, string, string> deleteFromServer, string targetName, string folderName, string fileName)
@@ -277,7 +283,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
             }, null, threadInfo);
 
-            _threads.AddLast(thread);
+            _threads.Add(thread);
         }
 
         public override string GetBackupDescription()
