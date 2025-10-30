@@ -20,30 +20,31 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
             var requestBody = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "assist request");
             
             var modifications = new DynamicJsonValue(requestBody);
-
-            if (streaming)
-            {
-                HttpContext.Response.Headers.ContentType = "text/event-stream";
-                modifications["UseStreaming"] = true;
-            }
-
             requestBody.Modifications = modifications;
             FulfillRequestMetadata(modifications);
+            modifications["UseStreaming"] = streaming;
 
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             var content = new StringContent(context.ReadObject(requestBody, "ai-assist").ToString(), Encoding.UTF8, "application/json");
-
-            var request = new HttpRequestMessage
+            using var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = content,
-                RequestUri = new Uri("http://localhost:9001/api/v1/ai/assist")
+                RequestUri = new Uri("/api/v1/ai/assist", UriKind.Relative)
             };
 
-            var response = await ApiHttpClient.SentAsync(request)
-                .ConfigureAwait(false);
+            using var response = await ApiHttpClient.SendAsync(request, token.Token).ConfigureAwait(false);
 
-            await response.Content.CopyToAsync(RequestHandler.ResponseBodyStream());
+            if (response.IsSuccessStatusCode == false)
+                HttpContext.Response.StatusCode = (int)response.StatusCode;
+
+            if (response.IsSuccessStatusCode && streaming)
+            {
+                HttpContext.Response.Headers.ContentType = "text/event-stream";
+                RequestHandler.DisableResponseBuffering();
+            }
+
+            await response.Content.CopyToAsync(RequestHandler.ResponseBodyStream(), token.Token);
         }
     }
 }
