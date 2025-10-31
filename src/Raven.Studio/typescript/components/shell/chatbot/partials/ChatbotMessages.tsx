@@ -5,7 +5,7 @@ import moment from "moment";
 import assertUnreachable from "components/utils/assertUnreachable";
 import ReactMarkdown, { Components } from "react-markdown";
 import Table from "react-bootstrap/Table";
-import Code, { CodeLanguage } from "components/common/Code";
+import Code, { CodeLanguage, supportedCodeLanguages } from "components/common/Code";
 import { isValidElement, useEffect, useRef } from "react";
 import remarkGfm from "remark-gfm";
 import Button from "react-bootstrap/Button";
@@ -193,6 +193,8 @@ const markdownComponents: Components = {
         } else if (typeof children === "string") {
             code = children;
         }
+
+        language = supportedCodeLanguages.includes(language) ? language : "plaintext";
 
         return <Code code={code} elementToCopy={code} language={language} />;
     },

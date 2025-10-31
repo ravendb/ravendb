@@ -9,23 +9,25 @@ import Button from "react-bootstrap/Button";
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
-require("prismjs/components/prism-json");
 
-export type CodeLanguage =
-    | "plaintext"
-    | "markup"
-    | "html"
-    | "mathml"
-    | "svg"
-    | "xml"
-    | "ssml"
-    | "atom"
-    | "rss"
-    | "css"
-    | "clike"
-    | "javascript"
-    | "csharp"
-    | "json";
+export const supportedCodeLanguages = [
+    "plaintext",
+    "markup",
+    "html",
+    "mathml",
+    "svg",
+    "xml",
+    "ssml",
+    "atom",
+    "rss",
+    "css",
+    "clike",
+    "javascript",
+    "csharp",
+    "json",
+] as const;
+
+export type CodeLanguage = (typeof supportedCodeLanguages)[number];
 
 interface CodeProps {
     code: string;
