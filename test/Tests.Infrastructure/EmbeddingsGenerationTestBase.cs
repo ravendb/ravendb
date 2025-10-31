@@ -45,6 +45,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         string connectionStringName = DefaultConnectionStringName,
         List<EmbeddingPathConfiguration> embeddingsPaths = null,
         string script = null,
+        ChunkingOptions chunkingOptionsForScript = null,
         string collectionName = null,
         VectorEmbeddingType targetQuantization = VectorEmbeddingType.Single,
         ChunkingOptions chunkingOptionsForQuerying = null)
@@ -57,7 +58,8 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             Collection = collectionName ?? "Dtos",
             EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new EmbeddingsTransformation
             {
-                Script = script
+                Script = script,
+                ChunkingOptions = chunkingOptionsForScript
             }
             : null,
             Quantization = targetQuantization,
