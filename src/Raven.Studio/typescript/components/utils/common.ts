@@ -35,11 +35,10 @@ export function createSuccessState<T>(data: T): loadableData<T> {
     };
 }
 
-export function createLoadingState<T>(previousState?: loadableData<T>): loadableData<T> {
+export function createLoadingState(): loadableData<null> {
     return {
         error: null,
         data: null,
-        ...previousState,
         status: "loading",
     };
 }

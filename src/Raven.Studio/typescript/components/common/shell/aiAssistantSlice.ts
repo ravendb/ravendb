@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import { loadableData } from "components/models/common";
-import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
+import { createFailureState, createIdleState, createLoadingState, createSuccessState } from "components/utils/common";
 import { services } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
@@ -29,7 +29,7 @@ export const aiAssistantSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(checkConsent.pending, (state) => {
-                state.consentStatus.status = "loading";
+                state.consentStatus = createLoadingState();
             })
             .addCase(checkConsent.rejected, (state, action) => {
                 state.consentStatus = createFailureState(action.error.message);
@@ -38,7 +38,7 @@ export const aiAssistantSlice = createSlice({
                 state.consentStatus = createSuccessState(action.payload.Status);
             })
             .addCase(checkUsage.pending, (state) => {
-                state.usage.status = "loading";
+                state.usage = createLoadingState();
             })
             .addCase(checkUsage.rejected, (state, action) => {
                 state.usage = createFailureState(action.error.message);
