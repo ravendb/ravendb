@@ -1,10 +1,10 @@
 <form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="edit-document" autocomplete="off">
-    <div class="docEditor flex-window flex-grow content-margin">
+    <div class="docEditor flex-window flex-grow content-margin" data-bind="style: { 'z-index': isFullScreenEditor() ? 1050 : undefined }">
         <div class="flex-window-head">
             <div class="flex-horizontal copy-area">
                 <div class="flex-grow">
                     <div class="documentId">
-                        <div data-bind="if: isCreatingNewDocument()">
+                        <div data-bind="if: isCreatingNewDocument() && !isFullScreenEditor()">
                             <div class="input-group" data-bind="validationElement: userSpecifiedId">
                                 <div class="input-group-addon">ID</div>
                                 <input class="form-control"
