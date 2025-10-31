@@ -1,9 +1,16 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+    createAsyncThunk,
+    createEntityAdapter,
+    createSlice,
+    EntityState,
+    PayloadAction,
+    Update,
+} from "@reduxjs/toolkit";
 import {
     RunChatbotAiAssistantResultDto,
     RunChatbotAiAssistantViewData,
+    RunChatbotAssistAiAssistantRequestDto,
 } from "commands/aiAssistant/runChatbotAiAssistantCommand";
-import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 
 export type ChatbotRole = "user" | "assistant";
@@ -28,10 +35,16 @@ interface ChatbotState {
     chatbotTab: ChatbotTab;
     chatbotResourcesTab: ChatbotResourcesTab;
     conversationId: string;
-    messages: ChatbotMessage[];
+    messages: EntityState<ChatbotMessage, string>;
     absoluteNotificationsWidth: number;
     lastRunChatData: ChatbotRunChatData;
 }
+
+const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
+    selectId: (message) => message.id,
+});
+
+const chatbotMessagesSelectors = chatbotMessagesAdapter.getSelectors();
 
 const initialState: ChatbotState = {
     isOpen: false,
@@ -39,7 +52,7 @@ const initialState: ChatbotState = {
     chatbotTab: "Ask AI",
     chatbotResourcesTab: "Help and resources",
     conversationId: null,
-    messages: [],
+    messages: chatbotMessagesAdapter.getInitialState(),
     absoluteNotificationsWidth: 0,
     lastRunChatData: null,
 };
@@ -61,10 +74,13 @@ export const chatbotSlice = createSlice({
             state.chatbotResourcesTab = action.payload;
         },
         messagesSet: (state, action: PayloadAction<ChatbotMessage[]>) => {
-            state.messages = action.payload;
+            chatbotMessagesAdapter.setAll(state.messages, action.payload);
         },
         messageAdded: (state, action: PayloadAction<ChatbotMessage>) => {
-            state.messages.push(action.payload);
+            chatbotMessagesAdapter.addOne(state.messages, action.payload);
+        },
+        messageUpdated: (state, action: PayloadAction<Update<ChatbotMessage, string>>) => {
+            chatbotMessagesAdapter.updateOne(state.messages, action.payload);
         },
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
@@ -79,11 +95,12 @@ export const chatbotSlice = createSlice({
     extraReducers: (builder) => {
         builder.addCase(runChat.fulfilled, (state, { payload }) => {
             if ("failedResponseId" in payload) {
-                state.messages = state.messages.map((x) =>
-                    x.id === payload.failedResponseId ? { ...x, state: "error" } : x
-                );
+                chatbotMessagesAdapter.removeOne(state.messages, payload.failedResponseId);
             } else {
-                state.messages = state.messages.map((x) => (x.id === payload.id ? payload : x));
+                chatbotMessagesAdapter.updateOne(state.messages, {
+                    id: payload.id,
+                    changes: payload,
+                });
             }
         });
     },
@@ -103,20 +120,11 @@ const runChat = createAsyncThunk(
             throw new Error("AI Assistant consent is required");
         }
 
-        const userId = _.uniqueId();
-
         const userMessage: ChatbotMessage = {
-            id: userId,
+            id: _.uniqueId(),
             role: "user",
             content: payload.data.Message,
             state: "success",
-            usage: {
-                TotalTokens: 100,
-                PromptTokens: 100,
-                CompletionTokens: 100,
-                CachedTokens: 100,
-                ReasoningTokens: 0,
-            },
         };
 
         if (chatbot.conversationId) {
@@ -137,30 +145,83 @@ const runChat = createAsyncThunk(
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
         try {
-            const result = await services.aiAssistantService.runChatbot({
-                View: payload.data.View,
-                Message: payload.data.Message,
-                ConversationId: chatbot.conversationId,
-                RavenVersion: cluster.serverVersion?.ProductVersion ?? "latest",
+            const response = await fetch("http://127.0.0.1:8080/assistant/assist?streaming=true", {
+                method: "POST",
+                body: JSON.stringify({
+                    OperationType: "Chatbot",
+                    View: payload.data.View,
+                    Message: payload.data.Message,
+                    ConversationId: chatbot.conversationId,
+                    RavenVersion: cluster.serverVersion?.ProductVersion ?? "latest",
+                } satisfies RunChatbotAssistAiAssistantRequestDto),
             });
 
-            dispatch(chatbotActions.conversationIdSet(result.ConversationId));
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
 
+            let content = "";
+
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+
+                const responseString = decoder.decode(value, { stream: true });
+                const responseLines = responseString.split("\n");
+
+                for (const line of responseLines) {
+                    if (!line.startsWith("data: ")) {
+                        continue;
+                    }
+
+                    const dataString = line.trim().replace("data: ", "");
+                    const data: { text: string | RunChatbotAiAssistantResultDto; done: boolean } =
+                        JSON.parse(dataString);
+
+                    if (!data.done && typeof data.text === "string") {
+                        content += data.text;
+
+                        dispatch(
+                            chatbotActions.messageUpdated({
+                                id: responseId,
+                                changes: {
+                                    state: "success",
+                                    content,
+                                },
+                            })
+                        );
+                    }
+
+                    if (data.done && typeof data.text === "object") {
+                        const finalData = data.text;
+
+                        dispatch(chatbotActions.conversationIdSet(finalData.ConversationId));
+
+                        return {
+                            ...assistantMessage,
+                            content,
+                            state: "success",
+                            thinkingTimeInMs: new Date().getTime() - startThinkingTime,
+                            usage: {
+                                TotalTokens: finalData.InputTokenCount,
+                                PromptTokens: finalData.InputTokenCount,
+                                CompletionTokens: finalData.OutputTokenCount,
+                                CachedTokens: 0, // TODO server-side
+                                ReasoningTokens: 0, // TODO server-side
+                            },
+                            relevantLinks: finalData.Response.RelevantLinks,
+                        };
+                    }
+                }
+            }
+
+            console.error("Failed to finish the AI Assistant response");
             return {
-                ...assistantMessage,
-                content: result.Response.Answer,
-                state: "success",
-                thinkingTimeInMs: new Date().getTime() - startThinkingTime,
-                usage: {
-                    TotalTokens: result.InputTokenCount,
-                    PromptTokens: result.InputTokenCount,
-                    CompletionTokens: result.OutputTokenCount,
-                    CachedTokens: 0, // TODO server-side
-                    ReasoningTokens: 0, // TODO server-side
-                },
-                relevantLinks: result.Response.RelevantLinks,
+                failedResponseId: responseId,
             };
-        } catch {
+        } catch (e) {
+            console.error(e);
             return {
                 failedResponseId: responseId,
             };
@@ -186,7 +247,8 @@ export const chatbotSelectors = {
     isPinned: (state: RootState) => state.chatbot.isPinned,
     chatbotTab: (state: RootState) => state.chatbot.chatbotTab,
     chatbotResourcesTab: (state: RootState) => state.chatbot.chatbotResourcesTab,
-    messages: (state: RootState) => state.chatbot.messages,
+    messageIds: (state: RootState) => chatbotMessagesSelectors.selectIds(state.chatbot.messages),
+    getMessageById: (state: RootState, id: string) => chatbotMessagesSelectors.selectById(state.chatbot.messages, id),
     conversationId: (state: RootState) => state.chatbot.conversationId,
     absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
     lastRunChatData: (state: RootState) => state.chatbot.lastRunChatData,

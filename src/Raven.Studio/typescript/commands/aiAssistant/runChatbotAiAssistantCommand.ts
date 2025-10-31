@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-interface RunChatbotAssistAiAssistantRequestDto {
+export interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
     View: string;
     Message: string;

@@ -10,14 +10,13 @@ import { isValidElement, useEffect, useRef } from "react";
 import remarkGfm from "remark-gfm";
 import Button from "react-bootstrap/Button";
 import RichAlert from "components/common/RichAlert";
-import { useAppDispatch } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { chatbotSelectors } from "../store/chatbotSlice";
 
-interface ChatbotMessagesProps {
-    messages: ChatbotMessage[];
-}
-
-export default function ChatbotMessages({ messages }: ChatbotMessagesProps) {
+export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
+
+    const messageIds = useAppSelector(chatbotSelectors.messageIds);
 
     // Scroll to the bottom when messages are updated
     useEffect(() => {
@@ -31,13 +30,13 @@ export default function ChatbotMessages({ messages }: ChatbotMessagesProps) {
                 behavior: "smooth",
             });
         }
-    }, [messages.length]);
+    }, [messageIds.length]);
 
     return (
         <div ref={messagesRef} className="flex-grow-1 overflow-y-auto vstack gap-2">
-            {messages.map((message) => (
-                <div key={message.id} className="px-2">
-                    <AiAgentMessage message={message} />
+            {messageIds.map((id) => (
+                <div key={id} className="px-2">
+                    <AiAgentMessage id={id} />
                 </div>
             ))}
         </div>
@@ -45,10 +44,12 @@ export default function ChatbotMessages({ messages }: ChatbotMessagesProps) {
 }
 
 interface AiAgentMessageProps {
-    message: ChatbotMessage;
+    id: string;
 }
 
-function AiAgentMessage({ message }: AiAgentMessageProps) {
+function AiAgentMessage({ id }: AiAgentMessageProps) {
+    const message = useAppSelector((state) => chatbotSelectors.getMessageById(state, id));
+
     switch (message.role) {
         case "user":
             return <UserMessage message={message} />;
@@ -110,19 +111,14 @@ function AgentMessage({ message }: AgentMessageProps) {
 
     return (
         <div>
-            {formattedThinkingTime && (
-                <div className="text-muted">
-                    Though for {formattedThinkingTime}
-                    <Icon icon="chevron-right" margin="ms-1" size="sm" />
-                </div>
-            )}
+            {formattedThinkingTime && <div className="text-muted">Though for {formattedThinkingTime}</div>}
             <div className="mt-1">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {message.content}
                 </ReactMarkdown>
             </div>
             {message.relevantLinks?.length > 0 && (
-                <div className="hstack gap-1 flex-wrap">
+                <div className="hstack gap-1 flex-wrap mt-1">
                     {message.relevantLinks.map((link) => (
                         <a
                             key={link.Url}

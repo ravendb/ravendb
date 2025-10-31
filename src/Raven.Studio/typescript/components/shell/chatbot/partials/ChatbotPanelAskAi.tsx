@@ -10,7 +10,6 @@ import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAss
 
 export default function ChatbotPanelAskAi() {
     const dispatch = useAppDispatch();
-    const messages = useAppSelector(chatbotSelectors.messages);
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const lastRunChatData = useAppSelector(chatbotSelectors.lastRunChatData);
 
@@ -47,7 +46,7 @@ export default function ChatbotPanelAskAi() {
     return (
         <div className="vstack flex-grow py-2 h-100">
             <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
-            <ChatbotMessages messages={messages} />
+            <ChatbotMessages />
             <div className="position-relative flex-shrink-0 px-2 pt-2">
                 <FormInput
                     type="textarea"
