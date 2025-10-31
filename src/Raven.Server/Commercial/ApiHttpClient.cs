@@ -35,6 +35,11 @@ namespace Raven.Server.Commercial
             return RetryPolicy.ExecuteAsync(t => Instance.PostAsync(requestUri, content, t), token, continueOnCapturedContext: false);
         }
 
+        public static Task<HttpResponseMessage> SentAsync(HttpRequestMessage request, CancellationToken token = default)
+        {
+            return RetryPolicy.ExecuteAsync(t => Instance.SendAsync(request, HttpCompletionOption.ResponseHeadersRead), token, continueOnCapturedContext: false);
+        }
+
         public static Task<HttpResponseMessage> GetAsync(string requestUri, CancellationToken token = default)
         {
             return RetryPolicy.ExecuteAsync(t => Instance.GetAsync(requestUri, t), token, continueOnCapturedContext: false);
