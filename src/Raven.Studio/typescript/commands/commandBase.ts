@@ -6,6 +6,12 @@ import protractedCommandsDetector = require("common/notifications/protractedComm
 import twoFactorHelper = require("common/twoFactorHelper");
 import database = require("models/resources/database");
 
+interface FetchData {
+    relativeUrl: string;
+    db?: string;
+    options?: RequestInit;
+}
+
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
 
@@ -13,7 +19,7 @@ class commandBase {
 
     static ravenStudioVersionHeader = 'Raven-Studio-Version';
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<any> | Promise<any> {
         throw new Error("Execute must be overridden.");
     }
 
@@ -157,6 +163,20 @@ class commandBase {
             .always(() => {
                 requestExecution.markCompleted();
             }) as any;
+    }
+
+    protected fetch({ relativeUrl, db, options = {} }: FetchData): Promise<Response> {
+        const url = appUrl.forDatabaseQuery(db) + relativeUrl;
+
+        const headers = {
+            ...(options.headers || {}),
+            [commandBase.ravenStudioVersionHeader]: commandBase.ravenClientVersion
+        };
+
+        return fetch(url, {
+            ...options,
+            headers
+        });
     }
 
     protected extractEtag(xhr: JQueryXHR) {

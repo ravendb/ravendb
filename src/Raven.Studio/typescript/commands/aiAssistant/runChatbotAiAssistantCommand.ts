@@ -1,15 +1,16 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
+import buildInfo = require("models/resources/buildInfo");
 
-export interface RunChatbotAssistAiAssistantRequestDto {
+interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
     View: string;
     Message: string;
     RavenVersion: string;
     ConversationId?: string;
-};
+}
 
-export type RunChatbotAiAssistantViewData = Omit<RunChatbotAssistAiAssistantRequestDto, "OperationType">;
+export type RunChatbotAiAssistantViewData = Omit<RunChatbotAssistAiAssistantRequestDto, "OperationType" | "RavenVersion">;
 
 interface RelevantLink {
     Title: string;
@@ -33,16 +34,21 @@ export default class runChatbotAiAssistantCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<RunChatbotAiAssistantResultDto> {
-        const url = endpoints.global.aiAssistant.assistantAssist;
+    execute() {
+        const relativeUrl = endpoints.global.aiAssistant.assistantAssist + "?streaming=true";
 
         const dto: RunChatbotAssistAiAssistantRequestDto = {
             OperationType: "Chatbot",
-            ...this.viewData
+            RavenVersion: buildInfo.serverBuildVersion()?.ProductVersion ?? "latest",
+            ...this.viewData,
         };
 
-        return this.post<RunChatbotAiAssistantResultDto>(url, JSON.stringify(dto)).fail((response: JQueryXHR) =>
-            this.reportError("Failed to run AI Assistant", response.responseText, response.statusText)
-        );
+        return this.fetch({
+            relativeUrl,
+            options: {
+                method: "POST",
+                body: JSON.stringify(dto),
+            },
+        });
     }
 }

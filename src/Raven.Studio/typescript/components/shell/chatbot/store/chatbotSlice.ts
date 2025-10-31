@@ -9,8 +9,8 @@ import {
 import {
     RunChatbotAiAssistantResultDto,
     RunChatbotAiAssistantViewData,
-    RunChatbotAssistAiAssistantRequestDto,
 } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 
 export type ChatbotRole = "user" | "assistant";
@@ -112,7 +112,7 @@ const runChat = createAsyncThunk(
         payload: { data: ChatbotRunChatData },
         { dispatch, getState }
     ): Promise<ChatbotMessage | { failedResponseId: string }> => {
-        const { aiAssistant, chatbot, cluster } = getState() as RootState;
+        const { aiAssistant, chatbot } = getState() as RootState;
 
         dispatch(chatbotActions.lastRunChatDataSet(payload.data));
 
@@ -145,15 +145,9 @@ const runChat = createAsyncThunk(
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
         try {
-            const response = await fetch("http://127.0.0.1:8080/assistant/assist?streaming=true", {
-                method: "POST",
-                body: JSON.stringify({
-                    OperationType: "Chatbot",
-                    View: payload.data.View,
-                    Message: payload.data.Message,
-                    ConversationId: chatbot.conversationId,
-                    RavenVersion: cluster.serverVersion?.ProductVersion ?? "latest",
-                } satisfies RunChatbotAssistAiAssistantRequestDto),
+            const response = await services.aiAssistantService.runChatbot({
+                ...payload.data,
+                ConversationId: chatbot.conversationId,
             });
 
             const reader = response.body.getReader();
