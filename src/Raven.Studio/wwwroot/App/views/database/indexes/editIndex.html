@@ -912,7 +912,7 @@
             <div class="col-xs-12 col-sm-12 col-xl-7" data-bind="visible: !hasVectorOptions()">
                 <div class="properties-container">
                     <div class="properties-item">
-                        <span class="properties-label">Store
+                        <span class="properties-label" title="Store">Store
                             <a class="js-store-field-info pull-right" data-toggle="tooltip" data-bind="visible: isStoreField()">
                                 <i class="icon-info text-warning"></i>
                             </a>
@@ -931,7 +931,7 @@
                         </div>
                     </div>
                     <div class="properties-item">
-                        <span class="properties-label">Full-Text Search</span>
+                        <span class="properties-label" title="Full-Text Search">Full-Text Search</span>
                         <div class="btn-group properties-value">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                 <span data-bind="text: effectiveFullTextSearch"></span> <span class="caret"></span>
@@ -944,7 +944,7 @@
                         </div>
                     </div>
                     <div class="properties-item">
-                        <span class="properties-label">Highlighting</span>
+                        <span class="properties-label" title="Highlighting">Highlighting</span>
                         <div class="btn-group properties-value">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                 <span data-bind="text: effectiveHighlighting"></span> <span class="caret"></span>
@@ -957,7 +957,7 @@
                         </div>
                     </div>
                     <div class="properties-item">
-                        <span class="properties-label">Suggestions</span>
+                        <span class="properties-label" title="Suggestions">Suggestions</span>
                         <div class="btn-group properties-value">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                 <span data-bind="text: effectiveSuggestions"></span> <span class="caret"></span>
@@ -972,7 +972,7 @@
                     <div class="properties-item" data-bind="visible: !isDefaultOptions(), if: !isDefaultOptions()">
                         <div class="toggle toggle-right">
                             <input class="styled" type="checkbox" data-bind="checked: hasSpatialOptions, attr: { id: 'spatial_toggle_' + $index() }" />
-                            <label class="properties-label" data-bind="attr: { for: 'spatial_toggle_' + $index() }">
+                            <label class="properties-label" title="Spatial" data-bind="attr: { for: 'spatial_toggle_' + $index() }">
                                 Spatial
                             </label>
                         </div>
@@ -985,7 +985,7 @@
                     </div>
                     <div class="properties-container" data-bind="with: spatial, visible: hasSpatialOptions()">
                         <div class="properties-item">
-                            <span class="properties-label">Type</span>
+                            <span class="properties-label" title="Type">Type</span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
                                     <span data-bind="text: type"></span> <span class="caret"></span>
@@ -998,7 +998,7 @@
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Strategy</span>
+                            <span class="properties-label" title="Strategy">Strategy</span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
                                     <span data-bind="text: strategy"></span> <span class="caret"></span>
@@ -1011,7 +1011,7 @@
                             </div>
                         </div>
                         <div class="properties-item" data-bind="style: { visibility: canSpecifyUnits() ? 'visible' : 'hidden' } ">
-                            <span class="properties-label">Radius Units</span>
+                            <span class="properties-label" title="Radius Units">Radius Units</span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown">
                                     <span data-bind="text: units"></span> <span class="caret"></span>
@@ -1024,37 +1024,37 @@
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Min X</span>
+                            <span class="properties-label" title="Min X">Min X</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: minX, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Min Y</span>
+                            <span class="properties-label" title="Min Y">Min Y</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: minY, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
                         <div class="properties-item" data-bind="style: { visibility: canSpecifyTreeLevel() ? 'visible' : 'hidden' }, validationElement: maxTreeLevel">
-                            <span class="properties-label">Max Tree Level</span>
+                            <span class="properties-label" title="Max Tree Level">Max Tree Level</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: maxTreeLevel" />
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Max X</span>
+                            <span class="properties-label" title="Max X">Max X</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: maxX, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Max Y</span>
+                            <span class="properties-label" title="Max Y">Max Y</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: maxY, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
                         <div class="properties-item grow-2" data-bind="visible: showPrecision">
-                            <span class="properties-label">Precision:</span>
+                            <span class="properties-label" title="Precision">Precision:</span>
                             <div class="properties-value">
                                 <div class="set-size">
                                     <i class="icon-info text-info"></i><span data-bind="text: precision" class="whitespace-initial"></span>
@@ -1070,7 +1070,7 @@
                     </div>
                     <div class="properties-container" data-bind="visible: showAdvancedOptions()">
                         <div class="properties-item">
-                            <span class="properties-label">TermVector</span>
+                            <span class="properties-label" title="TermVector">TermVector</span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveTermVector }">
                                     <span data-bind="text: effectiveTermVector"></span> <span class="caret"></span>
@@ -1084,7 +1084,7 @@
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Indexing</span>
+                            <span class="properties-label" title="Indexing">Indexing</span>
                             <div class="btn-group properties-value" data-bind="validationElement: indexOrStore">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
                                         data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing was not defined. Search is implied since an analyzer is defined' : effectiveIndexing() }">
@@ -1101,7 +1101,7 @@
                             </div>
                         </div>
                         <div class="properties-item" data-bind="visible: showAnalyzer">
-                            <span class="properties-label">Analyzer</span>
+                            <span class="properties-label" title="Analyzer">Analyzer</span>
                             <div class="btn-group properties-value">
                                 <div class="has-disable-reason" data-bind="attr: { 'data-original-title': disabledAnalyzerText }" data-placement="top">
                                     <input class="form-control"
@@ -1135,25 +1135,25 @@
             <div class="col-xs-12 col-sm-12 col-xl-7">
                 <div class="properties-container">
                     <div class="properties-item" data-bind="validationElement: dimensions">
-                        <span class="properties-label">Dimensions</span>
+                        <span class="properties-label" title="Dimensions">Dimensions</span>
                         <div class="btn-group properties-value">
-                            <input class="form-control" placeholder="Number of dimensions" data-bind="textInput: dimensions" type="number" />
+                            <input class="form-control" placeholder="Number of dimensions in source embeddings" data-bind="textInput: dimensions, disable: sourceEmbeddingType() === 'Text'" type="number" />
                         </div>
                     </div>
                     <div class="properties-item" data-bind="validationElement: numberOfCandidatesForIndexing">
-                        <span class="properties-label">Candidates for indexing</span>
+                        <span class="properties-label" title="Candidates for indexing">Candidates for indexing</span>
                         <div class="btn-group properties-value">
                             <input class="form-control" placeholder="Number of candidates" data-bind="textInput: numberOfCandidatesForIndexing" type="number" />
                         </div>
                     </div>
                     <div class="properties-item" data-bind="validationElement: numberOfEdges">
-                        <span class="properties-label">Edges</span>
+                        <span class="properties-label" title="Edges">Edges</span>
                         <div class="btn-group properties-value">
                             <input class="form-control" placeholder="Number of edges" data-bind="textInput: numberOfEdges" type="number" />
                         </div>
                     </div>
                     <div class="properties-item">
-                        <span class="properties-label">Destination embedding type</span>
+                        <span class="properties-label" title="Destination embedding type">Destination embedding type</span>
                         <div class="btn-group properties-value" data-bind="validationElement: destinationEmbeddingType">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                     aria-expanded="false">
@@ -1168,7 +1168,7 @@
                         </div>
                     </div>
                     <div class="properties-item">
-                        <span class="properties-label">Source embedding type</span>
+                        <span class="properties-label" title="Source embedding type">Source embedding type</span>
                         <div class="btn-group properties-value" data-bind="validationElement: sourceEmbeddingType">
                             <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                                     aria-expanded="false">
