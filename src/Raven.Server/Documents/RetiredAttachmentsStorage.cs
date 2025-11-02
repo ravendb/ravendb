@@ -287,7 +287,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage<Attachmen
     {
         if (_logger.IsDebugEnabled)
         {
-            _logger.Debug($"Skipping retired attachment '{item.Key}' with identifier '{item.RemoteIdentifier}'");
+            _logger.Debug($"Skipping retired attachment '{item.Key}' with identifier '{item.DestinationIdentifier}'");
         }
 
         if (_counter++ % 1024 == 0)

@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -79,6 +77,7 @@ namespace Raven.Server.Documents
             var totalCount = 0;
             var currentTime = _database.Time.GetUtcNow();
             var directUploaders = new Dictionary<string, AttachmentUploader>();
+            var uploadTasks = new Task<AttachmentRetirementInfo>[Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber];
 
             try
             {
@@ -113,8 +112,7 @@ namespace Raven.Server.Documents
                             return totalCount;
                         }
 
-                        var uploadTasks = Enumerable.Repeat(Task.CompletedTask, Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber).ToArray();
-                        var uploadedItems = new ConcurrentQueue<AttachmentRetirementInfo>();
+                        Array.Fill(uploadTasks, Task.FromResult<AttachmentRetirementInfo>(null));
 
                         try
                         {
@@ -128,49 +126,71 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                if (string.IsNullOrEmpty(attachment.RemoteIdentifier))
+                                switch (attachment.Status)
                                 {
-                                    if (Logger.IsDebugEnabled)
-                                        Logger.Debug($"Skipping PutRetire of retired attachment with key: '{attachment.Key}' because it's identifier '{attachment.RemoteIdentifier}' IsNullOrEmpty.");
+                                    case DocumentExpirationInfoStatus.Delete:
+                                        if (Logger.IsDebugEnabled)
+                                            Logger.Debug($"Skipping PutRetire of retired attachment with key: '{attachment.Key}' because it's identifier '{attachment.DestinationIdentifier}' IsNullOrEmpty.");
 
-                                    // document or attachment was deleted, need to remove it from retired tree
-                                    processed.Enqueue(attachment);
-                                    continue;
+                                        // document or attachment was deleted, need to remove it from retired tree
+                                        processed.Enqueue(attachment);
+                                        continue;
+                                    case DocumentExpirationInfoStatus.Process:
+                                        if (directUploaders.TryGetValue(attachment.DestinationIdentifier, out var directUpload) == false)
+                                        {
+                                            // get the destination configuration for the identifier & create new uploader for the attachment
+                                            var destination = Configuration.Destinations[attachment.DestinationIdentifier];
+                                            directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, attachment.DestinationIdentifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
+
+                                            directUploaders[attachment.DestinationIdentifier] = directUpload;
+                                        }
+
+                                        var index = Task.WaitAny(uploadTasks);
+                                        try
+                                        {
+                                            var res = await uploadTasks[index];
+                                            HandleUploadTaskResult(res, processed);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            _exceptions.Add(e);
+                                        }
+                                        finally
+                                        {
+                                            uploadTasks[index] = CreateUploadTaskAsync(directUpload, attachment);
+                                        }
+
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException(nameof(attachment.Status), $"Attachment '{attachment.Key} with identifier '{attachment.DestinationIdentifier}' had unexpected status '{attachment.Status}'.");
                                 }
-
-                                if (directUploaders.TryGetValue(attachment.RemoteIdentifier, out var directUpload) == false)
-                                {
-                                    // get the destination configuration for the identifier & create new uploader for the attachment
-                                    var destination = Configuration.Destinations[attachment.RemoteIdentifier];
-                                    directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, attachment.RemoteIdentifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
-
-                                    directUploaders[attachment.RemoteIdentifier] = directUpload;
-                                }
-
-                                var index = Task.WaitAny(uploadTasks);
-                                var t = uploadTasks[index];
-                                if (t.IsFaulted)
-                                {
-                                    _exceptions.Add(t.Exception);
-                                }
-
-                                uploadTasks[index] = CreateUploadTaskAsync(directUpload, uploadedItems, attachment);
                             }
                         }
                         finally
                         {
                             // Wait for all uploads to complete
-                            await Task.WhenAll(uploadTasks);
+                            try
+                            {
+                                await Task.WhenAll(uploadTasks);
+                            }
+                            catch
+                            {
+                                // we had a failed task, we will handle it below
+                            }
+
                             foreach (var t in uploadTasks)
                             {
-                                if (t.IsFaulted)
+                                _token.ThrowIfCancellationRequested();
+
+                                try
                                 {
-                                    _exceptions.Add(t.Exception);
+                                    var res = await t;
+                                    HandleUploadTaskResult(res, processed);
                                 }
-                            }
-                            while (uploadedItems.TryDequeue(out var item))
-                            {
-                                processed.Enqueue(item);
+                                catch (Exception e)
+                                {
+                                    _exceptions.Add(e);
+                                }
                             }
                         }
 
@@ -229,20 +249,39 @@ namespace Raven.Server.Documents
             return totalCount;
         }
 
-        private async Task CreateUploadTaskAsync(AttachmentUploader uploader, ConcurrentQueue<AttachmentRetirementInfo> concurrentItems, AttachmentRetirementInfo attachment)
+        private void HandleUploadTaskResult(AttachmentRetirementInfo res, Queue<AttachmentRetirementInfo> processed)
+        {
+            if (res != null)
+            {
+                processed.Enqueue(res);
+                _totalUploaded += res.Size;
+            }
+        }
+
+        private async Task<AttachmentRetirementInfo> CreateUploadTaskAsync(AttachmentUploader uploader, AttachmentRetirementInfo attachment)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, attachment.Key, out Slice hashSlice))
             using (context.OpenReadTransaction())
             {
                 var hash = hashSlice.ToString();
-                var attachmentStream = GetAttachmentStreamAndStreamLength(context, hashSlice, await uploader.GetObjectSizeAsync(string.Empty, hash), out var attachmentLength);
-                
+                var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, hash);
+                long? attachmentLength;
+                Stream attachmentStream;
+                if (objectSizeFromMetadata.HasValue)
+                {
+                    // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
+                    attachmentLength = AttachmentsStorage.GetAttachmentStreamLength(context, hashSlice);
+                    attachmentStream = objectSizeFromMetadata == attachmentLength ? null : _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
+                }
+                else
+                {
+                    (attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
+                }
+
                 if (attachmentStream == null)
                 {
-                    // attachment was deleted or already exist in cloud, need to remote it from retired tree
-                    concurrentItems.Enqueue(attachment);
-
+                    // attachment was deleted or already exist in cloud, need to remove it from retired tree
                     if (Logger.IsDebugEnabled)
                     {
                         Logger.Debug($"Skipping upload of attachment with '{hash}' on {uploader.GetBackupDescription()}.");
@@ -263,28 +302,11 @@ namespace Raven.Server.Documents
                         await attachmentStream.CopyToAsync(stream, _token.Token);
                     }
 
-                    Interlocked.Add(ref _totalUploaded, attachmentLength);
-                    concurrentItems.Enqueue(attachment);
-                }
-            }
-        }
-
-        private Stream GetAttachmentStreamAndStreamLength(DocumentsOperationContext context, Slice hashSlice, long? objectSizeFromMetadata, out long attachmentLength)
-        {
-            if (objectSizeFromMetadata.HasValue)
-            {
-                // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
-                attachmentLength = AttachmentsStorage.GetAttachmentStreamLength(context, hashSlice);
-                if (objectSizeFromMetadata == attachmentLength)
-                {
-                    return null;
+                    attachment.Size = attachmentLength.Value;
                 }
 
-                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
+                return attachment;
             }
-
-            (Stream attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
-            return attachmentStream;
         }
 
         internal static bool CanContinueBatch(RavenLogger logger, Stopwatch duration, long totalUploaded, OperationCancelToken token)
@@ -337,7 +359,7 @@ namespace Raven.Server.Documents
             {
                 return new UpdateRetiredAttachmentsCommandDto
                 {
-                    Retired = _retired.Select(x => (Ticks: x.Ticks, AttachmentKey: x.Key, Id: x.RemoteIdentifier, Status: x.Status)).ToArray(),
+                    Retired = _retired.Select(x => (Ticks: x.Ticks, AttachmentKey: x.Key, Id: x.DestinationIdentifier, Status: x.Status)).ToArray(),
                     CurrentTime = _currentTime
                 };
             }

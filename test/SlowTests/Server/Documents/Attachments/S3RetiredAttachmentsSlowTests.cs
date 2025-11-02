@@ -34,6 +34,43 @@ namespace SlowTests.Server.Documents.Attachments
         {
         }
 
+        [AmazonS3RetryFact]
+        public async Task RetiredAttachmentWithoutDestinationShouldBeSkipped()
+        {
+            int attachmentsCount=1;
+            int size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc);
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    Assert.Equal(attachmentsCount, Attachments.Count);
+
+                    var identifier2 = await PutRetireAttachmentsConfiguration(store, Settings, id: "new-identifier");
+
+                    // move in time & start retire
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+                    Assert.Equal(0, cloudObjects.Count);
+
+                    var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(0, stats.CountOfRetiredAttachments);
+                    Assert.Equal(1, stats.CountOfAttachments);
+
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(true)]
         [InlineData(false)]

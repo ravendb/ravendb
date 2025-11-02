@@ -5,8 +5,8 @@ namespace Raven.Server.Documents.BackgroundWork;
 public class AttachmentRetirementInfo : BackgroundWorkInfo
 {
     public Slice Key => TreeKey;
-    public string RemoteIdentifier => Identifier;
-
+    public string DestinationIdentifier => Identifier;
+    public long Size;
     public AttachmentRetirementInfo()
     {
     }
@@ -18,7 +18,7 @@ public class AttachmentRetirementInfo : BackgroundWorkInfo
 
     public override string GetIdentifier()
     {
-        return RemoteIdentifier;
+        return DestinationIdentifier;
     }
 
     public override Slice GetTreeKey()
