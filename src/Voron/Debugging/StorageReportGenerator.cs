@@ -152,7 +152,7 @@ namespace Voron.Debugging
                                         string nestedReportName = treeReport.Name + "/" + nestedReport.Name;
                                         nestedReport.Name = nestedReportName +" (CompactTree)";
                                         trees.Add(nestedReport);
-                                        trees.Add(GetContainerReport(nestedReportName +" (Entries)", textLookup.State.TermsContainerId, input.IncludeDetails));
+                                        trees.Add(GetContainerReport(nestedReportName +" (Entries)", (long)textLookup.State.TermsContainerId, input.IncludeDetails));
                                     }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
@@ -519,7 +519,7 @@ namespace Voron.Debugging
             if (includeDetails)
             {
                 pageDensities = new();
-                var it = Container.GetAllPagesIterator(_tx, page);
+                var it = Container.GetAllPagesIterator(_tx, new ContainerId(page));
                 while (it.MoveNext(out var pageNum))
                 {
                     // cannot use GetPageHeader since we are reading not just from the header
@@ -536,8 +536,8 @@ namespace Voron.Debugging
                     }
                 }
             }
-            
-            var (allPages, freePages) = Container.GetPagesFor(_tx, page);
+
+            var (allPages, freePages) = Container.GetPagesFor(_tx, new ContainerId(page));
             
             // cannot use GetPageHeader since we are reading not just from the header
             var root = new Container(_tx.GetPage(page));

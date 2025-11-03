@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -72,7 +72,7 @@ public unsafe partial class Hnsw
             }
             case Constants.Graphs.VectorId.PostingList:
             {
-                var setStateSpan = Container.GetReadOnly(llt, rawPostingListId);
+                var setStateSpan = Container.GetReadOnly(llt, new ContainerEntryId(rawPostingListId));
                 ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                 var postingList = new PostingList(llt, Slices.Empty, setState);
                 result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];

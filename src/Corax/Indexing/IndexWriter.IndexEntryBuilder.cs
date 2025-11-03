@@ -421,7 +421,7 @@ public partial class IndexWriter
                 out Span<byte> space);
             term.CopyTo(space);
 
-            var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, termId);
+            var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, (long)termId);
             
             if (entryTerms.TryAdd(recordedTerm) == false)
             {

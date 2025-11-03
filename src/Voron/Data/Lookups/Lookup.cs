@@ -8,6 +8,7 @@ using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -376,7 +377,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             RootPage = newPage.PageNumber,
             NumberOfEntries = 0,
             DictionaryId = dictionaryId,
-            TermsContainerId = termsContainerId
+            TermsContainerId = new ContainerId(termsContainerId)
         };
     }
 

@@ -136,7 +136,7 @@ public unsafe partial class IndexWriter
                         ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[offset]);
                         var job = ProcessSingleEntry(ref entries, isNullTerm: false,
                             sortedTerms[offset], postingListIds[offset],
-                            keys[offset].ContainerId, entriesOffsets[offset], out var totalLengthOfTermDelta);
+                            (long)keys[offset].ContainerId, entriesOffsets[offset], out var totalLengthOfTermDelta);
                         totalLengthOfTerm += totalLengthOfTermDelta;
                         entries.Dispose(_writer._entriesAllocator);
                         _jobs[offset] = job;
@@ -386,7 +386,7 @@ public unsafe partial class IndexWriter
                     out var listSpace);
 
                 processingBuffer.Slice(0, processingBufferPosition).CopyTo(listSpace);
-                var recordedTerm = RecordedTerm.CreateForStored(fieldTerms, storedFieldType, listContainerId);
+                var recordedTerm = RecordedTerm.CreateForStored(fieldTerms, storedFieldType, (long)listContainerId);
 
                 fieldTerms.Dispose(_writer._entriesAllocator);
                 if (entryTerms.TryAdd(recordedTerm) == false)
@@ -477,7 +477,7 @@ public unsafe partial class IndexWriter
                 var term = sortedTerms[i];
 
                 var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
-                buffers.Keys[i].ContainerId = Container.InvalidId;
+                buffers.Keys[i].ContainerId = ContainerEntryId.Invalid;
                 key.Set(term.AsSpan());
                 key.ChangeDictionary(fieldTree.DictionaryId);
                 key.EncodedWithCurrent(out _);
@@ -504,11 +504,11 @@ public unsafe partial class IndexWriter
                 return *((long, long)*)entry.Reader.Base;
             }
 
-            long setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
+            long setId = (long)Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
 
             _writer.InitializeFieldRootPage(_indexedField);
 
-            long nullMarkerId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
+            long nullMarkerId = (long)Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
                 1, _indexedField.FieldRootPage, out var nullBuffer);
             nullBuffer.Clear();
 

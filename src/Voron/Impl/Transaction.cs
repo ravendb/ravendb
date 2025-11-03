@@ -33,7 +33,7 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private Dictionary<long, Container.TransactionState> _containers;
+        private Dictionary<ContainerId, Container.TransactionState> _containers;
         
         private Dictionary<Slice, PostingList> _postingLists;
         
@@ -167,7 +167,7 @@ namespace Voron.Impl
             _lowLevelTransaction.EndAsyncCommit();
         }
 
-        public long OpenContainer(string name)
+        public ContainerId OpenContainer(string name)
         {
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
             {
@@ -187,12 +187,12 @@ namespace Voron.Impl
             return LowLevelTransaction.RootObjects.LookupFor<TKey>(name);
         }
 
-        public long OpenContainer(Slice name)
+        public ContainerId OpenContainer(Slice name)
         {
             var exists = LowLevelTransaction.RootObjects.DirectRead(name);
             if (exists != null)
             {
-                return ((ContainerRootHeader*)exists)->ContainerId;
+                return new ContainerId(((ContainerRootHeader*)exists)->ContainerId);
             }
             var id = Container.Create(LowLevelTransaction);
 
@@ -200,7 +200,7 @@ namespace Voron.Impl
                 *((ContainerRootHeader*)ptr) = new ContainerRootHeader
                 {
                     RootObjectType = RootObjectType.Container,
-                    ContainerId = id
+                    ContainerId = (long)id
                 };
             
             
@@ -320,7 +320,7 @@ namespace Voron.Impl
 
             if (_containers != null)
             {
-                foreach (var (containerId, containerState) in _containers)
+                foreach (var (_, containerState) in _containers)
                 {
                     containerState.PrepareForCommit(this);
                 }
@@ -736,9 +736,9 @@ namespace Voron.Impl
             LowLevelTransaction.RootObjects.Forget(name);
         }
 
-        public Container.TransactionState GetContainerState(long containerId)
+        public Container.TransactionState GetContainerState(ContainerId containerId)
         {
-            _containers ??= new Dictionary<long, Container.TransactionState>();
+            _containers ??= new Dictionary<ContainerId, Container.TransactionState>();
             if (_containers.TryGetValue(containerId, out var state))
                 return state;
             state = new Container.TransactionState(containerId);

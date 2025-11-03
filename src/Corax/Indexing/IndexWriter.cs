@@ -77,9 +77,9 @@ namespace Corax.Indexing
         private Dictionary<Slice, IndexedField> _dynamicFieldsTerms;
         private FieldsCache _fieldsCache;
 
-        private long _postingListContainerId;
-        private long _storedFieldsContainerId;
-        private long _entriesTermsContainerId;
+        private ContainerId _postingListContainerId;
+        private ContainerId _storedFieldsContainerId;
+        private ContainerId _entriesTermsContainerId;
         private Lookup<Int64LookupKey> _entryIdToLocation;
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
@@ -132,6 +132,9 @@ namespace Corax.Indexing
         /// we need to keep track of how many documents we actually deleted
         /// (e.g., when we perform a delete operation not by 'primary key,'
         /// we might end up in a situation where we try to remove the same document twice, and we need to detect it).
+        ///
+        /// Note: This stores document entry IDs (index-level identifiers), not ContainerEntryId (storage-level identifiers).
+        /// While both are represented as long, they are semantically different concepts and should not be confused.
         /// </summary>
         private readonly HashSet<long> _deletedEntries = new();
 
@@ -563,11 +566,12 @@ namespace Corax.Indexing
             foreach (var entryToDelete in _entriesToDelete)
             {
                 _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
-                if (_entryIdToLocation.TryRemove(entryToDelete, out var entryTermsId) == false)
+                if (_entryIdToLocation.TryRemove(entryToDelete, out var entryTermsIdLong) == false)
                     ThrowUnableToLocateEntry(entryToDelete);
 
                 RemoveDocumentBoost(entryToDelete);
-                var entryTerms = Container.Get(_transaction.LowLevelTransaction, entryTermsId);
+                ContainerEntryId entryTermsId = (ContainerEntryId)entryTermsIdLong;
+                Container.Get(_transaction.LowLevelTransaction, entryTermsId, out var entryTerms);
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
                 RecordTermDeletionsForEntry(entryTerms, _transaction.LowLevelTransaction, _fieldsByRootPage, _nullTermsMarkers, _nonExistingTermsMarkers,
                     _compactTreeDictionaryId, entryToDelete, termsPerEntryIndex);
@@ -600,7 +604,7 @@ namespace Corax.Indexing
                     vectorIndexer.Remove(entryToDelete, reader.StoredField.Value.ToSpan());
                 }
 
-                Container.Delete(llt, _storedFieldsContainerId, reader.TermId);
+                Container.Delete(llt, _storedFieldsContainerId, new ContainerEntryId(reader.TermId));
             }
 
             reader.Reset();
@@ -933,13 +937,13 @@ namespace Corax.Indexing
 
             var countOfAlreadyDeletedEntries = _deletedEntries.Count;
             setsAreDisjoint = true;
-            var containerId = EntryIdEncodings.GetContainerId(postingListId);
+            var containerEntryId = (ContainerEntryId)EntryIdEncodings.GetContainerId(postingListId);
 
             if ((postingListId & (long)TermIdMask.EnsureIsSingleMask) == (long)TermIdMask.Single)
             {
-                singleDocumentEntryId = containerId;
+                singleDocumentEntryId = (long)containerEntryId;
                 Debug.Assert(singleDocumentEntryId > 0);
-                var isNewDocument = _deletedEntries.Add(containerId);
+                var isNewDocument = _deletedEntries.Add((long)containerEntryId);
                 if (isNewDocument)
                     _entriesToDelete.Add(singleDocumentEntryId);
                 setsAreDisjoint &= isNewDocument;
@@ -956,7 +960,7 @@ namespace Corax.Indexing
             singleDocumentEntryId = Constants.IndexSearcher.InvalidId;
             if ((postingListId & (long)TermIdMask.PostingList) != 0)
             {
-                var setSpace = Container.GetMutable(_transaction.LowLevelTransaction, containerId);
+                var setSpace = Container.GetMutable(_transaction.LowLevelTransaction, containerEntryId);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
 
                 using var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
@@ -968,7 +972,7 @@ namespace Corax.Indexing
 
             if ((postingListId & (long)TermIdMask.SmallPostingList) != 0)
             {
-                var smallSet = Container.Get(_transaction.LowLevelTransaction, containerId);
+                Container.Get(_transaction.LowLevelTransaction, containerEntryId, out var smallSet);
                 // combine with existing value
                 _ = VariableSizeEncoding.Read<int>(smallSet.Address, out var pos);
                 _pforDecoder.Init(smallSet.Address + pos, smallSet.Length - pos);
@@ -1177,10 +1181,10 @@ namespace Corax.Indexing
 
                 int size = writer.Encode(termsRef);
 
-                long entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
+                ContainerEntryId entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
                 writer.Write(space);
 
-                _entryIdToLocation.Add(termsPerEntryIds[i], entryTermsId);
+                _entryIdToLocation.Add(termsPerEntryIds[i], (long)entryTermsId);
             }
         }
 
@@ -1267,7 +1271,7 @@ namespace Corax.Indexing
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
 
             var llt = _transaction.LowLevelTransaction;
-            Container.GetMutable(llt, containerId, out var item);
+            Container.GetMutable(llt, new ContainerEntryId(containerId), out var item);
 
             Debug.Assert(entries.Removals.ToSpan().ToArray().Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
 
@@ -1304,7 +1308,7 @@ namespace Corax.Indexing
 
             if (_smallPostingListWorkingBuffer.Count == 0)
             {
-                Container.Delete(llt, _postingListContainerId, containerId);
+                Container.Delete(llt, _postingListContainerId, new ContainerEntryId(containerId));
                 termIdInTree = Constants.IndexSearcher.InvalidId;
                 return AddEntriesToTermResult.RemoveTermId;
             }
@@ -1326,7 +1330,7 @@ namespace Corax.Indexing
                 return AddEntriesToTermResult.NothingToDo;
             }
 
-            Container.Delete(llt, _postingListContainerId, containerId);
+            Container.Delete(llt, _postingListContainerId, new ContainerEntryId(containerId));
 
             termIdInTree = AllocatedSpaceForSmallSet(encoded, llt, out Span<byte> space);
 
@@ -1337,7 +1341,7 @@ namespace Corax.Indexing
 
         private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
         {
-            long termIdInTree = Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
+            long termIdInTree = (long)Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
 
             return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
         }
@@ -1424,7 +1428,7 @@ namespace Corax.Indexing
         {
             var containerId = EntryIdEncodings.GetContainerId(id);
             var llt = _transaction.LowLevelTransaction;
-            var setSpace = Container.GetMutable(llt, containerId);
+            var setSpace = Container.GetMutable(llt, new ContainerEntryId(containerId));
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
 
             entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out var additions, out var removals);
@@ -1436,12 +1440,12 @@ namespace Corax.Indexing
 
             if (numberOfEntries == 0)
             {
-                if (isNullTerm) // we don't want to remove the null term posting list 
+                if (isNullTerm) // we don't want to remove the null term posting list
                     return AddEntriesToTermResult.NothingToDo;
 
                 llt.FreePage(postingListState.RootPage);
 
-                Container.Delete(llt, _postingListContainerId, containerId);
+                Container.Delete(llt, _postingListContainerId, new ContainerEntryId(containerId));
                 RemovePostingListFromLargePostingListsSet(containerId);
 
                 return AddEntriesToTermResult.RemoveTermId;
@@ -1512,7 +1516,7 @@ namespace Corax.Indexing
 
         private void AddNewTermToSet(out long termId)
         {
-            long setId = Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
+            long setId = (long)Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
 
             // we need to account for the size of the posting lists, once a term has been switch to a posting list
             // it will always be in this model, so we don't need to do any cleanup
