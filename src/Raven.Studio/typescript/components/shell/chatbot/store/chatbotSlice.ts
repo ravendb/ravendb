@@ -104,24 +104,17 @@ export const chatbotSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder.addCase(runChat.fulfilled, (state, { payload }) => {
-            if ("failedResponseId" in payload) {
-                chatbotMessagesAdapter.removeOne(state.messages, payload.failedResponseId);
-            } else {
-                chatbotMessagesAdapter.updateOne(state.messages, {
-                    id: payload.id,
-                    changes: payload,
-                });
-            }
+            chatbotMessagesAdapter.updateOne(state.messages, {
+                id: payload.id,
+                changes: payload,
+            });
         });
     },
 });
 
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
-    async (
-        payload: ChatbotRunChatData,
-        { dispatch, getState }
-    ): Promise<ChatbotMessage | { failedResponseId: string }> => {
+    async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
         const { aiAssistant, chatbot } = getState() as RootState;
 
         dispatch(chatbotActions.runChatLastMessageSet(payload.message));
@@ -230,12 +223,14 @@ const runChat = createAsyncThunk(
 
             console.error("Failed to finish the AI Assistant response");
             return {
-                failedResponseId: responseId,
+                ...assistantMessage,
+                state: "error",
             };
         } catch (e) {
             console.error(e);
             return {
-                failedResponseId: responseId,
+                ...assistantMessage,
+                state: "error",
             };
         }
     }
