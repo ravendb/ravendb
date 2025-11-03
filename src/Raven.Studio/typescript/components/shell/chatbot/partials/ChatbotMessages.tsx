@@ -1,5 +1,5 @@
 import { Icon } from "components/common/Icon";
-import { chatbotActions, ChatbotMessage } from "../store/chatbotSlice";
+import { chatbotActions, ChatbotAssistantMessage, ChatbotUserMessage } from "../store/chatbotSlice";
 import { LazyLoad } from "components/common/LazyLoad";
 import moment from "moment";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -12,6 +12,7 @@ import Button from "react-bootstrap/Button";
 import RichAlert from "components/common/RichAlert";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotSelectors } from "../store/chatbotSlice";
+import { ChatbotRelevantLink } from "commands/aiAssistant/runChatbotAiAssistantCommand";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -49,19 +50,20 @@ interface AiAgentMessageProps {
 
 function AiAgentMessage({ id }: AiAgentMessageProps) {
     const message = useAppSelector((state) => chatbotSelectors.getMessageById(state, id));
+    const role = message.role;
 
-    switch (message.role) {
+    switch (role) {
         case "user":
             return <UserMessage message={message} />;
         case "assistant":
             return <AgentMessage message={message} />;
         default:
-            return assertUnreachable(message.role);
+            return assertUnreachable(role);
     }
 }
 
 interface UserMessageProps {
-    message: ChatbotMessage;
+    message: ChatbotUserMessage;
 }
 
 function UserMessage({ message }: UserMessageProps) {
@@ -80,7 +82,7 @@ function UserMessage({ message }: UserMessageProps) {
 }
 
 interface AgentMessageProps {
-    message: ChatbotMessage;
+    message: ChatbotAssistantMessage;
 }
 
 function AgentMessage({ message }: AgentMessageProps) {
@@ -117,21 +119,8 @@ function AgentMessage({ message }: AgentMessageProps) {
                     {message.content}
                 </ReactMarkdown>
             </div>
-            {message.relevantLinks?.length > 0 && (
-                <div className="hstack gap-1 flex-wrap mt-1">
-                    {message.relevantLinks.map((link) => (
-                        <a
-                            key={link.Url}
-                            href={link.Url}
-                            target="_blank"
-                            className="btn btn-sm rounded-pill p-1 panel-bg-2 border border-secondary text-reset"
-                        >
-                            <Icon icon="raven" size="sm" color="info" />
-                            {link.Title}
-                        </a>
-                    ))}
-                </div>
-            )}
+            <RelevantLinks links={message.relevantLinks} />
+            <FollowUpQuestions questions={message.followUpQuestions} />
         </div>
     );
 }
@@ -195,3 +184,50 @@ const markdownComponents: Components = {
         return <Code code={code} elementToCopy={code} language={language} />;
     },
 };
+
+function RelevantLinks({ links }: { links: ChatbotRelevantLink[] }) {
+    if (!links?.length) {
+        return null;
+    }
+
+    return (
+        <div className="hstack gap-1 flex-wrap mt-1">
+            {links.map((link) => (
+                <a
+                    key={link.Url}
+                    href={link.Url}
+                    target="_blank"
+                    className="btn btn-sm rounded-pill py-1 px-2 panel-bg-2 border border-secondary text-reset"
+                >
+                    <Icon icon="raven" size="sm" color="info" />
+                    {link.Title}
+                </a>
+            ))}
+        </div>
+    );
+}
+
+function FollowUpQuestions({ questions }: { questions: string[] }) {
+    const dispatch = useAppDispatch();
+
+    if (!questions?.length) {
+        return null;
+    }
+
+    return (
+        <div>
+            <span className="small-label">Follow up questions</span>
+            <div className="vstack gap-2">
+                {questions.map((question) => (
+                    <div
+                        key={question}
+                        className="py-1 px-2 rounded-3 border border-primary cursor-pointer hover-filter"
+                        onClick={() => dispatch(chatbotActions.runChat({ message: question }))}
+                    >
+                        {question}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}

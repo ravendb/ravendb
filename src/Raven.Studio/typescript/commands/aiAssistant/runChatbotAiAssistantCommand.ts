@@ -12,7 +12,7 @@ interface RunChatbotAssistAiAssistantRequestDto {
 
 export type RunChatbotAiAssistantViewData = Omit<RunChatbotAssistAiAssistantRequestDto, "OperationType" | "RavenVersion">;
 
-interface RelevantLink {
+export interface ChatbotRelevantLink {
     Title: string;
     Url: string;
 }
@@ -25,7 +25,8 @@ export interface RunChatbotAiAssistantResultDto {
     UsagePercentage: number;
     Response: {
         Answer: string;
-        RelevantLinks: RelevantLink[];
+        RelevantLinks: ChatbotRelevantLink[];
+        FollowUpQuestions: string[];
     };
 }
 

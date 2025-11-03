@@ -11,7 +11,7 @@ export default function ChatbotCommonActions() {
     }
 
     return (
-        <div className="p-2">
+        <div className="pt-2 px-2">
             <span className="small-label">Common actions</span>
             <div className="vstack gap-1">
                 <ClickableCard

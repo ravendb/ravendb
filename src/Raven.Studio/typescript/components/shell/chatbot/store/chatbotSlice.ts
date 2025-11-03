@@ -11,7 +11,6 @@ import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 import router from "plugins/router";
 
-export type ChatbotRole = "user" | "assistant";
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
@@ -19,15 +18,26 @@ interface ChatbotRunChatData {
     message: string;
 }
 
-export interface ChatbotMessage {
+interface ChatbotMessageBase {
     id: string;
-    role: ChatbotRole;
-    content?: string;
-    thinkingTimeInMs?: number;
-    state?: "loading" | "success" | "error";
-    usage?: Raven.Client.Documents.Operations.AI.AiUsage;
-    relevantLinks?: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
+    content: string;
+    role: "user" | "assistant";
 }
+
+export interface ChatbotUserMessage extends ChatbotMessageBase {
+    role: "user";
+}
+
+export interface ChatbotAssistantMessage extends ChatbotMessageBase {
+    role: "assistant";
+    thinkingTimeInMs: number;
+    state: "loading" | "success" | "error";
+    usage: Raven.Client.Documents.Operations.AI.AiUsage;
+    relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
+    followUpQuestions: string[];
+}
+
+export type ChatbotMessage = ChatbotUserMessage | ChatbotAssistantMessage;
 
 interface ChatbotState {
     isOpen: boolean;
@@ -120,11 +130,10 @@ const runChat = createAsyncThunk(
             throw new Error("AI Assistant consent is required");
         }
 
-        const userMessage: ChatbotMessage = {
+        const userMessage: ChatbotUserMessage = {
             id: _.uniqueId(),
             role: "user",
             content: payload.message,
-            state: "success",
         };
 
         if (chatbot.conversationId) {
@@ -136,10 +145,15 @@ const runChat = createAsyncThunk(
         const responseId = _.uniqueId();
         const startThinkingTime = new Date().getTime();
 
-        const assistantMessage: ChatbotMessage = {
+        const assistantMessage: ChatbotAssistantMessage = {
             id: responseId,
             role: "assistant",
+            content: "",
             state: "loading",
+            thinkingTimeInMs: 0,
+            usage: null,
+            relevantLinks: [],
+            followUpQuestions: [],
         };
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
@@ -208,6 +222,7 @@ const runChat = createAsyncThunk(
                                 ReasoningTokens: 0, // TODO server-side
                             },
                             relevantLinks: finalData.Response.RelevantLinks,
+                            followUpQuestions: finalData.Response.FollowUpQuestions,
                         };
                     }
                 }

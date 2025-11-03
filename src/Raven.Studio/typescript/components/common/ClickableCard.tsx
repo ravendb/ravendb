@@ -44,7 +44,7 @@ export default function ClickableCard({
                 </div>
                 <div className="flex-grow">
                     <div className="fw-semibold">{title}</div>
-                    <div>{description}</div>
+                    {description && <div>{description}</div>}
                 </div>
             </div>
         </div>
