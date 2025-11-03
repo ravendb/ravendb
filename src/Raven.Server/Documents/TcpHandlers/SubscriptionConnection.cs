@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Esprima;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -373,7 +374,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 return qe;
             if (be.Operator is not OperatorType.Equal && be.Operator is not OperatorType.NotEqual)
                 return qe;
-            if (be.Left is not FieldExpression { FieldValueWithoutAlias: "@refresh" } || 
+            if (be.Left is not FieldExpression { FieldValueWithoutAlias: Constants.Documents.Metadata.Refresh } || 
                 be.Right is not ValueExpression { Value: ValueTokenType.Null })
                 return qe;
             var me = new MethodExpression("exists", [be.Left]);
