@@ -19,17 +19,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanNotAccess_WithoutSAN()
         {
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
-            var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
-
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
-                commonNameValue: "admin",
-                issuerCN: ca.SubjectName,
-                issuerKeyPair: caKeyPair,
-                isClientCertificate: true,
-                isCaCertificate: false,
-                notAfter: DateTime.UtcNow.Date.AddMonths(1),
-                certBytes: out var clientCertBytes);
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes);
 
             var client = new X509Certificate2(clientCertBytes);
 
@@ -55,18 +45,7 @@ namespace SlowTests.Issues
         [InlineData("localhost", "localhost")]
         public void KnownIssuerCert_CanAccess_WithValidSAN(string publicDomain, string san)
         {
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
-            var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
-
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
-                commonNameValue: "admin",
-                issuerCN: ca.SubjectName,
-                issuerKeyPair: caKeyPair,
-                isClientCertificate: true,
-                isCaCertificate: false,
-                notAfter: DateTime.UtcNow.Date.AddMonths(1),
-                certBytes: out var clientCertBytes,
-                sans: new[] { san });
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, san);
 
             var client = new X509Certificate2(clientCertBytes);
 
@@ -92,18 +71,7 @@ namespace SlowTests.Issues
         [InlineData("aaa.localhost", "aaa.localhost.bbb")]
         public void KnownIssuerCert_CanNotAccess_WithInvalidSAN(string publicDomain, string san)
         {
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
-            var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
-
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
-                commonNameValue: "admin",
-                issuerCN: ca.SubjectName,
-                issuerKeyPair: caKeyPair,
-                isClientCertificate: true,
-                isCaCertificate: false,
-                notAfter: DateTime.UtcNow.Date.AddMonths(1),
-                certBytes: out var clientCertBytes,
-                sans: new[] { san });
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, san);
 
             var client = new X509Certificate2(clientCertBytes);
 
@@ -124,18 +92,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanAccess_WhenSANValidation_IsDisabled_AndNotMatchingServerDomainName()
         {
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate("ca", out var caKeyPair, out _);
-            var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
-
-            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
-                commonNameValue: "admin",
-                issuerCN: ca.SubjectName,
-                issuerKeyPair: caKeyPair,
-                isClientCertificate: true,
-                isCaCertificate: false,
-                notAfter: DateTime.UtcNow.Date.AddMonths(1),
-                certBytes: out var clientCertBytes,
-                sans: new[] { LocalDomainName });
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, LocalDomainName);
 
             var client = new X509Certificate2(clientCertBytes);
 
@@ -150,6 +107,25 @@ namespace SlowTests.Issues
 
             var result = server.AuthenticateConnectionCertificate(client, null);
             Assert.Equal(RavenServer.AuthenticationStatus.ClusterAdmin, result.Status);
+        }
+
+        private static string GenerateCaAndServerCert(out byte[] clientCertBytes, params string[] sans)
+        {
+            var suffix = Guid.NewGuid().ToString().Split('-')[0];
+            
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"ca-{suffix}", out var caKeyPair, out _);
+            var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
+
+            CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                commonNameValue: $"admin-{suffix}",
+                issuerCN: ca.SubjectName,
+                issuerKeyPair: caKeyPair,
+                isClientCertificate: true,
+                isCaCertificate: false,
+                notAfter: DateTime.UtcNow.Date.AddMonths(1),
+                out clientCertBytes,
+                sans: sans);
+            return caBase64;
         }
 
         private const string LocalDomainName = "localhost";
