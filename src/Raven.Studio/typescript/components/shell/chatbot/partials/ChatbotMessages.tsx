@@ -26,20 +26,16 @@ export default function ChatbotMessages() {
             return;
         }
 
-        if (messagesRef.current) {
-            messagesRef.current.scrollTo({
-                top: messagesRef.current.scrollHeight,
-                behavior: "smooth",
-            });
-        }
+        const offsetToSeeUserMessage = 60;
+        const top = messagesRef.current.scrollHeight - messagesRef.current.clientHeight - offsetToSeeUserMessage;
+
+        messagesRef.current.scrollTo({ top, behavior: "smooth" });
     }, [messageIds.length]);
 
     return (
-        <div ref={messagesRef} className="flex-grow-1 overflow-y-auto vstack gap-2">
+        <div ref={messagesRef} className="flex-grow-1 overflow-y-auto vstack gap-2 px-2">
             {messageIds.map((id) => (
-                <div key={id} className="px-2">
-                    <AiAgentMessage id={id} />
-                </div>
+                <AiAgentMessage key={id} id={id} />
             ))}
         </div>
     );
@@ -50,7 +46,7 @@ interface AiAgentMessageProps {
 }
 
 function AiAgentMessage({ id }: AiAgentMessageProps) {
-    const message = useAppSelector((state) => chatbotSelectors.getMessageById(state, id));
+    const message = useAppSelector((state) => chatbotSelectors.messageById(state, id));
     const role = message.role;
 
     switch (role) {
@@ -87,6 +83,16 @@ interface AgentMessageProps {
 }
 
 function AgentMessage({ message }: AgentMessageProps) {
+    const isLastMessage = useAppSelector((state) => chatbotSelectors.isLastMessage(state, message.id));
+
+    return (
+        <div style={{ minHeight: isLastMessage ? "-webkit-fill-available" : "unset" }}>
+            <AgentMessageBody message={message} />
+        </div>
+    );
+}
+
+function AgentMessageBody({ message }: AgentMessageProps) {
     const dispatch = useAppDispatch();
 
     if (message.state === "loading") {

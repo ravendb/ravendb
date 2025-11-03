@@ -260,8 +260,12 @@ export const chatbotSelectors = {
     chatbotTab: (state: RootState) => state.chatbot.chatbotTab,
     chatbotResourcesTab: (state: RootState) => state.chatbot.chatbotResourcesTab,
     messageIds: (state: RootState) => chatbotMessagesSelectors.selectIds(state.chatbot.messages),
-    getMessageById: (state: RootState, id: string) => chatbotMessagesSelectors.selectById(state.chatbot.messages, id),
+    messageById: (state: RootState, id: string) => chatbotMessagesSelectors.selectById(state.chatbot.messages, id),
     messagesCount: (state: RootState) => chatbotMessagesSelectors.selectTotal(state.chatbot.messages),
+    isLastMessage: (state: RootState, id: string) => {
+        const messageIds = chatbotMessagesSelectors.selectIds(state.chatbot.messages);
+        return messageIds[messageIds.length - 1] === id;
+    },
     conversationId: (state: RootState) => state.chatbot.conversationId,
     absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
     runChatLastMessage: (state: RootState) => state.chatbot.runChatLastMessage,
