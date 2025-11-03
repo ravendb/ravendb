@@ -33,7 +33,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         /*
          *  We are only updating the attachments table, so we can add missing fields in the table, and correctly populate the dynamic index.
-         *  The documents table is not updated, because we are not adding RetireParameters to document if the parameters are null, this saves us document table space and schema update.
+         *  The documents table is not updated, because we are not adding RemoteParameters to document if the parameters are null, this saves us document table space and schema update.
          */
         public bool Update(UpdateStep step)
         {
@@ -152,7 +152,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
 
             tvb.Add(attachment.Size);
-            tvb.Add(Bits.SwapBytes((int)Client.Documents.Attachments.RetiredAttachmentFlags.None));
+            tvb.Add(Bits.SwapBytes((int)Client.Documents.Attachments.RemoteAttachmentFlags.None));
             tvb.Add(-1L);
             tvb.Add(Slices.Empty);
 
@@ -225,7 +225,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             ChangeVector = 6,
             Size = 7,
             Flags = 8,
-            RetireAt = 9,
+            RemoteAt = 9,
             Identifier = 10,
         }
     }

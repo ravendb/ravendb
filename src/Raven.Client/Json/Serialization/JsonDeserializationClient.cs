@@ -12,7 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.Configuration;
@@ -71,7 +71,7 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, AttachmentDetails> AttachmentDetails = GenerateJsonDeserializationRoutine<AttachmentDetails>();
       
-        public static readonly Func<BlittableJsonReaderObject, RetireAttachmentParameters> RetireAttachmentParameters = GenerateJsonDeserializationRoutine<RetireAttachmentParameters>();
+        public static readonly Func<BlittableJsonReaderObject, RemoteAttachmentParameters> RemoteAttachmentParameters = GenerateJsonDeserializationRoutine<RemoteAttachmentParameters>();
 
         public static readonly Func<BlittableJsonReaderObject, AttachmentName> AttachmentName = GenerateJsonDeserializationRoutine<AttachmentName>();
 
@@ -199,8 +199,8 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
      
-        internal static readonly Func<BlittableJsonReaderObject, ConfigureRetireAttachmentsOperationResult> ConfigureRetireAttachmentsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRetireAttachmentsOperationResult>();
-        internal static readonly Func<BlittableJsonReaderObject, RetiredAttachmentsConfiguration> RetiredAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RetiredAttachmentsConfiguration>();
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureRemoteAttachmentsOperationResult> ConfigureRemoteAttachmentsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRemoteAttachmentsOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, RemoteAttachmentsConfiguration> RemoteAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RemoteAttachmentsConfiguration>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsBinCleanerOperationResult> ConfigureRevisionsBinCleanerOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsBinCleanerOperationResult>();
         

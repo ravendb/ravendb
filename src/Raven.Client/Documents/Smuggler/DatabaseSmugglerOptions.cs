@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.AiConnectionStrings |
                                                                                   DatabaseRecordItemType.GenAiEtls |
                                                                                   DatabaseRecordItemType.AiAgents | 
-                                                                                  DatabaseRecordItemType.RetireAttachments;
+                                                                                  DatabaseRecordItemType.RemoteAttachments;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |

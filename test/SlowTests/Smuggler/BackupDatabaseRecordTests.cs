@@ -14,7 +14,7 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -253,17 +253,17 @@ namespace SlowTests.Smuggler
                         AllowEtlOnNonEncryptedChannel = true
                     };
 
-                    await store1.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                    await store1.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(new RemoteAttachmentsConfiguration()
                     {
-                        Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                        Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                         {
                             {
-                                "dummy-identifier", new RetiredAttachmentsDestinationConfiguration()
+                                "dummy-identifier", new RemoteAttachmentsDestinationConfiguration()
                                 {
                                     S3Settings = new S3Settings()
                                     {
                                         AwsAccessKey = "DummyAccessKey",
-                                        RemoteFolderName = "retired-attachments",
+                                        RemoteFolderName = "remote-attachments",
                                         BucketName = "dummy-bucket",
                                     },
                                     Disabled = false,
@@ -271,7 +271,7 @@ namespace SlowTests.Smuggler
                                 }
                             }
                         },
-                        RetireFrequencyInSec = 1000,
+                        CheckFrequencyInSec = 1000,
                     }));
 
                     embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
@@ -360,12 +360,12 @@ namespace SlowTests.Smuggler
                     Assert.Equal(true, record.EmbeddingsGenerations.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.EmbeddingsGenerations.First().Disabled);
 
-                    Assert.NotNull(record.RetiredAttachments);
-                    Assert.Equal(1000, record.RetiredAttachments.RetireFrequencyInSec);
-                    Assert.NotNull(record.RetiredAttachments.Destinations.First().Value.S3Settings);
-                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.Destinations.First().Value.S3Settings.AwsAccessKey);
-                    Assert.Equal("retired-attachments", record.RetiredAttachments.Destinations.First().Value.S3Settings.RemoteFolderName);
-                    Assert.Equal("dummy-bucket", record.RetiredAttachments.Destinations.First().Value.S3Settings.BucketName);
+                    Assert.NotNull(record.RemoteAttachments);
+                    Assert.Equal(1000, record.RemoteAttachments.CheckFrequencyInSec);
+                    Assert.NotNull(record.RemoteAttachments.Destinations.First().Value.S3Settings);
+                    Assert.Equal("DummyAccessKey", record.RemoteAttachments.Destinations.First().Value.S3Settings.AwsAccessKey);
+                    Assert.Equal("remote-attachments", record.RemoteAttachments.Destinations.First().Value.S3Settings.RemoteFolderName);
+                    Assert.Equal("dummy-bucket", record.RemoteAttachments.Destinations.First().Value.S3Settings.BucketName);
 
                 }
             }
@@ -1335,17 +1335,17 @@ namespace SlowTests.Smuggler
                 // add data archival configuration
                 await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 });
 
-                await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(new RemoteAttachmentsConfiguration()
                 {
-                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                     {
                         {
-                            "dummy-identifier", new RetiredAttachmentsDestinationConfiguration()
+                            "dummy-identifier", new RemoteAttachmentsDestinationConfiguration()
                             {
                                 S3Settings = new S3Settings()
                                 {
                                     AwsAccessKey = "DummyAccessKey",
-                                    RemoteFolderName = "retired-attachments",
+                                    RemoteFolderName = "remote-attachments",
                                     BucketName = "dummy-bucket",
                                 },
                                 Disabled = false,
@@ -1353,7 +1353,7 @@ namespace SlowTests.Smuggler
                             }
                         }
                     },
-                    RetireFrequencyInSec = 1000,
+                    CheckFrequencyInSec = 1000,
                 }));
 
                 //add queue sink configuration
@@ -1477,12 +1477,12 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.DataArchival);
                     Assert.False(record.DataArchival.Disabled);
 
-                    Assert.NotNull(record.RetiredAttachments);
-                    Assert.Equal(1000, record.RetiredAttachments.RetireFrequencyInSec);
-                    Assert.NotNull(record.RetiredAttachments.Destinations.First().Value.S3Settings);
-                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.Destinations.First().Value.S3Settings.AwsAccessKey);
-                    Assert.Equal("retired-attachments", record.RetiredAttachments.Destinations.First().Value.S3Settings.RemoteFolderName);
-                    Assert.Equal("dummy-bucket", record.RetiredAttachments.Destinations.First().Value.S3Settings.BucketName);
+                    Assert.NotNull(record.RemoteAttachments);
+                    Assert.Equal(1000, record.RemoteAttachments.CheckFrequencyInSec);
+                    Assert.NotNull(record.RemoteAttachments.Destinations.First().Value.S3Settings);
+                    Assert.Equal("DummyAccessKey", record.RemoteAttachments.Destinations.First().Value.S3Settings.AwsAccessKey);
+                    Assert.Equal("remote-attachments", record.RemoteAttachments.Destinations.First().Value.S3Settings.RemoteFolderName);
+                    Assert.Equal("dummy-bucket", record.RemoteAttachments.Destinations.First().Value.S3Settings.BucketName);
 
                     Assert.NotNull(record.QueueSinks);
                     Assert.Equal(1, record.QueueSinks.Count);

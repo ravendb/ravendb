@@ -58,7 +58,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         RevisionsConfigurationNotValid,
         ArchivalConfigurationNotValid,
-        RetireAttachmentsConfigurationNotValid,
+        RemoteAttachmentsConfigurationNotValid,
 
         ReplicationMissingAttachments,
 

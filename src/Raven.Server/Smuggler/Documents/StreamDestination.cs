@@ -323,11 +323,11 @@ namespace Raven.Server.Smuggler.Documents
                     WriteTaskConfiguration(databaseRecord.DataArchival);
                 }
 
-                if (databaseRecordItemType.Contain(DatabaseRecordItemType.RetireAttachments))
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.RemoteAttachments))
                 {
                     _writer.WriteComma();
-                    _writer.WritePropertyName(nameof(databaseRecord.RetiredAttachments));
-                    WriteTaskConfiguration(databaseRecord.RetiredAttachments);
+                    _writer.WritePropertyName(nameof(databaseRecord.RemoteAttachments));
+                    WriteTaskConfiguration(databaseRecord.RemoteAttachments);
                 }
                 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Refresh))
@@ -1638,8 +1638,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     progress.Attachments.ReadCount++;
-                    if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) == false || retireParameters == null 
-                        || (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flags) && flags == RetiredAttachmentFlags.None))
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) == false || remoteParameters == null 
+                        || (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.None))
                     {
                         if (_attachmentStreamsAlreadyExported.Add(hash))
                         {

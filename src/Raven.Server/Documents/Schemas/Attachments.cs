@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Schemas
             ChangeVector = 6,
             Size = 7,
             Flags = 8,
-            RetireAt = 9,
+            RemoteAt = 9,
             Identifier = 10,
         }
 
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Schemas
                 });
                 schema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
-                    GenerateKey = RetiredAttachmentsStorage.GenerateFlagAndHashForAttachments,
+                    GenerateKey = RemoteAttachmentsStorage.GenerateFlagAndHashForAttachments,
                     IsGlobal = true,
                     Name = AttachmentsFlagAndHashSlice,
                     SupportDuplicateKeys = true

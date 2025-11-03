@@ -23,7 +23,7 @@ public sealed class DetailedDatabaseStatistics : DatabaseStatistics
     public long CountOfTimeSeriesDeletedRanges { get; set; }
 
     ///// <summary>
-    ///// Total number of Retired Attachments values in database.
+    ///// Total number of Remote Attachments values in database.
     ///// </summary>
-    public long CountOfRetiredAttachments { get; set; }
+    public long CountOfRemoteAttachments { get; set; }
 }

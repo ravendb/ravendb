@@ -22,9 +22,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Base64Hash;
         public Stream Stream;
         public long AttachmentSize;
-        public RetiredAttachmentFlags Flags;
-        public DateTime? RetireAtUtc;
-        public Slice RetireIdentifier;
+        public RemoteAttachmentFlags Flags;
+        public DateTime? RemoteAtUtc;
+        public Slice RemoteIdentifier;
 
         public override long Size => base.Size + // common
 
@@ -42,10 +42,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                                      + sizeof(long)
                                      + sizeof(int) // size of AttachmentSize
-                                     + (RetireAtUtc == null ? 0 : sizeof(long)) // size of RetireAtUtc
+                                     + (RemoteAtUtc == null ? 0 : sizeof(long)) // size of RemoteAtUtc
                                      + sizeof(int) // size of Flags
-                                     + sizeof(int) + //  size of RetireIdentifier
-                                     + RetireIdentifier.Size;
+                                     + sizeof(int) + //  size of RemoteIdentifier
+                                     + RemoteIdentifier.Size;
 
         public long StreamSize => sizeof(byte) + // type
 
@@ -63,8 +63,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Base64Hash)] = Base64Hash.ToString();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             djv[nameof(Flags)] = Flags.ToString();
-            djv[nameof(RetireAtUtc)] = RetireAtUtc;
-            djv[nameof(RetireIdentifier)] = RetireIdentifier.ToString();
+            djv[nameof(RemoteAtUtc)] = RemoteAtUtc;
+            djv[nameof(RemoteIdentifier)] = RemoteIdentifier.ToString();
             return djv;
         }
 
@@ -83,17 +83,17 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 AttachmentSize = attachment.Size,
             };
 
-            if (attachment.RetireParameters != null)
+            if (attachment.RemoteParameters != null)
             {
-                item.Flags = attachment.RetireParameters.Flags;
-                item.RetireAtUtc = attachment.RetireParameters.At;
-                item.ToDispose(Slice.From(context.Allocator, attachment.RetireParameters.Identifier, ByteStringType.Immutable, out item.RetireIdentifier));
+                item.Flags = attachment.RemoteParameters.Flags;
+                item.RemoteAtUtc = attachment.RemoteParameters.At;
+                item.ToDispose(Slice.From(context.Allocator, attachment.RemoteParameters.Identifier, ByteStringType.Immutable, out item.RemoteIdentifier));
             }
             else
             {
-                item.Flags = RetiredAttachmentFlags.None;
-                item.RetireAtUtc = null;
-                item.RetireIdentifier = Slices.Empty;
+                item.Flags = RemoteAttachmentFlags.None;
+                item.RemoteAtUtc = null;
+                item.RemoteIdentifier = Slices.Empty;
             }
 
             // although the key is LSV but is treated as slice and doesn't respect escaping
@@ -132,23 +132,23 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += Base64Hash.Size;
 
-                tempBufferPos = WriteRetireAttachmentsProperties(supportedFeaturesReplication, pTemp, tempBufferPos);
+                tempBufferPos = WriteRemoteAttachmentsProperties(supportedFeaturesReplication, pTemp, tempBufferPos);
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
         }
 
-        private unsafe int WriteRetireAttachmentsProperties(TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication, byte* pTemp, int tempBufferPos)
+        private unsafe int WriteRemoteAttachmentsProperties(TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication, byte* pTemp, int tempBufferPos)
         {
-            if (supportedFeaturesReplication.RetiredAttachments == false)
+            if (supportedFeaturesReplication.RemoteAttachments == false)
                 return tempBufferPos;
 
             *(long*)(pTemp + tempBufferPos) = AttachmentSize;
             tempBufferPos += sizeof(long);
-            if (RetireAtUtc.HasValue)
+            if (RemoteAtUtc.HasValue)
             {
-                *(long*)(pTemp + tempBufferPos) = RetireAtUtc.Value.Ticks;
+                *(long*)(pTemp + tempBufferPos) = RemoteAtUtc.Value.Ticks;
                 tempBufferPos += sizeof(long);
             }
             else
@@ -157,15 +157,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 tempBufferPos += sizeof(long);
             }
 
-            *(RetiredAttachmentFlags*)(pTemp + tempBufferPos) = Flags;
-            tempBufferPos += sizeof(RetiredAttachmentFlags);
+            *(RemoteAttachmentFlags*)(pTemp + tempBufferPos) = Flags;
+            tempBufferPos += sizeof(RemoteAttachmentFlags);
 
-            *(int*)(pTemp + tempBufferPos) = RetireIdentifier.Size;
+            *(int*)(pTemp + tempBufferPos) = RemoteIdentifier.Size;
             tempBufferPos += sizeof(int);
-            if (RetireIdentifier.Size != 0)
+            if (RemoteIdentifier.Size != 0)
             {
-                Memory.Copy(pTemp + tempBufferPos, RetireIdentifier.Content.Ptr, RetireIdentifier.Size);
-                tempBufferPos += RetireIdentifier.Size;
+                Memory.Copy(pTemp + tempBufferPos, RemoteIdentifier.Content.Ptr, RemoteIdentifier.Size);
+                tempBufferPos += RemoteIdentifier.Size;
             }
 
             return tempBufferPos;
@@ -185,29 +185,29 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
-                if (supportedFeaturesReplication.RetiredAttachments)
+                if (supportedFeaturesReplication.RemoteAttachments)
                 {
                     AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
                     var ticks = *(long*)Reader.ReadExactly(sizeof(long));
                     if (ticks != -1)
-                        RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
+                        RemoteAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
-                    Flags = *(RetiredAttachmentFlags*)Reader.ReadExactly(sizeof(RetiredAttachmentFlags)) | RetiredAttachmentFlags.None;
+                    Flags = *(RemoteAttachmentFlags*)Reader.ReadExactly(sizeof(RemoteAttachmentFlags)) | RemoteAttachmentFlags.None;
                     size = *(int*)Reader.ReadExactly(sizeof(int));
 
                     if (size == 0)
                     {
-                        RetireIdentifier = Slices.Empty;
+                        RemoteIdentifier = Slices.Empty;
                     }
                     else
                     {
-                        ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out RetireIdentifier));
+                        ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out RemoteIdentifier));
                     }
                 }
                 else
                 {
-                    Flags = RetiredAttachmentFlags.None;
-                    RetireIdentifier = Slices.Empty;
+                    Flags = RemoteAttachmentFlags.None;
+                    RemoteIdentifier = Slices.Empty;
                 }
 
                 stats.RecordAttachmentRead(Size);
@@ -237,15 +237,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.Key = Key.Clone(allocator);
 
             item.AttachmentSize = AttachmentSize;
-            item.RetireAtUtc = RetireAtUtc;
+            item.RemoteAtUtc = RemoteAtUtc;
             item.Flags = Flags;
-            item.RetireIdentifier = RetireIdentifier.Clone(allocator);
+            item.RemoteIdentifier = RemoteIdentifier.Clone(allocator);
 
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Base64Hash.Release(allocator);
                 item.Key.Release(allocator);
-                item.RetireIdentifier.Release(allocator);
+                item.RemoteIdentifier.Release(allocator);
             }));
 
             return item;
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
                 var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
-                AttachmentSize = streamLength; // we populate the stream size here so we can use it in PreProcessAttachments method, when receiving replication from old versions, without retired attachments support
+                AttachmentSize = streamLength; // we populate the stream size here so we can use it in PreProcessAttachments method, when receiving replication from old versions, without remote attachments support
                 Stream = attachmentStreamsTempFile.StartNewStream();
                 Reader.ReadExactly(streamLength, Stream);
                 Stream.Flush();

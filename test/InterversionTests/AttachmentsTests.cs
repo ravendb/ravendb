@@ -12,7 +12,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Smuggler;
@@ -39,12 +39,12 @@ namespace InterversionTests
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Attachments | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux, AwsRequired = true)]
-        public async Task CannotReplicateRetiredAttachmentsToOld()
+        public async Task CannotReplicateRemoteAttachmentsToOld()
         {
-            await CannotReplicateRetiredAttachmentsToOldInternal(InterversionTestOptions.Default);
+            await CannotReplicateRemoteAttachmentsToOldInternal(InterversionTestOptions.Default);
         }
 
-        private async Task CannotReplicateRetiredAttachmentsToOldInternal(InterversionTestOptions ops)
+        private async Task CannotReplicateRemoteAttachmentsToOldInternal(InterversionTestOptions ops)
         {
             var version = Server62Version;
 
@@ -54,7 +54,7 @@ namespace InterversionTests
             using (var oldStore = await GetDocumentStoreAsync(version, ops))
             using (var store = GetDocumentStore())
             {
-                await CannotRetiredAttachmentsToOldInternal(settings, store);
+                await CannotRemoteAttachmentsToOldInternal(settings, store);
 
                 await SetupReplicationAsync(store, oldStore);
 
@@ -74,13 +74,13 @@ namespace InterversionTests
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Attachments | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux, AwsRequired = true)]
-        public async Task CannotReplicateRetiredAttachmentsToOldSharded()
+        public async Task CannotReplicateRemoteAttachmentsToOldSharded()
         {
-            await CannotReplicateRetiredAttachmentsToOldInternal(InterversionTestOptions.Sharded);
+            await CannotReplicateRemoteAttachmentsToOldInternal(InterversionTestOptions.Sharded);
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Attachments | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux, AwsRequired = true)]
-        public async Task CannotEtlRetiredAttachmentsToOld()
+        public async Task CannotEtlRemoteAttachmentsToOld()
         {
             var version = Server62Version;
 
@@ -90,7 +90,7 @@ namespace InterversionTests
             using (var oldStore = await GetDocumentStoreAsync(version))
             using (var store = GetDocumentStore())
             {
-                await CannotRetiredAttachmentsToOldInternal(settings, store);
+                await CannotRemoteAttachmentsToOldInternal(settings, store);
 
                 var taskName = "etl-test";
                 var csName = "cs-test";
@@ -456,7 +456,7 @@ namespace InterversionTests
                 session.SaveChanges();
             }
 
-            // Store regular attachment (not retired)
+            // Store regular attachment (not remote)
             using (var session = sourceStore.OpenSession())
             {
                 using var attachmentStream = new MemoryStream(attachmentContent);
@@ -583,9 +583,9 @@ namespace InterversionTests
                 }
             }
         }
-        private async Task CannotRetiredAttachmentsToOldInternal(S3Settings settings, DocumentStore store)
+        private async Task CannotRemoteAttachmentsToOldInternal(S3Settings settings, DocumentStore store)
         {
-            string identifier = await CreateRetiredAttachmentsConfigurationAndGetIdentifier(settings, store);
+            string identifier = await CreateRemoteAttachmentsConfigurationAndGetIdentifier(settings, store);
 
             var id = "Orders/1";
             using (var session = store.OpenSession())
@@ -599,7 +599,7 @@ namespace InterversionTests
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
                 session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
                 {
-                    RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                    RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
                     ContentType = "image/png"
                 });
                 session.SaveChanges();
@@ -611,12 +611,12 @@ namespace InterversionTests
                 Assert.True(exists);
             }
 
-            await RetireAndAssertCount(store, settings, 1);
+            await RemoteAndAssertCount(store, settings, 1);
 
             using (var session = store.OpenSession())
             {
-                var retiredExists = session.Advanced.Attachments.Exists(id, "test.png");
-                Assert.True(retiredExists);
+                var remoteExists = session.Advanced.Attachments.Exists(id, "test.png");
+                Assert.True(remoteExists);
             }
         }
 
@@ -632,15 +632,15 @@ namespace InterversionTests
             });
         }
 
-        private static async Task<string> CreateRetiredAttachmentsConfigurationAndGetIdentifier(S3Settings settings, DocumentStore store)
+        private static async Task<string> CreateRemoteAttachmentsConfigurationAndGetIdentifier(S3Settings settings, DocumentStore store)
         {
             var identifier = "conf-identifier-s3";
-            var config = new RetiredAttachmentsConfiguration()
+            var config = new RemoteAttachmentsConfiguration()
             {
-                Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                 {
                     {
-                        identifier, new RetiredAttachmentsDestinationConfiguration()
+                        identifier, new RemoteAttachmentsDestinationConfiguration()
                         {
                             S3Settings = settings,
                             Disabled = false,
@@ -648,18 +648,18 @@ namespace InterversionTests
                         }
                     }
                 },
-                RetireFrequencyInSec = 1000
+                CheckFrequencyInSec = 1000
             };
 
-            await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(config));
+            await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(config));
             return identifier;
         }
 
-        private async Task RetireAndAssertCount(DocumentStore store, S3Settings settings, int expected)
+        private async Task RemoteAndAssertCount(DocumentStore store, S3Settings settings, int expected)
         {
             var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-            await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+            await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
 
 
             List<S3FileInfoDetails> cloudObjects = null;

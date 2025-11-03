@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
         
-        protected abstract ValueTask PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, RetireAttachmentParameters retireAttachmentParameters, CancellationToken token); 
+        protected abstract ValueTask PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, RemoteAttachmentParameters remoteAttachmentParameters, CancellationToken token); 
 
         public override async ValueTask ExecuteAsync()
         {
@@ -28,25 +28,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var contentType = RequestHandler.GetStringQueryString("contentType", false) ?? "";
-                var retireAtStr = RequestHandler.GetStringQueryString("retireAt", false) ?? "";
-                var retireIdentifierStr = RequestHandler.GetStringQueryString("retireIdentifier", false) ?? "";
+                var remoteAtStr = RequestHandler.GetStringQueryString("remoteAt", false) ?? "";
+                var remoteIdentifierStr = RequestHandler.GetStringQueryString("remoteIdentifier", false) ?? "";
 
-                if (string.IsNullOrEmpty(retireAtStr) ^ string.IsNullOrEmpty(retireIdentifierStr))
+                if (string.IsNullOrEmpty(remoteAtStr) ^ string.IsNullOrEmpty(remoteIdentifierStr))
                 {
-                    throw new ArgumentException("Both 'retireAt' and 'retireIdentifier' must be specified together.");
+                    throw new ArgumentException("Both 'remoteAt' and 'remoteIdentifier' must be specified together.");
                 }
 
-                RetireAttachmentParameters retireAttachmentParameters = null;
-                if (string.IsNullOrEmpty(retireAtStr) == false)
+                RemoteAttachmentParameters remoteAttachmentParameters = null;
+                if (string.IsNullOrEmpty(remoteAtStr) == false)
                 {
-                    var retireAtDt = TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(retireAtStr, "retireAt");
-                    retireAttachmentParameters = new RetireAttachmentParameters(retireIdentifierStr, retireAtDt);
+                    var remoteAtDt = TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(remoteAtStr, "remoteAt");
+                    remoteAttachmentParameters = new RemoteAttachmentParameters(remoteIdentifierStr, remoteAtDt);
                 }
 
                 var requestBodyStream = RequestHandler.RequestBodyStream();
                 var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
-                await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, retireAttachmentParameters, token.Token);
+                await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, remoteAttachmentParameters, token.Token);
             }
         }
     }

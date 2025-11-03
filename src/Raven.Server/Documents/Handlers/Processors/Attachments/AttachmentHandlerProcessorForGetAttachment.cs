@@ -31,8 +31,8 @@ internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttac
                 return;
             }
 
-            IGetAttachmentStrategy strategy = attachment.RetireParameters.IsRetiredStorageAttachment()
-                  ? new RetiredGetAttachmentStrategyProcessor(RequestHandler)
+            IGetAttachmentStrategy strategy = attachment.RemoteParameters.IsRemoteStorageAttachment()
+                  ? new RemoteGetAttachmentStrategyProcessor(RequestHandler)
                   : new RegularGetAttachmentStrategyProcessor(RequestHandler);
 
             strategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
@@ -71,11 +71,11 @@ internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttac
             HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Base64Hash.ToString();
             HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
             HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
-            if (attachment.RetireParameters != null)
+            if (attachment.RemoteParameters != null)
             {
-                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireParametersAt] = attachment.RetireParameters.At.GetDefaultRavenFormat(isUtc: true);
-                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireParametersIdentifier] = Uri.EscapeDataString(attachment.RetireParameters.Identifier);
-                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireParametersFlags] = attachment.RetireParameters.Flags.ToString();
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRemoteParametersAt] = attachment.RemoteParameters.At.GetDefaultRavenFormat(isUtc: true);
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRemoteParametersIdentifier] = Uri.EscapeDataString(attachment.RemoteParameters.Identifier);
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRemoteParametersFlags] = attachment.RemoteParameters.Flags.ToString();
             }
 
             strategy.DisposeReadTransactionIfNeeded(tx);

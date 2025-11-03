@@ -105,7 +105,7 @@ namespace Raven.Client.ServerWide
 
         public DataArchivalConfiguration DataArchival;
 
-        public RetiredAttachmentsConfiguration RetiredAttachments;
+        public RemoteAttachmentsConfiguration RemoteAttachments;
 
         public IntegrationConfigurations Integrations;
 

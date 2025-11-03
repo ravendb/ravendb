@@ -160,7 +160,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     Stream stream = null;
 
-                    if (cmd.RetireParameters.IsLocalStorageAttachment())
+                    if (cmd.RemoteParameters.IsLocalStorageAttachment())
                     {
                         var attachmentStream = GetAttachmentStream(attachmentIterator, out stream);
 
@@ -179,7 +179,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         Debug.Assert(cmd.SizeInBytes.HasValue == true, "cmd.SizeInBytes.HasValue == true");
                     }
 
-                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes.Value, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes.Value, cmd.RemoteParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue

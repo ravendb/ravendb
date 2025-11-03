@@ -50,9 +50,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             continue;
 
                         IBulkPostAttachmentStrategy strategy;
-                        if (attachment.RetireParameters.IsRetiredStorageAttachment())
+                        if (attachment.RemoteParameters.IsRemoteStorageAttachment())
                         {
-                            strategy = new RetiredBulkPostAttachmentStrategyProcessor(RequestHandler);
+                            strategy = new RemoteBulkPostAttachmentStrategyProcessor(RequestHandler);
                             downloader ??= strategy.GetAttachmentsDownloader(attachment, tcs);
                         }
                         else
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
                 if (canDisposeReadTransaction)
                 {
-                    // all requested attachments were retired, we can dispose the read transaction
+                    // all requested attachments were remote, we can dispose the read transaction
                     tx.Dispose();
                 }
 

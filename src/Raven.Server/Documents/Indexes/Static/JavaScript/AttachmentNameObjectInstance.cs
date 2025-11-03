@@ -48,14 +48,14 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     value = new PropertyDescriptor(new JsString(hash), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.Size) && _attachmentName.TryGet(nameof(AttachmentName.Size), out long size))
                     value = new PropertyDescriptor(size, writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.RetireFlags) && _attachmentName.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) 
-                                                                           && retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out string flags))
+                else if (property == nameof(IAttachmentObject.RemoteFlags) && _attachmentName.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) 
+                                                                           && remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out string flags))
                     value = new PropertyDescriptor(new JsString(flags), writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.RetireAt) && _attachmentName.TryGet(nameof(AttachmentName.RetireParameters), out retireParameters)
-                                                                        && retireParameters.TryGet(nameof(RetireAttachmentParameters.At), out DateTime retiredAt))
-                    value = new PropertyDescriptor(new JsDate(_engine, retiredAt), writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.RetireIdentifier) && _attachmentName.TryGet(nameof(AttachmentName.RetireParameters), out retireParameters)
-                                                                           && retireParameters.TryGet(nameof(RetireAttachmentParameters.Identifier), out string identifier))
+                else if (property == nameof(IAttachmentObject.RemoteAt) && _attachmentName.TryGet(nameof(AttachmentName.RemoteParameters), out remoteParameters)
+                                                                        && remoteParameters.TryGet(nameof(RemoteAttachmentParameters.At), out DateTime remoteAt))
+                    value = new PropertyDescriptor(new JsDate(_engine, remoteAt), writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.RemoteIdentifier) && _attachmentName.TryGet(nameof(AttachmentName.RemoteParameters), out remoteParameters)
+                                                                           && remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Identifier), out string identifier))
                     value = new PropertyDescriptor(new JsString(identifier), writable: false, enumerable: false, configurable: false);
                 if (value != null)
                     _properties[property] = value;

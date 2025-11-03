@@ -850,17 +850,17 @@ namespace Raven.Server.Smuggler.Documents
                         attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
                         throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
 
-                    RetireAttachmentParameters retireParams = null;
-                    if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject readerObject) && readerObject != null)
+                    RemoteAttachmentParameters remoteParams = null;
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject readerObject) && readerObject != null)
                     {
-                        retireParams = JsonDeserializationClient.RetireAttachmentParameters(readerObject);
+                        remoteParams = JsonDeserializationClient.RemoteAttachmentParameters(readerObject);
                     }
 
                     if (isRevision == false)
                     {
-                        if (retireParams.IsLocalStorageAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
+                        if (remoteParams.IsLocalStorageAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, retireParams, updateDocument: false, fromSmuggler: true);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, remoteParams, updateDocument: false, fromSmuggler: true);
                         continue;
                     }
 
@@ -872,7 +872,7 @@ namespace Raven.Server.Smuggler.Documents
                     using (AttachmentsStorage.AttachmentKey.GetKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireParams, size, isRevision: true);
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, remoteParams, size, isRevision: true);
                     }
                 }
             }

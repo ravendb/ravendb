@@ -16,10 +16,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         }
 
         protected override async ValueTask PutAttachmentsAsync(TransactionOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector,
-            RetireAttachmentParameters retireAttachmentParameters, CancellationToken token)
+            RemoteAttachmentParameters remoteAttachmentParameters, CancellationToken token)
         {
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
-            var op = new PutAttachmentOperation.PutAttachmentCommand(id, name, requestBodyStream, contentType, changeVector, retireAttachmentParameters, validateStream: false);
+            var op = new PutAttachmentOperation.PutAttachmentCommand(id, name, requestBodyStream, contentType, changeVector, remoteAttachmentParameters, validateStream: false);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<AttachmentDetails>(op, RequestHandler.HttpContext), shardNumber, token);
         }
     }

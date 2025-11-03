@@ -2906,11 +2906,11 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static RetiredAttachmentFlags TableValueToAttachmentFlags(int index, ref TableValueReader tvr)
+        public static RemoteAttachmentFlags TableValueToAttachmentFlags(int index, ref TableValueReader tvr)
         {
             var ptr = tvr.Read(index, out _);
             var etag = Bits.SwapBytes(*(int*)ptr);
-            return (RetiredAttachmentFlags)etag;
+            return (RemoteAttachmentFlags)etag;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

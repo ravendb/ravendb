@@ -860,9 +860,9 @@ namespace Voron.Recovery
             writer.WritePropertyName("Size");
             writer.WriteInteger(size);
 
-            // retired attachment
+            // remote attachment
             writer.WriteComma();
-            writer.WritePropertyName(nameof(IStoreAttachmentParameters.RetireParameters));
+            writer.WritePropertyName(nameof(IStoreAttachmentParameters.RemoteParameters));
             writer.WriteNull();
         }
 

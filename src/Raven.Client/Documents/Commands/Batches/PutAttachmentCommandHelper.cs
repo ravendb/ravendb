@@ -38,9 +38,9 @@ namespace Raven.Client.Documents.Commands.Batches
             stream.Position = 0;
         }
 
-        public static bool TryValidateStream(Stream stream, RetireAttachmentParameters parameters)
+        public static bool TryValidateStream(Stream stream, RemoteAttachmentParameters parameters)
         {
-            if (parameters is { Flags: RetiredAttachmentFlags.Retired })
+            if (parameters is { Flags: RemoteAttachmentFlags.Remote })
             {
                 Debug.Assert(stream == null, "stream == null");
                 return false;

@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Commands.Batches
             if (command is not PutAttachmentCommandData putAttachmentCommandData) 
                 return;
 
-            if (PutAttachmentCommandHelper.TryValidateStream(putAttachmentCommandData.Stream, putAttachmentCommandData.RetireParameters) == false)
+            if (PutAttachmentCommandHelper.TryValidateStream(putAttachmentCommandData.Stream, putAttachmentCommandData.RemoteParameters) == false)
                 return;
 
             _uniqueAttachmentStreams ??= new HashSet<Stream>();

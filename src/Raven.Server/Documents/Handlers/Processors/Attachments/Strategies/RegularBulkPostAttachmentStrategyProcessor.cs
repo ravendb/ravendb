@@ -17,9 +17,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 
         public override void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            if (attachment.RetireParameters.IsRetiredStorageAttachment())
+            if (attachment.RemoteParameters.IsRemoteStorageAttachment())
             {
-                throw new InvalidOperationException($"Cannot bulk get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
+                throw new InvalidOperationException($"Cannot bulk get attachment '{name}' on document '{documentId}' because it is remote. Please use dedicated API.");
             }
         }
 

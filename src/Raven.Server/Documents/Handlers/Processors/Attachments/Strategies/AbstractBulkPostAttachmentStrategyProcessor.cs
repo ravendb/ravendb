@@ -42,24 +42,24 @@ internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHand
         writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
         writer.WriteString(documentId);
         writer.WriteComma();
-        writer.WritePropertyName(nameof(AttachmentDetails.RetireParameters));
-        if (attachment.RetireParameters == null)
+        writer.WritePropertyName(nameof(AttachmentDetails.RemoteParameters));
+        if (attachment.RemoteParameters == null)
         {
             writer.WriteNull();
         }
         else
         {
             writer.WriteStartObject();
-            writer.WritePropertyName(nameof(RetireAttachmentParameters.Identifier));
-            writer.WriteString(attachment.RetireParameters.Identifier);
+            writer.WritePropertyName(nameof(RemoteAttachmentParameters.Identifier));
+            writer.WriteString(attachment.RemoteParameters.Identifier);
 
             writer.WriteComma();
-            writer.WritePropertyName(nameof(RetireAttachmentParameters.At));
-            writer.WriteDateTime(attachment.RetireParameters.At, true);
+            writer.WritePropertyName(nameof(RemoteAttachmentParameters.At));
+            writer.WriteDateTime(attachment.RemoteParameters.At, true);
 
             writer.WriteComma();
-            writer.WritePropertyName(nameof(RetireAttachmentParameters.Flags));
-            writer.WriteInteger((int)attachment.RetireParameters.Flags);
+            writer.WritePropertyName(nameof(RemoteAttachmentParameters.Flags));
+            writer.WriteInteger((int)attachment.RemoteParameters.Flags);
 
             writer.WriteEndObject();
         }

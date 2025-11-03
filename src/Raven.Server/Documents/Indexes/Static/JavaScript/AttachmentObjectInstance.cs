@@ -27,8 +27,8 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private JsValue GetContentAsString(JsValue self, JsValue[] args)
         {
-            if (_attachment.RetireFlags == RetiredAttachmentFlags.Retired)
-                throw new RetiredAttachmentIndexingException($"Attempted to '{nameof(GetContentAsString)}' on retired attachment named '{_attachment.Name}' which is no longer available locally.");
+            if (_attachment.RemoteFlags == RemoteAttachmentFlags.Remote)
+                throw new RemoteAttachmentIndexingException($"Attempted to '{nameof(GetContentAsString)}' on remote attachment named '{_attachment.Name}' which is no longer available locally.");
 
             var encoding = Encoding.UTF8;
             if (args.Length > 0)
@@ -87,14 +87,14 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     value = new PropertyDescriptor(new JsString(_attachment.Hash), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.Size))
                     value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.RetireFlags))
-                    value = new PropertyDescriptor(new JsString(_attachment.RetireFlags.ToString()), writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.RetireAt))
-                    value = _attachment.RetireAt != DateTime.MaxValue ? new PropertyDescriptor(new JsDate(_engine, _attachment.RetireAt!.Value), writable: false, enumerable: false, configurable: false) : null;
-                else if (property == nameof(IAttachmentObject.RetireIdentifier))
-                    value = string.IsNullOrEmpty(_attachment.RetireIdentifier)
+                else if (property == nameof(IAttachmentObject.RemoteFlags))
+                    value = new PropertyDescriptor(new JsString(_attachment.RemoteFlags.ToString()), writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.RemoteAt))
+                    value = _attachment.RemoteAt != DateTime.MaxValue ? new PropertyDescriptor(new JsDate(_engine, _attachment.RemoteAt!.Value), writable: false, enumerable: false, configurable: false) : null;
+                else if (property == nameof(IAttachmentObject.RemoteIdentifier))
+                    value = string.IsNullOrEmpty(_attachment.RemoteIdentifier)
                         ? null
-                        : new PropertyDescriptor(new JsString(_attachment.RetireIdentifier), writable: false, enumerable: false, configurable: false);
+                        : new PropertyDescriptor(new JsString(_attachment.RemoteIdentifier), writable: false, enumerable: false, configurable: false);
                 else if (property == GetContentAsStringMethodName)
                     value = new PropertyDescriptor(new ClrFunction(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
                 if (value != null)

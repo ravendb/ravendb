@@ -9,7 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
@@ -18,88 +18,88 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments.Issues
 {
-    public class RavenDB_24487 : RetiredAttachmentsS3Base
+    public class RavenDB_24487 : RemoteAttachmentsS3Base
     {
         public RavenDB_24487(ITestOutputHelper output) : base(output)
         {
         }
 
         [AmazonS3RetryFact]
-        public async Task ShouldThrowRetiredAttachmentIndexingExceptionWhenAccessingRetiredAttachmentAsString()
+        public async Task ShouldThrowRemoteAttachmentIndexingExceptionWhenAccessingRemoteAttachmentAsString()
         {
             await using (var holder = CreateCloudSettings())
             {
                 using var store = GetDocumentStore();
-                var identifier = await SetupRetiredAttachmentsConfiguration(Settings, store);
-                await CreateDocumentsWithVariousRetirementTimes(store, identifier);
+                var identifier = await SetupRemoteAttachmentsConfiguration(Settings, store);
+                await CreateDocumentsWithVariousRemoteStorageUploadTimes(store, identifier);
 
-                await AssertRetiredAttachmentIndexingException(new RetiredAttachmentIndexString(), store);
+                await AssertRemoteAttachmentIndexingException(new RemoteAttachmentIndexString(), store);
             }
         }
 
         [AmazonS3RetryFact]
-        public async Task CanIndexRetiredAttachmentRetiredAndRetiredAt()
+        public async Task CanIndexRemoteAttachmentRemoteAndRemoteAt()
         {
             await using (var holder = CreateCloudSettings())
             {
                 {
                     using var store = GetDocumentStore();
-                    var identifier = await SetupRetiredAttachmentsConfiguration(Settings, store);
-                    DateTime baseline = await CreateDocumentsWithVariousRetirementTimes(store, identifier);
+                    var identifier = await SetupRemoteAttachmentsConfiguration(Settings, store);
+                    DateTime baseline = await CreateDocumentsWithVariousRemoteStorageUploadTimes(store, identifier);
 
-                    await TestRetiredAndRetiredAtIndexing(store, baseline, identifier);
+                    await TestRemoteAndRemoteAtIndexing(store, baseline, identifier);
                 }
             }
         }
 
-        private async Task TestRetiredAndRetiredAtIndexing(DocumentStore store, DateTime baseline, string identifier)
+        private async Task TestRemoteAndRemoteAtIndexing(DocumentStore store, DateTime baseline, string identifier)
         {
-            var index = new RetiredAttachmentIndexLoadAttachment();
+            var index = new RemoteAttachmentIndexLoadAttachment();
             await index.ExecuteAsync(store);
-            var index2 = new RetiredAttachmentIndexAttachmentsFor();
+            var index2 = new RemoteAttachmentIndexAttachmentsFor();
             await index2.ExecuteAsync(store);
             await Indexes.WaitForIndexingAsync(store);
             using (var session = store.OpenSession())
             {
-                var resultLoadAtt = session.Query<RetiredAttachmentIndexLoadAttachment.Result, RetiredAttachmentIndexLoadAttachment>()
-                    .Where(x => (x.RetiredAt != null && x.RetiredAt > baseline.AddMinutes(2))).ToList();
+                var resultLoadAtt = session.Query<RemoteAttachmentIndexLoadAttachment.Result, RemoteAttachmentIndexLoadAttachment>()
+                    .Where(x => (x.RemoteAt != null && x.RemoteAt > baseline.AddMinutes(2))).ToList();
 
                 Assert.NotNull(resultLoadAtt);
                 Assert.Equal(2, resultLoadAtt.Count);
 
-                var resultLoadAttByFlag = session.Query<RetiredAttachmentIndexLoadAttachment.Result, RetiredAttachmentIndexLoadAttachment>().Where(x => x.Flags == RetiredAttachmentFlags.Retired)
-                    .ProjectInto<RetiredAttachmentIndexLoadAttachment.Result>().ToList();
+                var resultLoadAttByFlag = session.Query<RemoteAttachmentIndexLoadAttachment.Result, RemoteAttachmentIndexLoadAttachment>().Where(x => x.Flags == RemoteAttachmentFlags.Remote)
+                    .ProjectInto<RemoteAttachmentIndexLoadAttachment.Result>().ToList();
 
-                Assert.Equal(RetiredAttachmentFlags.Retired, resultLoadAttByFlag[0].Flags);
+                Assert.Equal(RemoteAttachmentFlags.Remote, resultLoadAttByFlag[0].Flags);
                 Assert.Equal(identifier, resultLoadAttByFlag[0].Identifier);
-                if (resultLoadAttByFlag[0].RetiredAt != null)
-                    Assert.Equal(baseline.AddMinutes(1), resultLoadAttByFlag[0].RetiredAt.Value, TimeSpan.FromMilliseconds(1));
+                if (resultLoadAttByFlag[0].RemoteAt != null)
+                    Assert.Equal(baseline.AddMinutes(1), resultLoadAttByFlag[0].RemoteAt.Value, TimeSpan.FromMilliseconds(1));
                 Assert.NotNull(resultLoadAttByFlag);
                 Assert.Equal(1, resultLoadAttByFlag.Count);
 
-                var resultAttFor = session.Query<RetiredAttachmentIndexAttachmentsFor.Result, RetiredAttachmentIndexAttachmentsFor>()
-                    .Where(x => (x.RetiredAt != null && x.RetiredAt > baseline.AddDays(7))).ProjectInto<RetiredAttachmentIndexAttachmentsFor.Result>().ToList();
+                var resultAttFor = session.Query<RemoteAttachmentIndexAttachmentsFor.Result, RemoteAttachmentIndexAttachmentsFor>()
+                    .Where(x => (x.RemoteAt != null && x.RemoteAt > baseline.AddDays(7))).ProjectInto<RemoteAttachmentIndexAttachmentsFor.Result>().ToList();
 
-                Assert.Equal(RetiredAttachmentFlags.None, resultAttFor[0].Flags);
+                Assert.Equal(RemoteAttachmentFlags.None, resultAttFor[0].Flags);
                 Assert.Equal(identifier, resultAttFor[0].Identifier);
-                if (resultAttFor[0].RetiredAt != null)
-                    Assert.Equal(baseline.AddDays(365), resultAttFor[0].RetiredAt.Value, TimeSpan.FromMilliseconds(1));
+                if (resultAttFor[0].RemoteAt != null)
+                    Assert.Equal(baseline.AddDays(365), resultAttFor[0].RemoteAt.Value, TimeSpan.FromMilliseconds(1));
                 Assert.NotNull(resultAttFor);
                 Assert.Equal(1, resultAttFor.Count);
 
-                var resultAttForByFlag = session.Query<RetiredAttachmentIndexAttachmentsFor.Result, RetiredAttachmentIndexAttachmentsFor>().Where(x => x.Flags == RetiredAttachmentFlags.Retired)
-                    .ProjectInto<RetiredAttachmentIndexAttachmentsFor.Result>().ToList();
+                var resultAttForByFlag = session.Query<RemoteAttachmentIndexAttachmentsFor.Result, RemoteAttachmentIndexAttachmentsFor>().Where(x => x.Flags == RemoteAttachmentFlags.Remote)
+                    .ProjectInto<RemoteAttachmentIndexAttachmentsFor.Result>().ToList();
 
-                Assert.Equal(RetiredAttachmentFlags.Retired, resultAttForByFlag[0].Flags);
+                Assert.Equal(RemoteAttachmentFlags.Remote, resultAttForByFlag[0].Flags);
                 Assert.Equal(identifier, resultAttForByFlag[0].Identifier);
-                if (resultAttForByFlag[0].RetiredAt != null)
-                    Assert.Equal(baseline.AddMinutes(1), resultAttForByFlag[0].RetiredAt.Value, TimeSpan.FromMilliseconds(1));
+                if (resultAttForByFlag[0].RemoteAt != null)
+                    Assert.Equal(baseline.AddMinutes(1), resultAttForByFlag[0].RemoteAt.Value, TimeSpan.FromMilliseconds(1));
                 Assert.NotNull(resultAttForByFlag);
                 Assert.Equal(1, resultAttForByFlag.Count);
             }
         }
 
-        private async Task<DateTime> CreateDocumentsWithVariousRetirementTimes(DocumentStore store, string identifier)
+        private async Task<DateTime> CreateDocumentsWithVariousRemoteStorageUploadTimes(DocumentStore store, string identifier)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -110,46 +110,46 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             }
 
             DateTime baseline = DateTime.UtcNow;
-            var retireAt1 = baseline.AddDays(7);
-            var retireAt2 = baseline.AddMinutes(1);
-            var retireAt3 = baseline.AddDays(365);
+            var remoteAt1 = baseline.AddDays(7);
+            var remoteAt2 = baseline.AddMinutes(1);
+            var remoteAt3 = baseline.AddDays(365);
 
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello")))
             {
-                var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms) { RetireParameters = new RetireAttachmentParameters(identifier, retireAt1) };
+                var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms) { RemoteParameters = new RemoteAttachmentParameters(identifier, remoteAt1) };
                 var putOp1 = new PutAttachmentOperation("users/1", parameters1);
                 await store.Operations.SendAsync(putOp1);
                 ms.Position = 0;
-                var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms) { RetireParameters = new RetireAttachmentParameters(identifier, retireAt2) };
+                var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms) { RemoteParameters = new RemoteAttachmentParameters(identifier, remoteAt2) };
                 var putOp2 = new PutAttachmentOperation("users/2", parameters2);
                 await store.Operations.SendAsync(putOp2);
                 ms.Position = 0;
-                var parameters4 = new StoreAttachmentParameters("greeting3.txt", ms) { RetireParameters = new RetireAttachmentParameters(identifier, retireAt3) };
+                var parameters4 = new StoreAttachmentParameters("greeting3.txt", ms) { RemoteParameters = new RemoteAttachmentParameters(identifier, remoteAt3) };
                 var putOp4 = new PutAttachmentOperation("users/3", parameters4);
                 await store.Operations.SendAsync(putOp4);
             }
 
             int count = 0;
-            var retired = await WaitForValueAsync(async () =>
+            var remote = await WaitForValueAsync(async () =>
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
-                count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                count += await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
                 return count;
             }, 1, interval: 1000);
             return baseline;
         }
 
-        private static async Task<string> SetupRetiredAttachmentsConfiguration(S3Settings s3Settings, DocumentStore store)
+        private static async Task<string> SetupRemoteAttachmentsConfiguration(S3Settings s3Settings, DocumentStore store)
         {
             var id = "conf-identifier-s3";
-            var conf = new RetiredAttachmentsConfiguration
+            var conf = new RemoteAttachmentsConfiguration
             {
-                Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                 {
                     {
-                        id, new RetiredAttachmentsDestinationConfiguration()
+                        id, new RemoteAttachmentsDestinationConfiguration()
                         {
                             Disabled = false,
                             S3Settings = s3Settings,
@@ -158,24 +158,24 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                     }
                 }
             };
-            await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(conf));
+            await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRemoteAttachmentsOperation(conf));
 
             return id;
         }
 
-        private async Task AssertRetiredAttachmentIndexingException(AbstractJavaScriptIndexCreationTask index, IDocumentStore store)
+        private async Task AssertRemoteAttachmentIndexingException(AbstractJavaScriptIndexCreationTask index, IDocumentStore store)
         {
             await index.ExecuteAsync(store);
             await Indexes.WaitForIndexingAsync(store);
 
             var indexErrors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { index.IndexName }));
             var errorString = indexErrors[0].Errors[0].Error;
-            Assert.Contains("RetiredAttachmentIndexingException: Attempted to 'GetContentAsString' on retired attachment named 'greeting2.txt' which is no longer available locally.", errorString);
+            Assert.Contains("RemoteAttachmentIndexingException: Attempted to 'GetContentAsString' on remote attachment named 'greeting2.txt' which is no longer available locally.", errorString);
         }
 
-        private class RetiredAttachmentIndexString : AbstractJavaScriptIndexCreationTask
+        private class RemoteAttachmentIndexString : AbstractJavaScriptIndexCreationTask
         {
-            public RetiredAttachmentIndexString()
+            public RemoteAttachmentIndexString()
             {
                 Maps = new HashSet<string>
                 {
@@ -190,18 +190,18 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             }
         }
 
-        private class RetiredAttachmentIndexAttachmentsFor : AbstractJavaScriptIndexCreationTask
+        private class RemoteAttachmentIndexAttachmentsFor : AbstractJavaScriptIndexCreationTask
         {
             public class Result
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public RetiredAttachmentFlags Flags { get; set; }
-                public DateTime? RetiredAt { get; set; }
+                public RemoteAttachmentFlags Flags { get; set; }
+                public DateTime? RemoteAt { get; set; }
                 public string Identifier { get; set; }
             }
 
-            public RetiredAttachmentIndexAttachmentsFor()
+            public RemoteAttachmentIndexAttachmentsFor()
             {
                 Maps = new HashSet<string>
                 {
@@ -211,9 +211,9 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                     return att.map(a => {
                         return {
                         Name: a.Name,
-                        Flags: a.RetireFlags,
-                        RetiredAt: a.RetireAt,
-                        Identifier: a.RetireIdentifier
+                        Flags: a.RemoteFlags,
+                        RemoteAt: a.RemoteAt,
+                        Identifier: a.RemoteIdentifier
                         };
                     });
             })
@@ -223,18 +223,18 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             }
         }
 
-        private class RetiredAttachmentIndexLoadAttachment : AbstractJavaScriptIndexCreationTask
+        private class RemoteAttachmentIndexLoadAttachment : AbstractJavaScriptIndexCreationTask
         {
             public class Result
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public RetiredAttachmentFlags Flags { get; set; }
-                public DateTime? RetiredAt { get; set; }
+                public RemoteAttachmentFlags Flags { get; set; }
+                public DateTime? RemoteAt { get; set; }
                 public string Identifier { get; set; }
             }
 
-            public RetiredAttachmentIndexLoadAttachment()
+            public RemoteAttachmentIndexLoadAttachment()
             {
 
                 Maps = new HashSet<string>
@@ -244,9 +244,9 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                 var att = loadAttachment(u, u.AttName);
                 return {
                     Name : att.Name,
-                    Flags : att.RetireFlags,         
-                    RetiredAt: att.RetireAt,
-                    Identifier: att.RetireIdentifier
+                    Flags : att.RemoteFlags,         
+                    RemoteAt: att.RemoteAt,
+                    Identifier: att.RemoteIdentifier
                 };
             })
             "

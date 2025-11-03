@@ -209,7 +209,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddOrUpdateAiAgentCommand)] = 71_001,
             [nameof(DeleteAiAgentCommand)] = 71_001,
 
-            [nameof(EditRetireAttachmentsCommand)] = EditRetireAttachmentsCommand.CommandVersion
+            [nameof(EditRemoteAttachmentsCommand)] = EditRemoteAttachmentsCommand.CommandVersion
         };
 
         public bool CanPutCommand(string command)

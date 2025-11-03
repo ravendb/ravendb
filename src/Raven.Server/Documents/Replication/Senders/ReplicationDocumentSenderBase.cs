@@ -322,9 +322,9 @@ namespace Raven.Server.Documents.Replication.Senders
                 AssertNotIncrementalTimeSeriesForLegacyReplication(item);
             }
 
-            if (_parent.SupportedFeatures.Replication.RetiredAttachments == false)
+            if (_parent.SupportedFeatures.Replication.RemoteAttachments == false)
             {
-                AssertNotRetiredAttachmentsForLegacyReplication(item);
+                AssertNotRemoteAttachmentsForLegacyReplication(item);
             }
         }
 
@@ -422,18 +422,18 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        private void AssertNotRetiredAttachmentsForLegacyReplication(ReplicationBatchItem item)
+        private void AssertNotRemoteAttachmentsForLegacyReplication(ReplicationBatchItem item)
         {
             if (item.Type != ReplicationBatchItem.ReplicationItemType.Attachment)
                 return;
             switch (item)
             {
                 case AttachmentReplicationItem attachment:
-                    if (attachment.Flags == RetiredAttachmentFlags.Retired)
+                    if (attachment.Flags == RemoteAttachmentFlags.Remote)
                     {
                         var message = $"Replication '{_parent.FromToString}' found an item of type 'AttachmentReplicationItem' to replicate to {_parent.Destination.FromString()}, " +
                                       $"while we are in legacy mode (downgraded our replication version to match the destination). " +
-                                      $"Can't send Retired-Attachments in legacy mode, destination {_parent.Destination.FromString()} does not support Retired-Attachments feature. Stopping replication.";
+                                      $"Can't send Remote-Attachments in legacy mode, destination {_parent.Destination.FromString()} does not support Remote-Attachments feature. Stopping replication.";
 
                         if (Log.IsInfoEnabled)
                             Log.Info(message);
@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (item is AttachmentReplicationItem attachment)
             {
-                if (attachment.Flags == RetiredAttachmentFlags.None)
+                if (attachment.Flags == RemoteAttachmentFlags.None)
                 {
                     if (ShouldSendAttachmentStream(attachment))
                         _replicaAttachmentStreams[attachment.Base64Hash] = attachment;

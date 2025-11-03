@@ -113,7 +113,7 @@ public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
                         using (cmd.AttachmentStream.Stream)
                         {
                             Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.AttachmentStream.Stream.Length, retireParams: null, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                                cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.AttachmentStream.Stream.Length, remoteParams: null, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
                         }
 
                         var updates = GetDocumentUpdates(cmd.Id);

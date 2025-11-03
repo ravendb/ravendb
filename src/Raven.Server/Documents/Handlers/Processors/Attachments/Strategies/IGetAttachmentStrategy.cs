@@ -12,32 +12,31 @@ public interface IGetAttachmentStrategy
     public void CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
     public Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken tcs);
 
-    public static void CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name, string method)
+    public static void CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name, string operation)
     {
         using var document = database.DocumentsStorage.Get(context, documentId, DocumentFields.Id);
         if (document == null)
         {
-            throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because it doesn't exist.");
+            throw new InvalidOperationException($"Cannot perform '{operation}' for remote attachment '{name}' on document '{documentId}' because the document does not exist.");
         }
 
-        var config = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Configuration;
-
+        var config = database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.Configuration;
         if (config == null)
         {
             throw new InvalidOperationException(
-                $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a {nameof(RetiredAttachmentsConfiguration)}.");
+                $"Cannot perform '{operation}' for remote attachment '{name}' on document '{documentId}' because the database does not have a {nameof(RemoteAttachmentsConfiguration)} configured.");
         }
 
-        var destination = config.Destinations[attachment.RetireParameters.Identifier];
+        var destination = config.Destinations[attachment.RemoteParameters.Identifier];
         if (destination == null)
         {
             throw new InvalidOperationException(
-                $"Cannot {method} retired attachment '{name}' with identifier '{attachment.RetireParameters.Identifier}' on document '{documentId}' because it is doesn't have {nameof(RetiredAttachmentsConfiguration)}.{nameof(RetiredAttachmentsConfiguration.Destinations)}.");
+                $"Cannot perform '{operation}' for remote attachment '{name}' (identifier: '{attachment.RemoteParameters.Identifier}') on document '{documentId}' because the destination is not defined in {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)}.");
         }
         if (destination.Disabled)
         {
             throw new InvalidOperationException(
-                $"Cannot {method} retired attachment '{name}' with identifier '{attachment.RetireParameters.Identifier}' on document '{documentId}' because {nameof(RetiredAttachmentsConfiguration)}.{nameof(RetiredAttachmentsConfiguration.Destinations)} is disabled.");
+                $"Cannot perform '{operation}' for remote attachment '{name}' (identifier: '{attachment.RemoteParameters.Identifier}') on document '{documentId}' because its destination is disabled in {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)}.");
         }
     }
 }

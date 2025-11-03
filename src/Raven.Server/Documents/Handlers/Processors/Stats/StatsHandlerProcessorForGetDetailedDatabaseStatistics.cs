@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
                 stats.CountOfIdentities = RequestHandler.ServerStore.Cluster.GetNumberOfIdentities(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchange = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchange(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchangeTombstones = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context.Server, RequestHandler.Database.Name);
-                stats.CountOfRetiredAttachments = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsForFlag(context.Documents, RetiredAttachmentFlags.Retired);
+                stats.CountOfRemoteAttachments = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsForFlag(context.Documents, RemoteAttachmentFlags.Remote);
                 return WriteResultAsync(stats);
             }
         }

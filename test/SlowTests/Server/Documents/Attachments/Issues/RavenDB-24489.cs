@@ -8,21 +8,21 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments.Issues
 {
-    public class RavenDB_24489 : RetiredAttachmentsS3Base
+    public class RavenDB_24489 : RemoteAttachmentsS3Base
     {
         public RavenDB_24489(ITestOutputHelper output) : base(output)
         {
         }
         
         [AmazonS3RetryFact]
-        public async Task Index_ShouldInclude_RetiredFlag_And_RetiredAt_ForRetiredAttachments()
+        public async Task Index_ShouldInclude_RemoteFlag_And_RemoteAt_ForRemoteAttachments()
         {
             string remoteFolderName = "RavenDB_24489" + Guid.NewGuid();
             var s3Settings = Etl.GetS3Settings(remoteFolderName);
@@ -31,12 +31,12 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             {
                 using var store = GetDocumentStore();
 
-                var conf = new RetiredAttachmentsConfiguration
+                var conf = new RemoteAttachmentsConfiguration
                 {
-                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                     {
                         {
-                            "conf-identifier", new RetiredAttachmentsDestinationConfiguration()
+                            "conf-identifier", new RemoteAttachmentsDestinationConfiguration()
                             {
                                 Disabled = false, 
                                 S3Settings = s3Settings, 
@@ -44,9 +44,9 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                             }
                         }
                     },
-                    RetireFrequencyInSec = 1,
+                    CheckFrequencyInSec = 1,
                 };
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(conf));
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRemoteAttachmentsOperation(conf));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -57,15 +57,15 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                 }
 
                 DateTime baseline = DateTime.UtcNow;
-                var retireAt1 = baseline.AddDays(7);
-                var retireAt2 = baseline.AddDays(365);
-                var retireAt3 = baseline.AddMinutes(1);
+                var remoteAt1 = baseline.AddDays(7);
+                var remoteAt2 = baseline.AddDays(365);
+                var remoteAt3 = baseline.AddMinutes(1);
 
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello")))
                 {
                     var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt1)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt1)
                     };
                     var putOp1 = new PutAttachmentOperation("users/1", parameters1);
                     store.Operations.Send(putOp1);
@@ -73,65 +73,65 @@ namespace SlowTests.Server.Documents.Attachments.Issues
 
                     var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt2)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt2)
                     };
                     var putOp2 = new PutAttachmentOperation("users/2", parameters2);
                     store.Operations.Send(putOp2);
                     ms.Position = 0;
                     var parameters3 = new StoreAttachmentParameters("greeting3.txt", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt2)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt2)
                     };
                     var putOp3 = new PutAttachmentOperation("users/2", parameters3);
                     store.Operations.Send(putOp3);
                     ms.Position = 0;
                     var parameters4 = new StoreAttachmentParameters("greeting4.txt", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt3)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt3)
                     };
                     var putOp4 = new PutAttachmentOperation("users/3", parameters4);
                     store.Operations.Send(putOp4);
                 }
 
                 int count = 0;
-                var retired = await WaitForValueAsync(async () =>
+                var remote = await WaitForValueAsync(async () =>
                 {
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
-                    count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    count += await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
                     return count;
                 }, 1, interval: 1000);
 
-                var index = new RetiredAttachmentIndex();
+                var index = new RemoteAttachmentIndex();
                 await index.ExecuteAsync(store);
                 await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>()
-                        .Where(x => x.RetiredAt != null && x.RetiredAt > baseline.AddDays(8)).ToList();
+                    var result = session.Query<RemoteAttachmentIndex.Result, RemoteAttachmentIndex>()
+                        .Where(x => x.RemoteAt != null && x.RemoteAt > baseline.AddDays(8)).ToList();
 
                     Assert.NotNull(result);
                     Assert.Single(result);
                     Assert.True(result[0].Name == "Johny");
                     Assert.True(result[0].Id == "users/2");
 
-                    var resultWithProjection = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>()
-                        .Where(x => x.RetiredAt != null && x.RetiredAt > baseline).ProjectInto<RetiredAttachmentIndex.Result>().ToList();
+                    var resultWithProjection = session.Query<RemoteAttachmentIndex.Result, RemoteAttachmentIndex>()
+                        .Where(x => x.RemoteAt != null && x.RemoteAt > baseline).ProjectInto<RemoteAttachmentIndex.Result>().ToList();
 
                     Assert.NotNull(result);
                     Assert.Equal(4, resultWithProjection.Count);
                     Assert.All(resultWithProjection, x =>
                     {
-                        Assert.True(x.RetiredAt.HasValue, "RetiredAt should not be null here");
-                        Assert.True(x.RetiredAt.Value > baseline,
-                            $"RetiredAt {x.RetiredAt} should be > baseline");
+                        Assert.True(x.RemoteAt.HasValue, "RemoteAt should not be null here");
+                        Assert.True(x.RemoteAt.Value > baseline,
+                            $"RemoteAt {x.RemoteAt} should be > baseline");
                         Assert.StartsWith("greeting", x.Name);
                     });
 
-                    var resultByFlag = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>().Where(x => x.Retired == RetiredAttachmentFlags.Retired)
-                        .ProjectInto<RetiredAttachmentIndex.Result>().ToList();
+                    var resultByFlag = session.Query<RemoteAttachmentIndex.Result, RemoteAttachmentIndex>().Where(x => x.Remote == RemoteAttachmentFlags.Remote)
+                        .ProjectInto<RemoteAttachmentIndex.Result>().ToList();
 
                     Assert.NotNull(resultByFlag);
                     Assert.Equal(1, resultByFlag.Count);
@@ -144,7 +144,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
         }
 
         [AmazonS3RetryFact]
-        public async Task Index_ShouldInclude_RetiredFlag_And_RetiredAt_ForRetiredAttachments_LoadAttachments()
+        public async Task Index_ShouldInclude_RemoteFlag_And_RemoteAt_ForRemoteAttachments_LoadAttachments()
         {
             string remoteFolderName = "RavenDB_24489" + Guid.NewGuid();
             var s3Settings = Etl.GetS3Settings(remoteFolderName);
@@ -153,12 +153,12 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             {
                 using var store = GetDocumentStore();
 
-                var conf = new RetiredAttachmentsConfiguration
+                var conf = new RemoteAttachmentsConfiguration
                 {
-                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                     {
                         {
-                            "conf-identifier", new RetiredAttachmentsDestinationConfiguration()
+                            "conf-identifier", new RemoteAttachmentsDestinationConfiguration()
                             {
                                 Disabled = false,
                                 S3Settings = s3Settings,
@@ -166,9 +166,9 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                             }
                         }
                     },
-                    RetireFrequencyInSec = 1,
+                    CheckFrequencyInSec = 1,
                 };
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(conf));
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRemoteAttachmentsOperation(conf));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -178,56 +178,56 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                 }
 
                 DateTime baseline = DateTime.UtcNow;
-                var retireAt1 = baseline.AddDays(7);
-                var retireAt2 = baseline.AddMinutes(1);
-                var retireAt3 = baseline.AddDays(365);
+                var remoteAt1 = baseline.AddDays(7);
+                var remoteAt2 = baseline.AddMinutes(1);
+                var remoteAt3 = baseline.AddDays(365);
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello")))
                 {
                     var parameters1 = new StoreAttachmentParameters("myAttachment.png", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt1)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt1)
                     };
                     var putOp1 = new PutAttachmentOperation("users/1", parameters1);
                     store.Operations.Send(putOp1);
                     ms.Position = 0;
                     var parameters2 = new StoreAttachmentParameters("myPhoto.png", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt2)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt2)
                     };
                     var putOp2 = new PutAttachmentOperation("users/2", parameters2);
                     store.Operations.Send(putOp2);
                     ms.Position = 0;
                     var parameters3 = new StoreAttachmentParameters("greeting3.txt", ms)
                     {
-                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt3)
+                        RemoteParameters = new RemoteAttachmentParameters("conf-identifier", remoteAt3)
                     };
                     var putOp3 = new PutAttachmentOperation("users/2", parameters3);
                     store.Operations.Send(putOp3);
                 }
                 int count = 0;
-                var retired = await WaitForValueAsync(async () =>
+                var remote = await WaitForValueAsync(async () =>
                 {
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
-                    count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    count += await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
                     return count;
                 }, 1, interval: 1000);
 
-                var index = new RetiredAttachmentIndex();
+                var index = new RemoteAttachmentIndex();
                 await index.ExecuteAsync(store);
                 await Indexes.WaitForIndexingAsync(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Query<RetiredAttachmentIndex_LoadAttachments.Result, RetiredAttachmentIndex>()
-                        .Where(x => x.RetiredAt != null && x.RetiredAt > baseline.AddMinutes(5)).ToList();
+                    var result = session.Query<RemoteAttachmentIndex_LoadAttachments.Result, RemoteAttachmentIndex>()
+                        .Where(x => x.RemoteAt != null && x.RemoteAt > baseline.AddMinutes(5)).ToList();
 
                     Assert.NotNull(result);
                     Assert.True(result.Count == 2);
 
-                    var resultByFlag = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>().Where(x => x.Retired == RetiredAttachmentFlags.Retired)
-                        .ProjectInto<RetiredAttachmentIndex.Result>().ToList();
+                    var resultByFlag = session.Query<RemoteAttachmentIndex.Result, RemoteAttachmentIndex>().Where(x => x.Remote == RemoteAttachmentFlags.Remote)
+                        .ProjectInto<RemoteAttachmentIndex.Result>().ToList();
 
                     Assert.NotNull(resultByFlag);
                     Assert.Equal(1, resultByFlag.Count);
@@ -239,50 +239,50 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             }
         }
 
-        private class RetiredAttachmentIndex : AbstractIndexCreationTask<User, RetiredAttachmentIndex.Result>
+        private class RemoteAttachmentIndex : AbstractIndexCreationTask<User, RemoteAttachmentIndex.Result>
         {
             public class Result
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public RetiredAttachmentFlags Retired { get; set; }
-                public DateTime? RetiredAt { get; set; }
-                public string RetiredIdentifier { get; set; }
+                public RemoteAttachmentFlags Remote { get; set; }
+                public DateTime? RemoteAt { get; set; }
+                public string RemoteIdentifier { get; set; }
             }
 
-            public RetiredAttachmentIndex()
+            public RemoteAttachmentIndex()
             {
                 Map = users => from u in users
                     from att in AttachmentsFor(u)
                     select new Result { 
                         Name = att.Name,
-                        Retired = att.RetireParameters == null ? RetiredAttachmentFlags.None : att.RetireParameters.Flags,
-                        RetiredAt = att.RetireParameters == null ? null : att.RetireParameters.At,
-                        RetiredIdentifier = att.RetireParameters == null ? null : att.RetireParameters.Identifier,
+                        Remote = att.RemoteParameters == null ? RemoteAttachmentFlags.None : att.RemoteParameters.Flags,
+                        RemoteAt = att.RemoteParameters == null ? null : att.RemoteParameters.At,
+                        RemoteIdentifier = att.RemoteParameters == null ? null : att.RemoteParameters.Identifier,
                     };
                 StoreAllFields(FieldStorage.Yes);
             }
         }
 
-        private class RetiredAttachmentIndex_LoadAttachments : AbstractIndexCreationTask<User, RetiredAttachmentIndex.Result>
+        private class RemoteAttachmentIndex_LoadAttachments : AbstractIndexCreationTask<User, RemoteAttachmentIndex.Result>
         {
             public class Result
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public RetiredAttachmentFlags Retired { get; set; }
-                public DateTime? RetiredAt { get; set; }
+                public RemoteAttachmentFlags Remote { get; set; }
+                public DateTime? RemoteAt { get; set; }
             }
         
-            public RetiredAttachmentIndex_LoadAttachments()
+            public RemoteAttachmentIndex_LoadAttachments()
             {
                 Map = users => from u in users
                     let att = LoadAttachment(u, u.AttName)
                     select new Result
                     {
                         Name = att.Name,
-                        Retired = att.RetireFlags,
-                        RetiredAt = att.RetireAt,
+                        Remote = att.RemoteFlags,
+                        RemoteAt = att.RemoteAt,
                     };
                 StoreAllFields(FieldStorage.Yes);
             }

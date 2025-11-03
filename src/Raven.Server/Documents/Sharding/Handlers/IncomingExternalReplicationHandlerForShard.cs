@@ -46,9 +46,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     case AttachmentReplicationItem attachmentReplicationItem:
 
-                        if (attachmentReplicationItem.Flags == RetiredAttachmentFlags.Retired)
+                        if (attachmentReplicationItem.Flags == RemoteAttachmentFlags.Remote)
                         {
-                            throw new NotSupportedException("Replicating retired attachments to sharded database is not supported.");
+                            throw new NotSupportedException("Replicating remote attachments to sharded database is not supported.");
                         }
 
                         break;

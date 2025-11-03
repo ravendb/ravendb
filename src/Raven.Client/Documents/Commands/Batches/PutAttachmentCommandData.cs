@@ -11,16 +11,16 @@ namespace Raven.Client.Documents.Commands.Batches
     public sealed class PutAttachmentCommandData : ICommandData
     {
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
-            : this(documentId, name, stream, contentType, changeVector, size: null, retireAttachmentParameters: null, hash: null, fromEtl: false)
+            : this(documentId, name, stream, contentType, changeVector, size: null, remoteAttachmentParameters: null, hash: null, fromEtl: false)
         {
         }
 
-        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, RetireAttachmentParameters retireAttachmentParameters) 
-            : this(documentId, name, stream, contentType, changeVector, size: null, retireAttachmentParameters: retireAttachmentParameters, hash: null, fromEtl: false)
+        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, RemoteAttachmentParameters remoteAttachmentParameters) 
+            : this(documentId, name, stream, contentType, changeVector, size: null, remoteAttachmentParameters: remoteAttachmentParameters, hash: null, fromEtl: false)
         {
         }
 
-        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, long? size, RetireAttachmentParameters retireAttachmentParameters, string hash, bool fromEtl)
+        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, long? size, RemoteAttachmentParameters remoteAttachmentParameters, string hash, bool fromEtl)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -33,13 +33,13 @@ namespace Raven.Client.Documents.Commands.Batches
             ContentType = contentType;
             ChangeVector = changeVector;
             FromEtl = fromEtl;
-            RetireParameters = retireAttachmentParameters;
+            RemoteParameters = remoteAttachmentParameters;
             Hash = hash;
 
             // when this is called from ETL we know the size in advance
             SizeInBytes = size;
 
-            PutAttachmentCommandHelper.TryValidateStream(stream, RetireParameters);
+            PutAttachmentCommandHelper.TryValidateStream(stream, RemoteParameters);
         }
 
         public string Id { get; }
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
-        public RetireAttachmentParameters RetireParameters { get; }
+        public RemoteAttachmentParameters RemoteParameters { get; }
         public string Hash { get; }
         internal bool FromEtl { get; }
         internal long? SizeInBytes { get; }
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString(),
                 [nameof(FromEtl)] = FromEtl,
-                [nameof(RetireParameters)] = RetireParameters?.ToJson(),
+                [nameof(RemoteParameters)] = RemoteParameters?.ToJson(),
                 [nameof(Hash)] = Hash
             };
 

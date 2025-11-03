@@ -175,7 +175,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                     Assert.Equal(1, session.Advanced.Attachments.GetNames(company).Length);
 
-                    session.Advanced.Defer(new PutAttachmentCommandData("companies/1", "file1", new MemoryStream(Encoding.UTF8.GetBytes("123")), null, null, retireAttachmentParameters: null));
+                    session.Advanced.Defer(new PutAttachmentCommandData("companies/1", "file1", new MemoryStream(Encoding.UTF8.GetBytes("123")), null, null, remoteAttachmentParameters: null));
 
                     session.SaveChanges();
 

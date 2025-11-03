@@ -7,11 +7,11 @@ namespace Raven.Client.Documents.Indexes
 {
     public interface IAttachmentObject
     {
-        public DateTime? RetireAt { get; }
+        public DateTime? RemoteAt { get; }
 
-        public RetiredAttachmentFlags RetireFlags { get; }
+        public RemoteAttachmentFlags RemoteFlags { get; }
 
-        public string RetireIdentifier { get; }
+        public string RemoteIdentifier { get; }
 
         public string Name { get; }
 

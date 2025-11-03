@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected void PreProcessAttachments(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                if (_replicationInfo.SupportedFeatures.Replication.RetiredAttachments == false)
+                if (_replicationInfo.SupportedFeatures.Replication.RemoteAttachments == false)
                 {
                     switch (item)
                     {
@@ -452,14 +452,14 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 if (newChangeVector != null)
                                 {
-                                    RetireAttachmentParameters retiredParams = null;
-                                    if (attachment.RetireAtUtc.HasValue)
+                                    RemoteAttachmentParameters remoteParams = null;
+                                    if (attachment.RemoteAtUtc.HasValue)
                                     {
-                                        retiredParams = new RetireAttachmentParameters(attachment.RetireIdentifier.ToString(), attachment.RetireAtUtc.Value) { Flags = attachment.Flags };
+                                        remoteParams = new RemoteAttachmentParameters(attachment.RemoteIdentifier.ToString(), attachment.RemoteAtUtc.Value) { Flags = attachment.Flags };
                                     }
 
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, retiredParams, attachment.AttachmentSize, isRevision, newChangeVector);
+                                        contentType, attachment.Base64Hash, remoteParams, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;
@@ -836,8 +836,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
-                    if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) && retireParameters != null
-                        && retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flags) && flags == RetiredAttachmentFlags.Retired)
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) && remoteParameters != null
+                        && remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.Remote)
                         continue;
                     if (context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash))
                         continue;

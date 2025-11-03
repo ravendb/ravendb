@@ -27,5 +27,5 @@ public interface IStoreAttachmentParameters
     /// <summary>
     /// The date to upload the attachment to cloud.
     /// </summary>
-    RetireAttachmentParameters RetireParameters { get; set; }
+    RemoteAttachmentParameters RemoteParameters { get; set; }
 }

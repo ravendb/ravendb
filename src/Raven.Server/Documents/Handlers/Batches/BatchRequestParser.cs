@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string ContentType;
             public AttachmentType AttachmentType;
             public long? SizeInBytes;
-            public RetireAttachmentParameters RetireParameters;
+            public RemoteAttachmentParameters RemoteParameters;
             public string Hash;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
@@ -346,25 +346,25 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                         break;
 
-                    case CommandPropertyName.RetireParameters:
+                    case CommandPropertyName.RemoteParameters:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
-                        using (var retireParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
+                        using (var remoteParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
                         {
-                            if (retireParameters == null)
+                            if (remoteParameters == null)
                                 break;
 
-                            if (retireParameters.TryGet(nameof(RetireAttachmentParameters.At), out DateTime at) == false)
-                                throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.At)}' property on '{nameof(RetireAttachmentParameters)}'");
+                            if (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.At), out DateTime at) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RemoteAttachmentParameters.At)}' property on '{nameof(RemoteAttachmentParameters)}'");
 
-                            if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flag) == false)
-                                throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Flags)}' property on '{nameof(RetireAttachmentParameters)}'");
+                            if (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flag) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RemoteAttachmentParameters.Flags)}' property on '{nameof(RemoteAttachmentParameters)}'");
 
-                            if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Identifier), out string identifier) == false)
-                                throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Identifier)}' property on '{nameof(RetireAttachmentParameters)}'");
+                            if (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Identifier), out string identifier) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RemoteAttachmentParameters.Identifier)}' property on '{nameof(RemoteAttachmentParameters)}'");
 
-                            commandData.RetireParameters = new RetireAttachmentParameters(identifier, at) { Flags = flag };
+                            commandData.RemoteParameters = new RemoteAttachmentParameters(identifier, at) { Flags = flag };
                         }
 
                         break;
@@ -755,7 +755,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             ContentType,
             AttachmentType,
             SizeInBytes,
-            RetireParameters,
+            RemoteParameters,
             Hash,
             #endregion Attachment
 
@@ -895,8 +895,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                     return CommandPropertyName.NoSuchProperty;
 
                 case 16:
-                    if ("RetireParameters"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.RetireParameters;
+                    if ("RemoteParameters"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.RemoteParameters;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 20:

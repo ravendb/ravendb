@@ -2,7 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -18,12 +18,12 @@ namespace SlowTests.Issues
         {
         }
 
-        private RetiredAttachmentsConfiguration SampleConfig() => new RetiredAttachmentsConfiguration
+        private RemoteAttachmentsConfiguration SampleConfig() => new RemoteAttachmentsConfiguration
         {
-            Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+            Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
             {
                 {
-                    "conf-identifier", new RetiredAttachmentsDestinationConfiguration()
+                    "conf-identifier", new RemoteAttachmentsDestinationConfiguration()
                     {
                         Disabled = true,
                         S3Settings = new S3Settings
@@ -37,12 +37,12 @@ namespace SlowTests.Issues
                     }
                 }
             },
-            RetireFrequencyInSec = 123456,
+            CheckFrequencyInSec = 123456,
         };
 
         [RavenTheory(RavenTestCategory.Certificates)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CannotGetRetireConfigWithValidUserPermission(Options options)
+        public void CannotGetRemoteConfigWithValidUserPermission(Options options)
         {
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(options))
             {
                 AuthorizationException ex = Assert.Throws<AuthorizationException>(() =>
-                    store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation()));
+                    store.Maintenance.Send(new GetRemoteAttachmentsConfigurationOperation()));
                 Assert.NotNull(ex);
 
                 Assert.Contains($"Forbidden access to {store.Database}", ex.Message);
@@ -75,7 +75,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Certificates)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CanGetRetireConfigWithValidAdminPermission(Options options)
+        public void CanGetRemoteConfigWithValidAdminPermission(Options options)
         {
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
@@ -98,13 +98,13 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(options))
             {
-                var cfg = store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
+                var cfg = store.Maintenance.Send(new GetRemoteAttachmentsConfigurationOperation());
             }
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CanAddRetireConfigWithDatabaseAdminPermission(Options options)
+        public void CanAddRemoteConfigWithDatabaseAdminPermission(Options options)
         {
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
@@ -128,19 +128,19 @@ namespace SlowTests.Issues
             {
                 var cfg = SampleConfig();
 
-                store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg));
+                store.Maintenance.Send(new ConfigureRemoteAttachmentsOperation(cfg));
 
-                var returned = store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
+                var returned = store.Maintenance.Send(new GetRemoteAttachmentsConfigurationOperation());
                 Assert.Equal(1, returned.Destinations.Count);
                 Assert.True(returned.Destinations.First().Value.Disabled);
-                var x = returned.RetireFrequencyInSec;
-                Assert.Equal(123456, returned.RetireFrequencyInSec);
+                var x = returned.CheckFrequencyInSec;
+                Assert.Equal(123456, returned.CheckFrequencyInSec);
             }
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CannotAddRetireConfigWithoutDatabaseAdminPermission(Options options)
+        public void CannotAddRemoteConfigWithoutDatabaseAdminPermission(Options options)
         {
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
@@ -166,7 +166,7 @@ namespace SlowTests.Issues
                 var cfg = SampleConfig();
 
                 Assert.Throws<AuthorizationException>(() =>
-                    store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg)));
+                    store.Maintenance.Send(new ConfigureRemoteAttachmentsOperation(cfg)));
             }
         }
     }

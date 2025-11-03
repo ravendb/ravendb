@@ -66,42 +66,42 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public DateTime? RetireAt
+        public DateTime? RemoteAt
         {
             get
             {
-                if (_attachment.RetireParameters == null)
+                if (_attachment.RemoteParameters == null)
                 {
                     return DateTime.MaxValue;
                 }
 
-                return _attachment.RetireParameters.At;
+                return _attachment.RemoteParameters.At;
             }
         }
 
-        public RetiredAttachmentFlags RetireFlags
+        public RemoteAttachmentFlags RemoteFlags
         {
             get
             {
-                if (_attachment.RetireParameters == null)
+                if (_attachment.RemoteParameters == null)
                 {
-                    return RetiredAttachmentFlags.None;
+                    return RemoteAttachmentFlags.None;
                 }
 
-                return _attachment.RetireParameters.Flags;
+                return _attachment.RemoteParameters.Flags;
             }
         }
 
-        public string RetireIdentifier
+        public string RemoteIdentifier
         {
             get
             {
-                if (_attachment.RetireParameters == null)
+                if (_attachment.RemoteParameters == null)
                 {
                     return DynamicNullObject.ExplicitNull;
                 }
 
-                return _attachment.RetireParameters.Identifier;
+                return _attachment.RemoteParameters.Identifier;
             }
         }
 
@@ -112,8 +112,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string GetContentAsString(Encoding encoding)
         {
-            if (_attachment.RetireParameters.IsRetiredStorageAttachment())
-                ThrowRetiredAttachmentException(nameof(GetContentAsString));
+            if (_attachment.RemoteParameters.IsRemoteStorageAttachment())
+                ThrowRemoteAttachmentException(nameof(GetContentAsString));
 
             if (_contentAsString == null)
             {
@@ -128,8 +128,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Stream GetContentAsStream()
         {
-            if (_attachment.RetireParameters.IsRetiredStorageAttachment())
-                ThrowRetiredAttachmentException(nameof(GetContentAsStream));
+            if (_attachment.RemoteParameters.IsRemoteStorageAttachment())
+                ThrowRemoteAttachmentException(nameof(GetContentAsStream));
 
             _attachment.Stream.Position = 0;
 
@@ -142,11 +142,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
 
-        private void ThrowRetiredAttachmentException(string methodName)
+        private void ThrowRemoteAttachmentException(string methodName)
         {
-            throw new RetiredAttachmentIndexingException(
-                $"Attempted to {methodName} retired attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
-                " retired attachments are no longer available locally.");
+            throw new RemoteAttachmentIndexingException(
+                $"Attempted to {methodName} remote attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
+                " remote attachments are no longer available locally.");
         }
     }
 }

@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
         
-        public static readonly Func<BlittableJsonReaderObject, RetiredAttachmentsConfiguration> RetiredAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RetiredAttachmentsConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, RemoteAttachmentsConfiguration> RemoteAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RemoteAttachmentsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
@@ -201,7 +201,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
             [nameof(EditDataArchivalCommand)] = GenerateJsonDeserializationRoutine<EditDataArchivalCommand>(),
-            [nameof(EditRetireAttachmentsCommand)] = GenerateJsonDeserializationRoutine<EditRetireAttachmentsCommand>(),
+            [nameof(EditRemoteAttachmentsCommand)] = GenerateJsonDeserializationRoutine<EditRemoteAttachmentsCommand>(),
             [nameof(EditDocumentsCompressionCommand)] = GenerateJsonDeserializationRoutine<EditDocumentsCompressionCommand>(),
             [nameof(EditRefreshCommand)] = GenerateJsonDeserializationRoutine<EditRefreshCommand>(),
             [nameof(CreateNewShardCommand)] = GenerateJsonDeserializationRoutine<CreateNewShardCommand>(),

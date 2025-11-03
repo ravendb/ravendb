@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Sharding;
 using Tests.Infrastructure;
@@ -18,31 +18,31 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Attachments)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void CanGetRetireConfigShardedShouldThrow(Options options)
+        public void CanGetRemoteConfigShardedShouldThrow(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 var e = Assert.Throws<NotSupportedInShardingException>(() =>
                 {
-                    store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
+                    store.Maintenance.Send(new GetRemoteAttachmentsConfigurationOperation());
                 });
-                Assert.Contains("Retired attachments does not support sharding", e.Message);
+                Assert.Contains("Remote attachments does not support sharding", e.Message);
             }
         }
 
         [RavenTheory(RavenTestCategory.Attachments)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void CanAddRetireConfigShardedShouldThrow(Options options)
+        public void CanAddRemoteConfigShardedShouldThrow(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 var id = "does-not-exist-identifier";
-                var cfg = new RetiredAttachmentsConfiguration()
+                var cfg = new RemoteAttachmentsConfiguration()
                 {
-                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
                     {
                         {
-                            id, new RetiredAttachmentsDestinationConfiguration()
+                            id, new RemoteAttachmentsDestinationConfiguration()
                             {
                                 S3Settings = new S3Settings
                                 {
@@ -53,14 +53,14 @@ namespace SlowTests.Issues
                             }
                         }
                     },
-                    RetireFrequencyInSec = 123
+                    CheckFrequencyInSec = 123
                 };
 
                 var e = Assert.Throws<NotSupportedInShardingException>(() =>
                 {
-                    store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg));
+                    store.Maintenance.Send(new ConfigureRemoteAttachmentsOperation(cfg));
                 });
-                Assert.Contains("Retired attachments does not support sharding", e.Message);
+                Assert.Contains("Remote attachments does not support sharding", e.Message);
             }
         }
     }

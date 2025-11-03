@@ -79,7 +79,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationWithTimeSeries = 50_000;
         public static readonly int ReplicationWithDeduplicatedAttachments = 53_001;
         public static readonly int ReplicationWithRevisionTombstones = 60_000;
-        public static readonly int ReplicationWithRetireAttachments = 72_000;
+        public static readonly int ReplicationWithRemoteAttachments = 72_000;
 
         public static readonly int TcpConnectionsWithCompression = 53_000;
         public static readonly int SubscriptionBaseLine = 40;
@@ -90,7 +90,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly int ClusterTcpVersion = ClusterWithTcpCompression;
         public static readonly int HeartbeatsTcpVersion = HeartbeatsWithTcpCompression;
-        public static readonly int ReplicationTcpVersion = ReplicationWithRetireAttachments;
+        public static readonly int ReplicationTcpVersion = ReplicationWithRemoteAttachments;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -265,7 +265,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool IncrementalTimeSeries;
                 public bool DeduplicatedAttachments;
                 public bool RevisionTombstonesWithId;
-                public bool RetiredAttachments;
+                public bool RemoteAttachments;
             }
         }
 
@@ -294,7 +294,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
-                    ReplicationWithRetireAttachments,
+                    ReplicationWithRemoteAttachments,
                     ReplicationWithRevisionTombstones,
                     ReplicationWithDeduplicatedAttachments,
                     TcpConnectionsWithCompression,
@@ -390,12 +390,12 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
-                    [ReplicationWithRetireAttachments] = new SupportedFeatures(ReplicationWithRetireAttachments)
+                    [ReplicationWithRemoteAttachments] = new SupportedFeatures(ReplicationWithRemoteAttachments)
                     {
                         DataCompression = true,
                         Replication = new SupportedFeatures.ReplicationFeatures
                         {
-                            RetiredAttachments = true,
+                            RemoteAttachments = true,
                             RevisionTombstonesWithId = true,
                             DeduplicatedAttachments = true,
                             MissingAttachments = true,

@@ -43,7 +43,7 @@ namespace FastTests.Server.Basic
                 nameof(DatabaseRecord.EmbeddingsGenerations),
                 nameof(DatabaseRecord.GenAis),
                 nameof(DatabaseRecord.AiAgents),
-                nameof(DatabaseRecord.RetiredAttachments)
+                nameof(DatabaseRecord.RemoteAttachments)
             };
             
             foreach (var safe in ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)

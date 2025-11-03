@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     using var stream = new MemoryStream(new byte[] { 6, 7, 8, 9, 10 });
 
                     // should not throw a concurrency exception
-                    var cmd = new PutAttachmentCommandData(documentId, name, stream, contentType, changeVector: attachment.Details.ChangeVector, retireAttachmentParameters: null);
+                    var cmd = new PutAttachmentCommandData(documentId, name, stream, contentType, changeVector: attachment.Details.ChangeVector, remoteAttachmentParameters: null);
                     session.Advanced.Defer(cmd);
                     session.SaveChanges();
                 }

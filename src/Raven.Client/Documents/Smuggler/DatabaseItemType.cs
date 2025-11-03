@@ -68,6 +68,6 @@ namespace Raven.Client.Documents.Smuggler
         AiConnectionStrings = 1L << 33,
         GenAiEtls = 1L << 34,
         AiAgents = 1L << 35,
-        RetireAttachments = 1 << 36,
+        RemoteAttachments = 1L << 36,
     }
 }

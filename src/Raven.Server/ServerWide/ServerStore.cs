@@ -2063,11 +2063,11 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editDataArchival);
         }
 
-        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRetire(TransactionOperationContext context, string databaseName, RetiredAttachmentsConfiguration configuration, string raftRequestId)
+        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRemote(TransactionOperationContext context, string databaseName, RemoteAttachmentsConfiguration configuration, string raftRequestId)
         {
-            var editRetireAttachmentsCommand = new EditRetireAttachmentsCommand(configuration, databaseName, raftRequestId);
+            var editRemoteAttachmentsCommand = new EditRemoteAttachmentsCommand(configuration, databaseName, raftRequestId);
 
-            return SendToLeaderAsync(editRetireAttachmentsCommand);
+            return SendToLeaderAsync(editRemoteAttachmentsCommand);
         }
 
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)

@@ -17,6 +17,6 @@ namespace Raven.Server.Documents
         public Stream Stream;
         public short TransactionMarker;
         public long Size;
-        public RetireAttachmentParameters RetireParameters;
+        public RemoteAttachmentParameters RemoteParameters;
     }
 }

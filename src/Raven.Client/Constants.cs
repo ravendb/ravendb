@@ -186,9 +186,9 @@ namespace Raven.Client
             /// </summary>
             public const string AttachmentSize = "Attachment-Size";
 
-            public const string AttachmentRetireParametersAt = "Attachment-RetireParameters-At";
-            public const string AttachmentRetireParametersFlags = "Attachment-RetireParameters-Flags";
-            public const string AttachmentRetireParametersIdentifier = "Attachment-RetireParameters-Identifier";
+            public const string AttachmentRemoteParametersAt = "Attachment-RemoteParameters-At";
+            public const string AttachmentRemoteParametersFlags = "Attachment-RemoteParameters-Flags";
+            public const string AttachmentRemoteParametersIdentifier = "Attachment-RemoteParameters-Identifier";
 
             internal const string DatabaseMissing = "Database-Missing";
 

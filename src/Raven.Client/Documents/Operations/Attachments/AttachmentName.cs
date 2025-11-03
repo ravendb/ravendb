@@ -31,7 +31,7 @@ public class AttachmentName
     /// </summary>
     public long Size;
 
-    public RetireAttachmentParameters RetireParameters;
+    public RemoteAttachmentParameters RemoteParameters;
 
     internal virtual DynamicJsonValue ToJson()
     {
@@ -43,8 +43,8 @@ public class AttachmentName
             [nameof(Size)] = Size
         };
 
-        if (RetireParameters != null)
-            json[nameof(RetireParameters)] = RetireParameters.ToJson();
+        if (RemoteParameters != null)
+            json[nameof(RemoteParameters)] = RemoteParameters.ToJson();
 
         return json;
     }

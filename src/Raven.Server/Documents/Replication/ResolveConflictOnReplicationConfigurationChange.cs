@@ -508,13 +508,13 @@ namespace Raven.Server.Documents.Replication
                             x.Hash == attachment.Hash && 
                             x.ContentType == attachment.ContentType &&
                             x.Size == attachment.Size &&
-                            x.RetireParameters == attachment.RetireParameters))
+                            x.RemoteParameters == attachment.RemoteParameters))
                     {
                         found = true;
                        // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure
                        // all nodes have the same change vector value after replication
                         var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId, 
-                            attachment.Name, attachment.ContentType, attachment.Hash, attachment.Size, attachment.RetireParameters,
+                            attachment.Name, attachment.ContentType, attachment.Hash, attachment.Size, attachment.RemoteParameters,
                             stream: null, expectedChangeVector: null,  updateDocument: false);
                         continue;
                     }

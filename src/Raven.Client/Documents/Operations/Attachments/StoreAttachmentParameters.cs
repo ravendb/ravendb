@@ -21,7 +21,7 @@ public class StoreAttachmentParameters : IStoreAttachmentParameters
     public string ContentType { get; set; }
 
     /// <inheritdoc />
-    public RetireAttachmentParameters RetireParameters { get; set; }
+    public RemoteAttachmentParameters RemoteParameters { get; set; }
 
     public StoreAttachmentParameters(string name, Stream stream)
     {

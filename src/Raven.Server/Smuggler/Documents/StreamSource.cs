@@ -211,17 +211,17 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.RetiredAttachments), out BlittableJsonReaderObject retireAttachments) &&
-                    retireAttachments != null)
+                if (reader.TryGet(nameof(databaseRecord.RemoteAttachments), out BlittableJsonReaderObject remoteAttachments) &&
+                    remoteAttachments != null)
                 {
                     try
                     {
-                        databaseRecord.RetiredAttachments = JsonDeserializationCluster.RetiredAttachmentsConfiguration(retireAttachments);
+                        databaseRecord.RemoteAttachments = JsonDeserializationCluster.RemoteAttachmentsConfiguration(remoteAttachments);
                     }
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info($"Wasn't able to import the {nameof(RetiredAttachmentsConfiguration)} from smuggler file. Skipping.", e);
+                            _log.Info($"Wasn't able to import the {nameof(RemoteAttachmentsConfiguration)} from smuggler file. Skipping.", e);
                     }
                 }
 

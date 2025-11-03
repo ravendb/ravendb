@@ -113,18 +113,18 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
             public Stream Stream;
             public string Hash;
-            public DateTime? RetireAt;
-            public string RetireIdentifier;
+            public DateTime? RemoteAt;
+            public string RemoteIdentifier;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                RetireAttachmentParameters retireParameters = null;
-                if (RetireAt.HasValue)
+                RemoteAttachmentParameters remoteParameters = null;
+                if (RemoteAt.HasValue)
                 {
-                    retireParameters = new RetireAttachmentParameters(RetireIdentifier, RetireAt.Value) {  Flags = RetiredAttachmentFlags.None };
+                    remoteParameters = new RemoteAttachmentParameters(RemoteIdentifier, RemoteAt.Value) {  Flags = RemoteAttachmentFlags.None };
                 }
 
-                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, Stream.Length, retireParameters, ExpectedChangeVector, Stream);
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, Stream.Length, remoteParameters, ExpectedChangeVector, Stream);
                 return 1;
             }
 
@@ -138,8 +138,8 @@ namespace Raven.Server.Documents.Handlers
                     ContentType = ContentType,
                     Stream = Stream,
                     Hash = Hash,
-                    RetireAt = RetireAt,
-                    RetireIdentifier = RetireIdentifier
+                    RemoteAt = RemoteAt,
+                    RemoteIdentifier = RemoteIdentifier
                 };
             }
         }
@@ -177,8 +177,8 @@ namespace Raven.Server.Documents.Handlers
         public string ContentType;
         public Stream Stream;
         public string Hash;
-        public DateTime? RetireAt;
-        public string RetireIdentifier;
+        public DateTime? RemoteAt;
+        public string RemoteIdentifier;
         public AttachmentHandler.MergedPutAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedPutAttachmentCommand
@@ -190,8 +190,8 @@ namespace Raven.Server.Documents.Handlers
                 Stream = Stream,
                 Hash = Hash,
                 Database = database,
-                RetireAt = RetireAt,
-                RetireIdentifier = RetireIdentifier
+                RemoteAt = RemoteAt,
+                RemoteIdentifier = RemoteIdentifier
             };
         }
     }

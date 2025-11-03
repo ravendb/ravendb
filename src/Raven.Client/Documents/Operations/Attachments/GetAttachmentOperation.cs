@@ -156,24 +156,24 @@ namespace Raven.Client.Documents.Operations.Attachments
                 if (response.Headers.TryGetValues(Constants.Headers.AttachmentSize, out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
 
-                var retireIdentifier = response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersIdentifier, out IEnumerable<string> retireIdentifierVal) ? Uri.UnescapeDataString(retireIdentifierVal.First()) : null;
-                RetireAttachmentParameters retireParameters = null;
-                if (string.IsNullOrEmpty(retireIdentifier) == false)
+                var remoteIdentifier = response.Headers.TryGetValues(Constants.Headers.AttachmentRemoteParametersIdentifier, out IEnumerable<string> remoteIdentifierVal) ? Uri.UnescapeDataString(remoteIdentifierVal.First()) : null;
+                RemoteAttachmentParameters remoteParameters = null;
+                if (string.IsNullOrEmpty(remoteIdentifier) == false)
                 {
-                    DateTime attachmentRetireAt = default;
-                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersAt, out IEnumerable<string> dt) == false)
-                        ThrowOnMissingHeader(Constants.Headers.AttachmentRetireParametersAt);
+                    DateTime attachmentRemoteAt = default;
+                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRemoteParametersAt, out IEnumerable<string> dt) == false)
+                        ThrowOnMissingHeader(Constants.Headers.AttachmentRemoteParametersAt);
 
-                    if (DateTime.TryParseExact(dt.First(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out attachmentRetireAt) == false)
-                        ThrowOnBadHeader(Constants.Headers.AttachmentRetireParametersAt, dt.First());
+                    if (DateTime.TryParseExact(dt.First(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out attachmentRemoteAt) == false)
+                        ThrowOnBadHeader(Constants.Headers.AttachmentRemoteParametersAt, dt.First());
 
-                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersFlags, out IEnumerable<string> flagsVal) == false)
-                        ThrowOnMissingHeader(Constants.Headers.AttachmentRetireParametersFlags);
+                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRemoteParametersFlags, out IEnumerable<string> flagsVal) == false)
+                        ThrowOnMissingHeader(Constants.Headers.AttachmentRemoteParametersFlags);
 
-                    if (Enum.TryParse(flagsVal.First(), out RetiredAttachmentFlags attachmentFlags) == false)
-                        ThrowOnBadHeader(Constants.Headers.AttachmentRetireParametersFlags, flagsVal.First());
+                    if (Enum.TryParse(flagsVal.First(), out RemoteAttachmentFlags attachmentFlags) == false)
+                        ThrowOnBadHeader(Constants.Headers.AttachmentRemoteParametersFlags, flagsVal.First());
 
-                    retireParameters = new RetireAttachmentParameters(retireIdentifier, attachmentRetireAt)
+                    remoteParameters = new RemoteAttachmentParameters(remoteIdentifier, attachmentRemoteAt)
                     {
                         Flags = attachmentFlags
                     };
@@ -187,7 +187,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     Size = size,
                     ChangeVector = changeVector,
                     DocumentId = _documentId,
-                    RetireParameters = retireParameters
+                    RemoteParameters = remoteParameters
                 };
 
                 var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
@@ -205,12 +205,12 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             private void ThrowOnMissingHeader(string header)
             {
-                throw new InvalidOperationException($"Attachment retire parameters header '{header}' is missing for attachment '{_name}' on document '{_documentId}'.");
+                throw new InvalidOperationException($"Attachment remote parameters header '{header}' is missing for attachment '{_name}' on document '{_documentId}'.");
             }
 
             private void ThrowOnBadHeader(string header, string value)
             {
-                throw new InvalidOperationException($"Attachment retire parameters header '{header}' has invalid value '{value}' for attachment '{_name}' on document '{_documentId}'.");
+                throw new InvalidOperationException($"Attachment remote parameters header '{header}' has invalid value '{value}' for attachment '{_name}' on document '{_documentId}'.");
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)

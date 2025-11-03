@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly string _name;
         private readonly Stream _stream;
         private readonly string _contentType;
-        private readonly RetireAttachmentParameters _retireParameters;
+        private readonly RemoteAttachmentParameters _remoteParameters;
         private readonly string _changeVector;
 
         /// <summary>
@@ -35,15 +35,15 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// <param name="name">The name of the attachment.</param>
         /// <param name="stream">The stream containing the binary content of the attachment.</param>
         /// <param name="contentType">The MIME type of the attachment (optional).</param>
-        /// <param name="retireParameters">The parameters for retiring the attachment.</param>
+        /// <param name="remoteParameters">The parameters for retiring the attachment.</param>
         /// <param name="changeVector">An optional change vector for concurrency control.</param>
-        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, RetireAttachmentParameters retireParameters = null, string changeVector = null)
+        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, RemoteAttachmentParameters remoteParameters = null, string changeVector = null)
         {
             _documentId = documentId;
             _name = name;
             _stream = stream;
             _contentType = contentType;
-            _retireParameters = retireParameters;
+            _remoteParameters = remoteParameters;
             _changeVector = changeVector;
         }
 
@@ -58,13 +58,13 @@ namespace Raven.Client.Documents.Operations.Attachments
             _name = parameters.Name;
             _stream = parameters.Stream;
             _contentType = parameters.ContentType;
-            _retireParameters = parameters.RetireParameters;
+            _remoteParameters = parameters.RemoteParameters;
             _changeVector = parameters.ChangeVector;
         }
 
         public RavenCommand<AttachmentDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector, _retireParameters);
+            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector, _remoteParameters);
         }
 
         internal sealed class PutAttachmentCommand : RavenCommand<AttachmentDetails>
@@ -73,16 +73,16 @@ namespace Raven.Client.Documents.Operations.Attachments
             private readonly string _name;
             private readonly Stream _stream;
             private readonly string _contentType;
-            private readonly RetireAttachmentParameters _retireParameters;
+            private readonly RemoteAttachmentParameters _remoteParameters;
             private readonly string _changeVector;
             private readonly bool _validateStream;
 
-            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, RetireAttachmentParameters retireParameters) : 
-                this(documentId, name, stream, contentType, changeVector, retireParameters, validateStream: true)
+            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, RemoteAttachmentParameters remoteParameters) : 
+                this(documentId, name, stream, contentType, changeVector, remoteParameters, validateStream: true)
             {
             }
 
-            internal PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, RetireAttachmentParameters retireParameters, bool validateStream)
+            internal PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, RemoteAttachmentParameters remoteParameters, bool validateStream)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 _name = name;
                 _stream = stream;
                 _contentType = contentType;
-                _retireParameters = retireParameters;
+                _remoteParameters = remoteParameters;
                 _changeVector = changeVector;
                 _validateStream = validateStream;
 
@@ -109,10 +109,10 @@ namespace Raven.Client.Documents.Operations.Attachments
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 if (string.IsNullOrWhiteSpace(_contentType) == false)
                     url += $"&contentType={Uri.EscapeDataString(_contentType)}";
-                if (_retireParameters != null)
+                if (_remoteParameters != null)
                 {
-                    url += $"&retireAt={Uri.EscapeDataString(_retireParameters.At.EnsureUtc().GetDefaultRavenFormat())}";
-                    url += $"&retireIdentifier={Uri.EscapeDataString(_retireParameters.Identifier)}";
+                    url += $"&remoteAt={Uri.EscapeDataString(_remoteParameters.At.EnsureUtc().GetDefaultRavenFormat())}";
+                    url += $"&remoteIdentifier={Uri.EscapeDataString(_remoteParameters.Identifier)}";
                 }
 
                 var request = new HttpRequestMessage
