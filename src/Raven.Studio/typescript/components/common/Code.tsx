@@ -9,6 +9,7 @@ import Button from "react-bootstrap/Button";
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
 require("prismjs/components/prism-json");
+require("prismjs/components/prism-sql");
 
 export const supportedCodeLanguages = [
     "plaintext",
@@ -25,6 +26,7 @@ export const supportedCodeLanguages = [
     "javascript",
     "csharp",
     "json",
+    "sql",
 ] as const;
 
 export type CodeLanguage = (typeof supportedCodeLanguages)[number];

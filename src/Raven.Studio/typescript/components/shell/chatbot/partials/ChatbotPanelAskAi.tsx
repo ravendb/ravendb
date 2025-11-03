@@ -44,7 +44,7 @@ export default function ChatbotPanelAskAi() {
 
     return (
         <div className="vstack flex-grow py-2 h-100">
-            <div className="flex-grow-1 overflow-y-auto">
+            <div className="overflow-y-auto">
                 <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
                 <ChatbotCommonActions />
             </div>

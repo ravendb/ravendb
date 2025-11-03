@@ -1,12 +1,17 @@
 import ClickableCard from "components/common/ClickableCard";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotActions, chatbotSelectors } from "../store/chatbotSlice";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 export default function ChatbotCommonActions() {
     const dispatch = useAppDispatch();
+
+    const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const messagesCount = useAppSelector(chatbotSelectors.messagesCount);
 
-    if (messagesCount > 0) {
+    const isConsentSuccess = consentStatus.data === "Success";
+
+    if (messagesCount > 0 || !isConsentSuccess) {
         return null;
     }
 

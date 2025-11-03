@@ -13,6 +13,7 @@ import RichAlert from "components/common/RichAlert";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotSelectors } from "../store/chatbotSlice";
 import { ChatbotRelevantLink } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import { Element } from "hast";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -158,32 +159,84 @@ const markdownComponents: Components = {
         <blockquote className="blockquote fs-4 p-2 panel-bg-2 rounded-2">{children}</blockquote>
     ),
     pre: ({ node, children }) => {
-        let language: CodeLanguage = "plaintext";
-        if (typeof node?.properties?.className === "string") {
-            language = node.properties.className.replace("language-", "") as CodeLanguage;
-        }
+        const languageFromNode = getLanguageFromNode(node);
+        const childrenData = getChildrenData(children);
 
-        // TODO fix typing
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        if (typeof node?.children?.[0]?.properties?.className?.[0] === "string") {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-expect-error
-            language = node.children[0].properties.className[0].replace("language-", "") as CodeLanguage;
-        }
+        const code = childrenData.code ?? "";
+        const language = getCodeLanguage(childrenData.language ?? languageFromNode);
 
-        let code = "";
-        if (isValidElement(children) && children.props && typeof (children.props as any).children === "string") {
-            code = (children.props as any).children;
-        } else if (typeof children === "string") {
-            code = children;
-        }
-
-        language = supportedCodeLanguages.includes(language) ? language : "plaintext";
-
-        return <Code code={code} elementToCopy={code} language={language} />;
+        return <Code code={code} elementToCopy={code} language={language} className="mb-2" />;
     },
 };
+
+function getLanguageFromNode(node: Element): string {
+    const className = node.properties.className;
+
+    if (typeof className === "string") {
+        return getLanguageFromClassName(className);
+    }
+
+    const children = node.children[0] as Element;
+    const childrenClassName = children.properties.className;
+
+    if (typeof childrenClassName === "string") {
+        return getLanguageFromClassName(childrenClassName);
+    }
+
+    if (Array.isArray(childrenClassName) && typeof childrenClassName[0] === "string") {
+        return getLanguageFromClassName(childrenClassName[0]);
+    }
+
+    return null;
+}
+
+function getChildrenData(children: React.ReactNode): { language: string; code: string } {
+    if (!isValidElement(children) || !children.props) {
+        return { language: null, code: null };
+    }
+
+    const props = children.props as any;
+
+    let language: string = null;
+    if (typeof props.className === "string") {
+        language = getLanguageFromClassName(props.className);
+    }
+
+    let code: string = null;
+    if (typeof props.children === "string") {
+        code = props.children;
+    } else if (typeof children === "string") {
+        code = children;
+    }
+
+    return { language, code };
+}
+
+function getLanguageFromClassName(className: string): string {
+    if (typeof className !== "string") {
+        return null;
+    }
+
+    return className.replace("language-", "");
+}
+
+function getCodeLanguage(language: string): CodeLanguage {
+    if (supportedCodeLanguages.includes(language as CodeLanguage)) {
+        return language as CodeLanguage;
+    }
+
+    switch (language) {
+        case "rql":
+            return "sql";
+        case "js":
+            return "javascript";
+        case "cs":
+        case "dotnet":
+            return "csharp";
+        default:
+            return "plaintext";
+    }
+}
 
 function RelevantLinks({ links }: { links: ChatbotRelevantLink[] }) {
     if (!links?.length) {
@@ -215,9 +268,9 @@ function FollowUpQuestions({ questions }: { questions: string[] }) {
     }
 
     return (
-        <div>
+        <div className="mt-2">
             <span className="small-label">Follow up questions</span>
-            <div className="vstack gap-2">
+            <div className="vstack gap-1">
                 {questions.map((question) => (
                     <div
                         key={question}
