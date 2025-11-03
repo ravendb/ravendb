@@ -151,7 +151,7 @@ export default function EditRevision(props: EditRevisionProps) {
                             <span className="text-muted">
                                 (
                                 {isAgeRetentionActive
-                                    ? "When age-based retention is configured, this is the minimum number of revisions to keep"
+                                    ? "The minimum number of revisions to keep (age-based retention enabled)"
                                     : "The maximum number of revisions to keep"}
                                 )
                             </span>
