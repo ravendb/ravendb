@@ -6,18 +6,18 @@ import {
     PayloadAction,
     Update,
 } from "@reduxjs/toolkit";
-import {
-    RunChatbotAiAssistantResultDto,
-    RunChatbotAiAssistantViewData,
-} from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotAiAssistantCommand";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
+import router from "plugins/router";
 
 export type ChatbotRole = "user" | "assistant";
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
-type ChatbotRunChatData = Omit<RunChatbotAiAssistantViewData, "RavenVersion">;
+interface ChatbotRunChatData {
+    message: string;
+}
 
 export interface ChatbotMessage {
     id: string;
@@ -37,7 +37,7 @@ interface ChatbotState {
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
     absoluteNotificationsWidth: number;
-    lastRunChatData: ChatbotRunChatData;
+    runChatLastMessage: string;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -54,7 +54,7 @@ const initialState: ChatbotState = {
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
     absoluteNotificationsWidth: 0,
-    lastRunChatData: null,
+    runChatLastMessage: null,
 };
 
 export const chatbotSlice = createSlice({
@@ -85,8 +85,8 @@ export const chatbotSlice = createSlice({
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
-        lastRunChatDataSet: (state, action: PayloadAction<ChatbotRunChatData>) => {
-            state.lastRunChatData = action.payload;
+        runChatLastMessageSet: (state, action: PayloadAction<string>) => {
+            state.runChatLastMessage = action.payload;
         },
         absoluteNotificationsWidthSet: (state, action: PayloadAction<number>) => {
             state.absoluteNotificationsWidth = action.payload;
@@ -109,12 +109,12 @@ export const chatbotSlice = createSlice({
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (
-        payload: { data: ChatbotRunChatData },
+        payload: ChatbotRunChatData,
         { dispatch, getState }
     ): Promise<ChatbotMessage | { failedResponseId: string }> => {
         const { aiAssistant, chatbot } = getState() as RootState;
 
-        dispatch(chatbotActions.lastRunChatDataSet(payload.data));
+        dispatch(chatbotActions.runChatLastMessageSet(payload.message));
 
         if (aiAssistant.consentStatus.data !== "Success") {
             throw new Error("AI Assistant consent is required");
@@ -123,7 +123,7 @@ const runChat = createAsyncThunk(
         const userMessage: ChatbotMessage = {
             id: _.uniqueId(),
             role: "user",
-            content: payload.data.Message,
+            content: payload.message,
             state: "success",
         };
 
@@ -145,8 +145,11 @@ const runChat = createAsyncThunk(
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
         try {
+            const viewTitle = router.activeInstruction().config.title;
+
             const response = await services.aiAssistantService.runChatbot({
-                ...payload.data,
+                Message: payload.message,
+                View: viewTitle,
                 ConversationId: chatbot.conversationId,
             });
 
@@ -225,9 +228,9 @@ const runChat = createAsyncThunk(
 
 const retryRunChat = createAsyncThunk(chatbotSlice.name + "/retryRunChat", async (_, { dispatch, getState }) => {
     const { chatbot } = getState() as RootState;
-    const { lastRunChatData } = chatbot;
+    const { runChatLastMessage } = chatbot;
 
-    return await dispatch(runChat({ data: lastRunChatData }));
+    return await dispatch(runChat({ message: runChatLastMessage }));
 });
 
 export const chatbotActions = {
@@ -243,7 +246,8 @@ export const chatbotSelectors = {
     chatbotResourcesTab: (state: RootState) => state.chatbot.chatbotResourcesTab,
     messageIds: (state: RootState) => chatbotMessagesSelectors.selectIds(state.chatbot.messages),
     getMessageById: (state: RootState, id: string) => chatbotMessagesSelectors.selectById(state.chatbot.messages, id),
+    messagesCount: (state: RootState) => chatbotMessagesSelectors.selectTotal(state.chatbot.messages),
     conversationId: (state: RootState) => state.chatbot.conversationId,
     absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
-    lastRunChatData: (state: RootState) => state.chatbot.lastRunChatData,
+    runChatLastMessage: (state: RootState) => state.chatbot.runChatLastMessage,
 };

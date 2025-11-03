@@ -6,7 +6,7 @@ interface ClickableCardProps {
     icon: IconName;
     title: string;
     description: string;
-    isSelected: boolean;
+    isSelected?: boolean;
     className?: string;
     isDisabled?: boolean;
     onClick: () => void;
@@ -24,7 +24,7 @@ export default function ClickableCard({
     return (
         <div
             className={classNames(
-                "border rounded p-2 cursor-pointer",
+                "border rounded p-2 cursor-pointer hover-filter",
                 {
                     "bg-faded-primary border-primary": isSelected,
                 },

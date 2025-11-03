@@ -28,7 +28,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
     const handleAskAi = useCallback(() => {
         dispatch(chatbotActions.conversationIdSet(null));
         dispatch(chatbotActions.isOpenSet(true));
-        dispatch(chatbotActions.runChat({ data: { View: "TODO", Message: searchQuery } }));
+        dispatch(chatbotActions.runChat({ message: searchQuery }));
         setSearchQuery("");
         setIsDropdownOpen(false);
     }, [searchQuery]);
