@@ -70,7 +70,7 @@ public class FacetIndexingRepro : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var c = wtx.OpenContainer("test");
+            var c = (ContainerId)wtx.OpenContainer("test");
 
             var items = Items;
             for (int i = 0; i < items.Length; i++)
@@ -81,7 +81,7 @@ public class FacetIndexingRepro : StorageTest
                         Container.Allocate(wtx.LowLevelTransaction, c, items[i].Item2, out _);
                         break;
                     case '-':
-                        Container.Delete(wtx.LowLevelTransaction, c, items[i].Item2);
+                        Container.Delete(wtx.LowLevelTransaction, c, (ContainerEntryId)items[i].Item2);
                         break;
                 }
             }

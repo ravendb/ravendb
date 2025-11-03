@@ -8,6 +8,7 @@ using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -321,7 +322,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public ref LookupState State => ref _state;
     public LowLevelTransaction Llt => _llt;
 
-    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name, long dictionaryId = -1, long termsContainerId = -1)
+    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name, long dictionaryId = -1, ContainerId termsContainerId = default)
     {
         var llt = parent.Llt;
 
@@ -358,7 +359,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         };
     }
     
-    public static void Create(LowLevelTransaction llt, out LookupState state, long dictionaryId = -1, long termsContainerId = -1)
+    public static void Create(LowLevelTransaction llt, out LookupState state, long dictionaryId = -1, ContainerId termsContainerId = default)
     {
         var newPage = llt.AllocatePage(1);
         var compactPageHeader = (LookupPageHeader*)newPage.Pointer;

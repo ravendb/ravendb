@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Voron.Data.Containers;
 
 namespace Voron.Data.Lookups
 {
@@ -24,7 +25,7 @@ namespace Voron.Data.Lookups
         [FieldOffset(40)]
         public long DictionaryId;
         [FieldOffset(48)]
-        public long TermsContainerId;
+        public ContainerId TermsContainerId;
         
 
         public override string ToString()

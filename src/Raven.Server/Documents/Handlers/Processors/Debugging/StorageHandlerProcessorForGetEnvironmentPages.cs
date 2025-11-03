@@ -55,7 +55,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
                     {
                         for (int i = 0; i < read; i++)
                         {
-                            Container.Get(tx.LowLevelTransaction, buffer[i], out var item);
+                            Container.Get(tx.LowLevelTransaction, new ContainerEntryId(buffer[i]), out var item);
                             var state = (PostingListState*)item.Address;
                             var pl = new PostingList(tx.LowLevelTransaction, Constants.IndexWriter.LargePostingListsSetSlice, *state);
                             list.AddRange(pl.AllPages());

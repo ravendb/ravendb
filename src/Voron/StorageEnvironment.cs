@@ -18,6 +18,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
+using Voron.Data.Containers;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
@@ -1300,10 +1301,10 @@ namespace Voron
             {
                 r.Add(container, name);
                 var overflowName = $"{name}/OverflowPage";
-                var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, container);
+                var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, (ContainerId)container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
                 RegisterPages(freePages.AllPages(), name + "/FreePagesSet");
-                var iterator = Voron.Data.Containers.Container.GetAllPagesIterator(tx.LowLevelTransaction, container);
+                var iterator = Voron.Data.Containers.Container.GetAllPagesIterator(tx.LowLevelTransaction, (ContainerId)container);
                 while (iterator.MoveNext(out var page))
                 {
                     var pageObject = tx.LowLevelTransaction.GetPage(page);
@@ -1321,9 +1322,9 @@ namespace Voron
             void RegisterLookup(Lookup<Int64LookupKey> numeric, string name)
             {
                 RegisterPages(numeric.AllPages(), name);
-                if (numeric.State.TermsContainerId > 0)
+                if ((long)numeric.State.TermsContainerId > 0)
                 {
-                    RegisterContainer(numeric.State.TermsContainerId, name + "/TermsContainer");
+                    RegisterContainer((long)numeric.State.TermsContainerId, name + "/TermsContainer");
                 }
             }
         }

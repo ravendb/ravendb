@@ -39,38 +39,41 @@ public sealed partial class CompactTree : IPrepareForCommit
     public unsafe struct CompactKeyLookup : ILookupKey
     {
         public CompactKey Key;
-        public long ContainerId;
+        public ContainerEntryId ContainerId;
+
+        public bool IsValid => ContainerId.IsValid;
+        public bool IsEmpty => ContainerId.IsEmpty;
 
         public CompactKeyLookup(CompactKey key)
         {
             Key = key;
-            ContainerId = -1;
+            ContainerId = ContainerEntryId.Invalid;
         }
 
-        public CompactKeyLookup(long containerId)
+        public CompactKeyLookup(long keyData)
         {
-            ContainerId = containerId;
+            ContainerId = (ContainerEntryId)keyData;
             Key = null;
         }
 
         public void Reset()
         {
-            ContainerId = -1;
+            ContainerId = ContainerEntryId.Invalid;
         }
 
         public long ToLong()
         {
-            return ContainerId;
+            return (long)ContainerId;
         }
 
-        public static T FromLong<T>(long l)
+        public static T FromLong<T>(long keyData)
         {
             if (typeof(T) != typeof(CompactKeyLookup))
             {
                 throw new NotSupportedException(typeof(T).FullName);
             }
 
-            return (T)(object)new CompactKeyLookup(l);
+            return (T)(object)new CompactKeyLookup(keyData);
         }
 
         public static long MinValue => 0;
@@ -83,7 +86,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
             byte* keyPtr;
             int keyLenInBits;
-            if (ContainerId == 0)
+            if (IsEmpty)
             {
                 keyPtr = null;
                 keyLenInBits = 0;
@@ -92,7 +95,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             {
                 GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
             }
-            
+
             Key = llt.AcquireCompactKey();
             Key.Initialize(llt);
             Key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
@@ -105,7 +108,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
             byte* keyPtr;
             int keyLenInBits;
-            if (ContainerId == 0)
+            if (IsEmpty)
             {
                 keyPtr = null;
                 keyLenInBits = 0;
@@ -114,7 +117,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             {
                 GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
             }
-            
+
             key.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
         }
 
@@ -123,38 +126,39 @@ public sealed partial class CompactTree : IPrepareForCommit
             GetKey(parent);
         }
 
-        public int CompareTo<T>(Lookup<T> parent, long currentKeyId) where T : struct, ILookupKey
+        /// <summary>
+        /// Compares this CompactKeyLookup with key data from storage.
+        /// The keyData parameter contains a ContainerEntryId stored as a long for interface compatibility.
+        /// </summary>
+        public int CompareTo<T>(Lookup<T> parent, long keyData) where T : struct, ILookupKey
         {
             var llt = parent.Llt;
 
             byte* keyPtr;
             int keyLengthInBits;
-            if (currentKeyId == 0)
+            if (keyData == 0)
             {
                 keyPtr = null;
                 keyLengthInBits = 0;
             }
             else
             {
-                GetEncodedKey(llt, currentKeyId, out keyLengthInBits, out keyPtr);
+                GetEncodedKey(llt, (ContainerEntryId)keyData, out keyLengthInBits, out keyPtr);
             }
 
             var k = GetKey(parent);
-            if (ReferenceEquals(k, CompactKey.NullInstance))
-                return -1; // null is smallest
-            
             var match = k.CompareEncodedWithCurrent(keyPtr, keyLengthInBits);
             if (match == 0)
             {
-                ContainerId = currentKeyId;
+                ContainerId = (ContainerEntryId)keyData;
             }
 
             return match;
         }
 
-        private static void GetEncodedKey(LowLevelTransaction llt, long l, out int encodedKeyLengthInBits, out byte* encodedKeyPtr) 
+        private static void GetEncodedKey(LowLevelTransaction llt, ContainerEntryId entryId, out int encodedKeyLengthInBits, out byte* encodedKeyPtr)
         {
-            Container.Get(llt, l, out var keyItem);
+            Container.Get(llt, entryId, out var keyItem);
             int remainderInBits = *keyItem.Address >> 4;
             var encodedKeyLen = keyItem.Length - 1;
             encodedKeyLengthInBits = encodedKeyLen * 8 - remainderInBits;
@@ -170,16 +174,16 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         public void CreateTermInContainer<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
-            if (ContainerId == -1) // need to save this in the external terms container
+            if (ContainerId == ContainerEntryId.Invalid) // need to save this in the external terms container
             {
                 var encodedKey = Key.EncodedWithCurrent(out int encodedKeyLengthInBits);
-                ContainerId = WriteTermToContainer(encodedKey, encodedKeyLengthInBits, ref parent.State, parent.Llt);
+                ContainerId = (ContainerEntryId)WriteTermToContainer(encodedKey, encodedKeyLengthInBits, ref parent.State, parent.Llt);
             }
         }
 
         public void OnKeyRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
-            if (ContainerId == 0)
+            if (IsEmpty)
                 return; // the empty key is not stored and cannot be referenced
             DecrementTermReferenceCount(parent.Llt, ContainerId, ref parent.State);
         }
@@ -191,23 +195,23 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         public int GetTermRefCount<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
-            if (ContainerId < 0)
+            if (!IsValid)
             {
                 return -1;
             }
 
-            var term = Container.Get(parent.Llt, ContainerId);
+            Container.Get(parent.Llt, ContainerId, out var term);
             return term.ToSpan()[0] & 0xF;
         }
 
         public T Clone<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
             Debug.Assert(typeof(T) == typeof(CompactKeyLookup));
-            
+
             var llt = parent.Llt;
             byte* keyPtr;
             int keyLenInBits;
-            if (ContainerId == 0)
+            if (IsEmpty)
             {
                 keyPtr = null;
                 keyLenInBits = 0;
@@ -228,7 +232,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             return Key?.ToString() ?? "ContainerId: " + ContainerId;
         }
 
-        private void DecrementTermReferenceCount(LowLevelTransaction llt, long keyContainerId, ref LookupState state)
+        private void DecrementTermReferenceCount(LowLevelTransaction llt, ContainerEntryId keyContainerId, ref LookupState state)
         {
             var term = Container.GetMutable(llt, keyContainerId);
             int termRefCount = term[0] & 0xF;
@@ -244,13 +248,13 @@ public sealed partial class CompactTree : IPrepareForCommit
         }
 
 
-        private void IncrementTermReferenceCount(LowLevelTransaction llt, long keyContainerId)
+        private void IncrementTermReferenceCount(LowLevelTransaction llt, ContainerEntryId keyContainerId)
         {
             var term = Container.GetMutable(llt, keyContainerId);
             int termRefCount = term[0] & 0xF;
             // A term usage count means that it is used by multiple pages at the same time. That can happen only if a leaf & branches are using
             // the same term as the separator. However, that has natural limits. As the term can only be in one path through the tree, the tree height
-            // is a natural limit. Compact tree at maximum storage will take ~17 bytes, which means at *least* 425 items, which means that that the 
+            // is a natural limit. Compact tree at maximum storage will take ~17 bytes, which means at *least* 425 items, which means that that the
             // height of the tree if we store 2^64 items it in would be 8. So even if we assume bad insert factor, which will increase the height of the
             // tree, having a limit of 15 is reasonable
             if (termRefCount == 15)
@@ -260,7 +264,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         }
 
 
-        private static long WriteTermToContainer(ReadOnlySpan<byte> encodedKey, int encodedKeyLengthInBits, ref LookupState state, LowLevelTransaction llt)
+        private static ContainerEntryId WriteTermToContainer(ReadOnlySpan<byte> encodedKey, int encodedKeyLengthInBits, ref LookupState state, LowLevelTransaction llt)
         {
             // the term in the container is:  [ metadata -1 byte ] [ term bytes ]
             // the metadata is composed of two nibbles - the first says the *remainder* of bits in the last byte in the term
@@ -312,18 +316,14 @@ public sealed partial class CompactTree : IPrepareForCommit
         Add(scope.Key, value);
     }
 
-    public void Add(ReadOnlySpan<byte> key, long value)
+    public long Add(ReadOnlySpan<byte> key, long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
-        Add(scope.Key, value);
+        return Add(scope.Key, value);
     }
 
-    public long AddAfterTryGetNext(ref CompactKeyLookup lookup, long value)
+    public void GetTermByContainerId(long containerId)
     {
-        CompactTreeDumper.WriteAddition(this, ref lookup, value);
-
-        _inner.AddAfterTryGetNext(ref lookup, value);
-        return lookup.ContainerId;
     }
     
     public void SetAfterTryGetNext(ref CompactKeyLookup lookup, long value)
@@ -339,15 +339,15 @@ public sealed partial class CompactTree : IPrepareForCommit
         CompactTreeDumper.WriteAddition(this, ref lookup, value);
         _inner.Add(ref lookup, value);
 
-        return lookup.ContainerId;
+        return (long)lookup.ContainerId;
     }
-    
+
     public long Add(CompactKeyLookup key, long value)
     {
         Debug.Assert(key.Key.Dictionary == _inner.State.DictionaryId);
         CompactTreeDumper.WriteAddition(this, ref key, value);
         _inner.Add(ref key, value);
-        return key.ContainerId;
+        return (long)key.ContainerId;
     }
 
     public void PrepareForCommit()
@@ -394,8 +394,8 @@ public sealed partial class CompactTree : IPrepareForCommit
                 dictionaryId = ((PersistentDictionaryRootHeader*)existingDictionary)->PageNumber;
             }
 
-            long containerId = Container.Create(llt);
-            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
+            var containerId = Container.Create(llt);
+            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, (ContainerId)containerId);
         }
         else
         {
@@ -449,12 +449,36 @@ public sealed partial class CompactTree : IPrepareForCommit
         return _inner.TryGetTermContainerId(new CompactKeyLookup(key), out value);
     }
 
+    public bool TryGetValue(ReadOnlySpan<byte> key, out long termContainerId, out long value)
+    {
+        using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
+        var ckl = new CompactKeyLookup(scope.Key);
+        var found = _inner.TryGetValue(ref ckl, out value);
+        termContainerId = (long)ckl.ContainerId;
+        return found;
+    }
+
+    /// <summary>
+    /// Retrieves the values associated with the specified CompactKey.
+    /// </summary>
+    /// <param name="termContainerId">The address of the CompactKey.</param>
+    /// <param name="value">The value stored under the CompactKey.</param>
+    /// <param name="key">The underlying value of the CompactKey.</param>
+    /// <returns>True if the value exists; otherwise, false.</returns>
+    public bool TryGetValue(long termContainerId, out long value, out ReadOnlySpan<byte> key)
+    {
+        var containerId = new CompactKeyLookup(termContainerId);
+        var found = _inner.TryGetValue(ref containerId, out value);
+        key = found ? containerId.Key.Decoded() : [];
+        return found;
+    }
+
     public bool TryGetValue(CompactKey key, out long termContainerId, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
         CompactKeyLookup compactKeyLookup = new(key);
         var result = _inner.TryGetValue(ref compactKeyLookup, out value);
-        termContainerId = compactKeyLookup.ContainerId;
+        termContainerId = (long)compactKeyLookup.ContainerId;
         return result;
     }
     
@@ -505,7 +529,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         key.EncodedWithCurrent(out _);
         lookup = new CompactKeyLookup(key);
         var result = _inner.TryGetNextValue(ref lookup, out value);
-        termContainerId = lookup.ContainerId;
+        termContainerId = (long)lookup.ContainerId;
         return result;
     }
     
@@ -533,13 +557,13 @@ public sealed partial class CompactTree : IPrepareForCommit
         #if DEBUG
         for (int i = 0; i < keys.Length; i++)
         {
-            Debug.Assert(keys[i].ContainerId == -1, "keys[i].ContainerId == -1");
+            Debug.Assert(keys[i].ContainerId == ContainerEntryId.Invalid, "keys[i].ContainerId == ContainerEntryId.Invalid");
         }
         #endif
         var read = _inner.BulkUpdateStart(keys, values, offsets, out pageNum);
         for (int i = 0; i < read; i++)
         {
-            if (keys[i].ContainerId == -1)
+            if (keys[i].ContainerId == ContainerEntryId.Invalid)
             {
                 keys[i].CreateTermInContainer(_inner);
             }

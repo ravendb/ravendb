@@ -5215,7 +5215,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         for (int i = 0; i < read; i++)
                         {
-                            Container.Get(llt, buffer[i], out var item);
+                            Container.Get(llt, new ContainerEntryId(buffer[i]), out var item);
                             var state = (PostingListState*)item.Address;
                             report.BranchPages += state->BranchPages;
                             report.LeafPages += state->LeafPages;

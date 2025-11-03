@@ -93,7 +93,7 @@ public class DeleteTest : StorageTest
             Assert.True(terms!.TryGetValue("9", out var containerId));
             Assert.NotEqual(0, containerId & (long)TermIdMask.PostingList);
             var setId = EntryIdEncodings.DecodeAndDiscardFrequency(containerId);
-            var setStateSpan = Container.GetMutable(llt, setId);
+            var setStateSpan = Container.GetMutable(llt, (ContainerEntryId)setId);
             ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             using var _ = Slice.From(llt.Allocator, "Content", ByteStringType.Immutable, out var fieldName);
             var set = new PostingList(llt, fieldName, in setState);

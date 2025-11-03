@@ -200,11 +200,11 @@ namespace Voron.Impl
                 *((ContainerRootHeader*)ptr) = new ContainerRootHeader
                 {
                     RootObjectType = RootObjectType.Container,
-                    ContainerId = id
+                    ContainerId = (long)id
                 };
-            
-            
-            return id;
+
+
+            return (long)id;
         }
 
         public PostingList OpenPostingList(string name)
@@ -736,13 +736,13 @@ namespace Voron.Impl
             LowLevelTransaction.RootObjects.Forget(name);
         }
 
-        public Container.TransactionState GetContainerState(long containerId)
+        public Container.TransactionState GetContainerState(ContainerId containerId)
         {
             _containers ??= new Dictionary<long, Container.TransactionState>();
-            if (_containers.TryGetValue(containerId, out var state))
+            if (_containers.TryGetValue((long)containerId, out var state))
                 return state;
             state = new Container.TransactionState(containerId);
-            _containers[containerId] = state;
+            _containers[(long)containerId] = state;
             return state;
         }
 

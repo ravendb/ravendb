@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
@@ -37,7 +37,7 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
 
             for (int i = 0; i < elementsUsed; i++)
             {
-                Container.Allocate(llt: wTx.LowLevelTransaction, containerId: currentContainer, size: random.Next(17, 512), out var memory);
+                Container.Allocate(llt: wTx.LowLevelTransaction, containerId: (ContainerId)currentContainer, size: random.Next(17, 512), out var memory);
                 
                 memory.Fill((byte)random.Next(0, byte.MaxValue +1));
             }
@@ -74,11 +74,11 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         if (iterations > elementsUsed)
             elementsUsed = iterations;
         
-        long[] containersToRemove = new long[elementsUsed];
-        long rootContainerPage;
+        ContainerEntryId[] containersToRemove = new ContainerEntryId[elementsUsed];
+        ContainerId rootContainerPage;
         using (var wTx = Env.WriteTransaction())
         {
-            rootContainerPage = wTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
+            rootContainerPage = (ContainerId)wTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
             for (int i = 0; i < elementsUsed; i++)
             {
                 containersToRemove[i] = Container.Allocate(llt: wTx.LowLevelTransaction, containerId: rootContainerPage, size: random.Next(1, 512), out var memory);
@@ -88,7 +88,7 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
             wTx.Commit();
         }
 
-        AssertSpaceUsedInItems(rootContainerPage, -1);
+        AssertSpaceUsedInItems((long)rootContainerPage, -1);
         
         var perIteration = Enumerable.Repeat(elementsUsed / iterations, iterations).ToArray();
         perIteration[^1] += elementsUsed - perIteration.Sum(); // Make sure we remove all elements now
@@ -111,14 +111,14 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
                     wTx.Commit();
                 }
 
-                AssertSpaceUsedInItems(rootContainerPage, itCount);
+                AssertSpaceUsedInItems((long)rootContainerPage, itCount);
             }
         }
 
-        AssertSpaceUsedInItems(rootContainerPage, iterations);
+        AssertSpaceUsedInItems((long)rootContainerPage, iterations);
         using (var rTx = Env.ReadTransaction())
         {
-            var rootPage = rTx.LowLevelTransaction.GetPage(rootContainerPage);
+            var rootPage = rTx.LowLevelTransaction.GetPage((long)rootContainerPage);
             var rootContainer = new Container(rootPage);
 
             var hasEntries = false;
