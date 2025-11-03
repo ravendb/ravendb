@@ -118,6 +118,8 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         {
             Debug.Assert(_configuration.EmbeddingsTransformation.Script != null, "_configuration.EmbeddingsTransformation.Script != null");
 
+            // RavenDB-24613: We need to ensure that the metadata is present to be accessible when running the script
+            Current.Document.EnsureMetadata();
             DocumentScript.Run(Context, Context, "execute", [Current.Document]);
 
             return;
@@ -127,6 +129,8 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         {
             var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
 
+            // RavenDB-24613: We need to ensure that the metadata is present to be accessible when running the script
+            Current.Document.EnsureMetadata();
             foreach (var pathConfiguration in _configuration.EmbeddingsPathConfigurations)
             {
                 if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, Current.Document, pathConfiguration.Path, out var value) == false)

@@ -86,6 +86,9 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     var args = CreatePatchArgs(context, item);
                     try
                     {
+                        // RavenDB-24613: We need to ensure that the metadata is present to be accessible when running the update script
+                        tuple.Doc.EnsureMetadata();
+                        
                         var documentInstance = (BlittableObjectInstance)runner.Translate(context, tuple.Doc).AsObject();
                         using (var scriptResult = runner.Run(context, context, "execute", item.DocumentId, [documentInstance, args]))
                         using (var old = tuple.Doc.Data)
@@ -103,7 +106,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
                         statsScope.UpdateFailures++;
                         _statistics.RecordPartialLoadError(msg, item.DocumentId);
-                        
+
                         if (_logger.IsWarnEnabled)
                             _logger.Warn(msg);
                     }

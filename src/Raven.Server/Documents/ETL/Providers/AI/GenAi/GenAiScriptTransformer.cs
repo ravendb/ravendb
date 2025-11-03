@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -157,6 +157,9 @@ var ai = new AI();
 
             Debug.Assert(item.IsDelete is false);
 
+            // RavenDB-24613: We need to ensure that the metadata is present to be accessible when running the update script
+            Current.Document.EnsureMetadata();
+            
             DocumentScript.Run(Context, Context, "execute", [Current.Document]);
             ProcessScriptResults();
         }
