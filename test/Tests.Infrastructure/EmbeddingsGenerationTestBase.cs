@@ -59,7 +59,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             EmbeddingsTransformation = string.IsNullOrEmpty(script) == false ? new EmbeddingsTransformation
             {
                 Script = script,
-                ChunkingOptions = chunkingOptionsForScript
+                ChunkingOptions = chunkingOptionsForScript ?? DefaultChunkingOptions
             }
             : null,
             Quantization = targetQuantization,
