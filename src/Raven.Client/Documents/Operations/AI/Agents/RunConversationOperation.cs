@@ -23,6 +23,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
+    private readonly List<AiAgentArtificialAction> _artificialActions;
     private readonly string _changeVector;
 
     private readonly string _streamPropertyPath;
@@ -34,15 +35,38 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<ContentPart> promptParts,
         List<AiAgentActionResponse> actionResponses,
         AiConversationCreationOptions options,
-        string changeVector) : this(agentId, conversationId, promptParts, actionResponses, options, changeVector, null, null)
+        string changeVector) : this(agentId, conversationId, promptParts, actionResponses, [], options, changeVector, null, null)
     {
     }
-
+    
     public RunConversationOperation(
         string agentId,
         string conversationId,
+        List<ContentPart> promptParts,
+        List<AiAgentActionResponse> actionResponses,
+        List<AiAgentArtificialAction> artificialActions,
+        AiConversationCreationOptions options,
+        string changeVector) : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, null, null)
+    {
+    }
+    
+    public RunConversationOperation(
+        string agentId,
+        string conversationId,
+        List<ContentPart> promptParts,
+        List<AiAgentActionResponse> actionResponses,
+        AiConversationCreationOptions options,
+        string changeVector,
+        string streamPropertyPath,
+        Func<string, Task> streamedChunksCallback) : this(agentId, conversationId, promptParts, actionResponses, [], options, changeVector, streamPropertyPath, streamedChunksCallback)
+    {
+    }
+
+    public RunConversationOperation(string agentId,
+        string conversationId,
         IEnumerable<ContentPart> promptParts,
         List<AiAgentActionResponse> actionResponses,
+        List<AiAgentArtificialAction> artificialActions,
         AiConversationCreationOptions options,
         string changeVector,
         string streamPropertyPath,
@@ -58,6 +82,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _promptParts = promptParts;
         _changeVector = changeVector;
         _actionResponses = actionResponses;
+        _artificialActions = artificialActions;
         _options = options;
 
         _streamPropertyPath = streamPropertyPath;
@@ -74,7 +99,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             string changeVector,
             string streamPropertyPath,
             Func<string, Task> streamedChunksCallback)
-        : this(agentId, conversationId, new List<ContentPart> { new TextPart(userPrompt) }, actionResponses, options, changeVector, streamPropertyPath, streamedChunksCallback)
+        : this(agentId, conversationId, new List<ContentPart>
+        {
+            new TextPart(userPrompt)
+        }, actionResponses, [], options, changeVector, streamPropertyPath, streamedChunksCallback)
     {
     }
     public virtual RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -119,6 +147,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             var body = new ConversionRequestBody
             {
                 ActionResponses = _parent._actionResponses,
+                ArtificialActions = _parent._artificialActions,
                 UserPrompt = _parent._promptParts,
                 CreationOptions = _parent._options
             };

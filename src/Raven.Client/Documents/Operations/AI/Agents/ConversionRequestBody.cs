@@ -8,6 +8,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents;
 internal class ConversionRequestBody : IDynamicJson
 {
     public List<AiAgentActionResponse> ActionResponses { get; set; }
+    public List<AiAgentArtificialAction> ArtificialActions { get; set; }
 
     public IEnumerable<ContentPart> UserPrompt { get; set; }
     public AiConversationCreationOptions CreationOptions { get; set; }
@@ -16,9 +17,10 @@ internal class ConversionRequestBody : IDynamicJson
         var json = new DynamicJsonValue
         {
             [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())),
-            [nameof(CreationOptions)] = (CreationOptions ?? new AiConversationCreationOptions()).ToJson()
+            [nameof(ArtificialActions)] = ArtificialActions == null ? null : new DynamicJsonArray(ArtificialActions.Select(r => r.ToJson())),
+            [nameof(CreationOptions)] = (CreationOptions ?? new AiConversationCreationOptions()).ToJson(),
+            [nameof(UserPrompt)] = UserPrompt == null ? null : new DynamicJsonArray(UserPrompt.Select(part => part.ToJson()))
         };
-        json[nameof(UserPrompt)] = UserPrompt == null ? null : new DynamicJsonArray(UserPrompt.Select(part => part.ToJson()));
 
         return json;
     }

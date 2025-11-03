@@ -22,7 +22,8 @@ internal class AiConversation : IAiConversationOperations
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
     private readonly List<AiAgentActionResponse> _actionResponses = [];
-    private readonly List<ContentPart> _promptParts = new();
+    private readonly List<AiAgentArtificialAction> _artificialActions = [];
+    private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     public string ChangeVector => _changeVector;
 
@@ -56,6 +57,38 @@ internal class AiConversation : IAiConversationOperations
             }
 
             return _conversationId;
+        }
+    }
+    
+    public void AddArtificialActionWithResponse(string toolName, string actionResponse)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(toolName, nameof(toolName));
+        ValidationMethods.AssertNotNullOrEmpty(actionResponse, nameof(actionResponse));
+
+        _artificialActions.Add(new AiAgentArtificialAction
+        {
+            ToolName = toolName,
+            Content = actionResponse,
+        });
+    }
+
+    public void AddArtificialActionWithResponse<TResponse>(string toolName, TResponse actionResponse) where TResponse : class
+    {
+        ValidationMethods.AssertNotNullOrEmpty(toolName, nameof(toolName));
+        if (actionResponse == null)
+            throw new ArgumentNullException(nameof(actionResponse), $"Action response for '{toolName}' cannot be null.");
+
+        if (actionResponse is string str)
+        {
+            AddArtificialActionWithResponse(toolName, str);
+            return;
+        }
+
+        using (_aiOperations.AllocateOperationContext(out var context))
+        {
+            var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
+            var json = jsonSerializer.ToBlittable(actionResponse, context);
+            AddArtificialActionWithResponse(toolName, json.ToString());
         }
     }
 
@@ -241,7 +274,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, _actionResponses, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, _actionResponses, _artificialActions, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
 
         try
         {
@@ -268,6 +301,7 @@ internal class AiConversation : IAiConversationOperations
             // clear the user prompt and tool responses after running the conversation
             _promptParts.Clear();
             _actionResponses.Clear();
+            _artificialActions.Clear();
         }
     }
 
