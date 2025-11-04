@@ -71,55 +71,58 @@ body {
         grid-area: menu;
     }
 
-    .content-container-wrapper {
+    .content-container {
         grid-area: content;
 
         position: relative;
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         width: 100%;
         transition: left @menu-transition-ease;
         overflow: auto;
         height: 100%;
 
-        .content-container {
-            flex-grow: 1;
-            
-            .page-host {
-                height: 100%;
+        .page-host {
+            height: 100%;
+            width: 100%;
+
+            .durandal-wrapper {
                 width: 100%;
-
-                .durandal-wrapper {
-                    width: 100%;
-                    height: 100%;
-                }
-
-                .shard-aware-container {
-                    width: 100%;
-                    height: 100%;
-                }
-
-                .react-container {
-                    height: 100%;
-                    width: 100%;
-                }
+                height: 100%;
             }
 
-            .content-margin {
-                flex-grow: 1;
-                margin: @gutter;
-                position: relative;
+            .shard-aware-container {
+                width: 100%;
+                height: 100%;
             }
 
-            .content-padding {
-                padding: @gutter;
+            .react-container {
                 height: 100%;
                 width: 100%;
             }
         }
+
+        .content-margin {
+            flex-grow: 1;
+            margin: @gutter;
+            position: relative;
+        }
+
+        .content-padding {
+            padding: @gutter;
+            height: 100%;
+            width: 100%;
+        }
     }
 
     .notification-center-container {
+        grid-area: content;
+        justify-self: end;
+        height: 100%;
+        position: relative;
+    }
+
+    .chatbot-container {
         grid-area: content;
         justify-self: end;
         height: 100%;
@@ -233,11 +236,16 @@ body {
         }
     }
 
+    &.pin-chatbot {
+        #chatbot {
+            transition: none;
+        }
+    }
+
     &.show-notifications {
         #notification-center {
-            transform: translateX(0%);
+            transform: translateY(0%);
         }
-
 
         &.pin-notifications {
             grid-template-rows: auto @navbar-height 1fr auto auto;
@@ -268,6 +276,64 @@ body {
                 }
             }
         }
+    }
+
+    &.show-chatbot {
+        #chatbot {
+            transform: translateY(0%);
+
+            .chatbot-header {
+                border-top-left-radius: @gutter-xs;
+                border-top-right-radius: @gutter-xs;
+            }
+            .chatbot-footer {
+                border-bottom-left-radius: @gutter-xs;
+                border-bottom-right-radius: @gutter-xs;
+            }
+        }
+
+        &.show-notifications {
+            &:not(.pin-notifications) {
+                #chatbot {
+                    right: calc(@right-panel-width + 10px);
+                }
+            }
+        }
+
+        &.pin-chatbot {
+            grid-template-rows: auto @navbar-height 1fr auto auto;
+            grid-template-columns: var(--menu-width) 1fr var(--chatbot-width);
+            grid-template-areas: "alert alert alert" "navbar navbar navbar" "menu content chatbot" "footer footer footer";
+
+            .chatbot-container {
+                grid-area: chatbot;
+                justify-self: initial;
+
+                #chatbot {
+                    transform: none;
+                    box-shadow: none;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    border: none;
+                    border-left: 1px solid var(--border-color-light);
+                    border-radius: unset;
+
+                    .chatbot-header {
+                        border-radius: unset;
+                    }
+                    .chatbot-footer {
+                        border-radius: unset;
+                    }
+                }
+            }
+        }
+    }
+
+    &.show-notifications.show-chatbot.pin-notifications.pin-chatbot {
+        grid-template-rows: auto @navbar-height 1fr auto auto;
+        grid-template-columns: var(--menu-width) 1fr var(--chatbot-width, 400px) @right-panel-width;
+        grid-template-areas: "alert alert alert alert" "navbar navbar navbar navbar" "menu content chatbot notifications" "footer footer footer footer";
     }
 }
 

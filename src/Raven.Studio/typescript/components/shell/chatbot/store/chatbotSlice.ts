@@ -47,7 +47,6 @@ interface ChatbotState {
     chatbotResourcesTab: ChatbotResourcesTab;
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
-    absoluteNotificationsWidth: number;
     runChatLastMessage: string;
 }
 
@@ -64,7 +63,6 @@ const initialState: ChatbotState = {
     chatbotResourcesTab: "Help and resources",
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
-    absoluteNotificationsWidth: 0,
     runChatLastMessage: null,
 };
 
@@ -75,8 +73,11 @@ export const chatbotSlice = createSlice({
         isOpenSet: (state, action: PayloadAction<boolean>) => {
             state.isOpen = action.payload;
         },
-        isPinnedSet: (state, action: PayloadAction<boolean>) => {
-            state.isPinned = action.payload;
+        isOpenToggled: (state) => {
+            state.isOpen = !state.isOpen;
+        },
+        isPinnedToggled: (state) => {
+            state.isPinned = !state.isPinned;
         },
         chatbotTabSet: (state, action: PayloadAction<ChatbotTab>) => {
             state.chatbotTab = action.payload;
@@ -98,9 +99,6 @@ export const chatbotSlice = createSlice({
         },
         runChatLastMessageSet: (state, action: PayloadAction<string>) => {
             state.runChatLastMessage = action.payload;
-        },
-        absoluteNotificationsWidthSet: (state, action: PayloadAction<number>) => {
-            state.absoluteNotificationsWidth = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -160,6 +158,14 @@ const runChat = createAsyncThunk(
                 View: viewTitle,
                 ConversationId: chatbot.conversationId,
             });
+
+            if (response.headers.get("content-type").includes("application/json")) {
+                const data: RunChatbotAiAssistantResultDto = await response.json();
+                return {
+                    ...assistantMessage,
+                    state: data.Status,
+                };
+            }
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
@@ -263,6 +269,5 @@ export const chatbotSelectors = {
         return messageIds[messageIds.length - 1] === id;
     },
     conversationId: (state: RootState) => state.chatbot.conversationId,
-    absoluteNotificationsWidth: (state: RootState) => state.chatbot.absoluteNotificationsWidth,
     runChatLastMessage: (state: RootState) => state.chatbot.runChatLastMessage,
 };

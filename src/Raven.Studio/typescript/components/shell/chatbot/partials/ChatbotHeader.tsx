@@ -15,14 +15,7 @@ export default function ChatbotHeader() {
     };
 
     return (
-        <div
-            className={classNames(
-                "panel-bg-2 border-bottom border-secondary p-2 hstack justify-content-between align-items-center",
-                {
-                    "rounded-top-2": !isPinned,
-                }
-            )}
-        >
+        <div className="chatbot-header panel-bg-2 border-bottom border-secondary p-2 hstack justify-content-between align-items-center">
             <h4 className="m-0">
                 <HeaderTitle />
             </h4>
@@ -32,29 +25,18 @@ export default function ChatbotHeader() {
                         <Icon icon="plus" margin="m-0" />
                     </Button>
                 )}
-                {isPinned ? (
-                    <Button
-                        variant="link"
-                        size="sm"
-                        className="text-reset"
-                        onClick={() => dispatch(chatbotActions.isPinnedSet(false))}
-                    >
-                        <Icon icon="pinned" margin="m-0" />
-                    </Button>
-                ) : (
-                    <Button
-                        variant="link"
-                        size="sm"
-                        className="text-reset"
-                        onClick={() => dispatch(chatbotActions.isPinnedSet(true))}
-                    >
-                        <Icon icon="pin" margin="m-0" />
-                    </Button>
-                )}
                 <Button
                     variant="link"
                     size="sm"
-                    onClick={() => dispatch(chatbotActions.isOpenSet(false))}
+                    onClick={() => dispatch(chatbotActions.isPinnedToggled())}
+                    className={classNames({ "text-reset": !isPinned })}
+                >
+                    <Icon icon={isPinned ? "pinned" : "pin"} margin="m-0" />
+                </Button>
+                <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => dispatch(chatbotActions.isOpenToggled())}
                     className="text-reset"
                 >
                     <Icon icon="cancel" margin="m-0" />

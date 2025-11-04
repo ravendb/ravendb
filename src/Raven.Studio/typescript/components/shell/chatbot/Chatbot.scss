@@ -1,7 +1,20 @@
 @use "Content/scss/sizes";
+@use "Content/scss/variables";
+@use "Content/scss/colors";
 
-.chatbot {
-    z-index: calc(var(--zindex-notification-center) - 1);
+#chatbot {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    transform: translateY(150%);
+    z-index: var(--zindex-notification-center);
+    transition: transform variables.$menu-transition-ease;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid colors.$border-color-light-var;
+    background-color: colors.$panel-bg-1-var;
+    border-radius: sizes.$gutter-xs;
 
     .prompt-textarea {
         border-radius: sizes.$border-radius;

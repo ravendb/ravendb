@@ -20,7 +20,16 @@ export default function useResizableWidth({ initialWidth, minWidth, maxWidth }: 
         (e: MouseEvent) => {
             if (isDragging) {
                 const newWidth = window.innerWidth - e.clientX;
-                setWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)));
+                const w = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+                console.log("kalczur ", {
+                    windowInnerWidth: window.innerWidth,
+                    clientX: e.clientX,
+                    newWidth,
+                    w,
+                });
+
+                setWidth(w);
             }
         },
         [isDragging]

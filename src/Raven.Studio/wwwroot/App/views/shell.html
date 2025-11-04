@@ -42,9 +42,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="#" title="Chatbot" class="btn-toggle no-decor" data-bind="click: $root.openChatbot">
-                        <i class="icon-chatbot"></i>
-                    </a>
+                    <div data-bind="react: $root.chatbotNavIconView"></div>
                 </li>
             </ul>
         </div><!--/.nav-collapse -->
@@ -179,12 +177,10 @@
             <i class="icon-arrow-right"></i>
         </button>
     </nav>
-    <div class="content-container-wrapper">
-        <div id="page-host-root" class="content-container">
-            <div id="page-host" class="page-host overflow-scroll" data-bind="router: { cacheViews: false }"></div>
-        </div>
-        <div data-bind="react: $root.chatbotView" class="bs5"></div>
+    <div id="page-host-root" class="content-container">
+        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
+    <div class="chatbot-container bs5" data-bind="react: $root.chatbotView"></div>
     <div class="notification-center-container bs3" data-bind="compose: notificationCenterView"></div>
 
     <footer class="status-footer bs3" data-bind="with: $root.footer">

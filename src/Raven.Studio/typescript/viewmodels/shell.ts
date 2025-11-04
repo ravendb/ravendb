@@ -62,7 +62,7 @@ import StudioSearchWithDatabaseSwitcher = require("components/shell/studioSearch
 import ProtractedRequestMessage = require("components/shell/partials/ProtractedRequestMessage");
 import typeUtils = require("common/typeUtils");
 import Chatbot = require("components/shell/chatbot/Chatbot")
-import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import ChatbotNavIcon = require("components/shell/chatbot/ChatbotNavIcon");
 
 class shell extends viewModelBase {
 
@@ -138,6 +138,7 @@ class shell extends viewModelBase {
     logoSrc: KnockoutObservable<string>;
     logoClass: KnockoutComputed<string>;
 
+    chatbotNavIconView: ReactInKnockout<typeof ChatbotNavIcon.default>;
     chatbotView: ReactInKnockout<typeof Chatbot.default>;
     
     constructor() {
@@ -301,7 +302,13 @@ class shell extends viewModelBase {
             return "main-logo";
         });
 
-        this.chatbotView = ko.pureComputed(() => ({ component: Chatbot.default }));
+        this.chatbotNavIconView = ko.computed(() => ({
+            component: ChatbotNavIcon.default,
+        }));
+
+        this.chatbotView = ko.pureComputed(() => ({
+            component: Chatbot.default,
+        }));
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -744,10 +751,6 @@ class shell extends viewModelBase {
                       
             return canHandleOperation ? "" : accessManager.getDisableReasonHtml(requiredAccess);
         })
-    }
-
-    openChatbot() {
-        storeCompat.globalDispatch(chatbotSlice.chatbotActions.isOpenSet(true));
     }
 }
 

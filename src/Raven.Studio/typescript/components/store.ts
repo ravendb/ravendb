@@ -22,6 +22,7 @@ import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/cha
 import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
 import { aiAssistantSlice } from "./common/shell/aiAssistantSlice";
 import { chatbotSlice } from "./shell/chatbot/store/chatbotSlice";
+import { chatbotMiddleware } from "./shell/chatbot/store/chatbotMiddleware";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -57,7 +58,8 @@ export function createStoreConfiguration() {
                 .prepend(listenerMiddleware.middleware)
                 .prepend(connectionStringsUpdateUrlMiddleware.middleware)
                 .prepend(adminLogsMiddleware.middleware)
-                .prepend(chatAiAgentUpdateUrlMiddleware.middleware),
+                .prepend(chatAiAgentUpdateUrlMiddleware.middleware)
+                .prepend(chatbotMiddleware.middleware),
     });
 }
 
