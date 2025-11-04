@@ -364,7 +364,7 @@ namespace InterversionTests
             using var store54 = await GetDocumentStoreAsync(Server54Version);
             using var storeCurrent = GetDocumentStore();
 
-            store54.Maintenance.Send(new CreateSampleDataOperation());
+            await store54.Maintenance.SendAsync(new CreateSampleDataOperation());
             using (var session = store54.OpenAsyncSession())
             {
                 for (var i = 0; i < 5; i++)
@@ -376,7 +376,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var operation = await Migrate(store54, storeCurrent);
+            var operation = await Migrate(store54, storeCurrent, operateOnDatabaseRecordTypes: _operateOnRecordTypes54);
             await operation.WaitForCompletionAsync(_operationTimeout);
 
             var fromStat = await store54.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -492,7 +492,7 @@ namespace InterversionTests
             Assert.Equal(fromMetadataCount, toMetadataCount);
         }
 
-        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType operateOnTypes = DatabaseItemType.None)
+        private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType operateOnTypes = DatabaseItemType.None, DatabaseRecordItemType operateOnDatabaseRecordTypes = DatabaseRecordItemType.None)
         {
             using var client = new HttpClient();
             var url = new Uri($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
@@ -511,7 +511,8 @@ namespace InterversionTests
                 MigrationSettings = new DatabaseMigrationSettings
                 {
                     DatabaseName = @from.Database,
-                    OperateOnTypes = operateOnTypes
+                    OperateOnTypes = operateOnTypes,
+                    OperateOnDatabaseRecordTypes = operateOnDatabaseRecordTypes
                 }
             };
 
