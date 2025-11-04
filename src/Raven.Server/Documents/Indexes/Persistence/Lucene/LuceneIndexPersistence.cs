@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             if(tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
-                rec = IndexStateRecord.Empty;
+                rec = IndexStateRecord.CreateEmpty();
 
             return rec with { Collections = GetCollectionEtags(tx), DirectoriesByName = dirs.ToImmutable() };
         }
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         internal override void RecreateSearcher(Transaction asOfTx)
         {
             if (asOfTx.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord) is false)
-                stateRecord = IndexStateRecord.Empty;
+                stateRecord = IndexStateRecord.CreateEmpty();
             asOfTx.LowLevelTransaction.UpdateClientState(stateRecord with { LuceneIndexState = new LuceneIndexState(CreateIndexSearcher) });
         }
 
