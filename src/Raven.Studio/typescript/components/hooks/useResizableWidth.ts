@@ -5,9 +5,15 @@ interface useResizableWidthProps {
     initialWidth: number;
     minWidth: number;
     maxWidth: number;
+    rightOffset?: number;
 }
 
-export default function useResizableWidth({ initialWidth, minWidth, maxWidth }: useResizableWidthProps) {
+export default function useResizableWidth({
+    initialWidth,
+    minWidth,
+    maxWidth,
+    rightOffset = 0,
+}: useResizableWidthProps) {
     const [width, setWidth] = useState(initialWidth);
     const { value: isDragging, setValue: setIsDragging } = useBoolean(false);
 
@@ -19,17 +25,10 @@ export default function useResizableWidth({ initialWidth, minWidth, maxWidth }: 
     const handleMouseMove = useCallback(
         (e: MouseEvent) => {
             if (isDragging) {
-                const newWidth = window.innerWidth - e.clientX;
-                const w = Math.max(minWidth, Math.min(maxWidth, newWidth));
+                const newWidth = window.innerWidth - e.clientX - rightOffset;
+                const fixedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
-                console.log("kalczur ", {
-                    windowInnerWidth: window.innerWidth,
-                    clientX: e.clientX,
-                    newWidth,
-                    w,
-                });
-
-                setWidth(w);
+                setWidth(fixedWidth);
             }
         },
         [isDragging]

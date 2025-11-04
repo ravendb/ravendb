@@ -65,6 +65,8 @@ import cpuCreditsBalanceDetails = require("viewmodels/common/notificationCenter/
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
 import typeUtils = require("common/typeUtils");
 import aiAgentExceededTokenThreshold = require("viewmodels/common/notificationCenter/detailViewer/alerts/aiAgentExceededTokenThreshold");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import storeCompat = require("components/storeCompat");
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -250,6 +252,10 @@ class notificationCenter {
         });
         this.noNewNotifications = ko.pureComputed(() => {
             return this.totalItemsCount() === 0;
+        });
+
+        ko.computed(() => {
+            storeCompat.globalDispatch(chatbotSlice.chatbotActions.isNotificationsVisibleAndPinnedSet(this.showNotifications() && this.pinNotifications()));
         });
     }
 

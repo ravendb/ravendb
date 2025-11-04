@@ -48,6 +48,7 @@ interface ChatbotState {
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
     runChatLastMessage: string;
+    isNotificationsVisibleAndPinned: boolean;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -64,6 +65,7 @@ const initialState: ChatbotState = {
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
     runChatLastMessage: null,
+    isNotificationsVisibleAndPinned: false,
 };
 
 export const chatbotSlice = createSlice({
@@ -99,6 +101,9 @@ export const chatbotSlice = createSlice({
         },
         runChatLastMessageSet: (state, action: PayloadAction<string>) => {
             state.runChatLastMessage = action.payload;
+        },
+        isNotificationsVisibleAndPinnedSet: (state, action: PayloadAction<boolean>) => {
+            state.isNotificationsVisibleAndPinned = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -270,4 +275,5 @@ export const chatbotSelectors = {
     },
     conversationId: (state: RootState) => state.chatbot.conversationId,
     runChatLastMessage: (state: RootState) => state.chatbot.runChatLastMessage,
+    isNotificationsVisibleAndPinned: (state: RootState) => state.chatbot.isNotificationsVisibleAndPinned,
 };
