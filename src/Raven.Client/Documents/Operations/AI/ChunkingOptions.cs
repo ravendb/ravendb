@@ -25,7 +25,7 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
         };
     }
 
-    public void Validate(string source, List<string> errors)
+    internal void Validate(string source, List<string> errors)
     {
         if (MaxTokensPerChunk <= 0)
             errors.Add($"'{source}': {nameof(MaxTokensPerChunk)} value has to be greater than 0.");

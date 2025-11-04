@@ -13,7 +13,7 @@ public class EmbeddingsTransformation
 
     public ChunkingOptions ChunkingOptions { get; set; } = new() { ChunkingMethod = ChunkingMethod.PlainTextSplit, MaxTokensPerChunk = 256 };
 
-    public void Validate(List<string> errors)
+    internal void Validate(List<string> errors)
     {
         ValidateScript(errors);
         
