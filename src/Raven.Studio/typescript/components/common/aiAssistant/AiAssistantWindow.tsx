@@ -78,13 +78,10 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                 )}
                 {asyncAssist.error && <RichAlert variant="danger">Failed to assist. Please try again.</RichAlert>}
                 {asyncAssist.result?.Status === "InvalidData" && (
-                    <RichAlert variant="danger">Invalid data. Please check your data and try again.</RichAlert>
+                    <RichAlert variant="danger">{aiAssistantConstants.invalidData}</RichAlert>
                 )}
                 {asyncAssist.result?.Status === "OutOfTokens" && (
-                    <RichAlert variant="danger">
-                        You have used all your AI Assistant tokens for this month. Your token allowance will be reset at
-                        the beginning of the next month.
-                    </RichAlert>
+                    <RichAlert variant="danger">{aiAssistantConstants.outOfTokens}</RichAlert>
                 )}
                 {asyncAssist.result?.Status === "InvalidCredentials" && (
                     <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>

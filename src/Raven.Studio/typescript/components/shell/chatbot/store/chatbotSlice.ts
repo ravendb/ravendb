@@ -31,7 +31,8 @@ export interface ChatbotUserMessage extends ChatbotMessageBase {
 export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     role: "assistant";
     thinkingTimeInMs: number;
-    state: "loading" | "success" | "error";
+    state: "Loading" | "Error" | AiAssistantResponseStatus;
+    errorMessage?: string;
     usage: Raven.Client.Documents.Operations.AI.AiUsage;
     relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
     followUpQuestions: string[];
@@ -142,7 +143,7 @@ const runChat = createAsyncThunk(
             id: responseId,
             role: "assistant",
             content: "",
-            state: "loading",
+            state: "Loading",
             thinkingTimeInMs: 0,
             usage: null,
             relevantLinks: [],
@@ -190,7 +191,7 @@ const runChat = createAsyncThunk(
                             chatbotActions.messageUpdated({
                                 id: responseId,
                                 changes: {
-                                    state: "success",
+                                    state: "Success",
                                     content,
                                 },
                             })
@@ -205,7 +206,7 @@ const runChat = createAsyncThunk(
                         return {
                             ...assistantMessage,
                             content,
-                            state: "success",
+                            state: finalData.Status,
                             thinkingTimeInMs: new Date().getTime() - startThinkingTime,
                             usage: {
                                 TotalTokens: finalData.InputTokenCount,
@@ -221,16 +222,16 @@ const runChat = createAsyncThunk(
                 }
             }
 
-            console.error("Failed to finish the AI Assistant response");
             return {
                 ...assistantMessage,
-                state: "error",
+                state: "Error",
+                errorMessage: "Failed to finish the AI Assistant response",
             };
         } catch (e) {
-            console.error(e);
             return {
                 ...assistantMessage,
-                state: "error",
+                state: "Error",
+                errorMessage: e.message,
             };
         }
     }

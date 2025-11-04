@@ -14,6 +14,8 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotSelectors } from "../store/chatbotSlice";
 import { ChatbotRelevantLink } from "commands/aiAssistant/runChatbotAiAssistantCommand";
 import { Element } from "hast";
+import { aiAssistantConstants } from "components/common/aiAssistant/aiAssistantConstants";
+import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAssistantConsentStatusChecker";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -95,7 +97,7 @@ function AgentMessage({ message }: AgentMessageProps) {
 function AgentMessageBody({ message }: AgentMessageProps) {
     const dispatch = useAppDispatch();
 
-    if (message.state === "loading") {
+    if (message.state === "Loading") {
         return (
             <LazyLoad active>
                 <div style={{ height: "100px", width: "100%" }}>Loading...</div>
@@ -103,10 +105,26 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         );
     }
 
-    if (message.state === "error") {
+    if (message.state === "InvalidData") {
+        return <RichAlert variant="danger">{aiAssistantConstants.invalidData}</RichAlert>;
+    }
+
+    if (message.state === "InvalidCredentials") {
+        return <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>;
+    }
+
+    if (message.state === "OutOfTokens") {
+        return <RichAlert variant="danger">{aiAssistantConstants.outOfTokens}</RichAlert>;
+    }
+
+    if (message.state === "ConsentRequired") {
+        return <AiAssistantConsentStatusChecker onConsentGiven={() => dispatch(chatbotActions.retryRunChat())} />;
+    }
+
+    if (message.state === "Error") {
         return (
             <RichAlert variant="danger">
-                Failed to get response from AI Assistant.{" "}
+                {message.errorMessage ?? "Failed to get response from AI Assistant."}{" "}
                 <Button variant="link" className="px-0" onClick={() => dispatch(chatbotActions.retryRunChat())}>
                     Please try again
                 </Button>
