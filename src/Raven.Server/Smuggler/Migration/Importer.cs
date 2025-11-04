@@ -141,14 +141,14 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateDatabase(long operationId, ImportInfo importInfo)
         {
-
             var startDocumentEtag = importInfo?.LastEtag ?? 0;
             var startRaftIndex = importInfo?.LastRaftIndex ?? 0;
             var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}&startRaftIndex={startRaftIndex}";
             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide(AuthorizationStatus)
             {
                 OperateOnTypes = Options.OperateOnTypes,
-                RemoveAnalyzers = Options.RemoveAnalyzers
+                RemoveAnalyzers = Options.RemoveAnalyzers,
+                OperateOnDatabaseRecordTypes = Options.OperateOnDatabaseRecordTypes
             };
 
             if (importInfo != null)
