@@ -1597,7 +1597,8 @@ class editDocument extends shardViewModelBase {
             documentId: documentId,
             name: file.Name,
             contentType: file.ContentType,
-            size: file.Size
+            size: file.Size,
+            remoteParameters: file.RemoteParameters
         };
     }
 

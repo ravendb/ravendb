@@ -20,6 +20,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import genUtils = require("common/generalUtils");
+import _ = require("lodash")
+import prismjs = require("prismjs");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -160,6 +162,10 @@ class connectedDocuments {
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
+                transformValue: (x: Raven.Client.Documents.Attachments.RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment"></i>` : `<i class="icon-attachment"></i>`,
+            }),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.crudActionsProvider().deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
@@ -257,16 +263,39 @@ class connectedDocuments {
                 const timeSeriesItem = (item as timeSeriesItem);
                 
                 if (column instanceof textColumn) {
-                    if (column.header === "Revision") {
-                        const value = column.getCellValue(item);
-                        onValue(moment.utc(value), value);
-                    } else if (column.header === "Timeseries date range") {
-                        onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
-                    } else if (column.header === "Timeseries items count") {
-                        onValue(timeSeriesItem.numberOfEntries.toLocaleString());
-                    } else {
-                        const value = column.getCellValue(item);
-                        onValue(genUtils.escapeHtml(value), value);
+                    const value = column.getCellValue(item);
+                    switch (column.header) {
+                        case "Revision": {
+                            onValue(moment.utc(value), value);
+                            break;
+                        }
+                        case "Timeseries date range":
+                            onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
+                            break;
+                        case "Timeseries items count":
+                            onValue(timeSeriesItem.numberOfEntries.toLocaleString());
+                            break;
+                        case "Remote parameters": {
+                            if (value == null) {
+                                return;
+                            }
+                            const json = JSON.stringify(value, null, 4);
+                            const html = prismjs.highlight(json, prismjs.languages.javascript, "js");
+                            onValue(_.isObject(value) ? html : genUtils.escapeHtml((value)), _.isObject(value) ? json : value);
+                            break;
+                        }
+                        case "Remote flags": {
+                            const flag = value as Raven.Client.Documents.Attachments.RemoteAttachmentFlags;
+                            onValue(flag === "Remote" ? "Remote attachment" : "Local attachment");
+                            break;
+                        }
+                        default: {
+                            if (value == null) {
+                                return;
+                            }
+                            onValue(genUtils.escapeHtml(value), value);
+                            break;
+                        }
                     }
                 }
             });

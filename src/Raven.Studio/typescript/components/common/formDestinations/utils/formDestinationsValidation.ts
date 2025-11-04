@@ -85,7 +85,7 @@ const amazonSchema = yupObjectSchema<AmazonDestination>({
     awsSessionToken: yup.string().nullable(),
 });
 
-const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
+export const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
     bucketName: yup
         .string()
         .nullable()
@@ -132,7 +132,7 @@ const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
     .concat(destinationBaseSchema)
     .concat(amazonSchema);
 
-const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
+export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
     storageContainer: yup
         .string()
         .nullable()

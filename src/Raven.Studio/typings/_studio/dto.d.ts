@@ -127,6 +127,7 @@ interface attachmentItem {
     name: string;
     contentType: string;
     size: number;
+    remoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 }
 
 interface timeSeriesItem {
@@ -161,6 +162,7 @@ interface documentAttachmentDto {
     Hash: string;
     Name: string;
     Size: number;
+    RemoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters
 }
 
 interface connectedDocument {

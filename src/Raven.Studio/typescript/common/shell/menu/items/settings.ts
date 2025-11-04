@@ -20,6 +20,7 @@ import ConflictResolution = require("components/pages/database/settings/conflict
 import Integrations = require("components/pages/database/settings/integrations/Integrations");
 import UnusedDatabaseIds = require("components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds");
 import RevisionsBinCleaner = require("components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleaner");
+import RemoteAttachments = require("components/pages/database/settings/remoteAttachments/RemoteAttachments");
 
 export = getSettingsMenuItem;
 
@@ -216,6 +217,22 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 innerActions: [
                     { name: "Enable Data Archival" },
                     { name: "Set custom archival frequency" },
+                ],
+            },
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/remoteAttachments',
+            moduleId: reactUtils.bridgeToReact(RemoteAttachments.default, 'nonShardedView'),
+            shardingMode: "allShards",
+            title: "Remote Attachments",
+            nav: true,
+            css: "icon-remote-attachment",
+            dynamicHash: appUrls.remoteAttachments,
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                innerActions: [
+                    { name: "Enable Remote Attachments" },
+                    { name: "Set custom remote attachments frequency" },
                 ],
             },
         }),

@@ -1,0 +1,15 @@
+@use "Content/scss/sizes";
+
+.sheet {
+    z-index: calc(var(--zindex-notification-center) - 1);
+
+
+    .prompt-textarea {
+        border-radius: sizes.$border-radius;
+        field-sizing: content;
+        min-height: 75px !important;
+        max-height: 200px;
+
+        resize: none;
+    }
+}

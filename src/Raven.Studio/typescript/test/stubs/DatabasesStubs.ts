@@ -2,6 +2,7 @@
 import shardedDatabase from "models/resources/shardedDatabase";
 import document from "models/database/documents/document";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
+import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
@@ -14,7 +15,6 @@ import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.Revi
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
-import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
 
 export class DatabasesStubs {
     private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
@@ -1081,6 +1081,42 @@ return docs[0];`,
                 },
             ],
             totalResultCount: 2,
+        };
+    }
+
+    static remoteAttachmentsConfiguration(): Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration {
+        return {
+            Disabled: false,
+            Destinations: {
+                Test: {
+                    Disabled: false,
+                    Identifier: "123123",
+                    S3Settings: {
+                        BucketName: "test",
+                        StorageClass: "GlacierInstantRetrieval",
+                        AwsSessionToken: "test",
+                        AwsAccessKey: "test",
+                        AwsSecretKey: "test",
+                        AwsRegionName: "eu-central-1",
+                        CustomServerUrl: "",
+                        ForcePathStyle: false,
+                        RemoteFolderName: "",
+                        Disabled: false,
+                        GetBackupConfigurationScript: undefined,
+                    },
+                    AzureSettings: {
+                        AccountKey: "",
+                        AccountName: "",
+                        RemoteFolderName: "",
+                        SasToken: "",
+                        StorageContainer: "",
+                        Disabled: false,
+                        GetBackupConfigurationScript: undefined,
+                    },
+                },
+            },
+            MaxItemsToProcess: 32,
+            CheckFrequencyInSec: 5 * TimeInSeconds.Minute,
         };
     }
 }
