@@ -51,7 +51,7 @@ namespace Raven.Server.ServerWide.Context
         private static IndexStateRecord GetIndexStateFrom(LowLevelTransaction llt)
         {
             if (llt.TryGetClientState(out IndexStateRecord r) is false)
-                r = IndexStateRecord.Empty;
+                r = IndexStateRecord.CreateEmpty();
             return r;
         }
 

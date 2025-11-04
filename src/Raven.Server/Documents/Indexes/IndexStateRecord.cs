@@ -2,9 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Corax;
 using Lucene.Net.Search;
-using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Logging;
 using Sparrow.Logging;
@@ -23,7 +21,10 @@ public record IndexStateRecord(
     ImmutableDictionary<string, LuceneIndexState> LuceneSuggestionStates)
 {
 
-    public static IndexStateRecord Empty = new IndexStateRecord(
+    /// <summary>
+    /// Cannot use a shared instance here, since <see cref="HandleReferencesBase.State"/> have a mutable builder, we create a new value each time
+    /// </summary>
+    public static IndexStateRecord CreateEmpty() => new IndexStateRecord(
         ImmutableDictionary<string, string>.Empty,
         HandleReferencesBase.State.CreateEmpty(),
         HandleReferencesBase.State.CreateEmpty(),
