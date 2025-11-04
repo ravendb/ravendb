@@ -87,7 +87,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof performanceHint) && notification.hintType() === "SqlEtl_SlowSql";
+        return (notification instanceof performanceHint) && notification.performanceHintReason() === "SqlEtl_SlowSql";
     }
 
     static showDetailsFor(hint: performanceHint, center: notificationCenter) {

@@ -60,7 +60,7 @@ class cpuCreditsBalanceDetails extends abstractAlertDetails {
     
     static supportsDetailsFor(notification: abstractNotification) {
         return (notification instanceof alert) 
-            && notification.alertType() === "Throttling_CpuCreditsBalance";
+            && notification.alertReason() === "Throttling_CpuCreditsBalance";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

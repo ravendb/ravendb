@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Revisions
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name,
                     $"Revisions error in {_database.Name}", message,
-                    AlertType.RevisionsConfigurationNotValid,
+                    AlertReason.RevisionsConfigurationNotValid,
                     NotificationSeverity.Error,
                     _database.Name,
                     details: new ExceptionDetails(e)));

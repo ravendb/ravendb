@@ -114,7 +114,7 @@ namespace SlowTests.Issues
                     Assert.Equal("Number of map results produced by an index exceeds the performance hint configuration key (MaxIndexOutputsPerDocument).",
                         performanceHint.Item2[nameof(PerformanceHint.Message)]);
                     
-                    Assert.Equal(PerformanceHintType.Indexing, performanceHint.Item2[nameof(PerformanceHint.HintType)]);
+                    Assert.Equal(PerformanceHintReason.Indexing, performanceHint.Item2[nameof(PerformanceHint.Reason)]);
 
                     var details = performanceHint.Item2[nameof(PerformanceHint.Details)] as DynamicJsonValue;
                     Assert.NotNull(details);

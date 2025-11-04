@@ -10,7 +10,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -71,11 +70,11 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     if (exists is false)
                     {
                         Document document = GetCurrentDocument(context, item.DocumentId);
-                        if (document is null)
-                            continue; // document was probably deleted while we talked to the model, skipping this
-
                         tuple = (document, []);
                     }
+
+                    if (tuple.Doc is null)
+                        continue; // document was probably deleted while we talked to the model, skipping this
 
                     tuple.Hashes.Add(item.ContextOutput.AiHash);
 

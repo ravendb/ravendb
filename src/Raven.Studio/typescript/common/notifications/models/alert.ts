@@ -6,7 +6,7 @@ import licenseAgpl = require("viewmodels/common/notificationCenter/customControl
 
 class alert extends abstractNotification {
 
-    alertType = ko.observable<Raven.Server.NotificationCenter.Notifications.AlertType>();
+    alertReason = ko.observable<Raven.Server.NotificationCenter.Notifications.AlertReason>();
     key = ko.observable<string>();
     details = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.INotificationDetails>();
     isLicenseAlert: KnockoutComputed<boolean>;
@@ -15,13 +15,13 @@ class alert extends abstractNotification {
         super(db, dto);
         this.updateWith(dto);
         
-        this.canBeDismissed = ko.pureComputed(() => (this.alertType() !== "LicenseManager_AGPL3" && !this.readOnly) || !this.isPersistent());
+        this.canBeDismissed = ko.pureComputed(() => (this.alertReason() !== "LicenseManager_AGPL3" && !this.readOnly) || !this.isPersistent());
 
         this.hasDetails = ko.pureComputed(() => !!this.details());
         
         this.isLicenseAlert = ko.pureComputed(() => {
-            return this.alertType().startsWith("LicenseManager") &&
-                (this.alertType() === "LicenseManager_LicenseLimit" || this.alertType() === "LicenseManager_AGPL3");
+            return this.alertReason().startsWith("LicenseManager") &&
+                (this.alertReason() === "LicenseManager_LicenseLimit" || this.alertReason() === "LicenseManager_AGPL3");
         });
 
         this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.isLicenseAlert() && !this.readOnly);
@@ -30,7 +30,7 @@ class alert extends abstractNotification {
     }
     
     private injectCustomControl() {
-        if (this.alertType() === "LicenseManager_AGPL3") {
+        if (this.alertReason() === "LicenseManager_AGPL3") {
             this.customControl(new licenseAgpl());
         }
     }
@@ -38,7 +38,7 @@ class alert extends abstractNotification {
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
         super.updateWith(incomingChanges);
 
-        this.alertType(incomingChanges.AlertType);
+        this.alertReason(incomingChanges.Reason);
         this.key(incomingChanges.Key);
         this.details(incomingChanges.Details);
 

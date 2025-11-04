@@ -37,7 +37,7 @@ class licenseLimitDetails extends dialogViewModelBase {
     }
     
     private static extractLimitType(notification: alert | recentLicenseLimitError) {
-        if (notification instanceof alert && notification.alertType() === "LicenseManager_LicenseLimit") {
+        if (notification instanceof alert && notification.alertReason() === "LicenseManager_LicenseLimit") {
             const limit = notification.details() as Raven.Server.NotificationCenter.Notifications.Details.LicenseLimitWarning;
             return limit.Type;
         }

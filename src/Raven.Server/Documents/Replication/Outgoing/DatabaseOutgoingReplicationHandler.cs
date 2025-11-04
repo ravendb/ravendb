@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _database.NotificationCenter.Add(
                 AlertRaised.Create(
                     _database.Name,
-                    AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)));
+                    AlertTitle, msg, AlertReason.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)));
         }
 
         private bool WaitForChanges(int timeout, CancellationToken token)

@@ -62,7 +62,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
-            context.Write(writer, handler.GetConversationResponse(context, r.Response));
+            var finalPayload = handler.GetConversationResponse(context, r.Response);
+            context.Write(writer, finalPayload);
         }
 
 

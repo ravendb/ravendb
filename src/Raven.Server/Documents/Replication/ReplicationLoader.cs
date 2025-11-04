@@ -1445,7 +1445,7 @@ namespace Raven.Server.Documents.Replication
                         node.Database,
                         $"Forbidden access to {node.FromString()}'",
                         $"Replication failed. Certificate : {certificate?.FriendlyName} does not have permission to access or is unknown.",
-                        AlertType.Replication,
+                        AlertReason.Replication,
                         NotificationSeverity.Error);
 
                     _server.NotificationCenter.Add(alert);
@@ -1843,7 +1843,7 @@ namespace Raven.Server.Documents.Replication
                         msg:
                         $"The disabled replication destination {disabledReplicationNode.FromString()} prevents from cleaning large number of tombstones.",
 
-                        type: PerformanceHintType.Replication,
+                        reason: PerformanceHintReason.Replication,
                         notificationSeverity: NotificationSeverity.Warning,
                         source: disabledReplicationNode.FromString()
                     ));

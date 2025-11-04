@@ -91,7 +91,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof performanceHint) && notification.hintType() === "Indexing";
+        return (notification instanceof performanceHint) && notification.performanceHintReason() === "Indexing";
     }
 
     static showDetailsFor(hint: performanceHint, center: notificationCenter) {

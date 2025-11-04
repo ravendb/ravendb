@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     Database.Name,
                     $"Periodic Backup task: '{_taskName}'",
                     message,
-                    AlertType.PeriodicBackup,
+                    AlertReason.PeriodicBackup,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
 

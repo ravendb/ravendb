@@ -253,7 +253,7 @@ namespace Raven.Server.Utils.Cpu
                     null,
                     "Cpu usage extension point error",
                     warningMsg,
-                    AlertType.CpuUsageExtensionPointError,
+                    AlertReason.CpuUsageExtensionPointError,
                     NotificationSeverity.Warning);
                 _notificationCenter.Add(alert);
             }

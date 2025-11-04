@@ -9,11 +9,11 @@ namespace Raven.Server.NotificationCenter.Notifications
         {
         }
 
-        public PerformanceHintType HintType { get; private set; }
+        public PerformanceHintReason Reason { get; private set; }
 
         public string Source { get; private set; }
 
-        public override string Id => GetKey(HintType, Source);
+        public override string Id => GetKey(Reason, Source);
 
         public INotificationDetails Details { get; private set; }
 
@@ -22,29 +22,29 @@ namespace Raven.Server.NotificationCenter.Notifications
             var json = base.ToJson();
 
             json[nameof(Source)] = Source;
-            json[nameof(HintType)] = HintType;
+            json[nameof(Reason)] = Reason;
             json[nameof(Details)] = Details?.ToJson();
 
             return json;
         }
 
-        public static PerformanceHint Create(string database, string title, string msg, PerformanceHintType type, NotificationSeverity notificationSeverity, string source, INotificationDetails details = null)
+        public static PerformanceHint Create(string database, string title, string msg, PerformanceHintReason reason, NotificationSeverity notificationSeverity, string source, INotificationDetails details = null)
         {
             return new PerformanceHint(database)
             {
                 IsPersistent = true,
                 Title = title,
                 Message = msg,
-                HintType = type,
+                Reason = reason,
                 Severity = notificationSeverity,
                 Source = source,
                 Details = details
             };
         }
 
-        public static string GetKey(PerformanceHintType type, string source)
+        public static string GetKey(PerformanceHintReason reason, string source)
         {
-            return $"{NotificationType.PerformanceHint}/{type}/{source}";
+            return $"{NotificationType.PerformanceHint}/{reason}/{source}";
         }
     }
 }

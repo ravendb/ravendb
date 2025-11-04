@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Replication
                         _database.Name,
                         $"Script unable to resolve conflicted documents with the ID {documentConflict.Id}",
                         msg,
-                        AlertType.Replication,
+                        AlertReason.Replication,
                         NotificationSeverity.Error,
                         "Mismatched Collections On Replication Resolve"
                         );
@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Replication
                     _database.Name,
                     "User-provided conflict script raised an error during conflict resolution, manual intervention required!",
                     msg,
-                    AlertType.Replication,
+                    AlertReason.Replication,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e));
 

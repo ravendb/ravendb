@@ -938,7 +938,7 @@ namespace SlowTests.Client.TimeSeries
                     var count = dbA.NotificationCenter.GetAlertCount();
                     if (count > 0)
                     {
-                        var keyA = AlertRaised.GetKey(AlertType.Replication, null);
+                        var keyA = AlertRaised.GetKey(AlertReason.Replication, null);
                         var alertA = dbA.NotificationCenter.GetStoredMessage(keyA);
                         if (alertA != null)
                         {
@@ -948,7 +948,7 @@ namespace SlowTests.Client.TimeSeries
                     }
 
                     var dbB = await GetDocumentDatabaseInstanceForAsync(options.DatabaseMode == RavenDatabaseMode.Single ? storeB.Database : await Sharding.GetShardDatabaseNameForDocAsync(storeB, "users/ayende"));
-                    var keyB = AlertRaised.GetKey(AlertType.Replication, null);
+                    var keyB = AlertRaised.GetKey(AlertReason.Replication, null);
                     var alertB = dbB.NotificationCenter.GetStoredMessage(keyB);
 
                     Assert.True(alertB.Contains("Segment reached capacity (2KB) and open a new segment unavailable at this point."));

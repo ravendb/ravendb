@@ -218,7 +218,7 @@ public class QueueSinkLoader : IDisposable
         if (Logger.IsInfoEnabled)
             Logger.Info(errorMessage);
 
-        var alert = AlertRaised.Create(_database.Name, AlertTitle, errorMessage, AlertType.QueueSink_Error, NotificationSeverity.Error);
+        var alert = AlertRaised.Create(_database.Name, AlertTitle, errorMessage, AlertReason.QueueSink_Error, NotificationSeverity.Error);
 
         _database.NotificationCenter.Add(alert);
     }

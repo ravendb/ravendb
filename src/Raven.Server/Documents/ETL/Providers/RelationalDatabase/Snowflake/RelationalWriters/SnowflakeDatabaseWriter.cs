@@ -49,7 +49,7 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
             database.Name,
             SnowflakeEtlTag,
             $"[{etlConfigurationName}] Could not open connection using '{connectionStringName}' connection string",
-            AlertType.SnowflakeEtl_ConnectionError,
+            AlertReason.SnowflakeEtl_ConnectionError,
             NotificationSeverity.Error,
             key: $"{etlConfigurationName}/{connectionStringName}",
             details: new ExceptionDetails(e)));

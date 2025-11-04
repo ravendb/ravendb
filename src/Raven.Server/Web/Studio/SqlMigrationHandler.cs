@@ -32,7 +32,7 @@ namespace Raven.Server.Web.Studio
                 {
                     sourceSqlDatabase.Provider = MigrationProvider.MySQL_MySqlConnector;
                     var alert = AlertRaised.Create(Database.Name, "Deprecated MySql factory auto-updated", "MySql.Data.MySqlClient factory has been defaulted to MySqlConnector.MySqlConnectorFactory",
-                            AlertType.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
+                            AlertReason.SqlConnectionString_DeprecatedFactoryReplaced, NotificationSeverity.Info);
                     Database.NotificationCenter.Add(alert);
                 }
 

@@ -86,7 +86,7 @@ class aiAgentExceededTokenThreshold extends abstractAlertDetails {
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "AiAgent_ExceededTokenThreshold";
+        return (notification instanceof alert) && notification.alertReason() === "AiAgent_ExceededTokenThreshold";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

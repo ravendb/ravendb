@@ -28,10 +28,10 @@ namespace Raven.Server.Config.Categories
             switch (notification)
             {
                 case AlertRaised alert:
-                    name = alert.AlertType.ToString();
+                    name = alert.Reason.ToString();
                     break;
                 case PerformanceHint hint:
-                    name = hint.HintType.ToString();
+                    name = hint.Reason.ToString();
                     break;
                 default:
                     return false;

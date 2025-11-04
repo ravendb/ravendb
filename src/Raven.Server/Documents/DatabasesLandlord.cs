@@ -210,7 +210,7 @@ namespace Raven.Server.Documents
                     if (_logger.IsInfoEnabled)
                         _logger.Info(message, e);
 
-                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, message, AlertType.ConcurrentDatabaseLoadTimeout,
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, message, AlertReason.ConcurrentDatabaseLoadTimeout,
                         NotificationSeverity.Warning,
                         details: new ExceptionDetails(e)));
 
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents
                     var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}' at index {index}";
                     if (_logger.IsInfoEnabled)
                         _logger.Info(title, e);
-                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertReason.DeletionError, NotificationSeverity.Error,
                         details: new ExceptionDetails(e)));
                     throw;
                 }

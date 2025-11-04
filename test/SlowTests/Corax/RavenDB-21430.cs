@@ -52,7 +52,7 @@ public sealed class RavenDB_21430 : RavenTestBase
                         try
                         {
                             var complexFieldAlert = AlertRaised.FromJson("", persistedAlerts[0].Json);
-                            Assert.Equal(AlertType.Indexing_CoraxComplexItem, complexFieldAlert.AlertType);
+                            Assert.Equal(AlertReason.Indexing_CoraxComplexItem, complexFieldAlert.Reason);
                             Assert.Contains("Complex field in Corax auto index", complexFieldAlert.Title);
                             foundCoraxHint = true;
                             break;

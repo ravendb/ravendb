@@ -85,7 +85,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof performanceHint) && notification.hintType() == "RequestLatency";
+        return (notification instanceof performanceHint) && notification.performanceHintReason() == "RequestLatency";
     }
 
     static showDetailsFor(hint: performanceHint, center: notificationCenter) {

@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Replication
                     _databaseName,
                     "Connection string name is empty",
                     msg,
-                    AlertType.Replication,
+                    AlertReason.Replication,
                     NotificationSeverity.Error));
                 return false;
             }
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Replication
                     _databaseName,
                     "Connection string not found",
                     msg,
-                    AlertType.Replication,
+                    AlertReason.Replication,
                     NotificationSeverity.Error));
 
                 return false;

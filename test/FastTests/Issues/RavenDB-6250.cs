@@ -71,27 +71,27 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Monitoring)]
         public void All_performance_hints_has_details_providers()
         {
-            var alreadyHandledInStudio = new HashSet<PerformanceHintType>
+            var alreadyHandledInStudio = new HashSet<PerformanceHintReason>
             {
-               PerformanceHintType.Paging,
-               PerformanceHintType.Indexing,
-               PerformanceHintType.RequestLatency,
-               PerformanceHintType.UnusedCapacity,
-               PerformanceHintType.SqlEtl_SlowSql,
-               PerformanceHintType.HugeDocuments,
-               PerformanceHintType.Indexing_References
+               PerformanceHintReason.Paging,
+               PerformanceHintReason.Indexing,
+               PerformanceHintReason.RequestLatency,
+               PerformanceHintReason.UnusedCapacity,
+               PerformanceHintReason.SqlEtl_SlowSql,
+               PerformanceHintReason.HugeDocuments,
+               PerformanceHintReason.Indexing_References
             };
 
-            var operationWithoutDetails = new HashSet<PerformanceHintType>
+            var operationWithoutDetails = new HashSet<PerformanceHintReason>
             {
-                PerformanceHintType.None,
-                PerformanceHintType.Replication,
-                PerformanceHintType.SlowIO
+                PerformanceHintReason.None,
+                PerformanceHintReason.Replication,
+                PerformanceHintReason.SlowIO
             };
 
-            var allKnownTypes = Enum.GetNames(typeof(PerformanceHintType)).ToHashSet();
+            var allKnownTypes = Enum.GetNames(typeof(PerformanceHintReason)).ToHashSet();
 
-            var unionSet = new HashSet<PerformanceHintType>(alreadyHandledInStudio);
+            var unionSet = new HashSet<PerformanceHintReason>(alreadyHandledInStudio);
             unionSet.UnionWith(operationWithoutDetails);
 
             var list = allKnownTypes.Except(unionSet.Select(x => x.ToString())).ToList();

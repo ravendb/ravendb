@@ -9,6 +9,7 @@ type actionColumnOpts<T> = {
     hide?: (item: T) => boolean;
     extraClass?: (item: T) => string;
     title?: (item:T) => string;
+    buttonStyle?: string;
 }
 type provider<T> = (item: T) => string;
 
@@ -58,6 +59,7 @@ class actionColumn<T extends object> implements virtualColumn {
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
         const extraStyle = this.opts.hide ? this.opts.hide(item) ? 'display: none;' : `display: block;` : '';
         const extraButtonHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
+        const buttonStyle = this.opts.buttonStyle ? generalUtils.escapeHtml(this.opts.buttonStyle) : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
         if (isSorted) {
@@ -65,7 +67,7 @@ class actionColumn<T extends object> implements virtualColumn {
         }
         
         return `<div class="cell action-cell padding padding-xs" style="width: ${this.width}; ${extraStyle}">
-            <button type="button" ${extraButtonHtml} data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${extraCssClasses}">${this.buttonText(item)}</button>
+            <button type="button" ${extraButtonHtml} data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${extraCssClasses}" style="${buttonStyle}">${this.buttonText(item)}</button>
         </div>`;
     }
 

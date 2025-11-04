@@ -45,12 +45,22 @@ export default function TemperatureField({ baseName }: TemperatureFieldProps) {
                 <PopoverWithHoverWrapper
                     message={
                         <>
-                            Controls randomness of the model output. Range typically [0.0, 2.0].
-                            <br />
-                            <br />
-                            Higher values (e.g., 1.0+) make output more creative and diverse.
-                            <br />
-                            Lower values (e.g., 0.2) make it more deterministic.
+                            Controls the randomness and creativity of the model&apos;s output. Valid values typically
+                            range from <code>0.0</code> to <code>2.0</code>:
+                            <ul className="mb-0">
+                                <li className="mt-1">
+                                    Higher values (e.g., <code>1.0</code> or above) produce more diverse and creative
+                                    responses.
+                                </li>
+                                <li className="mt-1">
+                                    Lower values (e.g., <code>0.2</code>) result in more focused, consistent, and
+                                    deterministic output.
+                                </li>
+                                <li className="mt-1">
+                                    If not explicitly set, <br />
+                                    Ollama defaults to a temperature of <code>0.8</code>.
+                                </li>
+                            </ul>
                         </>
                     }
                 >

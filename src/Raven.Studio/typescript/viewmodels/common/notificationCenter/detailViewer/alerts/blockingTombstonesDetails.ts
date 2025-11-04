@@ -147,7 +147,7 @@ class blockingTombstonesDetails extends abstractAlertDetails {
     }
     
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof alert) && notification.alertType() === "BlockingTombstones";
+        return (notification instanceof alert) && notification.alertReason() === "BlockingTombstones";
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

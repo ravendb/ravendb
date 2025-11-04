@@ -16,10 +16,10 @@ namespace Raven.Server.NotificationCenter
 {
     public sealed class Paging : IDisposable
     {
-        private static readonly string PagingDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Documents}";
-        private static readonly string PagingQueriesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Queries}";
-        private static readonly string PagingRevisionsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Revisions}";
-        private static readonly string PagingCompareExchangeId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.CompareExchange}";
+        private static readonly string PagingDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintReason.Paging}/{PagingOperationType.Documents}";
+        private static readonly string PagingQueriesId = $"{NotificationType.PerformanceHint}/{PerformanceHintReason.Paging}/{PagingOperationType.Queries}";
+        private static readonly string PagingRevisionsId = $"{NotificationType.PerformanceHint}/{PerformanceHintReason.Paging}/{PagingOperationType.Revisions}";
+        private static readonly string PagingCompareExchangeId = $"{NotificationType.PerformanceHint}/{PerformanceHintReason.Paging}/{PagingOperationType.CompareExchange}";
 
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
 
@@ -177,15 +177,15 @@ namespace Raven.Server.NotificationCenter
                         case PagingOperationType.Queries:
                             return PerformanceHint.Create(_notificationCenter.Database, $"Page size too big ({type.ToString().ToLower()})",
                                 "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.",
-                                PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                                PerformanceHintReason.Paging, NotificationSeverity.Warning, type.ToString(), details);
                         case PagingOperationType.Revisions:
                             return PerformanceHint.Create(_notificationCenter.Database, "Page size too big (revisions)",
                                 "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.",
-                                PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                                PerformanceHintReason.Paging, NotificationSeverity.Warning, type.ToString(), details);
                         case PagingOperationType.CompareExchange:
                             return PerformanceHint.Create(_notificationCenter.Database, "Page size too big (compare exchange)",
                                 "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.",
-                                PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                                PerformanceHintReason.Paging, NotificationSeverity.Warning, type.ToString(), details);
                         default:
                             throw new ArgumentOutOfRangeException(nameof(type), type, null);
                     }

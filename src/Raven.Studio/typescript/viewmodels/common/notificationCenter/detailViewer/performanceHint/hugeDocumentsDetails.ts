@@ -72,7 +72,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof performanceHint) && notification.hintType() === "HugeDocuments";
+        return (notification instanceof performanceHint) && notification.performanceHintReason() === "HugeDocuments";
     }
 
     static showDetailsFor(hint: performanceHint, center: notificationCenter) {

@@ -340,7 +340,7 @@ class notificationCenter {
             const alertObject = new alert(database, alertDto);
             notificationsContainer.push(alertObject);
             
-            if (alertObject.alertType() === "LicenseManager_LicenseLimit") {
+            if (alertObject.alertReason() === "LicenseManager_LicenseLimit") {
                 this.openDetails(alertObject);
             }
         }

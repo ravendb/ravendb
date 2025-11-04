@@ -11,6 +11,10 @@ namespace Raven.Server.NotificationCenter
 
         public DateTime? PostponedUntil;
 
+        public long Type;
+        
+        public long Reason;
+
         public void Dispose()
         {
             Json?.Dispose();
