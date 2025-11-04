@@ -163,6 +163,18 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         List<BlittableJsonReaderObject> historyDocs = default;
         bool shouldContinueConversation = true;
         var sw = Stopwatch.StartNew();
+
+        if (_conversationId[^1] == '|')
+        {
+            var res = await server.GenerateClusterIdentityAsync(_conversationId, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
+            _conversationId = res.ClusterId;
+        }
+        else
+        {
+            _conversationId = database.DocumentsStorage.DocumentPut.BuildDocumentId(_conversationId, database.DocumentsStorage.GenerateNextEtag(), out _);
+        }
+        _document.Id = _conversationId;
+
         while (shouldContinueConversation)
         {
             using var request = talker.CreateCompletionRequest(_request.Attachments);
@@ -471,12 +483,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
-        if (_conversationId[^1] == '|')
-        {
-            var r = await server.GenerateClusterIdentityAsync(_conversationId, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
-            _conversationId = r.ClusterId;
-        }
-
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
         var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
         await database.TxMerger.Enqueue(cmd);

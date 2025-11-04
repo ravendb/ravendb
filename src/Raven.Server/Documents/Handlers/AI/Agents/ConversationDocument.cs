@@ -374,7 +374,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             if (m.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) == false)
             {
                 continue;
-}
+            }
 
             switch (role)
             {
