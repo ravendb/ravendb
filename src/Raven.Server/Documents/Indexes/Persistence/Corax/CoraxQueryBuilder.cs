@@ -85,7 +85,7 @@ public static partial class CoraxQueryBuilder
             AllEntries = IndexSearcher.Memoize(IndexSearcher.AllEntries());
             Metadata = query.Metadata;
             HasDynamics = index.Definition.HasDynamicFields;
-            IsVectorSingleClause = Metadata.Query.Where is MethodExpression me && QueryMethod.GetMethodType(me.Name.Value) == MethodType.Vector_Search;
+            IsVectorSingleClause = Metadata.Query.Where is MethodExpression me && QueryMethod.GetMethodType(me.Name.Value) == MethodType.Vector_Search && Metadata.Query.OrderBy is null or {Count: 0};
             DynamicFields = HasDynamics
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
