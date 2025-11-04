@@ -35,7 +35,7 @@ public class DeleteAiAgentOperation : IMaintenanceOperation<AiAgentConfiguration
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/ai/agent?id={Uri.EscapeDataString(_identifier)}";
+            url = $"{node.Url}/databases/{node.Database}/admin/ai/agent?agentId={Uri.EscapeDataString(_identifier)}";
 
             var request = new HttpRequestMessage
             {
