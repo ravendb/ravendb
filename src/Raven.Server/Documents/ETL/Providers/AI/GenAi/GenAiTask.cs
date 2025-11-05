@@ -174,7 +174,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     {
         OutputSchema = Configuration.JsonSchema,
         SampleObject = Configuration.SampleObject,
-        Queries = Configuration.Queries
+        Queries = Configuration.Queries,
+        Parameters = Configuration.Parameters
     };
 
     private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope)
@@ -212,6 +213,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 };
                 handler.Initialize(Agent, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
+                    Parameters = item.ContextOutput.Context,
                     CreationOptions = new AiConversationCreationOptions
                     {
                         ExpirationInSec = Configuration.ExpirationInSeconds

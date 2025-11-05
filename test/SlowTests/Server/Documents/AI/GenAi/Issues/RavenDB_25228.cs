@@ -1,0 +1,245 @@
+﻿using System;
+using System.Threading.Tasks;
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Server.Documents.AI;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace SlowTests.Server.Documents.AI.GenAi.Issues
+{
+    public class RavenDB_25228(ITestOutputHelper output) : RavenTestBase(output)
+    {
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanPassAgentParametersIntoGenAiTools(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore();
+
+            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            // --- GenAI task config ---
+            config.Name = "GenAi-ShoppingCart-Suggestions";
+            config.Identifier = "shopping-cart-suggestions";
+            config.Collection = "ShoppingCarts";
+
+            config.Prompt =
+                "Use the tool 'recent-orders-for-customer' to fetch items from the customer's recent orders. " +
+                "From that list, suggest items to add to the shopping cart. " +
+                "Make sure that the items you suggest are NOT already in 'cartItems'. ";
+
+            config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
+
+            // Set agent parameters 
+            config.Parameters = [new AiAgentParameter("customerId")];
+
+            config.GenAiTransformation = new GenAiTransformation
+            {
+                Script =
+                    "ai.genContext({ " +
+                    "  customerId: this.CustomerId, " +
+                    "  cartItems: this.Items " +
+                    "});"
+            };
+
+            config.Queries =
+            [
+                new AiAgentToolQuery
+                {
+                    Name = "recent-orders-for-customer",
+                    Description = "Return item names from recent orders",
+                    Query =
+                        "from Orders " +
+                        "where CustomerId = $customerId " +
+                        "select Items",
+                    ParametersSampleObject = "{}",
+                }
+            ];
+
+            // Update the ShoppingCart with the model's Suggestions
+            config.UpdateScript = "this.SuggestedItems = $output.Suggestions;";
+
+            store.Maintenance.Send(new AddGenAiOperation(config));
+
+            var etlDone = Etl.WaitForEtlToComplete(store);
+
+            // --- Seed data ---
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Id = "orders/1-A",
+                    CustomerId = "customers/1-A",
+                    Items = ["milk", "bread"]
+                });
+                session.Store(new Order
+                {
+                    Id = "orders/2-A",
+                    CustomerId = "customers/1-A",
+                    Items = ["eggs"]
+                });
+                session.Store(new Order
+                {
+                    Id = "orders/3-A",
+                    CustomerId = "customers/1-A",
+                    Items = ["wine"]
+                });
+
+                session.Store(new Order
+                {
+                    Id = "orders/4-A",
+                    CustomerId = "customers/2-A",
+                    Items = ["apples"]
+                });
+
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ShoppingCart
+                {
+                    Id = "carts/1-A",
+                    CustomerId = "customers/1-A",
+                    Items = ["bread", "apples"]
+                });
+
+                session.Store(new ShoppingCart
+                {
+                    Id = "carts/2-A",
+                    CustomerId = "customers/2-A",
+                    Items = []
+                });
+
+                session.SaveChanges();
+            }
+
+            Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
+
+            using (var session = store.OpenSession())
+            {
+                var cart1 = session.Load<ShoppingCart>("carts/1-A");
+                var cart2 = session.Load<ShoppingCart>("carts/2-A");
+
+                Assert.NotNull(cart1);
+                Assert.NotNull(cart2);
+
+                // For customers/1-A:
+                // recent items: milk, bread, eggs, wine
+                // cart already has bread, apples → suggestions should be [milk, eggs, wine]
+                Assert.NotNull(cart1.SuggestedItems);
+                Assert.Equal(3, cart1.SuggestedItems.Length);
+                Assert.DoesNotContain("bread", cart1.SuggestedItems);
+                Assert.Contains("milk", cart1.SuggestedItems);
+                Assert.Contains("eggs", cart1.SuggestedItems);
+                Assert.Contains("wine", cart1.SuggestedItems);
+
+                // For customers/2-A:
+                // recent items: apples; empty cart → suggestions should be [apples]
+                Assert.NotNull(cart2.SuggestedItems);
+                Assert.Single(cart2.SuggestedItems);
+                Assert.Equal("apples", cart2.SuggestedItems[0]);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ShouldThrowWhenRequiredParametersAreNotPassedInContext(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore();
+
+            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            config.Name = "GenAi-ShoppingCart-Suggestions";
+            config.Identifier = "shopping-cart-suggestions";
+            config.Collection = "ShoppingCarts";
+
+            config.Prompt =
+                "Use the tool 'recent-orders-for-customer' to fetch items from the customer's recent orders. " +
+                "From that list, suggest items to add to the shopping cart. " +
+                "Make sure that the items you suggest are NOT already in 'cartItems'. ";
+
+            config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
+
+            // Set agent parameters 
+            config.Parameters = [new AiAgentParameter("customerId")];
+
+            // customerId is not part of the context object that we send to the model 
+            config.GenAiTransformation = new GenAiTransformation
+            {
+                Script =
+                    "ai.genContext({ " +
+                    "  cartItems: this.Items " +
+                    "});"
+            };
+
+            config.Queries =
+            [
+                new AiAgentToolQuery
+                {
+                    Name = "recent-orders-for-customer",
+                    Description = "Return item names from recent orders",
+                    Query =
+                        "from Orders " +
+                        "where CustomerId = $customerId " +
+                        "select Items",
+                    ParametersSampleObject = "{}",
+                }
+            ];
+
+            // Update the ShoppingCart with the model's deterministic Suggestions
+            config.UpdateScript = "this.SuggestedItems = $output.Suggestions;";
+
+            store.Maintenance.Send(new AddGenAiOperation(config));
+
+            const string docId = "carts/1";
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Id = "orders/1-A",
+                    CustomerId = "customers/1-A",
+                    Items = new[] { "milk", "bread" }
+                });
+                session.Store(new ShoppingCart
+                {
+                    Id = "carts/1-A",
+                    CustomerId = "customers/1-A",
+                    Items = new[] { "bread", "apples" }
+                }, docId);
+                session.SaveChanges();
+            }
+
+            EtlErrorInfo error = null;
+            var value = await WaitForValueAsync(async () =>
+            {
+                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
+                return error != null;
+            }, true, timeout: 60_000);
+
+            Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+            Assert.NotNull(error);
+            Assert.True(error.Error.Contains("Parameter 'customerId' is missing"));
+        }
+
+        private class Order
+        {
+            public string Id { get; set; }
+            public string CustomerId { get; set; }
+            public string[] Items { get; set; }
+        }
+
+        private class ShoppingCart
+        {
+            public string Id { get; set; }
+            public string CustomerId { get; set; }
+            public string[] Items { get; set; }
+            public string[] SuggestedItems { get; set; }
+        }
+    }
+}
