@@ -217,7 +217,83 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 
             Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
             Assert.NotNull(error);
-            Assert.True(error.Error.Contains("Value of parameter 'customerId' was not provided"));
+            Assert.True(error.Error.Contains("Tool query 'recent-orders-for-customer' contains parameters that are not defined in the agent configuration: 'customerId'"));
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ShouldThrowWhenParameterIsDefinedInQueryToolSchemaAndPassedInContext(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore();
+
+            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            config.Name = "GenAi-ShoppingCart-Suggestions";
+            config.Identifier = "shopping-cart-suggestions";
+            config.Collection = "ShoppingCarts";
+
+            config.Prompt =
+                "Use the tool 'recent-orders-for-customer' to fetch items from the customer's recent orders. " +
+                "From that list, suggest items to add to the shopping cart. " +
+                "Make sure that the items you suggest are NOT already in 'cartItems'. ";
+
+            config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
+
+            // customerId is part of the context object that we send to the model 
+            config.GenAiTransformation = new GenAiTransformation
+            {
+                Script =
+                    "ai.genContext({ " +
+                    "  customerId: this.CustomerId, " +
+                    "  cartItems: this.Items " +
+                    "});"
+            };
+
+            // but customerId also appears as a parameter in ParametersSampleObject
+            config.Queries =
+            [
+                new AiAgentToolQuery
+                {
+                    Name = "recent-orders-for-customer",
+                    Description = "Return item names from recent orders",
+                    Query =
+                        "from Orders " +
+                        "where CustomerId = $customerId " +
+                        "select Items",
+                    ParametersSampleObject = "{\"customerId\":\"customers/1-A\"}",
+                }
+            ];
+
+            config.UpdateScript = "this.SuggestedItems = $output.Suggestions;";
+            store.Maintenance.Send(new AddGenAiOperation(config));
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Order
+                {
+                    Id = "orders/1-A",
+                    CustomerId = "customers/1-A",
+                    Items = new[] { "milk", "bread" }
+                });
+                session.Store(new ShoppingCart
+                {
+                    Id = "carts/1-A",
+                    CustomerId = "customers/1-A",
+                    Items = new[] { "bread", "apples" }
+                });
+                session.SaveChanges();
+            }
+
+            EtlErrorInfo error = null;
+            var value = await WaitForValueAsync(async () =>
+            {
+                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
+                return error != null;
+            }, true, timeout: 60_000);
+
+            Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+            Assert.NotNull(error);
+            Assert.True(error.Error.Contains("Parameter customerId is defined on both the agent level and the query level for recent-orders-for-customer"));
         }
 
         private class Order

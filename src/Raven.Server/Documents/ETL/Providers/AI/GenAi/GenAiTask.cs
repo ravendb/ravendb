@@ -23,6 +23,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -196,28 +197,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 string json = item.ContextOutput.Context.ToString();
                 Task<GenAiHandlerResult> task;
 
+                var agentConfiguration = CreateAgentConfiguration(context, item);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
                     // GenAI task uses full access
                     Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
                 };
 
-                var agentParameters = new List<AiAgentParameter>();
-                var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
-                foreach (var name in contextObjPropNames)
-                {
-                    agentParameters.Add(new AiAgentParameter(name));
-                }
-
-                var agent = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
-                {
-                    OutputSchema = Configuration.JsonSchema,
-                    SampleObject = Configuration.SampleObject,
-                    Queries = Configuration.Queries,
-                    Parameters = agentParameters
-                };
-
-                handler.Initialize(Agent, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
+                handler.Initialize(agentConfiguration, $"GenAI/{item.DocumentId}", new RequestBody
                 {
                     Parameters = item.ContextOutput.Context,
                     CreationOptions = new AiConversationCreationOptions
@@ -259,7 +246,29 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
+    private AiAgentConfiguration CreateAgentConfiguration(DocumentsOperationContext context, GenAiResultItem item)
+    {
+        var agentParameters = new List<AiAgentParameter>();
+        var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
+        foreach (var name in contextObjPropNames)
+        {
+            agentParameters.Add(new AiAgentParameter(name));
+        }
+
+        var agentConfiguration = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
+        {
+            OutputSchema = Configuration.JsonSchema,
+            SampleObject = Configuration.SampleObject,
+            Queries = Configuration.Queries,
+            Parameters = agentParameters,
+            ChatTrimming = null
+        };
+
+        AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agentConfiguration);
+        return agentConfiguration;
+    }
+
+    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<(string Result, AiUsage Usage)>> tasks, GenAiStatsScope statsScope)
     {
         List<Exception> exceptions = null;
 
