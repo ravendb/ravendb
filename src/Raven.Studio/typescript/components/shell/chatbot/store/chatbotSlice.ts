@@ -177,7 +177,7 @@ const runChat = createAsyncThunk(
 
             let content = "";
 
-            for (;;) {
+            while (true) {
                 const { done, value } = await reader.read();
                 if (done) {
                     break;
@@ -269,10 +269,8 @@ export const chatbotSelectors = {
     messageIds: (state: RootState) => chatbotMessagesSelectors.selectIds(state.chatbot.messages),
     messageById: (state: RootState, id: string) => chatbotMessagesSelectors.selectById(state.chatbot.messages, id),
     messagesCount: (state: RootState) => chatbotMessagesSelectors.selectTotal(state.chatbot.messages),
-    isLastMessage: (state: RootState, id: string) => {
-        const messageIds = chatbotMessagesSelectors.selectIds(state.chatbot.messages);
-        return messageIds[messageIds.length - 1] === id;
-    },
+    isLastMessage: (state: RootState, id: string) =>
+        chatbotMessagesSelectors.selectIds(state.chatbot.messages).at(-1) === id,
     conversationId: (state: RootState) => state.chatbot.conversationId,
     runChatLastMessage: (state: RootState) => state.chatbot.runChatLastMessage,
     isNotificationsVisibleAndPinned: (state: RootState) => state.chatbot.isNotificationsVisibleAndPinned,

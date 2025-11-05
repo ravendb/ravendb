@@ -1,11 +1,12 @@
 import classNames from "classnames";
 import IconName from "typings/server/icons";
 import { Icon } from "./Icon";
+import { ReactNode } from "react";
 
 interface ClickableCardProps {
     icon: IconName;
-    title: string;
-    description: string;
+    title: ReactNode;
+    description?: ReactNode;
     isSelected?: boolean;
     className?: string;
     isDisabled?: boolean;
@@ -44,7 +45,7 @@ export default function ClickableCard({
                 </div>
                 <div className="flex-grow">
                     <div className="fw-semibold">{title}</div>
-                    {description && <div>{description}</div>}
+                    {description != null && <div>{description}</div>}
                 </div>
             </div>
         </div>

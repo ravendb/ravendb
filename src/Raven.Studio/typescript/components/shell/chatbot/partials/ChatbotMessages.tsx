@@ -24,14 +24,13 @@ export default function ChatbotMessages() {
 
     // Scroll to the bottom when messages are updated
     useEffect(() => {
-        if (!messagesRef.current) {
+        const current = messagesRef.current;
+        if (!current) {
             return;
         }
 
-        const offsetToSeeUserMessage = 60;
-        const top = messagesRef.current.scrollHeight - messagesRef.current.clientHeight - offsetToSeeUserMessage;
-
-        messagesRef.current.scrollTo({ top, behavior: "smooth" });
+        const top = current.scrollHeight - current.clientHeight - OFFSET_TO_SEE_USER_MESSAGE_IN_PX;
+        current.scrollTo({ top, behavior: "smooth" });
     }, [messageIds.length]);
 
     return (
@@ -42,6 +41,8 @@ export default function ChatbotMessages() {
         </div>
     );
 }
+
+const OFFSET_TO_SEE_USER_MESSAGE_IN_PX = 60;
 
 interface AiAgentMessageProps {
     id: string;

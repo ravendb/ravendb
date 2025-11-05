@@ -77,15 +77,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     </div>
                 )}
                 {asyncAssist.error && <RichAlert variant="danger">Failed to assist. Please try again.</RichAlert>}
-                {asyncAssist.result?.Status === "InvalidData" && (
-                    <RichAlert variant="danger">{aiAssistantConstants.invalidData}</RichAlert>
-                )}
-                {asyncAssist.result?.Status === "OutOfTokens" && (
-                    <RichAlert variant="danger">{aiAssistantConstants.outOfTokens}</RichAlert>
-                )}
-                {asyncAssist.result?.Status === "InvalidCredentials" && (
-                    <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>
-                )}
+                <AiAssistStatus status={asyncAssist.result?.Status} />
                 {assistResultText && (
                     <div>
                         <div className="mb-2">{successMessage}</div>
@@ -111,4 +103,24 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
             </div>
         </div>
     );
+}
+
+interface AiAssistStatusProps {
+    status: AiAssistantResponseStatus;
+}
+
+function AiAssistStatus({ status }: AiAssistStatusProps) {
+    if (status === "InvalidData") {
+        return <RichAlert variant="danger">{aiAssistantConstants.invalidData}</RichAlert>;
+    }
+
+    if (status === "OutOfTokens") {
+        return <RichAlert variant="danger">{aiAssistantConstants.outOfTokens}</RichAlert>;
+    }
+
+    if (status === "InvalidCredentials") {
+        return <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>;
+    }
+
+    return null;
 }
