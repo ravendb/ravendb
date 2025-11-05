@@ -103,8 +103,8 @@ public sealed class RavenDB_22176 : RavenDB_17068_Base
             for (var id = 0; id < 10; ++id)
             {
                 Notification notificationEndpointDto = id % 2 == 0
-                    ? AlertRaised.Create("test", id.ToString(), id.ToString(), (AlertType)id, NotificationSeverity.Info)
-                    : PerformanceHint.Create("test", id.ToString(), id.ToString(), (PerformanceHintType)(id % 5), NotificationSeverity.Info, "indexing");
+                    ? AlertRaised.Create("test", id.ToString(), id.ToString(), (AlertReason)id, NotificationSeverity.Info)
+                    : PerformanceHint.Create("test", id.ToString(), id.ToString(), (PerformanceHintReason)(id % 5), NotificationSeverity.Info, "indexing");
                 db.NotificationCenter.Add(notificationEndpointDto);
             }
 

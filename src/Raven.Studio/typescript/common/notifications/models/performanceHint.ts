@@ -7,7 +7,7 @@ class performanceHint extends abstractNotification {
 
     details = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.INotificationDetails>();
     source = ko.observable<string>();
-    hintType = ko.observable<Raven.Server.NotificationCenter.Notifications.PerformanceHintType>();
+    performanceHintReason = ko.observable<Raven.Server.NotificationCenter.Notifications.PerformanceHintReason>();
     dontShowAgain = ko.observable<boolean>(false);
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.PerformanceHint) {
@@ -22,7 +22,7 @@ class performanceHint extends abstractNotification {
 
         this.details(incomingChanges.Details);
         this.source(incomingChanges.Source);
-        this.hintType(incomingChanges.HintType);
+        this.performanceHintReason(incomingChanges.Reason);
     }
 
 }

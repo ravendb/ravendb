@@ -23,6 +23,8 @@
         
         OngoingTasks,
 
-        GcInfo
+        GcInfo,
+        
+        DatabasesNotifications
     }
 }

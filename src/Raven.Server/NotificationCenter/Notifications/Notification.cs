@@ -10,6 +10,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public const string AllDatabases = "*";
 
+        public const long UnsupportedReason = -1;
+
         protected Notification()
         {
             // for deserialization
@@ -62,6 +64,18 @@ namespace Raven.Server.NotificationCenter.Notifications
                 [nameof(IsPersistent)] = IsPersistent,
                 [nameof(Database)] = Database
             };
+        }
+        
+        public long GetReasonLongValue()
+        {
+            var notificationReason = Type switch
+            {
+                NotificationType.PerformanceHint => (long)((PerformanceHint)this).Reason,
+                NotificationType.AlertRaised => (long)((AlertRaised)this).Reason,
+                _ => UnsupportedReason
+            };
+            
+            return notificationReason;
         }
     }
 }

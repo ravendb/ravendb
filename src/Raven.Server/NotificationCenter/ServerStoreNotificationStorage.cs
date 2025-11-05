@@ -28,7 +28,7 @@ public sealed class ServerStoreNotificationStorage(ServerStore serverStore) : No
     {
         var buildNumber = ServerVersion.Build;
 
-        var id = AlertRaised.GetKey(AlertType.Server_NewVersionAvailable, null);
+        var id = AlertRaised.GetKey(AlertReason.Server_NewVersionAvailable, null);
         using (Read(id, out var ntv))
         {
             using (ntv)

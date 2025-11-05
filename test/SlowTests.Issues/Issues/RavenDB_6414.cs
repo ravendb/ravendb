@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                     } while (alert.Item2["Type"].ToString() != NotificationType.AlertRaised.ToString());
                  
                     
-                    Assert.Equal(AlertType.CatastrophicDatabaseFailure, alert.Item2[nameof(AlertRaised.AlertType)]);
+                    Assert.Equal(AlertReason.CatastrophicDatabaseFailure, alert.Item2[nameof(AlertRaised.Reason)]);
                     Assert.Contains(database.Name, alert.Item2[nameof(AlertRaised.Title)] as string);
                 }
 

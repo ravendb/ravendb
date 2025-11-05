@@ -69,9 +69,9 @@ namespace SlowTests.Server.Documents.QueueSink
 
             string tag = config.BrokerType == QueueBrokerType.Kafka ? QueueSinkProcess.KafkaTag : QueueSinkProcess.RabbitMqTag;
 
-            var errorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_Error);
-            var consumeErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ConsumeError);
-            var scriptErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertType.QueueSink_ScriptError);
+            var errorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertReason.QueueSink_Error);
+            var consumeErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertReason.QueueSink_ConsumeError);
+            var scriptErrorAlert = database.NotificationCenter.QueueSinkNotifications.GetAlert<QueueSinkErrorsDetails>(tag, $"{config.Name}/{config.Scripts.First().Name}", AlertReason.QueueSink_ScriptError);
 
             if (errorAlert.Errors.Count != 0)
             {

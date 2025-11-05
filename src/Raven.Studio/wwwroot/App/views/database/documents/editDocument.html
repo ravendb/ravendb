@@ -4,7 +4,7 @@
             <div class="flex-horizontal copy-area">
                 <div class="flex-grow">
                     <div class="documentId">
-                        <div data-bind="if: isCreatingNewDocument()">
+                        <div data-bind="if: isCreatingNewDocument() && !isFullScreenEditor()">
                             <div class="input-group" data-bind="validationElement: userSpecifiedId">
                                 <div class="input-group-addon">ID</div>
                                 <input class="form-control"

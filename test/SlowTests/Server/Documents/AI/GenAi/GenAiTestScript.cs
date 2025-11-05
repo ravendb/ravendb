@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FastTests;
@@ -10,8 +9,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;

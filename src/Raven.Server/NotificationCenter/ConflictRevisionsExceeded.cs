@@ -92,7 +92,7 @@ public class ConflictRevisionsExceeded
 
                 return AlertRaised.Create(_notificationCenter.Database, "Excess number of Conflict Revisions",
                     "We have detected that some of the documents conflict/resolved revisions exceeded the configured value (set on the conflict revisions configuration).",
-                    AlertType.ConflictRevisionsExceeded, NotificationSeverity.Warning, ConflictRevisionExceededMaxId, details);
+                    AlertReason.ConflictRevisionsExceeded, NotificationSeverity.Warning, ConflictRevisionExceededMaxId, details);
             }
         }
     }

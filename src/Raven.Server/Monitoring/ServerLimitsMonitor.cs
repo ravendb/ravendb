@@ -78,7 +78,7 @@ namespace Raven.Server.Monitoring
                 {
                     ServerLimitsDetails details;
                     AlertRaised hint;
-                    var id = AlertRaised.GetKey(AlertType.ServerLimits, Source);
+                    var id = AlertRaised.GetKey(AlertReason.ServerLimits, Source);
 
                     using (_notificationsStorage.Read(id, out var ntv))
                     {
@@ -100,7 +100,7 @@ namespace Raven.Server.Monitoring
                             null,
                             "Running close to OS limits",
                             "We have detected server is running close to OS limits",
-                            AlertType.ServerLimits,
+                            AlertReason.ServerLimits,
                             NotificationSeverity.Warning,
                             Source,
                             details

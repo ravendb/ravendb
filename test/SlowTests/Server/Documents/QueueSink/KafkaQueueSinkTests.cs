@@ -336,7 +336,7 @@ namespace SlowTests.Server.Documents.QueueSink
                 var exception = await AssertWaitForNotNullAsync(async () =>
                 {
                     var database = await GetDatabase(store.Database);
-                    var consumerCreationError = database.NotificationCenter.QueueSinkNotifications.GetAlert<ExceptionDetails>("Kafka Sink", $"test/test", AlertType.QueueSink_ConsumerCreationError);
+                    var consumerCreationError = database.NotificationCenter.QueueSinkNotifications.GetAlert<ExceptionDetails>("Kafka Sink", $"test/test", AlertReason.QueueSink_ConsumerCreationError);
                     
                     return consumerCreationError.Exception;
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);

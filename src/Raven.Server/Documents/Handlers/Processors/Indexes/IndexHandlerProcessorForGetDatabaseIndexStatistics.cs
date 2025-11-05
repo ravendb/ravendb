@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                                         RequestHandler.Database.NotificationCenter.Add(AlertRaised.Create(RequestHandler.Database.Name,
                                             $"Failed to get stats of '{x.Name}' index",
                                             $"Exception was thrown on getting stats of '{x.Name}' index",
-                                            AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
+                                            AlertReason.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
                                     }
                                     catch (Exception addAlertException)
                                     {

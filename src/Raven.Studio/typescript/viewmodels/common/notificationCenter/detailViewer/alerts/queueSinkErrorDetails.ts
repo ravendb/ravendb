@@ -63,7 +63,7 @@ class queueSinkErrorDetails extends abstractAlertDetails {
     
     static supportsDetailsFor(notification: abstractNotification) {
         return (notification instanceof alert) 
-            && (notification.alertType() === "QueueSink_ConsumeError" || notification.alertType() === "QueueSink_ScriptError");
+            && (notification.alertReason() === "QueueSink_ConsumeError" || notification.alertReason() === "QueueSink_ScriptError");
     }
 
     static showDetailsFor(alert: alert, center: notificationCenter) {

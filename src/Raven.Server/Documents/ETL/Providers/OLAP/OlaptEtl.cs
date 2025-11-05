@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                     Database.Name,
                     "OLAP ETL run frequency parsing error",
                     message,
-                    AlertType.Etl_Error,
+                    AlertReason.Etl_Error,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
 

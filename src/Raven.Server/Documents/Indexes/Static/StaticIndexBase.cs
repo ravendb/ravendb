@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     documentDatabase.Name,
                     $"Index '{indexMetadata.Name}' contains {StackSizeInSelectClause} `let` clauses.",
                     $"We have detected that your index contains many `let` clauses. This can be not optimal approach because it might cause to allocate a lot of stack-based memory. Please consider to simplify your index definition. We suggest not to exceed {performanceHintConfig.MaxDepthOfRecursionInLinqSelect} `let` statements.",
-                    PerformanceHintType.Indexing,
+                    PerformanceHintReason.Indexing,
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));
                 

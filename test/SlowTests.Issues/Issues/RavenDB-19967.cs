@@ -30,7 +30,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_19967 : ReplicationTestBase
     {
-        private readonly string _notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+        private readonly string _notificationId = AlertRaised.GetKey(AlertReason.BlockingTombstones, nameof(AlertReason.BlockingTombstones));
         private readonly string _customTaskName = $"Custom task name {Guid.NewGuid()}";
 
         private const int Timeout = 3000;
@@ -531,7 +531,7 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                var notificationId = AlertRaised.GetKey(AlertReason.BlockingTombstones, nameof(AlertReason.BlockingTombstones));
                 Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
 
                 var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);
@@ -564,7 +564,7 @@ namespace SlowTests.Issues
                 }
 
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
-                var notificationId = AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones));
+                var notificationId = AlertRaised.GetKey(AlertReason.BlockingTombstones, nameof(AlertReason.BlockingTombstones));
                 Assert.True(documentDatabase.NotificationCenter.Exists(notificationId));
 
                 var blockingTombstonesDetails = documentDatabase.NotificationCenter.TombstoneNotifications.GetNotificationDetails(notificationId);

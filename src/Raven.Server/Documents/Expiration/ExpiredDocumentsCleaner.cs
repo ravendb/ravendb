@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Expiration
                 database.NotificationCenter.Add(AlertRaised.Create(
                     database.Name,
                     $"Expiration error in {database.Name}", msg,
-                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
+                    AlertReason.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
                 var logger = database.Loggers.GetLogger<ExpiredDocumentsCleaner>();
                 if (logger.IsErrorEnabled)

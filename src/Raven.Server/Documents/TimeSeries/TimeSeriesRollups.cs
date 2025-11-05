@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.TimeSeries
                             _logger.Info(msg, e);
 
                         var alert = AlertRaised.Create(context.DocumentDatabase.Name, "Failed to perform rollup because the time-series has more than 5 values", msg,
-                            AlertType.RollupExceedNumberOfValues, NotificationSeverity.Warning, $"{item.Collection}/{item.Name}", new ExceptionDetails(e));
+                            AlertReason.RollupExceedNumberOfValues, NotificationSeverity.Warning, $"{item.Collection}/{item.Name}", new ExceptionDetails(e));
 
                         context.DocumentDatabase.NotificationCenter.Add(alert);
                     }

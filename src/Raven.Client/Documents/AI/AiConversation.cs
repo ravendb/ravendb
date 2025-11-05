@@ -253,7 +253,9 @@ internal class AiConversation : IAiConversationOperations
             return new AiAnswer<TAnswer>
             {
                 Answer = r.Response,
-                Status = _actionRequests.Count > 0 ? AiConversationResult.ActionRequired : AiConversationResult.Done
+                Status = _actionRequests.Count > 0 ? AiConversationResult.ActionRequired : AiConversationResult.Done,
+                Usage = r.Usage,
+                Elapsed = r.Elapsed
             };
         }
         catch (ConcurrencyException e)

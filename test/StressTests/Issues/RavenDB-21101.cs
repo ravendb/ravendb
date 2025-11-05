@@ -53,7 +53,7 @@ public class RavenDB_21101 : ReplicationTestBase
         }
 
         await Task.Delay(TimeSpan.FromMinutes(1));
-        var notificationId = AlertRaised.GetKey(AlertType.ConflictRevisionsExceeded, "ConflictRevisionExceededMax");
+        var notificationId = AlertRaised.GetKey(AlertReason.ConflictRevisionsExceeded, "ConflictRevisionExceededMax");
         Assert.True(dstDb.NotificationCenter.Exists(notificationId));
     }
 

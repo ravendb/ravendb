@@ -106,7 +106,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof performanceHint) && notification.hintType() === "Paging";
+        return (notification instanceof performanceHint) && notification.performanceHintReason() === "Paging";
     }
 
     static showDetailsFor(hint: performanceHint, center: notificationCenter) {

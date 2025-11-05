@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter
         {
             var alert = GetOrCreateAlert<QueueSinkErrorsDetails>(processTag,
                 processName,
-                AlertType.QueueSink_ScriptError,
+                AlertReason.QueueSink_ScriptError,
                 $"{preMessage}Script has failed for the following messages (last {QueueSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
                 out var details);
 
@@ -31,7 +31,7 @@ namespace Raven.Server.NotificationCenter
         {
             var alert = GetOrCreateAlert<QueueSinkErrorsDetails>(processTag,
                 processName,
-                AlertType.QueueSink_ConsumeError,
+                AlertReason.QueueSink_ConsumeError,
                 $"{preMessage}Consume messages has failed (last {QueueSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
                 out var details);
 
@@ -47,13 +47,13 @@ namespace Raven.Server.NotificationCenter
             return alert;
         }
 
-        private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertType alertType, string message, out T details) where T : INotificationDetails, new()
+        private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertReason alertReason, string message, out T details) where T : INotificationDetails, new()
         {
-            Debug.Assert(alertType == AlertType.QueueSink_ConsumeError || alertType == AlertType.QueueSink_ScriptError);
+            Debug.Assert(alertReason == AlertReason.QueueSink_ConsumeError || alertReason == AlertReason.QueueSink_ScriptError);
 
             var key = $"{processTag}/{processName}";
 
-            var id = AlertRaised.GetKey(alertType, key);
+            var id = AlertRaised.GetKey(alertReason, key);
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
@@ -63,22 +63,22 @@ namespace Raven.Server.NotificationCenter
                     _notificationCenter.Database,
                     $"{processTag}: '{processName}'",
                     message,
-                    alertType,
+                    alertReason,
                     NotificationSeverity.Warning,
                     key: key,
                     details: details);
             }
         }
 
-        public T GetAlert<T>(string processTag, string processName, AlertType alertType) where T : INotificationDetails, new()
+        public T GetAlert<T>(string processTag, string processName, AlertReason alertReason) where T : INotificationDetails, new()
         {
             Debug.Assert(
-                alertType is AlertType.QueueSink_ConsumeError or AlertType.QueueSink_ScriptError or AlertType.QueueSink_Error
-                    or AlertType.QueueSink_ConsumerCreationError, $"Got type: {alertType}");
+                alertReason is AlertReason.QueueSink_ConsumeError or AlertReason.QueueSink_ScriptError or AlertReason.QueueSink_Error
+                    or AlertReason.QueueSink_ConsumerCreationError, $"Got type: {alertReason}");
 
             var key = $"{processTag}/{processName}";
 
-            var id = AlertRaised.GetKey(alertType, key);
+            var id = AlertRaised.GetKey(alertReason, key);
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {

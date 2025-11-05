@@ -30,7 +30,7 @@ namespace SlowTests.Sharding.Issues
 
                 // store notification 
                 var alertMsg = $"you have low disk space on node '{Server.ServerStore.NodeTag}'";
-                alert = AlertRaised.Create(store.Database, "low disk space warning", alertMsg, AlertType.LowDiskSpace, NotificationSeverity.Warning);
+                alert = AlertRaised.Create(store.Database, "low disk space warning", alertMsg, AlertReason.LowDiskSpace, NotificationSeverity.Warning);
 
                 shardedDbCtx.NotificationCenter.Add(alert);
 
@@ -84,7 +84,7 @@ namespace SlowTests.Sharding.Issues
 
                 // store notification 
                 var alertMsg = $"you have low disk space on node '{Server.ServerStore.NodeTag}'";
-                var alert = AlertRaised.Create(store.Database, "low disk space warning", alertMsg, AlertType.LowDiskSpace, NotificationSeverity.Warning);
+                var alert = AlertRaised.Create(store.Database, "low disk space warning", alertMsg, AlertReason.LowDiskSpace, NotificationSeverity.Warning);
 
                 shardedDbCtx.NotificationCenter.Add(alert);
 

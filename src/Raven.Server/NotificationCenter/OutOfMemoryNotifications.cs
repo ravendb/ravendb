@@ -54,7 +54,7 @@ namespace Raven.Server.NotificationCenter
                 null,
                 notificationMetadata.Title,
                 exception.Message,
-                AlertType.OutOfMemoryException,
+                AlertReason.OutOfMemoryException,
                 NotificationSeverity.Error,
                 notificationMetadata.Key,
                 OutOfMemoryDetails(exception));

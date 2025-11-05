@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                     Assert.Equal("We have detected high number of LoadDocument() / LoadCompareExchangeValue() calls per single reference item. The update of a reference will result in reindexing all documents that reference it. Please see Indexing Performance graph to check the performance of your indexes.",
                         performanceHint.Item2[nameof(PerformanceHint.Message)]);
 
-                    Assert.Equal(PerformanceHintType.Indexing_References, performanceHint.Item2[nameof(PerformanceHint.HintType)]);
+                    Assert.Equal(PerformanceHintReason.Indexing_References, performanceHint.Item2[nameof(PerformanceHint.Reason)]);
 
                     var details = performanceHint.Item2[nameof(PerformanceHint.Details)] as DynamicJsonValue;
 

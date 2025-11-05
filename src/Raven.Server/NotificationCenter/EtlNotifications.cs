@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter
         {
             var alert = GetOrCreateAlert<EtlErrorsDetails>(processTag,
                 processName,
-                AlertType.Etl_TransformationError,
+                AlertReason.Etl_TransformationError,
                 $"{preMessage}Transformation has failed for the following documents (last {EtlErrorsDetails.MaxNumberOfErrors} errors are shown)",
                 out var details);
 
@@ -31,7 +31,7 @@ namespace Raven.Server.NotificationCenter
         {
             var alert = GetOrCreateAlert<EtlErrorsDetails>(processTag,
                 processName,
-                AlertType.Etl_LoadError,
+                AlertReason.Etl_LoadError,
                 $"{preMessage}Loading transformed data to the destination has failed (last {EtlErrorsDetails.MaxNumberOfErrors} errors are shown)",
                 out var details);
 
@@ -42,7 +42,7 @@ namespace Raven.Server.NotificationCenter
         {
             var alert = GetOrCreatePerformanceHint<SlowSqlDetails>(processTag,
                 processName,
-                PerformanceHintType.SqlEtl_SlowSql,
+                PerformanceHintReason.SqlEtl_SlowSql,
                 $"Slow SQL detected (last {SlowSqlDetails.MaxNumberOfStatements} statements are shown)",
                 out var details);
 
@@ -63,13 +63,13 @@ namespace Raven.Server.NotificationCenter
             return alert;
         }
 
-        private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertType etlAlertType, string message, out T details) where T : INotificationDetails, new()
+        private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertReason etlAlertReason, string message, out T details) where T : INotificationDetails, new()
         {
-            Debug.Assert(etlAlertType == AlertType.Etl_LoadError || etlAlertType == AlertType.Etl_TransformationError);
+            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError);
 
             var key = $"{processTag}/{processName}";
 
-            var id = AlertRaised.GetKey(etlAlertType, key);
+            var id = AlertRaised.GetKey(etlAlertReason, key);
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
@@ -81,7 +81,7 @@ namespace Raven.Server.NotificationCenter
                         _notificationCenter.Database,
                         $"{processTag}: '{processName}'",
                         message,
-                        etlAlertType,
+                        etlAlertReason,
                         NotificationSeverity.Warning,
                         key: key,
                         details: details);
@@ -89,14 +89,14 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public AlertRaised GetAlert<T>(string processTag, string processName, AlertType etlAlertType)
+        public AlertRaised GetAlert<T>(string processTag, string processName, AlertReason etlAlertReason)
             where T : INotificationDetails, new()
         {
-            Debug.Assert(etlAlertType == AlertType.Etl_LoadError || etlAlertType == AlertType.Etl_TransformationError);
+            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError);
 
             var key = $"{processTag}/{processName}";
 
-            var id = AlertRaised.GetKey(etlAlertType, key);
+            var id = AlertRaised.GetKey(etlAlertReason, key);
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
@@ -109,13 +109,13 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private PerformanceHint GetOrCreatePerformanceHint<T>(string processTag, string processName, PerformanceHintType etlHintType, string message, out T details) where T : INotificationDetails, new()
+        private PerformanceHint GetOrCreatePerformanceHint<T>(string processTag, string processName, PerformanceHintReason etlHintReason, string message, out T details) where T : INotificationDetails, new()
         {
-            Debug.Assert(etlHintType == PerformanceHintType.SqlEtl_SlowSql);
+            Debug.Assert(etlHintReason == PerformanceHintReason.SqlEtl_SlowSql);
 
             var key = $"{processTag}/{processName}";
 
-            var id = PerformanceHint.GetKey(etlHintType, key);
+            var id = PerformanceHint.GetKey(etlHintReason, key);
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
@@ -127,7 +127,7 @@ namespace Raven.Server.NotificationCenter
                         _notificationCenter.Database,
                         $"{processTag}: '{processName}'",
                         message,
-                        etlHintType,
+                        etlHintReason,
                         NotificationSeverity.Warning,
                         source: key,
                         details: details);

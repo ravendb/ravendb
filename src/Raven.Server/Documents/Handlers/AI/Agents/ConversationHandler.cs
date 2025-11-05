@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -150,6 +151,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return await RunInternalAsync(context, talker, token);
     }
 
+    private TimeSpan _elapsed;
+
     private async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> RunInternalAsync(
         JsonOperationContext context,
         Talker talker, CancellationToken token)
@@ -159,7 +162,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         AiResponse r = default;
         List<BlittableJsonReaderObject> historyDocs = default;
         bool shouldContinueConversation = true;
-
+        var sw = Stopwatch.StartNew();
         while (shouldContinueConversation)
         {
             using var request = talker.CreateCompletionRequest(_request.Attachments);
@@ -211,6 +214,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
 
+        _elapsed = sw.Elapsed;
         _conversationId = await TryPersistAsync(context, historyDocs);
 
         return (r.Result, talker.AiUsage);
@@ -588,7 +592,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             [nameof(ConversationResult<object>.ChangeVector)] = _document.ChangeVector,
             [nameof(ConversationResult<object>.Response)] = response,
             [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(_document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson()
+            [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson(),
+            [nameof(ConversationResult<object>.Usage)] = _document.CurrentUsage.ToJson(),
+            [nameof(ConversationResult<object>.Elapsed)] = _elapsed
         };
     }
 }

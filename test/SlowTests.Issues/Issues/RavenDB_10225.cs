@@ -41,7 +41,7 @@ namespace SlowTests.Issues
 
                     Assert.True(notification.Item1);
 
-                    Assert.Equal(AlertType.LowDiskSpace, notification.Item2[nameof(AlertRaised.AlertType)]);
+                    Assert.Equal(AlertReason.LowDiskSpace, notification.Item2[nameof(AlertRaised.Reason)]);
                 }
             }
         }

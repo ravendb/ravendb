@@ -342,7 +342,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         command.Update.DatabaseName,
                         $"Topology of database '{command.Update.DatabaseName}' was changed",
                         command.Reason,
-                        AlertType.DatabaseTopologyWarning,
+                        AlertReason.DatabaseTopologyWarning,
                         NotificationSeverity.Warning
                     );
                     NotificationCenter.Add(alert);

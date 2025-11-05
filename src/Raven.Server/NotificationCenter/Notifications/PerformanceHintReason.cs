@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.NotificationCenter.Notifications
 {
-    public enum PerformanceHintType
+    public enum PerformanceHintReason
     {
         None,
         Indexing,

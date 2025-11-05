@@ -189,7 +189,7 @@ namespace Raven.Server.Documents
             if (detailsSet.Count > 0)
                 _documentDatabase.NotificationCenter.TombstoneNotifications.Add(detailsSet);
             else
-                _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
+                _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.BlockingTombstones, nameof(AlertReason.BlockingTombstones)));
         }
 
         internal TombstonesState GetState(bool addInfoForDebug = false)

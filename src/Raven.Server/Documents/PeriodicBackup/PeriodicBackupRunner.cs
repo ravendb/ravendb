@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _database.Name,
                         message,
                         "The next backup will be rescheduled",
-                        AlertType.PeriodicBackup,
+                        AlertReason.PeriodicBackup,
                         NotificationSeverity.Error,
                         details: new ExceptionDetails(e)));
 
@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _database.Name,
                     "Couldn't schedule next backup",
                     message,
-                    AlertType.PeriodicBackup,
+                    AlertReason.PeriodicBackup,
                     NotificationSeverity.Warning,
                     details: new ExceptionDetails(e)));
             }
@@ -848,7 +848,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _database.Name,
                         "Periodic Backup",
                         message,
-                        AlertType.PeriodicBackup,
+                        AlertReason.PeriodicBackup,
                         NotificationSeverity.Info));
                 }
 
@@ -969,7 +969,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _database.Name,
                 "Couldn't schedule next backup, this shouldn't happen",
                 message,
-                AlertType.PeriodicBackup,
+                AlertReason.PeriodicBackup,
                 NotificationSeverity.Warning));
         }
 
@@ -989,7 +989,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _database.Name,
                 "Backup frequency parsing error",
                 message,
-                AlertType.PeriodicBackup,
+                AlertReason.PeriodicBackup,
                 NotificationSeverity.Error,
                 details: new ExceptionDetails(parameters.Exception)));
         }

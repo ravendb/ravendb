@@ -464,7 +464,7 @@ namespace Raven.Server.Documents.ETL
                 Database.Name,
                 Tag,
                 message,
-                AlertType.Etl_TransformationError,
+                AlertReason.Etl_TransformationError,
                 NotificationSeverity.Error,
                 key: key,
                 details: details);
@@ -977,7 +977,7 @@ namespace Raven.Server.Documents.ETL
                        Database.Name,
                        Tag,
                        "Etl process paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
-                       AlertType.Throttling_CpuCreditsBalance,
+                       AlertReason.Throttling_CpuCreditsBalance,
                        NotificationSeverity.Warning,
                        key: Name);
                     Database.NotificationCenter.Add(alert);

@@ -2,7 +2,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Dashboard.Cluster.Notifications;
+using Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications;
 using Raven.Server.NotificationCenter;
+using Sparrow.Json;
 
 namespace Raven.Server.Dashboard.Cluster
 {
@@ -19,7 +21,7 @@ namespace Raven.Server.Dashboard.Cluster
             _databasesInfoRetriever = new DatabasesInfoRetriever(server.ServerStore, canAccessDatabase);
         }
 
-        public async Task<AbstractClusterDashboardNotificationSender> CreateNotificationSender(int topicId, ClusterDashboardNotificationType type)
+        public async Task<AbstractClusterDashboardNotificationSender> CreateNotificationSender(int topicId, ClusterDashboardNotificationType type, BlittableJsonReaderObject configuration)
         {
             var watcher = await EnsureWatcher(); // in current impl we have only one watcher
 
@@ -51,6 +53,8 @@ namespace Raven.Server.Dashboard.Cluster
                     return new OngoingTasksNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.GcInfo:
                     return new GcInfoNotificationSender(topicId, watcher, _shutdown);
+                case ClusterDashboardNotificationType.DatabasesNotifications:
+                    return new DatabaseNotificationsSummaryNotificationSender(topicId, _databasesInfoRetriever, watcher, configuration, _shutdown);
                 default:
                     // we don't want to throw here - it allows mixed clusters to partially show data
                     return null;

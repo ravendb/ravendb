@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                         true, 10_000));
 
                     var database = await GetDatabase(server, store.Database);
-                    var key = AlertRaised.GetKey(AlertType.ClusterTransactionFailure, $"{database.Name}/ClusterTransaction");
+                    var key = AlertRaised.GetKey(AlertReason.ClusterTransactionFailure, $"{database.Name}/ClusterTransaction");
                     Assert.False(database.NotificationCenter.Exists(key));
                 }
 
