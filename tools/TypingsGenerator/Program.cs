@@ -209,6 +209,9 @@ namespace TypingsGenerator
             var endpoints = new EndpointsExporter();
             endpoints.Create(targetDir);
 
+            var getEndpointsMetadata = new GetEndpointsMetadataExporter();
+            getEndpointsMetadata.Create(targetDir);
+
             var configuration = new ConfigurationExporter();
             configuration.Create(targetDir);
 

@@ -1,0 +1,3359 @@
+[
+  {
+    "Path": "/",
+    "Method": "GET",
+    "Description": "RavenRoot endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/2fa/$",
+    "Method": "GET",
+    "Description": "GetTwoFactorFile endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/2fa/index.html",
+    "Method": "GET",
+    "Description": "GetTwoFactorIndexFile endpoint for Studio",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates",
+    "Method": "GET",
+    "Description": "GetCertificates endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/2fa/generate",
+    "Method": "GET",
+    "Description": "GenerateSecret endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/cluster-domains",
+    "Method": "GET",
+    "Description": "ClusterDomains endpoint for AdminCertificates",
+    "Tags": [
+      "Cluster",
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/export",
+    "Method": "GET",
+    "Description": "GetClusterCertificates endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/for-communication/export",
+    "Method": "GET",
+    "Description": "GetServerCertificateForCommunication endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/letsencrypt/renewal-date",
+    "Method": "GET",
+    "Description": "RenewalDate endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/local-state",
+    "Method": "GET",
+    "Description": "GetLocalState endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/mode",
+    "Method": "GET",
+    "Description": "Mode endpoint for AdminCertificates",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/certificates/replacement/status",
+    "Method": "GET",
+    "Description": "Returns status information.",
+    "Tags": [
+      "Admin",
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/cluster-dashboard/remote/watch",
+    "Method": "GET",
+    "Description": "RemoteWatch endpoint for ClusterDashboard",
+    "Tags": [
+      "Cluster",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/cluster/log",
+    "Method": "GET",
+    "Description": "GetLogs endpoint for RachisAdmin",
+    "Tags": [
+      "Cluster",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/cluster/log/entry",
+    "Method": "GET",
+    "Description": "GetLogByIndex endpoint for RachisAdmin",
+    "Tags": [
+      "Cluster",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/cluster/maintenance-stats",
+    "Method": "GET",
+    "Description": "ClusterMaintenanceStats endpoint for RachisAdmin",
+    "Tags": [
+      "Cluster",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/cluster/observer/decisions",
+    "Method": "GET",
+    "Description": "GetObserverDecisions endpoint for RachisAdmin",
+    "Tags": [
+      "Cluster",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/configuration/server-wide",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/configuration/server-wide/backup",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Backup",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/configuration/server-wide/tasks",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/configuration/settings",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/databases",
+    "Method": "GET",
+    "Description": "Get endpoint for AdminDatabases",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/cluster-info-package",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Cluster",
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/cluster/history-logs",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Cluster",
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/cpu/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/databases/idle",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/dump",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/gcdump",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/info-package",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/info/tcp/active-connections",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Network"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/info/tcp/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Admin",
+      "Debug",
+      "Network"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/io-metrics",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/io-metrics/live",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/allocations",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/encryption-buffer-pool",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/gc",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/gc-events",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/low-mem-log",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/smaps",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/memory/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Admin",
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/node/clear-http-clients-pool",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/node/engine-logs",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/node/ping",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/node/remote-connections",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/node/state-change-history",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/periodic-backup/timers",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/proc/meminfo",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/proc/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/debug/proc/status",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/remote-cluster-info-package",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/script-runners",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/storage/environment/report",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/storage/environment/scratch-buffer-info",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/threads/contention",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/threads/runaway",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/threads/stack-trace",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/debug/txinfo",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/event-listener/configuration",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      },
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/indexes/lucene/query-clause-cache",
+    "Method": "GET",
+    "Description": "QueryClauseCache endpoint for AdminDebugQueryClauseCache",
+    "Tags": [
+      "Indexing",
+      "Admin",
+      "Query"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/logs/configuration",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/logs/download",
+    "Method": "GET",
+    "Description": "Download endpoint for AdminLogs",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/logs/watch",
+    "Method": "GET",
+    "Description": "RegisterForLogs endpoint for AdminLogs",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/memory/gc",
+    "Method": "GET",
+    "Description": "CollectGarbage endpoint for AdminMemory",
+    "Tags": [
+      "Admin",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/metrics",
+    "Method": "GET",
+    "Description": "Returns database metrics.",
+    "Tags": [
+      "Diagnostics",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/monitoring/v1/collections",
+    "Method": "GET",
+    "Description": "MonitoringCollections endpoint for AdminMonitoring",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/monitoring/v1/databases",
+    "Method": "GET",
+    "Description": "MonitoringDatabases endpoint for AdminMonitoring",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/monitoring/v1/indexes",
+    "Method": "GET",
+    "Description": "MonitoringIndexes endpoint for AdminMonitoring",
+    "Tags": [
+      "Indexing",
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/monitoring/v1/prometheus",
+    "Method": "GET",
+    "Description": "Metrics endpoint for AdminPrometheusMonitoring",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/monitoring/v1/server",
+    "Method": "GET",
+    "Description": "MonitoringServer endpoint for AdminMonitoring",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/operations/next-operation-id",
+    "Method": "GET",
+    "Description": "GetNextOperationId endpoint for OperationsServer",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/remote-server/build/version",
+    "Method": "GET",
+    "Description": "GetRemoteServerBuildInfoWithDatabases endpoint for Databases",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/secrets",
+    "Method": "GET",
+    "Description": "GetKeys endpoint for SecretKey",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/secrets/generate",
+    "Method": "GET",
+    "Description": "LegacyGenerate endpoint for SecretKey",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/server-wide/backup-data-directory",
+    "Method": "GET",
+    "Description": "FullBackupDataDirectory endpoint for AdminStudioServerWide",
+    "Tags": [
+      "Admin",
+      "Backup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/server-wide/tasks",
+    "Method": "GET",
+    "Description": "GetServerWideTasksForStudio endpoint for AdminStudioServerWide",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Admin"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/admin/studio-tasks/full-data-directory",
+    "Method": "GET",
+    "Description": "FullDataDirectory endpoint for StudioTasks",
+    "Tags": [
+      "Admin",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/studio-tasks/offline-migration-test",
+    "Method": "GET",
+    "Description": "OfflineMigrationTest endpoint for StudioTasks",
+    "Tags": [
+      "Admin",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/test/delay",
+    "Method": "GET",
+    "Description": "Delay endpoint for EmptyMessage",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/test/empty-message",
+    "Method": "GET",
+    "Description": "Get endpoint for EmptyMessage",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/test/sized-message",
+    "Method": "GET",
+    "Description": "GetBuffer endpoint for EmptyMessage",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/traffic-watch",
+    "Method": "GET",
+    "Description": "TrafficWatchWebsockets endpoint for TrafficWatch",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/admin/traffic-watch/configuration",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/analyzers",
+    "Method": "GET",
+    "Description": "Get endpoint for Analyzers",
+    "Tags": [
+      "Analyzers"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/auth-error.html",
+    "Method": "GET",
+    "Description": "StudioAuthError endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/authentication/2fa/configuration",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/build/version",
+    "Method": "GET",
+    "Description": "Get endpoint for BuildVersion",
+    "Tags": [
+      "BuildVersion"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/certificates/whoami",
+    "Method": "GET",
+    "Description": "WhoAmI endpoint for AdminCertificates",
+    "Tags": [
+      "Security"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/cluster-dashboard/watch",
+    "Method": "GET",
+    "Description": "Watch endpoint for ClusterDashboard",
+    "Tags": [
+      "Cluster"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/cluster/node-info",
+    "Method": "GET",
+    "Description": "GetNodeInfo endpoint for RachisAdmin",
+    "Tags": [
+      "Cluster"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/cluster/topology",
+    "Method": "GET",
+    "Description": "GetClusterTopology endpoint for RachisAdmin",
+    "Tags": [
+      "Cluster"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/configuration/client",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/configuration/studio",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Configuration",
+      "Studio"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/databases",
+    "Method": "GET",
+    "Description": "Databases endpoint for Databases",
+    "Tags": [
+      "Databases"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/ai/agent",
+    "Method": "GET",
+    "Description": "GetAiAgentConfiguration endpoint for AiAgent",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/backup-data-directory",
+    "Method": "GET",
+    "Description": "FullBackupDataDirectory endpoint for OngoingTasks",
+    "Tags": [
+      "Admin",
+      "Backup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/backup/running",
+    "Method": "GET",
+    "Description": "GetBackupRunningStatus endpoint for OngoingTasks",
+    "Tags": [
+      "Admin",
+      "Backup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/configuration/settings",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Admin",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/admin/connection-strings",
+    "Method": "GET",
+    "Description": "GetConnectionStrings endpoint for OngoingTasks",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/debug/cluster/txinfo",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Cluster",
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/debug/periodic-backup/timers",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/debug/txinfo",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Admin",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/integrations/postgresql/server/status",
+    "Method": "GET",
+    "Description": "Returns status information.",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/integrations/postgresql/users",
+    "Method": "GET",
+    "Description": "GetUsernamesList endpoint for PostgreSqlIntegration",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/admin/periodic-backup/config",
+    "Method": "GET",
+    "Description": "GetConfiguration endpoint for OngoingTasks",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/record",
+    "Method": "GET",
+    "Description": "GetDatabaseRecord endpoint for AdminConfiguration",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/smuggler/import",
+    "Method": "GET",
+    "Description": "GetImport endpoint for Smuggler",
+    "Tags": [
+      "Admin",
+      "Import/Export"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/smuggler/import-dir",
+    "Method": "GET",
+    "Description": "PostImportDirectory endpoint for Smuggler",
+    "Tags": [
+      "Admin",
+      "Import/Export"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/smuggler/import-s3-dir",
+    "Method": "GET",
+    "Description": "PostImportFromS3Directory endpoint for Smuggler",
+    "Tags": [
+      "Admin",
+      "Import/Export"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/admin/tasks/pull-replication/hub/access",
+    "Method": "GET",
+    "Description": "ListHubAccess endpoint for PullReplication",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/admin/tombstones/state",
+    "Method": "GET",
+    "Description": "State endpoint for AdminTombstone",
+    "Tags": [
+      "Admin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/analyzers",
+    "Method": "GET",
+    "Description": "Get endpoint for Analyzers",
+    "Tags": [
+      "Analyzers"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/attachments",
+    "Method": "GET",
+    "Description": "Get endpoint for Attachment",
+    "Tags": [
+      "Attachments"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/changes",
+    "Method": "GET",
+    "Description": "GetChanges endpoint for Changes",
+    "Tags": [
+      "Changes"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/changes/debug",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/cmpxchg",
+    "Method": "GET",
+    "Description": "GetCompareExchangeValues endpoint for CompareExchange",
+    "Tags": [
+      "CompareExchange"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/collections/docs",
+    "Method": "GET",
+    "Description": "GetCollectionDocuments endpoint for Collections",
+    "Tags": [
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/collections/last-change-vector",
+    "Method": "GET",
+    "Description": "GetLastDocumentChangeVectorForCollection endpoint for Collections",
+    "Tags": [
+      "Collections"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/collections/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/collections/stats/detailed",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/configuration/client",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/configuration/studio",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Configuration",
+      "Studio"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/counters",
+    "Method": "GET",
+    "Description": "Get endpoint for Counters",
+    "Tags": [
+      "Counters"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/data-archival/config",
+    "Method": "GET",
+    "Description": "GetArchivalConfig endpoint for DataArchival",
+    "Tags": [
+      "DataArchival"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/attachments/hash",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Attachments"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/attachments/metadata",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Attachments"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/attachments/missing",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Attachments"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/documents/export-all-ids",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/documents/get-revisions",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/documents/huge",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/documents/scan-corrupted-ids",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/identities",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/info-package",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/io-metrics",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/io-metrics/live",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/perf-metrics",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/queries/cache/list",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Query"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/queries/running",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Query"
+    ],
+    "QueryParams": [
+      {
+        "Name": "details",
+        "Required": false,
+        "Description": "Include detailed information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/debug/replication/all-items",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Replication",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/script-runners",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/sharding/bucket",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/sharding/buckets",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/all-environments/report",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/btree-structure",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/compression-dictionaries",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/environment/debug-only/pages",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/environment/free-space-snapshot",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/environment/report",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/environment/scratch-buffer-info",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/fst-structure",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/report",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/storage/trees",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/debug/subscriptions/resend",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Subscriptions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/docs",
+    "Method": "GET",
+    "Description": "Get endpoint for Document",
+    "Tags": [
+      "Documents"
+    ],
+    "QueryParams": [
+      {
+        "Name": "id",
+        "Required": true,
+        "Description": "Document identifier."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/docs/class",
+    "Method": "GET",
+    "Description": "GenerateClassFromDocument endpoint for Document",
+    "Tags": [
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/docs/size",
+    "Method": "GET",
+    "Description": "GetDocSize endpoint for Document",
+    "Tags": [
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/documents-compression/config",
+    "Method": "GET",
+    "Description": "GetDocumentsCompressionConfig endpoint for DocumentsCompression",
+    "Tags": [
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/etl/debug/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Debug",
+      "ETL"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/etl/performance",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Diagnostics",
+      "ETL"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/etl/performance/live",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Diagnostics",
+      "ETL"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/etl/progress",
+    "Method": "GET",
+    "Description": "Returns progress information.",
+    "Tags": [
+      "ETL"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/etl/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "ETL"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/expiration/config",
+    "Method": "GET",
+    "Description": "GetExpirationConfig endpoint for Expiration",
+    "Tags": [
+      "Expiration"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/healthcheck",
+    "Method": "GET",
+    "Description": "Returns database health check status.",
+    "Tags": [
+      "Stats"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/hilo/next",
+    "Method": "GET",
+    "Description": "GetNextHiLo endpoint for HiLo",
+    "Tags": [
+      "HiLo"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes",
+    "Method": "GET",
+    "Description": "Returns all indexes in the database.",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      },
+      {
+        "Name": "namesOnly",
+        "Required": false,
+        "Description": "Return only index names."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/auto/convert",
+    "Method": "GET",
+    "Description": "ConvertAutoIndex endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/c-sharp-index-definition",
+    "Method": "GET",
+    "Description": "GenerateCSharpIndexDefinition endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/debug",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Indexing",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/debug/metadata",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Indexing",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/errors",
+    "Method": "GET",
+    "Description": "Returns error information.",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/history",
+    "Method": "GET",
+    "Description": "GetIndexHistory endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/performance",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Indexing",
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/performance/live",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Indexing",
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/progress",
+    "Method": "GET",
+    "Description": "Returns progress information.",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/source",
+    "Method": "GET",
+    "Description": "Source endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": true,
+        "Description": "Name of index."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/staleness",
+    "Method": "GET",
+    "Description": "Stale endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Indexing",
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/status",
+    "Method": "GET",
+    "Description": "Returns status information.",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/suggest-index-merge",
+    "Method": "GET",
+    "Description": "SuggestIndexMerge endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/indexes/terms",
+    "Method": "GET",
+    "Description": "Returns all terms in a specified index field for introspection or auto-complete.",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": true,
+        "Description": "Name of index."
+      },
+      {
+        "Name": "field",
+        "Required": true,
+        "Description": "Index field to extract terms from."
+      },
+      {
+        "Name": "fromValue",
+        "Required": false,
+        "Description": "Starting value for term enumeration."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of terms to return."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/indexes/total-time",
+    "Method": "GET",
+    "Description": "TotalTime endpoint for Index",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/info/tcp",
+    "Method": "GET",
+    "Description": "Get endpoint for DatabaseTcpConnectionInfo",
+    "Tags": [
+      "Network"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/metrics",
+    "Method": "GET",
+    "Description": "Returns database metrics.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/metrics/bytes",
+    "Method": "GET",
+    "Description": "Returns database metrics.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/metrics/puts",
+    "Method": "GET",
+    "Description": "Returns database metrics.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/migrate/get-migrated-server-urls",
+    "Method": "GET",
+    "Description": "GetMigratedServerUrls endpoint for Smuggler",
+    "Tags": [
+      "Smuggler"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/notification-center/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/notification-center/watch",
+    "Method": "GET",
+    "Description": "Watch endpoint for DatabaseNotificationCenter",
+    "Tags": [
+      "DatabaseNotificationCenter"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/notifications",
+    "Method": "GET",
+    "Description": "GetNotifications endpoint for DatabaseNotificationCenter",
+    "Tags": [
+      "DatabaseNotificationCenter"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/operations",
+    "Method": "GET",
+    "Description": "GetAll endpoint for Operations",
+    "Tags": [
+      "Operations"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/operations/next-operation-id",
+    "Method": "GET",
+    "Description": "GetNextOperationId endpoint for Operations",
+    "Tags": [
+      "Operations"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/operations/state",
+    "Method": "GET",
+    "Description": "State endpoint for Operations",
+    "Tags": [
+      "Operations"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/queries",
+    "Method": "GET",
+    "Description": "Executes a query and returns results.",
+    "Tags": [
+      "Query"
+    ],
+    "QueryParams": [
+      {
+        "Name": "query",
+        "Required": false,
+        "Description": "RQL query string."
+      },
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/queue-sink/performance/live",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/refresh/config",
+    "Method": "GET",
+    "Description": "GetRefreshConfiguration endpoint for Refresh",
+    "Tags": [
+      "Refresh"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/active-connections",
+    "Method": "GET",
+    "Description": "GetReplicationActiveConnections endpoint for Replication",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/conflicts",
+    "Method": "GET",
+    "Description": "GetReplicationConflicts endpoint for Replication",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/conflicts/solver",
+    "Method": "GET",
+    "Description": "GetConflictSolver endpoint for Replication",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/debug/incoming-last-activity-time",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Replication",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/debug/incoming-rejection-info",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Replication",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/debug/outgoing-failures",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Replication",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/debug/outgoing-reconnect-queue",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Replication",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/internal/outgoing/progress",
+    "Method": "GET",
+    "Description": "Returns progress information.",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/lastEtag",
+    "Method": "GET",
+    "Description": "LastEtag endpoint for LegacyReplication",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/performance",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Replication",
+      "Diagnostics"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/performance/live",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Replication",
+      "Diagnostics"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/progress",
+    "Method": "GET",
+    "Description": "Returns progress information.",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/pulses/live",
+    "Method": "GET",
+    "Description": "PulsesLive endpoint for Replication",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/replication/tombstones",
+    "Method": "GET",
+    "Description": "GetAllTombstones endpoint for Replication",
+    "Tags": [
+      "Replication"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions",
+    "Method": "GET",
+    "Description": "GetRevisionsFor endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/bin",
+    "Method": "GET",
+    "Description": "GetRevisionsBin endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/bin-cleaner/config",
+    "Method": "GET",
+    "Description": "GetRevisionsBinConfig endpoint for RevisionsBinCleaner",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/collections/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Revisions"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/revisions/config",
+    "Method": "GET",
+    "Description": "GetRevisionsConfiguration endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/conflicts/config",
+    "Method": "GET",
+    "Description": "GetConflictRevisionsConfig endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/count",
+    "Method": "GET",
+    "Description": "GetRevisionsCountFor endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/resolved",
+    "Method": "GET",
+    "Description": "GetResolvedConflictsSince endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/revisions/size",
+    "Method": "GET",
+    "Description": "GetRevisionsSize endpoint for Revisions",
+    "Tags": [
+      "Revisions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/sorters",
+    "Method": "GET",
+    "Description": "Get endpoint for Sorters",
+    "Tags": [
+      "Sorters"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/stats/detailed",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/stats/essential",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/streams/docs",
+    "Method": "GET",
+    "Description": "StreamDocsGet endpoint for Streaming",
+    "Tags": [
+      "Documents"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/streams/queries",
+    "Method": "GET",
+    "Description": "Executes a query and returns results.",
+    "Tags": [
+      "Query"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/streams/timeseries",
+    "Method": "GET",
+    "Description": "Stream endpoint for Streaming",
+    "Tags": [
+      "TimeSeries"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio-tasks/indexes/configuration/defaults",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Indexing",
+      "Configuration",
+      "Studio"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/studio-tasks/suggest-conflict-resolution",
+    "Method": "GET",
+    "Description": "SuggestConflictResolution endpoint for StudioDatabaseTasks",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio/collections/fields",
+    "Method": "GET",
+    "Description": "GetCollectionFields endpoint for StudioCollectionFields",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio/collections/preview",
+    "Method": "GET",
+    "Description": "PreviewCollection endpoint for StudioCollections",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio/footer/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Studio"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/studio/indexes/errors-count",
+    "Method": "GET",
+    "Description": "Returns error information.",
+    "Tags": [
+      "Indexing",
+      "Studio"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/databases/*/studio/license/limits-usage",
+    "Method": "GET",
+    "Description": "GetLicenseLimitsUsage endpoint for StudioStats",
+    "Tags": [
+      "Licensing",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio/revisions/ids",
+    "Method": "GET",
+    "Description": "GetRevisionsIdsByPrefix endpoint for StudioCollections",
+    "Tags": [
+      "Revisions",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio/revisions/preview",
+    "Method": "GET",
+    "Description": "PreviewRevisions endpoint for StudioCollections",
+    "Tags": [
+      "Revisions",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/studio/sample-data/classes",
+    "Method": "GET",
+    "Description": "GetSampleDataClasses endpoint for SampleData",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/subscriptions",
+    "Method": "GET",
+    "Description": "GetAll endpoint for Subscriptions",
+    "Tags": [
+      "Subscriptions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/subscriptions/connection-details",
+    "Method": "GET",
+    "Description": "GetSubscriptionConnectionDetails endpoint for Subscriptions",
+    "Tags": [
+      "Subscriptions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/subscriptions/performance/live",
+    "Method": "GET",
+    "Description": "Returns performance metrics.",
+    "Tags": [
+      "Diagnostics",
+      "Subscriptions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/subscriptions/state",
+    "Method": "GET",
+    "Description": "GetSubscriptionState endpoint for Subscriptions",
+    "Tags": [
+      "Subscriptions"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/task",
+    "Method": "GET",
+    "Description": "GetOngoingTaskInfo endpoint for OngoingTasks",
+    "Tags": [
+      "OngoingTasks"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/tasks",
+    "Method": "GET",
+    "Description": "GetOngoingTasks endpoint for OngoingTasks",
+    "Tags": [
+      "OngoingTasks"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/tasks/pull-replication/hub",
+    "Method": "GET",
+    "Description": "GetHubTasksInfo endpoint for OngoingTasks",
+    "Tags": [
+      "OngoingTasks"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/tcp",
+    "Method": "GET",
+    "Description": "GetAll endpoint for TcpManagement",
+    "Tags": [
+      "Network"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/timeseries",
+    "Method": "GET",
+    "Description": "Read endpoint for TimeSeries",
+    "Tags": [
+      "TimeSeries"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/timeseries/config",
+    "Method": "GET",
+    "Description": "GetTimeSeriesConfiguration endpoint for TimeSeries",
+    "Tags": [
+      "TimeSeries"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/timeseries/debug/segments-summary",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "TimeSeries"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/timeseries/ranges",
+    "Method": "GET",
+    "Description": "ReadRanges endpoint for TimeSeries",
+    "Tags": [
+      "TimeSeries"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/databases/*/timeseries/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "TimeSeries"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/cpu-credits",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/cluster/log",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Cluster",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/cluster/observer/decisions",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Cluster",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/cluster/topology",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Cluster",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/configuration/settings",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Configuration"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/indexes",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Indexing",
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/indexes/errors",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Indexing",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/indexes/performance",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Indexing",
+      "Diagnostics",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/indexes/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Indexing",
+      "Diagnostics",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by specific index name."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/overview",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/record",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/databases/stats",
+    "Method": "GET",
+    "Description": "Returns statistics information.",
+    "Tags": [
+      "Diagnostics",
+      "Debug"
+    ],
+    "QueryParams": [
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/info-package/analyzer/memory",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Memory"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/network",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Network"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/summary",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/summary/node",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/threads/runaway",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/info-package/analyzer/threads/stack-trace",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/is-loaded",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/queries/running/live",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug",
+      "Query"
+    ],
+    "QueryParams": [
+      {
+        "Name": "details",
+        "Required": false,
+        "Description": "Include detailed information."
+      }
+    ]
+  },
+  {
+    "Path": "/debug/routes",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/server-id",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/debug/sharding/find/bucket",
+    "Method": "GET",
+    "Description": "Provides debug information.",
+    "Tags": [
+      "Debug"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/eula/$",
+    "Method": "GET",
+    "Description": "GetEulaFile endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/eula/index.html",
+    "Method": "GET",
+    "Description": "GetEulaIndexFile endpoint for Studio",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/favicon.ico",
+    "Method": "GET",
+    "Description": "FavIcon endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/info/remote-task/tcp",
+    "Method": "GET",
+    "Description": "GetRemoteTaskTcp endpoint for TcpConnectionInfo",
+    "Tags": [
+      "Network"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/info/remote-task/topology",
+    "Method": "GET",
+    "Description": "GetRemoteTaskTopology endpoint for TcpConnectionInfo",
+    "Tags": [
+      "TcpConnectionInfo"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/info/tcp",
+    "Method": "GET",
+    "Description": "Get endpoint for TcpConnectionInfo",
+    "Tags": [
+      "Network"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/license-server/connectivity",
+    "Method": "GET",
+    "Description": "CheckConnectivityToLicenseServer endpoint for License",
+    "Tags": [
+      "Licensing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/license/configuration",
+    "Method": "GET",
+    "Description": "Returns configuration settings.",
+    "Tags": [
+      "Configuration",
+      "Licensing"
+    ],
+    "QueryParams": [
+      {
+        "Name": "key",
+        "Required": false,
+        "Description": "Configuration key to retrieve."
+      }
+    ]
+  },
+  {
+    "Path": "/license/eula",
+    "Method": "GET",
+    "Description": "Eula endpoint for License",
+    "Tags": [
+      "Licensing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/license/limits-usage",
+    "Method": "GET",
+    "Description": "GetLicenseLimitsUsage endpoint for License",
+    "Tags": [
+      "Licensing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/license/status",
+    "Method": "GET",
+    "Description": "Returns status information.",
+    "Tags": [
+      "Licensing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/license/support",
+    "Method": "GET",
+    "Description": "LicenseSupport endpoint for License",
+    "Tags": [
+      "Licensing"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/monitoring/snmp",
+    "Method": "GET",
+    "Description": "Get endpoint for Snmp",
+    "Tags": [
+      "Snmp"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/monitoring/snmp/bulk",
+    "Method": "GET",
+    "Description": "GetBulk endpoint for Snmp",
+    "Tags": [
+      "Snmp"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/monitoring/snmp/mib",
+    "Method": "GET",
+    "Description": "GetMib endpoint for Snmp",
+    "Tags": [
+      "Snmp"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/monitoring/snmp/oids",
+    "Method": "GET",
+    "Description": "GetOids endpoint for Snmp",
+    "Tags": [
+      "Snmp"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/operations/state",
+    "Method": "GET",
+    "Description": "State endpoint for OperationsServer",
+    "Tags": [
+      "OperationsServer"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/periodic-backup",
+    "Method": "GET",
+    "Description": "GetPeriodicBackup endpoint for BackupDatabase",
+    "Tags": [
+      "BackupDatabase"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/periodic-backup/status",
+    "Method": "GET",
+    "Description": "Returns status information.",
+    "Tags": [
+      "BackupDatabase"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/rachis/waitfor",
+    "Method": "GET",
+    "Description": "WaitForIndex endpoint for RachisAdmin",
+    "Tags": [
+      "RachisAdmin"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/secrets/generate",
+    "Method": "GET",
+    "Description": "Generate endpoint for SecretKey",
+    "Tags": [
+      "SecretKey"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/server/notification-center/watch",
+    "Method": "GET",
+    "Description": "Get endpoint for ServerNotificationCenter",
+    "Tags": [
+      "ServerNotificationCenter"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/setup/alive",
+    "Method": "GET",
+    "Description": "ServerAlive endpoint for Setup",
+    "Tags": [
+      "Setup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/setup/ips",
+    "Method": "GET",
+    "Description": "GetIps endpoint for Setup",
+    "Tags": [
+      "Setup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/setup/letsencrypt/agreement",
+    "Method": "GET",
+    "Description": "SetupAgreement endpoint for Setup",
+    "Tags": [
+      "Setup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/setup/parameters",
+    "Method": "GET",
+    "Description": "GetSetupParameters endpoint for Setup",
+    "Tags": [
+      "Setup"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/sorters",
+    "Method": "GET",
+    "Description": "Get endpoint for Sorters",
+    "Tags": [
+      "Sorters"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio-tasks/admin/migrator-path",
+    "Method": "GET",
+    "Description": "HasMigratorPathInConfiguration endpoint for StudioTasks",
+    "Tags": [
+      "Admin",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio-tasks/bootstrap",
+    "Method": "GET",
+    "Description": "Bootstrap endpoint for StudioTasks",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio-tasks/databases",
+    "Method": "GET",
+    "Description": "Databases endpoint for StudioDatabases",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio-tasks/databases/state",
+    "Method": "GET",
+    "Description": "GetDatabasesState endpoint for StudioDatabases",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio-tasks/is-valid-name",
+    "Method": "GET",
+    "Description": "IsValidName endpoint for StudioTasks",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio-tasks/next-cron-expression-occurrence",
+    "Method": "GET",
+    "Description": "GetNextCronExpressionOccurrence endpoint for StudioTasks",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio/$",
+    "Method": "GET",
+    "Description": "GetStudioFile endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio/index.html",
+    "Method": "GET",
+    "Description": "GetStudioIndexFile endpoint for Studio",
+    "Tags": [
+      "Indexing",
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/studio/upgrade-info",
+    "Method": "GET",
+    "Description": "GetUpgradeInfo endpoint for UpgradeInfo",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/threads-info/watch",
+    "Method": "GET",
+    "Description": "GetThreadsInfo endpoint for ThreadsInfo",
+    "Tags": [
+      "ThreadsInfo"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/topology",
+    "Method": "GET",
+    "Description": "GetTopology endpoint for Databases",
+    "Tags": [
+      "Databases"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/wizard/$",
+    "Method": "GET",
+    "Description": "GetSetupFile endpoint for Studio",
+    "Tags": [
+      "Studio"
+    ],
+    "QueryParams": []
+  },
+  {
+    "Path": "/wizard/index.html",
+    "Method": "GET",
+    "Description": "GetSetupIndexFile endpoint for Studio",
+    "Tags": [
+      "Indexing"
+    ],
+    "QueryParams": []
+  }
+]
