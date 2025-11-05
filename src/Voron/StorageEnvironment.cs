@@ -1228,7 +1228,7 @@ namespace Voron
                                 }
                                 break;
                             case RootObjectType.Container:
-                                long container = tx.OpenContainer(currentKey);
+                                var container = tx.OpenContainer(currentKey);
                                 RegisterContainer(container, name);
                                 break;
                             case RootObjectType.Set:
@@ -1297,14 +1297,14 @@ namespace Voron
                 }
             }
 
-            void RegisterContainer(long container, string name)
+            void RegisterContainer(ContainerId container, string name)
             {
-                r.Add(container, name);
+                r.Add((long)container, name);
                 var overflowName = $"{name}/OverflowPage";
-                var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, (ContainerId)container);
+                var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
                 RegisterPages(freePages.AllPages(), name + "/FreePagesSet");
-                var iterator = Voron.Data.Containers.Container.GetAllPagesIterator(tx.LowLevelTransaction, (ContainerId)container);
+                var iterator = Voron.Data.Containers.Container.GetAllPagesIterator(tx.LowLevelTransaction, container);
                 while (iterator.MoveNext(out var page))
                 {
                     var pageObject = tx.LowLevelTransaction.GetPage(page);
@@ -1324,7 +1324,7 @@ namespace Voron
                 RegisterPages(numeric.AllPages(), name);
                 if ((long)numeric.State.TermsContainerId > 0)
                 {
-                    RegisterContainer((long)numeric.State.TermsContainerId, name + "/TermsContainer");
+                    RegisterContainer(numeric.State.TermsContainerId, name + "/TermsContainer");
                 }
             }
         }
@@ -1393,7 +1393,7 @@ namespace Voron
                                 detailedReportInput.Tables.Add(table);
                                 break;
                             case RootObjectType.Container:
-                                long container = tx.OpenContainer(currentKey);
+                                var container = tx.OpenContainer(currentKey);
                                 detailedReportInput.Containers[currentKey] = container;
                                 break;
                             case RootObjectType.Set:

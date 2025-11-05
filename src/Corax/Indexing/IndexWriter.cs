@@ -218,9 +218,9 @@ namespace Corax.Indexing
         {
             Debug.Assert(_transaction.LowLevelTransaction.Flags == TransactionFlags.ReadWrite);
             _compactKeyScope = new(_transaction.LowLevelTransaction);
-            _postingListContainerId = (ContainerId)_transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
-            _storedFieldsContainerId = (ContainerId)_transaction.OpenContainer(Constants.IndexWriter.StoredFieldsSlice);
-            _entriesTermsContainerId = (ContainerId)_transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
+            _postingListContainerId = _transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
+            _storedFieldsContainerId = _transaction.OpenContainer(Constants.IndexWriter.StoredFieldsSlice);
+            _entriesTermsContainerId = _transaction.OpenContainer(Constants.IndexWriter.EntriesTermsContainerSlice);
             _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _fieldsTree = _transaction.CreateTree(Constants.IndexWriter.FieldsSlice);

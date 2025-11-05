@@ -48,7 +48,7 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         using (var rTx = Env.ReadTransaction())
         {
             var currentContainer = rTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
-            var rootPage = rTx.LowLevelTransaction.GetPage(currentContainer);
+            var rootPage = rTx.LowLevelTransaction.GetPage((long)currentContainer);
             var rootContainer = new Container(rootPage);
 
             var spaceUsedFromMethod = rootContainer.SpaceUsedInItems(rootPage.Pointer, out var usedItemsFromMethod);

@@ -50,6 +50,12 @@ public sealed partial class CompactTree : IPrepareForCommit
             ContainerId = ContainerEntryId.Invalid;
         }
 
+        public CompactKeyLookup(ContainerEntryId entryId)
+        {
+            ContainerId = entryId;
+            Key = null;
+        }
+
         public CompactKeyLookup(long keyData)
         {
             ContainerId = (ContainerEntryId)keyData;
@@ -195,7 +201,7 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         public int GetTermRefCount<T>(Lookup<T> parent) where T : struct, ILookupKey
         {
-            if (!IsValid)
+            if (IsValid == false)
             {
                 return -1;
             }
@@ -316,7 +322,7 @@ public sealed partial class CompactTree : IPrepareForCommit
         Add(scope.Key, value);
     }
 
-    public long Add(ReadOnlySpan<byte> key, long value)
+    public ContainerEntryId Add(ReadOnlySpan<byte> key, long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
         return Add(scope.Key, value);
@@ -325,29 +331,29 @@ public sealed partial class CompactTree : IPrepareForCommit
     public void GetTermByContainerId(long containerId)
     {
     }
-    
+
     public void SetAfterTryGetNext(ref CompactKeyLookup lookup, long value)
     {
         _inner.SetAfterTryGetNext(ref lookup, value);
     }
 
 
-    public long Add(CompactKey key, long value)
+    public ContainerEntryId Add(CompactKey key, long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
         var lookup = new CompactKeyLookup(key);
         CompactTreeDumper.WriteAddition(this, ref lookup, value);
         _inner.Add(ref lookup, value);
 
-        return (long)lookup.ContainerId;
+        return lookup.ContainerId;
     }
 
-    public long Add(CompactKeyLookup key, long value)
+    public ContainerEntryId Add(CompactKeyLookup key, long value)
     {
         Debug.Assert(key.Key.Dictionary == _inner.State.DictionaryId);
         CompactTreeDumper.WriteAddition(this, ref key, value);
         _inner.Add(ref key, value);
-        return (long)key.ContainerId;
+        return key.ContainerId;
     }
 
     public void PrepareForCommit()
@@ -395,7 +401,7 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
 
             var containerId = Container.Create(llt);
-            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, (ContainerId)containerId);
+            inner = Lookup<CompactKeyLookup>.InternalCreate(parent, name, dictionaryId, containerId);
         }
         else
         {
@@ -449,12 +455,12 @@ public sealed partial class CompactTree : IPrepareForCommit
         return _inner.TryGetTermContainerId(new CompactKeyLookup(key), out value);
     }
 
-    public bool TryGetValue(ReadOnlySpan<byte> key, out long termContainerId, out long value)
+    public bool TryGetValue(ReadOnlySpan<byte> key, out ContainerEntryId termContainerId, out long value)
     {
         using var scope = new CompactKeyCacheScope(_inner.Llt, key, _inner.State.DictionaryId);
         var ckl = new CompactKeyLookup(scope.Key);
         var found = _inner.TryGetValue(ref ckl, out value);
-        termContainerId = (long)ckl.ContainerId;
+        termContainerId = ckl.ContainerId;
         return found;
     }
 
@@ -465,7 +471,7 @@ public sealed partial class CompactTree : IPrepareForCommit
     /// <param name="value">The value stored under the CompactKey.</param>
     /// <param name="key">The underlying value of the CompactKey.</param>
     /// <returns>True if the value exists; otherwise, false.</returns>
-    public bool TryGetValue(long termContainerId, out long value, out ReadOnlySpan<byte> key)
+    public bool TryGetValue(ContainerEntryId termContainerId, out long value, out ReadOnlySpan<byte> key)
     {
         var containerId = new CompactKeyLookup(termContainerId);
         var found = _inner.TryGetValue(ref containerId, out value);
@@ -473,12 +479,12 @@ public sealed partial class CompactTree : IPrepareForCommit
         return found;
     }
 
-    public bool TryGetValue(CompactKey key, out long termContainerId, out long value)
+    public bool TryGetValue(CompactKey key, out ContainerEntryId termContainerId, out long value)
     {
         key.ChangeDictionary(_inner.State.DictionaryId);
         CompactKeyLookup compactKeyLookup = new(key);
         var result = _inner.TryGetValue(ref compactKeyLookup, out value);
-        termContainerId = (long)compactKeyLookup.ContainerId;
+        termContainerId = compactKeyLookup.ContainerId;
         return result;
     }
     
@@ -523,13 +529,13 @@ public sealed partial class CompactTree : IPrepareForCommit
         _inner.InitializeCursorState();
     }
 
-    public bool TryGetNextValue(CompactKey key, out long termContainerId, out long value,out CompactKeyLookup lookup)
+    public bool TryGetNextValue(CompactKey key, out ContainerEntryId termContainerId, out long value,out CompactKeyLookup lookup)
     {
         key.ChangeDictionary(DictionaryId);
         key.EncodedWithCurrent(out _);
         lookup = new CompactKeyLookup(key);
         var result = _inner.TryGetNextValue(ref lookup, out value);
-        termContainerId = (long)lookup.ContainerId;
+        termContainerId = lookup.ContainerId;
         return result;
     }
     

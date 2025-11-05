@@ -322,7 +322,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public ref LookupState State => ref _state;
     public LowLevelTransaction Llt => _llt;
 
-    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name, long dictionaryId = -1, ContainerId termsContainerId = default)
+    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name, long dictionaryId = -1)
+    {
+        return InternalCreate(parent, name, dictionaryId, ContainerId.Invalid);
+    }
+
+    public static Lookup<TLookupKey> InternalCreate(Tree parent, Slice name, long dictionaryId, ContainerId termsContainerId)
     {
         var llt = parent.Llt;
 
@@ -359,7 +364,12 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         };
     }
     
-    public static void Create(LowLevelTransaction llt, out LookupState state, long dictionaryId = -1, ContainerId termsContainerId = default)
+    public static void Create(LowLevelTransaction llt, out LookupState state, long dictionaryId = -1)
+    {
+        Create(llt, out state, dictionaryId, ContainerId.Invalid);
+    }
+
+    public static void Create(LowLevelTransaction llt, out LookupState state, long dictionaryId, ContainerId termsContainerId)
     {
         var newPage = llt.AllocatePage(1);
         var compactPageHeader = (LookupPageHeader*)newPage.Pointer;

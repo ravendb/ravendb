@@ -167,7 +167,7 @@ namespace Voron.Impl
             _lowLevelTransaction.EndAsyncCommit();
         }
 
-        public long OpenContainer(string name)
+        public ContainerId OpenContainer(string name)
         {
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
             {
@@ -187,12 +187,12 @@ namespace Voron.Impl
             return LowLevelTransaction.RootObjects.LookupFor<TKey>(name);
         }
 
-        public long OpenContainer(Slice name)
+        public ContainerId OpenContainer(Slice name)
         {
             var exists = LowLevelTransaction.RootObjects.DirectRead(name);
             if (exists != null)
             {
-                return ((ContainerRootHeader*)exists)->ContainerId;
+                return new ContainerId(((ContainerRootHeader*)exists)->ContainerId);
             }
             var id = Container.Create(LowLevelTransaction);
 
@@ -204,7 +204,7 @@ namespace Voron.Impl
                 };
 
 
-            return (long)id;
+            return id;
         }
 
         public PostingList OpenPostingList(string name)
