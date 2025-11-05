@@ -204,7 +204,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
                 };
 
-                handler.Initialize(agentConfiguration, $"GenAI/{item.DocumentId}", new RequestBody
+                handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
                     Parameters = item.ContextOutput.Context,
                     CreationOptions = new AiConversationCreationOptions
@@ -268,7 +268,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return agentConfiguration;
     }
 
-    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<(string Result, AiUsage Usage)>> tasks, GenAiStatsScope statsScope)
+    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
     {
         List<Exception> exceptions = null;
 
