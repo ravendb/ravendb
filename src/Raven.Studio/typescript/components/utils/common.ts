@@ -19,35 +19,30 @@ export function withNestedSubmit(action: (...args: any[]) => void) {
     };
 }
 
-export function createIdleState<T>(initialData: T = null): loadableData<T> {
+export function createIdleState<T>(initialData?: T): loadableData<T> {
     return {
-        data: initialData,
         status: "idle",
-        error: null,
+        data: initialData,
     };
 }
 
 export function createSuccessState<T>(data: T): loadableData<T> {
     return {
-        data,
-        error: null,
         status: "success",
+        data,
     };
 }
 
-export function createLoadingState(): loadableData<null> {
+export function createLoadingState(): loadableData<undefined> {
     return {
-        error: null,
-        data: null,
         status: "loading",
     };
 }
 
-export function createFailureState(error?: string): loadableData<any> {
+export function createFailureState(error?: any): loadableData<undefined> {
     return {
-        error,
-        data: null,
         status: "failure",
+        error,
     };
 }
 
