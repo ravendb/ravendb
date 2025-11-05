@@ -80,6 +80,14 @@ namespace TypingsGenerator
 
         private string GenerateDescription(MethodInfo methodInfo, Type handlerType, string path)
         {
+            // First, check if the RavenActionAttribute has a Description property set
+            var actionAttribute = methodInfo.GetCustomAttribute<RavenActionAttribute>();
+            if (actionAttribute != null && !string.IsNullOrWhiteSpace(actionAttribute.Description))
+            {
+                return actionAttribute.Description;
+            }
+
+            // Fallback to auto-generated descriptions
             var methodName = methodInfo.Name;
             var handlerName = handlerType.Name.Replace("Handler", "");
 
@@ -210,7 +218,13 @@ namespace TypingsGenerator
         private string GetPathFromMethod(MethodInfo methodInfo)
         {
             var attr = methodInfo.GetCustomAttribute<RavenActionAttribute>();
-            return attr?.Path ?? "";
+            if (attr == null)
+            {
+                // This should not happen as we filter for methods with this attribute
+                // But being defensive in case of future changes
+                return string.Empty;
+            }
+            return attr.Path;
         }
 
         private List<QueryParameter> GetKnownParametersForPath(string path, string methodName)
@@ -460,15 +474,17 @@ namespace TypingsGenerator
 
         private Type FindProcessorType(MethodInfo methodInfo, Type handlerType)
         {
-            // Look at the method body to find processor instantiation
-            // This is a simplified approach - in a real implementation, you might need more sophisticated analysis
+            // This is a best-effort approach to find processor types using naming conventions
+            // Note: RavenDB uses consistent naming patterns for processors, but this may not find all processors
             var methodBody = methodInfo.GetMethodBody();
             if (methodBody != null)
             {
                 // Try to find processor type from the namespace pattern
+                // Pattern: Handlers.X -> Handlers.Processors.X
                 var processorNamespace = handlerType.Namespace?.Replace(".Handlers", ".Handlers.Processors");
                 if (processorNamespace != null)
                 {
+                    // Pattern: XHandler.MethodName -> XProcessorForMethodName
                     var processorTypeName = $"{processorNamespace}.{handlerType.Name.Replace("Handler", "")}ProcessorFor{methodInfo.Name}";
                     var processorType = handlerType.Assembly.GetType(processorTypeName);
                     if (processorType != null)
@@ -505,32 +521,16 @@ namespace TypingsGenerator
 
         private List<QueryParameter> AnalyzeMethodForParameters(MethodInfo method)
         {
-            var parameters = new List<QueryParameter>();
-
-            // This is a simplified approach - ideally we'd use Roslyn to parse the source
-            // For now, we'll use reflection on common parameter extraction patterns
+            // Note: This method is kept as a stub for future enhancement
+            // Extracting parameters from compiled method bodies would require:
+            // 1. IL code analysis to find GetStringQueryString/GetIntValueQueryString calls
+            // 2. Source code parsing using Roslyn
+            // 3. Manual mapping (which we do in GetKnownParametersForPath)
+            // 
+            // For now, all parameter extraction is handled by GetKnownParametersForPath
+            // which provides comprehensive mappings for common endpoint patterns
             
-            // Common parameter names that we know about
-            var knownParameters = new Dictionary<string, (bool required, string description)>
-            {
-                { "name", (true, "Name of the resource") },
-                { "field", (true, "Field name") },
-                { "start", (false, "Starting position for pagination") },
-                { "pageSize", (false, "Number of items per page") },
-                { "namesOnly", (false, "Return only names") },
-                { "id", (true, "Document or resource identifier") },
-                { "fromValue", (false, "Starting value for range queries") },
-                { "collection", (false, "Collection name") },
-                { "prefix", (false, "Prefix filter") },
-                { "debugInfo", (false, "Include debug information") },
-                { "details", (false, "Include detailed information") }
-            };
-
-            // Note: In a real implementation, we'd parse the method body or source code
-            // For this simplified version, we return empty - the actual extraction would need
-            // to be done through source code analysis or manual mapping
-
-            return parameters;
+            return new List<QueryParameter>();
         }
 
         public class EndpointMetadata

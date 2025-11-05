@@ -34,11 +34,29 @@ The tool generates a JSON file (`get-endpoints-metadata.json`) containing an arr
 - **Path**: The endpoint URL path (PascalCase key)
 - **Method**: HTTP method (always "GET" for this tool) (PascalCase key)
 - **Description**: Human-readable description of the endpoint's purpose (PascalCase key)
+  - Can be set explicitly via the `Description` property on `RavenActionAttribute`
+  - Falls back to auto-generated description based on method names and path patterns if not set
 - **Tags**: Array of category tags for the endpoint (PascalCase key)
 - **QueryParams**: Array of query parameter definitions (PascalCase key)
   - **Name**: Parameter name (PascalCase key)
   - **Required**: Whether the parameter is required (PascalCase key)
   - **Description**: Parameter description (PascalCase key)
+
+## Adding Descriptions to Endpoints
+
+The best way to provide accurate descriptions is to add them directly to the `RavenActionAttribute`:
+
+```csharp
+[RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, 
+    DisableOnCpuCreditsExhaustion = true,
+    Description = "Returns all terms in a specified index field for introspection or auto-complete.")]
+public async Task Terms()
+{
+    // ...
+}
+```
+
+If no description is provided via the attribute, the tool will auto-generate one based on the method name and path patterns.
 
 ## Tags
 

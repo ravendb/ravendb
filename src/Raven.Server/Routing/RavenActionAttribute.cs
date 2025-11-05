@@ -17,6 +17,8 @@ namespace Raven.Server.Routing
 
         public string Method { get; }
 
+        public string Description { get; set; }
+
         public AuthorizationStatus RequiredAuthorization { get; set; }
 
         public bool SkipUsagesCount { get; set; }

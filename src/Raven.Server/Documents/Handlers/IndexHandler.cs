@@ -195,7 +195,9 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, 
+            DisableOnCpuCreditsExhaustion = true,
+            Description = "Returns all terms in a specified index field for introspection or auto-complete.")]
         public async Task Terms()
         {
             using (var processor = new IndexHandlerProcessorForTerms(this))
