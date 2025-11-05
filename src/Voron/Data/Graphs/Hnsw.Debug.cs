@@ -51,7 +51,7 @@ public unsafe partial class Hnsw
 
     public static long[] GetEntries(LowLevelTransaction llt,long postingListId)
     {
-        long rawPostingListId = postingListId & Constants.Graphs.VectorId.ContainerType;
+        ContainerEntryId rawPostingListId = new ContainerEntryId(postingListId & Constants.Graphs.VectorId.ContainerType);
         long[] result;
         switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
         {
@@ -59,7 +59,7 @@ public unsafe partial class Hnsw
                 result= [];
                 break;
             case Constants.Graphs.VectorId.Single:
-                result = [rawPostingListId];
+                result = [(long)rawPostingListId];
                 break;
             case Constants.Graphs.VectorId.SmallPostingList:
             {
@@ -72,7 +72,7 @@ public unsafe partial class Hnsw
             }
             case Constants.Graphs.VectorId.PostingList:
             {
-                var setStateSpan = Container.GetReadOnly(llt, new ContainerEntryId(rawPostingListId));
+                var setStateSpan = Container.GetReadOnly(llt, rawPostingListId);
                 ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                 var postingList = new PostingList(llt, Slices.Empty, setState);
                 result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];

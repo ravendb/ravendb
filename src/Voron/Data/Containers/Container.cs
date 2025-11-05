@@ -6,12 +6,9 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
-using Sparrow.Server.Binary;
-using Sparrow.Server.Platform.Posix;
 using Voron.Data.Lookups;
 using Voron.Exceptions;
 using Voron.Global;
@@ -30,6 +27,10 @@ namespace Voron.Data.Containers
         public long ContainerId;
     }
 
+    // Represents the root container itself (the header page that owns freelists, lookup trees, etc.).
+    // Historically both container ids and entry ids were plain longs, so ContainerEntryId == 0 meant
+    // "empty entry" while ContainerId == 0 pointed at the storage header. Mixing them up would send
+    // callers to the wrong page or reuse a root as if it were an entry. This wrapper marks "root" level.
     [StructLayout(LayoutKind.Explicit, Size = sizeof(long))]
     public readonly struct ContainerId(long id) : IEquatable<ContainerId>
     {
@@ -53,6 +54,9 @@ namespace Voron.Data.Containers
         public static bool operator !=(ContainerId left, ContainerId right) => left._id != right._id;
     }
 
+    // Represents an entry allocated inside a container (the payload slot). Value 0 means "no entry" here,
+    // which collided with ContainerId == 0 (root header) when both were longs. Passing the wrong type would
+    // make us delete or read from the root instead of the payload. The dedicated type enforces the boundary.
     [StructLayout(LayoutKind.Explicit, Size = sizeof(long))]
     public readonly struct ContainerEntryId(long id) : IEquatable<ContainerEntryId>
     {

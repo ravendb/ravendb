@@ -489,14 +489,14 @@ public unsafe partial class Hnsw
             return distance;
         }
 
-        public void ReadPostingList(long rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
+        public void ReadPostingList(ContainerEntryId rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
         {
             ReadPostingList(Llt, rawPostingListId, ref listBuffer, ref pforDecoder, out postingListSize);
         }
 
-        public static void ReadPostingList(LowLevelTransaction llt, long rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
+        public static void ReadPostingList(LowLevelTransaction llt, ContainerEntryId rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
         {
-            Container.Get(llt, new ContainerEntryId(rawPostingListId), out var smallPostingList);
+            Container.Get(llt, rawPostingListId, out var smallPostingList);
             var count = VariableSizeEncoding.Read<int>(smallPostingList.Address, out var offset);
             
             var requiredSize = Math.Max(256, 256 * (int)Math.Ceiling((count + listBuffer.Count) / 256f));
@@ -904,7 +904,6 @@ public unsafe partial class Hnsw
                 vector.Length != _searchState.Options.VectorSizeBytes,
                 $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
 
-            ContainerId hashContainerId;
             var hashBuffer = ComputeHashFor(vector);
             ref (ByteString Hash, int NodeIndex, NativeList<long> PostingList) postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
             if(exists)
@@ -912,22 +911,18 @@ public unsafe partial class Hnsw
                 // already added this in the current batch
                 ref var l = ref postingList.PostingList;
                 l.Add(_searchState.Llt.Allocator, entryId);
-                // key already exists in the dictionary, so can clear this 
-                var nodeIdExists = _vectorsByHash.TryGetValue(hashBuffer.ToReadOnlySpan(), out var hashContainerIdLong, out _);
-                hashContainerId = new ContainerId(hashContainerIdLong);
                 _searchState.Llt.Allocator.Release(ref hashBuffer);
-                Debug.Assert(nodeIdExists, $"nodeIdExists");
                 return postingList.Hash;
             }
 
             var vectorHash = hashBuffer.ToReadOnlySpan();
-            if (_vectorsByHash.TryGetValue(vectorHash, out var hashContainerIdLong2, out var vectorId) is false)
+            long vectorId;
+            if (_vectorsByHash.TryGetValue(vectorHash, out _, out vectorId) is false)
             {
                 var vectorEntryId = RegisterVector(vector);
                 vectorId = (long)vectorEntryId;
-                hashContainerIdLong2 = _vectorsByHash.Add(vectorHash, vectorId);
+                _vectorsByHash.Add(vectorHash, vectorId);
             }
-            hashContainerId = new ContainerId(hashContainerIdLong2);
             
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId))
             {
@@ -1064,14 +1059,14 @@ public unsafe partial class Hnsw
                 
                 int currentSize = 0;
                 bool hasSmallPostingList = false;
-                long rawPostingListId = postingList & Constants.Graphs.VectorId.ContainerType;
-                
+                ContainerEntryId rawPostingListId = new ContainerEntryId(postingList & Constants.Graphs.VectorId.ContainerType);
+
                 switch (postingList & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
                     case Constants.Graphs.VectorId.Tombstone: // nothing there
                         break;
                     case Constants.Graphs.VectorId.Single: // single value, just add it
-                        listBuffer.Add(rawPostingListId);
+                        listBuffer.Add((long)rawPostingListId);
                         break;
                     case Constants.Graphs.VectorId.SmallPostingList:
                         hasSmallPostingList = true;
@@ -1094,12 +1089,12 @@ public unsafe partial class Hnsw
                 {
                     if (hasSmallPostingList)
                     {
-                        Container.Delete(_searchState.Llt, _searchState.Options.Container, new ContainerEntryId(rawPostingListId));
+                        Container.Delete(_searchState.Llt, _searchState.Options.Container, rawPostingListId);
                     }
 
                     if (listBuffer.Count is 0)
                         return 0;
-                    
+
                     Debug.Assert((listBuffer[0] & Constants.Graphs.VectorId.PostingList) == 0, "(listBuffer[0] & 0b11) == 0");
                     return listBuffer[0] | Constants.Graphs.VectorId.Single;
                 }
@@ -1119,26 +1114,25 @@ public unsafe partial class Hnsw
                 Span<byte> mutable;
                 if (currentSize == byteBuffer.Count)
                 {
-                    mutable = Container.GetMutable(_searchState.Llt, new ContainerEntryId(rawPostingListId));
+                    mutable = Container.GetMutable(_searchState.Llt, rawPostingListId);
                 }
                 else
                 {
                     DeleteOldSmallPostingListIfNeeded();
-                    var allocatedId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, byteBuffer.Count, out mutable);
-                    rawPostingListId = (long)allocatedId;
+                    rawPostingListId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, byteBuffer.Count, out mutable);
                 }
                 Span<byte> span = byteBuffer.ToSpan();
                 span.CopyTo(mutable);
 
-                Debug.Assert((rawPostingListId & Constants.Graphs.VectorId.PostingList) == 0, "(rawPostingListId & 0b11) == 0");
-                return rawPostingListId | Constants.Graphs.VectorId.SmallPostingList;
-                
-                
+                Debug.Assert(((long)rawPostingListId & Constants.Graphs.VectorId.PostingList) == 0, "(rawPostingListId & 0b11) == 0");
+                return (long)rawPostingListId | Constants.Graphs.VectorId.SmallPostingList;
+
+
                 void DeleteOldSmallPostingListIfNeeded()
                 {
                     if (hasSmallPostingList)
                     {
-                        Container.Delete(_searchState.Llt, _searchState.Options.Container, new ContainerEntryId(rawPostingListId));
+                        Container.Delete(_searchState.Llt, _searchState.Options.Container, rawPostingListId);
                     }
                 }
             }
@@ -1149,9 +1143,9 @@ public unsafe partial class Hnsw
             //todo: we may wants to release the vector hash cache
         }
 
-        private long UpdatePostingList(long postingListId, in NativeList<long> modifications, FastPForEncoder pForEncoder, ref FastPForDecoder pForDecoder, ref ContextBoundNativeList<long> tempListBuffer)
+        private long UpdatePostingList(ContainerEntryId postingListId, in NativeList<long> modifications, FastPForEncoder pForEncoder, ref FastPForDecoder pForDecoder, ref ContextBoundNativeList<long> tempListBuffer)
         {
-            var setSpace = Container.GetMutable(_searchState.Llt, new ContainerEntryId(postingListId));
+            var setSpace = Container.GetMutable(_searchState.Llt, postingListId);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
 
             var lists = stackalloc long*[2];
@@ -1176,12 +1170,12 @@ public unsafe partial class Hnsw
             if(numberOfEntries is 0)
             {
                 _largePostingListSet ??= _searchState.Llt.Transaction.OpenPostingList(Constants.PostingList.PostingListRegister);
-                _largePostingListSet.Remove(postingListId);
-                Container.Delete(_searchState.Llt, _searchState.Options.Container, new ContainerEntryId(postingListId));
+                _largePostingListSet.Remove((long)postingListId);
+                Container.Delete(_searchState.Llt, _searchState.Options.Container, postingListId);
                 return 0;
             }
 
-            return postingListId | Constants.Graphs.VectorId.PostingList;
+            return (long)postingListId | Constants.Graphs.VectorId.PostingList;
         }
 
         private long CreateNewPostingList(FastPForEncoder pforEncoder)
@@ -1392,7 +1386,7 @@ public unsafe partial class Hnsw
 
                 var nodeIdx = _indexes[_currentNode];
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
-                var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
+                ContainerEntryId rawPostingListId = new ContainerEntryId(node.PostingListId & Constants.Graphs.VectorId.ContainerType);
                 distance = _searchState.Distance(_vector.ToSpan(), -1, nodeIdx);
 
                 if (distance > _maximumDistance)
@@ -1400,7 +1394,7 @@ public unsafe partial class Hnsw
                     _currentNode++;
                     continue;
                 }
-                
+
                 switch (node.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
                 {
                     case Constants.Graphs.VectorId.Tombstone: // empty
@@ -1408,7 +1402,7 @@ public unsafe partial class Hnsw
                         continue;
                     case Constants.Graphs.VectorId.Single: // single item posting list
                         distances[index] = distance;
-                        matches[index++] = rawPostingListId;
+                        matches[index++] = (long)rawPostingListId;
                         _currentNode++;
                         continue;
                     case Constants.Graphs.VectorId.SmallPostingList: // small posting list
@@ -1416,7 +1410,7 @@ public unsafe partial class Hnsw
                         _searchState.ReadPostingList(rawPostingListId, ref _postingListResults, ref _pforDecoder, out _);
                         continue;
                     case Constants.Graphs.VectorId.PostingList: // large posting list
-                        var setStateSpan = Container.GetReadOnly(_searchState.Llt, new ContainerEntryId(rawPostingListId));
+                        var setStateSpan = Container.GetReadOnly(_searchState.Llt, rawPostingListId);
                         ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                         _postingList = new PostingList(_searchState.Llt, Slices.Empty, setState);
                         _postingListIterator = _postingList.Iterate();

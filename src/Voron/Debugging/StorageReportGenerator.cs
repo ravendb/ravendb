@@ -54,7 +54,7 @@ namespace Voron.Debugging
         public List<JournalFile> Journals;
         public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
-        public Dictionary<Slice, long> Containers;
+        public Dictionary<Slice, ContainerId> Containers;
         public List<PostingList> PostingLists;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<Lookup<Int64LookupKey>> NumericLookups;
@@ -117,7 +117,7 @@ namespace Voron.Debugging
                 {
                     var globalContainer = tree.DirectRead(Hnsw.VectorsContainerIdSlice);
                     if (globalContainer != null)
-                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<long>(globalContainer));
+                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<ContainerId>(globalContainer));
                 }
                 
                 if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
@@ -152,7 +152,7 @@ namespace Voron.Debugging
                                         string nestedReportName = treeReport.Name + "/" + nestedReport.Name;
                                         nestedReport.Name = nestedReportName +" (CompactTree)";
                                         trees.Add(nestedReport);
-                                        trees.Add(GetContainerReport(nestedReportName +" (Entries)", (long)textLookup.State.TermsContainerId, input.IncludeDetails));
+                                        trees.Add(GetContainerReport(nestedReportName +" (Entries)", textLookup.State.TermsContainerId, input.IncludeDetails));
                                     }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
@@ -510,7 +510,7 @@ namespace Voron.Debugging
             return treeReport;
         }
 
-        public TreeReport GetContainerReport(string name, long page, bool includeDetails)
+        public TreeReport GetContainerReport(string name, ContainerId page, bool includeDetails)
         {
             name += $" (Container)";
             
@@ -519,7 +519,7 @@ namespace Voron.Debugging
             if (includeDetails)
             {
                 pageDensities = new();
-                var it = Container.GetAllPagesIterator(_tx, new ContainerId(page));
+                var it = Container.GetAllPagesIterator(_tx, page);
                 while (it.MoveNext(out var pageNum))
                 {
                     // cannot use GetPageHeader since we are reading not just from the header
@@ -537,10 +537,10 @@ namespace Voron.Debugging
                 }
             }
 
-            var (allPages, freePages) = Container.GetPagesFor(_tx, new ContainerId(page));
+            var (allPages, freePages) = Container.GetPagesFor(_tx, page);
             
             // cannot use GetPageHeader since we are reading not just from the header
-            var root = new Container(_tx.GetPage(page));
+            var root = new Container(_tx.GetPage((long)page));
             double density = pageDensities?.Average() ?? -1;
             long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
             var treeReport = new TreeReport
