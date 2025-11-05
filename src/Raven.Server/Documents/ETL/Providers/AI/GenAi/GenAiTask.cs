@@ -168,16 +168,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results.Count;
     }
 
-    private AiAgentConfiguration _agent;
-
-    private AiAgentConfiguration Agent => _agent ??= new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
-    {
-        OutputSchema = Configuration.JsonSchema,
-        SampleObject = Configuration.SampleObject,
-        Queries = Configuration.Queries,
-        Parameters = Configuration.Parameters
-    };
-
     private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope)
     {
         using (var statsScope = scope.For(GenAiOperations.LoadToModel))
@@ -211,6 +201,22 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     // GenAI task uses full access
                     Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
                 };
+
+                var agentParameters = new List<AiAgentParameter>();
+                var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
+                foreach (var name in contextObjPropNames)
+                {
+                    agentParameters.Add(new AiAgentParameter(name));
+                }
+
+                var agent = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
+                {
+                    OutputSchema = Configuration.JsonSchema,
+                    SampleObject = Configuration.SampleObject,
+                    Queries = Configuration.Queries,
+                    Parameters = agentParameters
+                };
+
                 handler.Initialize(Agent, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
                     Parameters = item.ContextOutput.Context,

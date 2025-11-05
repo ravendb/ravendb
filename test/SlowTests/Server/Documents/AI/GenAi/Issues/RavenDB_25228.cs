@@ -35,9 +35,6 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 
             config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
 
-            // Set agent parameters 
-            config.Parameters = [new AiAgentParameter("customerId")];
-
             config.GenAiTransformation = new GenAiTransformation
             {
                 Script =
@@ -149,7 +146,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task ShouldThrowWhenRequiredParametersAreNotPassedInContext(Options options, GenAiConfiguration config)
+        public async Task ShouldThrowWhenParametersInQueryToolAreNotPassedInContext(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore();
 
@@ -165,9 +162,6 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 "Make sure that the items you suggest are NOT already in 'cartItems'. ";
 
             config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
-
-            // Set agent parameters 
-            config.Parameters = [new AiAgentParameter("customerId")];
 
             // customerId is not part of the context object that we send to the model 
             config.GenAiTransformation = new GenAiTransformation
@@ -197,7 +191,6 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 
             store.Maintenance.Send(new AddGenAiOperation(config));
 
-            const string docId = "carts/1";
             using (var session = store.OpenSession())
             {
                 session.Store(new Order
@@ -211,7 +204,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                     Id = "carts/1-A",
                     CustomerId = "customers/1-A",
                     Items = new[] { "bread", "apples" }
-                }, docId);
+                });
                 session.SaveChanges();
             }
 
@@ -224,7 +217,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 
             Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
             Assert.NotNull(error);
-            Assert.True(error.Error.Contains("Parameter 'customerId' is missing"));
+            Assert.True(error.Error.Contains("Value of parameter 'customerId' was not provided"));
         }
 
         private class Order

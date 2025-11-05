@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ETL;
@@ -32,8 +31,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     public string UpdateScript { get; set; }
 
     public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
-
-    public List<AiAgentParameter> Parameters { get; set; } = new();
 
     public List<AiAgentToolQuery> Queries { get; set; } = [];
 
@@ -127,7 +124,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(GenAiTransformation)] = GenAiTransformation.ToJson();
         json[nameof(MaxConcurrency)] = MaxConcurrency;
         json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
-        json[nameof(Parameters)] = Parameters != null ? new DynamicJsonArray(Parameters) : null;
         json[nameof(EnableTracing)] = EnableTracing;
         json[nameof(ExpirationInSeconds)] = ExpirationInSeconds;
 
@@ -144,9 +140,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             UpdateScript != other.UpdateScript ||
             JsonSchema != other.JsonSchema ||
             SampleObject != other.SampleObject ||
-            MaxConcurrency != other.MaxConcurrency ||
-            Queries?.SequenceEqual(other.Queries) == false ||
-            Parameters?.SequenceEqual(other.Parameters) == false)
+            MaxConcurrency != other.MaxConcurrency)
             differences |= EtlConfigurationCompareDifferences.Other;
 
         return differences;
