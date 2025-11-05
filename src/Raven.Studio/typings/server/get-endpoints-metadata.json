@@ -34,7 +34,18 @@
       "Admin",
       "Security"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/certificates/2fa/generate",
@@ -44,7 +55,13 @@
       "Admin",
       "Security"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "validMonths",
+        "Required": false,
+        "Description": "Certificate validity in months."
+      }
+    ]
   },
   {
     "Path": "/admin/certificates/cluster-domains",
@@ -65,7 +82,18 @@
       "Admin",
       "Security"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/certificates/for-communication/export",
@@ -75,7 +103,18 @@
       "Admin",
       "Security"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/certificates/letsencrypt/renewal-date",
@@ -95,7 +134,18 @@
       "Admin",
       "Security"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/certificates/mode",
@@ -135,7 +185,18 @@
       "Cluster",
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/cluster/log/entry",
@@ -145,7 +206,18 @@
       "Cluster",
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/cluster/maintenance-stats",
@@ -165,7 +237,23 @@
       "Cluster",
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "nodeTag",
+        "Required": false,
+        "Description": "Specific node tag."
+      },
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/configuration/server-wide",
@@ -177,9 +265,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -194,9 +287,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -210,9 +308,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -226,9 +329,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -239,7 +347,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/cluster-info-package",
@@ -250,7 +369,18 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/cluster/history-logs",
@@ -261,7 +391,18 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/cpu/stats",
@@ -318,7 +459,28 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      },
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/info/tcp/active-connections",
@@ -329,7 +491,18 @@
       "Debug",
       "Network"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "ip",
+        "Required": false,
+        "Description": "IP address filter."
+      },
+      {
+        "Name": "operation",
+        "Required": false,
+        "Description": "Operation type filter."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/info/tcp/stats",
@@ -346,6 +519,16 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "ip",
+        "Required": false,
+        "Description": "IP address filter."
+      },
+      {
+        "Name": "operation",
+        "Required": false,
+        "Description": "Operation type filter."
       }
     ]
   },
@@ -378,7 +561,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/memory/encryption-buffer-pool",
@@ -389,7 +578,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/memory/gc",
@@ -400,7 +595,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/memory/gc-events",
@@ -411,7 +612,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/memory/low-mem-log",
@@ -422,7 +629,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/memory/smaps",
@@ -433,7 +646,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/memory/stats",
@@ -450,6 +669,11 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
       }
     ]
   },
@@ -523,7 +747,18 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/periodic-backup/timers",
@@ -591,7 +826,18 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/script-runners",
@@ -601,7 +847,23 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "detailed",
+        "Required": false,
+        "Description": "Include detailed information."
+      },
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/debug/storage/environment/report",
@@ -673,11 +935,6 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
-        "Required": false,
-        "Description": "Configuration key to retrieve."
-      },
-      {
         "Name": "start",
         "Required": false,
         "Description": "Number of results to skip."
@@ -710,9 +967,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -752,7 +1014,18 @@
       "Diagnostics",
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/monitoring/v1/collections",
@@ -807,7 +1080,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/remote-server/build/version",
@@ -816,7 +1100,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/secrets",
@@ -825,7 +1120,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/secrets/generate",
@@ -853,7 +1159,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/stats",
@@ -868,6 +1185,16 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -907,7 +1234,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/test/sized-message",
@@ -916,7 +1254,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/admin/traffic-watch",
@@ -937,9 +1286,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -968,13 +1322,7 @@
     "Tags": [
       "Configuration"
     ],
-    "QueryParams": [
-      {
-        "Name": "key",
-        "Required": false,
-        "Description": "Configuration key to retrieve."
-      }
-    ]
+    "QueryParams": []
   },
   {
     "Path": "/build/version",
@@ -1030,9 +1378,9 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "inherit",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Inherit server-wide configuration."
       }
     ]
   },
@@ -1044,13 +1392,7 @@
       "Configuration",
       "Studio"
     ],
-    "QueryParams": [
-      {
-        "Name": "key",
-        "Required": false,
-        "Description": "Configuration key to retrieve."
-      }
-    ]
+    "QueryParams": []
   },
   {
     "Path": "/databases",
@@ -1068,7 +1410,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/backup-data-directory",
@@ -1088,7 +1441,18 @@
       "Admin",
       "Backup"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/configuration/settings",
@@ -1100,9 +1464,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "start",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
       }
     ]
   },
@@ -1113,7 +1482,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/debug/cluster/txinfo",
@@ -1134,7 +1514,18 @@
       "Admin",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/debug/txinfo",
@@ -1153,7 +1544,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/integrations/postgresql/users",
@@ -1182,7 +1584,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/record",
@@ -1191,7 +1604,18 @@
     "Tags": [
       "Admin"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/smuggler/import",
@@ -1201,7 +1625,18 @@
       "Admin",
       "Import/Export"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/admin/smuggler/import-dir",
@@ -1231,6 +1666,11 @@
       "Admin"
     ],
     "QueryParams": [
+      {
+        "Name": "name",
+        "Required": true,
+        "Description": "Pull replication hub name."
+      },
       {
         "Name": "start",
         "Required": false,
@@ -1327,6 +1767,11 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by collection name."
       }
     ]
   },
@@ -1342,6 +1787,11 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by collection name."
       }
     ]
   },
@@ -1354,9 +1804,9 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "inherit",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Inherit server-wide configuration."
       }
     ]
   },
@@ -1368,13 +1818,7 @@
       "Configuration",
       "Studio"
     ],
-    "QueryParams": [
-      {
-        "Name": "key",
-        "Required": false,
-        "Description": "Configuration key to retrieve."
-      }
-    ]
+    "QueryParams": []
   },
   {
     "Path": "/databases/*/counters",
@@ -1480,7 +1924,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/databases/*/debug/io-metrics",
@@ -1517,7 +1972,18 @@
       "Debug",
       "Query"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/debug/queries/running",
@@ -1543,7 +2009,18 @@
       "Replication",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/debug/script-runners",
@@ -1552,7 +2029,13 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "detailed",
+        "Required": false,
+        "Description": "Include detailed information."
+      }
+    ]
   },
   {
     "Path": "/databases/*/debug/sharding/bucket",
@@ -1561,7 +2044,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "shardNumber",
+        "Required": false,
+        "Description": "Shard number."
+      },
+      {
+        "Name": "nodeTag",
+        "Required": false,
+        "Description": "Node tag."
+      }
+    ]
   },
   {
     "Path": "/databases/*/debug/sharding/buckets",
@@ -1570,7 +2064,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "shardNumber",
+        "Required": false,
+        "Description": "Shard number."
+      },
+      {
+        "Name": "nodeTag",
+        "Required": false,
+        "Description": "Node tag."
+      }
+    ]
   },
   {
     "Path": "/databases/*/debug/storage/all-environments/report",
@@ -1684,6 +2189,11 @@
         "Name": "id",
         "Required": true,
         "Description": "Document identifier."
+      },
+      {
+        "Name": "includes",
+        "Required": false,
+        "Description": "Related documents to include."
       }
     ]
   },
@@ -1694,7 +2204,18 @@
     "Tags": [
       "Documents"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "id",
+        "Required": true,
+        "Description": "Document identifier."
+      },
+      {
+        "Name": "lang",
+        "Required": false,
+        "Description": "Programming language for class generation (csharp, java, etc.)."
+      }
+    ]
   },
   {
     "Path": "/databases/*/docs/size",
@@ -1959,7 +2480,13 @@
     "Tags": [
       "Indexing"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": true,
+        "Description": "Name of index."
+      }
+    ]
   },
   {
     "Path": "/databases/*/indexes/stats",
@@ -1974,6 +2501,11 @@
         "Name": "name",
         "Required": false,
         "Description": "Filter by specific index name."
+      },
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
       }
     ]
   },
@@ -2028,6 +2560,11 @@
         "Name": "pageSize",
         "Required": false,
         "Description": "Maximum number of terms to return."
+      },
+      {
+        "Name": "collection",
+        "Required": false,
+        "Description": "Collection name for dynamic index matching."
       }
     ]
   },
@@ -2047,7 +2584,18 @@
     "Tags": [
       "Network"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "ip",
+        "Required": false,
+        "Description": "IP address filter."
+      },
+      {
+        "Name": "operation",
+        "Required": false,
+        "Description": "Operation type filter."
+      }
+    ]
   },
   {
     "Path": "/databases/*/metrics",
@@ -2065,7 +2613,13 @@
     "Tags": [
       "Diagnostics"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "empty",
+        "Required": false,
+        "Description": "Include empty metrics."
+      }
+    ]
   },
   {
     "Path": "/databases/*/metrics/puts",
@@ -2074,7 +2628,13 @@
     "Tags": [
       "Diagnostics"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "empty",
+        "Required": false,
+        "Description": "Include empty metrics."
+      }
+    ]
   },
   {
     "Path": "/databases/*/migrate/get-migrated-server-urls",
@@ -2125,7 +2685,18 @@
     "Tags": [
       "Operations"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/operations/next-operation-id",
@@ -2167,6 +2738,21 @@
         "Name": "pageSize",
         "Required": false,
         "Description": "Maximum number of results to return."
+      },
+      {
+        "Name": "disableAutoIndexCreation",
+        "Required": false,
+        "Description": "Disable automatic index creation."
+      },
+      {
+        "Name": "allowStale",
+        "Required": false,
+        "Description": "Allow querying stale indexes."
+      },
+      {
+        "Name": "details",
+        "Required": false,
+        "Description": "Include detailed query information."
       }
     ]
   },
@@ -2204,7 +2790,18 @@
     "Tags": [
       "Replication"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "docId",
+        "Required": false,
+        "Description": "Document ID to filter conflicts."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/replication/conflicts/solver",
@@ -2213,7 +2810,18 @@
     "Tags": [
       "Replication"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "docId",
+        "Required": false,
+        "Description": "Document ID to filter conflicts."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/replication/debug/incoming-last-activity-time",
@@ -2318,7 +2926,18 @@
     "Tags": [
       "Replication"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/revisions",
@@ -2360,6 +2979,11 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "name",
+        "Required": false,
+        "Description": "Filter by collection name."
       }
     ]
   },
@@ -2498,13 +3122,7 @@
       "Configuration",
       "Studio"
     ],
-    "QueryParams": [
-      {
-        "Name": "key",
-        "Required": false,
-        "Description": "Configuration key to retrieve."
-      }
-    ]
+    "QueryParams": []
   },
   {
     "Path": "/databases/*/studio-tasks/suggest-conflict-resolution",
@@ -2522,7 +3140,18 @@
     "Tags": [
       "Studio"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "collection",
+        "Required": false,
+        "Description": "Collection name."
+      },
+      {
+        "Name": "prefix",
+        "Required": false,
+        "Description": "Field name prefix filter."
+      }
+    ]
   },
   {
     "Path": "/databases/*/studio/collections/preview",
@@ -2546,6 +3175,11 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "global",
+        "Required": false,
+        "Description": "Include global statistics."
       }
     ]
   },
@@ -2611,7 +3245,18 @@
     "Tags": [
       "Subscriptions"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "start",
+        "Required": false,
+        "Description": "Number of results to skip."
+      },
+      {
+        "Name": "pageSize",
+        "Required": false,
+        "Description": "Maximum number of results to return."
+      }
+    ]
   },
   {
     "Path": "/databases/*/subscriptions/connection-details",
@@ -2639,7 +3284,13 @@
     "Tags": [
       "Subscriptions"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "name",
+        "Required": true,
+        "Description": "Subscription name."
+      }
+    ]
   },
   {
     "Path": "/databases/*/task",
@@ -2675,7 +3326,18 @@
     "Tags": [
       "Network"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "ip",
+        "Required": false,
+        "Description": "IP address filter."
+      },
+      {
+        "Name": "operation",
+        "Required": false,
+        "Description": "Operation type filter."
+      }
+    ]
   },
   {
     "Path": "/databases/*/timeseries",
@@ -2747,7 +3409,18 @@
       "Cluster",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/cluster/observer/decisions",
@@ -2757,7 +3430,18 @@
       "Cluster",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/cluster/topology",
@@ -2767,7 +3451,18 @@
       "Cluster",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/databases/configuration/settings",
@@ -2779,9 +3474,14 @@
     ],
     "QueryParams": [
       {
-        "Name": "key",
+        "Name": "type",
         "Required": false,
-        "Description": "Configuration key to retrieve."
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
       }
     ]
   },
@@ -2793,7 +3493,18 @@
       "Indexing",
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/databases/indexes/errors",
@@ -2808,6 +3519,16 @@
         "Name": "name",
         "Required": false,
         "Description": "Filter by specific index name."
+      },
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
       }
     ]
   },
@@ -2825,6 +3546,16 @@
         "Name": "name",
         "Required": false,
         "Description": "Filter by specific index name."
+      },
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
       }
     ]
   },
@@ -2842,6 +3573,21 @@
         "Name": "name",
         "Required": false,
         "Description": "Filter by specific index name."
+      },
+      {
+        "Name": "debugInfo",
+        "Required": false,
+        "Description": "Include debug information."
+      },
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
       }
     ]
   },
@@ -2852,7 +3598,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/databases/record",
@@ -2861,7 +3618,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/databases/stats",
@@ -2876,6 +3644,16 @@
         "Name": "debugInfo",
         "Required": false,
         "Description": "Include debug information."
+      },
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
       }
     ]
   },
@@ -2887,7 +3665,13 @@
       "Debug",
       "Memory"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "loh",
+        "Required": false,
+        "Description": "Include large object heap information."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/network",
@@ -2897,7 +3681,18 @@
       "Debug",
       "Network"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/summary",
@@ -2906,7 +3701,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/summary/node",
@@ -2915,7 +3721,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/threads/runaway",
@@ -2924,7 +3741,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/info-package/analyzer/threads/stack-trace",
@@ -2933,7 +3761,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "type",
+        "Required": false,
+        "Description": "Type of debug package content."
+      },
+      {
+        "Name": "timeoutInSecPerNode",
+        "Required": false,
+        "Description": "Timeout in seconds per node."
+      }
+    ]
   },
   {
     "Path": "/debug/is-loaded",
@@ -2985,7 +3824,18 @@
     "Tags": [
       "Debug"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "shardNumber",
+        "Required": false,
+        "Description": "Shard number."
+      },
+      {
+        "Name": "nodeTag",
+        "Required": false,
+        "Description": "Node tag."
+      }
+    ]
   },
   {
     "Path": "/eula/$",
@@ -3021,7 +3871,18 @@
     "Tags": [
       "Network"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "ip",
+        "Required": false,
+        "Description": "IP address filter."
+      },
+      {
+        "Name": "operation",
+        "Required": false,
+        "Description": "Operation type filter."
+      }
+    ]
   },
   {
     "Path": "/info/remote-task/topology",
@@ -3039,7 +3900,18 @@
     "Tags": [
       "Network"
     ],
-    "QueryParams": []
+    "QueryParams": [
+      {
+        "Name": "ip",
+        "Required": false,
+        "Description": "IP address filter."
+      },
+      {
+        "Name": "operation",
+        "Required": false,
+        "Description": "Operation type filter."
+      }
+    ]
   },
   {
     "Path": "/license-server/connectivity",
@@ -3058,13 +3930,7 @@
       "Configuration",
       "Licensing"
     ],
-    "QueryParams": [
-      {
-        "Name": "key",
-        "Required": false,
-        "Description": "Configuration key to retrieve."
-      }
-    ]
+    "QueryParams": []
   },
   {
     "Path": "/license/eula",

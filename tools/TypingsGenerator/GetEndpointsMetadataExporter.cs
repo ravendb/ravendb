@@ -217,91 +217,242 @@ namespace TypingsGenerator
         {
             var parameters = new List<QueryParameter>();
 
-            // Index terms endpoint
+            // Index endpoints
             if (path.Contains("/indexes/terms"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = true, Description = "Name of index." });
                 parameters.Add(new QueryParameter { Name = "field", Required = true, Description = "Index field to extract terms from." });
                 parameters.Add(new QueryParameter { Name = "fromValue", Required = false, Description = "Starting value for term enumeration." });
                 parameters.Add(new QueryParameter { Name = "pageSize", Required = false, Description = "Maximum number of terms to return." });
+                parameters.Add(new QueryParameter { Name = "collection", Required = false, Description = "Collection name for dynamic index matching." });
             }
-            // Index stats
+            else if (path.Contains("/indexes/staleness"))
+            {
+                parameters.Add(new QueryParameter { Name = "name", Required = true, Description = "Name of index." });
+            }
             else if (path.Contains("/indexes/stats"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = false, Description = "Filter by specific index name." });
             }
-            // Index errors
             else if (path.Contains("/indexes/errors"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = false, Description = "Filter by specific index name." });
             }
-            // Index performance
             else if (path.Contains("/indexes/performance"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = false, Description = "Filter by specific index name." });
             }
-            // Index progress
             else if (path.Contains("/indexes/progress"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = false, Description = "Filter by specific index name." });
             }
-            // Index status
             else if (path.Contains("/indexes/status"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = false, Description = "Filter by specific index name." });
             }
-            // Index source
             else if (path.Contains("/indexes/source"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = true, Description = "Name of index." });
             }
-            // Indexes list
             else if (path.Contains("/indexes") && methodName == "GetAll")
             {
                 parameters.Add(new QueryParameter { Name = "start", Required = false, Description = "Number of results to skip." });
                 parameters.Add(new QueryParameter { Name = "pageSize", Required = false, Description = "Maximum number of results to return." });
                 parameters.Add(new QueryParameter { Name = "namesOnly", Required = false, Description = "Return only index names." });
             }
-            // Stats endpoints
-            else if (path.Contains("/stats"))
+
+            // Stats and metrics endpoints
+            if (path.Contains("/stats/detailed") || path.Contains("/stats/essential") || path.EndsWith("/stats"))
             {
                 parameters.Add(new QueryParameter { Name = "debugInfo", Required = false, Description = "Include debug information." });
             }
-            // Queries
-            else if (path.Contains("/queries") && methodName == "Get")
+            else if (path.Contains("/metrics/puts") || path.Contains("/metrics/bytes"))
+            {
+                parameters.Add(new QueryParameter { Name = "empty", Required = false, Description = "Include empty metrics." });
+            }
+
+            // Query endpoints
+            if (path.Contains("/queries") && methodName == "Get")
             {
                 parameters.Add(new QueryParameter { Name = "query", Required = false, Description = "RQL query string." });
                 parameters.Add(new QueryParameter { Name = "start", Required = false, Description = "Number of results to skip." });
                 parameters.Add(new QueryParameter { Name = "pageSize", Required = false, Description = "Maximum number of results to return." });
+                parameters.Add(new QueryParameter { Name = "disableAutoIndexCreation", Required = false, Description = "Disable automatic index creation." });
+                parameters.Add(new QueryParameter { Name = "allowStale", Required = false, Description = "Allow querying stale indexes." });
+                parameters.Add(new QueryParameter { Name = "details", Required = false, Description = "Include detailed query information." });
             }
-            // Documents
-            else if (path.Contains("/docs") && methodName == "Get")
+
+            // Document endpoints
+            if (path.Contains("/docs") && methodName == "Get")
             {
                 parameters.Add(new QueryParameter { Name = "id", Required = true, Description = "Document identifier." });
+                parameters.Add(new QueryParameter { Name = "includes", Required = false, Description = "Related documents to include." });
             }
-            // Collections
-            else if (path.Contains("/collections/stats"))
+            else if (path.Contains("/docs/class"))
+            {
+                parameters.Add(new QueryParameter { Name = "id", Required = true, Description = "Document identifier." });
+                parameters.Add(new QueryParameter { Name = "lang", Required = false, Description = "Programming language for class generation (csharp, java, etc.)." });
+            }
+
+            // Collection endpoints
+            if (path.Contains("/collections/stats"))
             {
                 parameters.Add(new QueryParameter { Name = "name", Required = false, Description = "Filter by collection name." });
             }
-            // Debug endpoints
-            else if (path.Contains("/debug") && path.Contains("/queries/running"))
+            else if (path.Contains("/collections/fields"))
             {
-                parameters.Add(new QueryParameter { Name = "details", Required = false, Description = "Include detailed information." });
-            }
-            // Configuration endpoints
-            else if (path.Contains("/configuration"))
-            {
-                parameters.Add(new QueryParameter { Name = "key", Required = false, Description = "Configuration key to retrieve." });
+                parameters.Add(new QueryParameter { Name = "collection", Required = false, Description = "Collection name." });
+                parameters.Add(new QueryParameter { Name = "prefix", Required = false, Description = "Field name prefix filter." });
             }
 
-            // Common pagination parameters
-            if (path.Contains("/admin/") && (methodName.Contains("List") || methodName.Contains("GetAll")))
+            // Replication endpoints
+            if (path.Contains("/replication/conflicts"))
             {
-                if (!parameters.Any(p => p.Name == "start"))
+                parameters.Add(new QueryParameter { Name = "docId", Required = false, Description = "Document ID to filter conflicts." });
+                parameters.Add(new QueryParameter { Name = "pageSize", Required = false, Description = "Maximum number of results to return." });
+            }
+            else if (path.Contains("/pull-replication/hub/access"))
+            {
+                parameters.Add(new QueryParameter { Name = "name", Required = true, Description = "Pull replication hub name." });
+            }
+
+            // Debug endpoints
+            if (path.Contains("/debug"))
+            {
+                if (path.Contains("/queries/running"))
+                {
+                    parameters.Add(new QueryParameter { Name = "details", Required = false, Description = "Include detailed information." });
+                }
+                else if (path.Contains("/memory"))
+                {
+                    parameters.Add(new QueryParameter { Name = "loh", Required = false, Description = "Include large object heap information." });
+                }
+                else if (path.Contains("/script-runners"))
+                {
+                    parameters.Add(new QueryParameter { Name = "detailed", Required = false, Description = "Include detailed information." });
+                }
+                else if (path.Contains("/info-package"))
+                {
+                    parameters.Add(new QueryParameter { Name = "type", Required = false, Description = "Type of debug package content." });
+                    parameters.Add(new QueryParameter { Name = "timeoutInSecPerNode", Required = false, Description = "Timeout in seconds per node." });
+                }
+            }
+
+            // Configuration endpoints
+            if (path.Contains("/configuration"))
+            {
+                if (path.Contains("/client"))
+                {
+                    parameters.Add(new QueryParameter { Name = "inherit", Required = false, Description = "Inherit server-wide configuration." });
+                }
+            }
+
+            // TCP/Network endpoints
+            if (path.Contains("/tcp"))
+            {
+                parameters.Add(new QueryParameter { Name = "ip", Required = false, Description = "IP address filter." });
+                parameters.Add(new QueryParameter { Name = "operation", Required = false, Description = "Operation type filter." });
+            }
+
+            // Admin endpoints
+            if (path.Contains("/admin/"))
+            {
+                if (path.Contains("/cluster/node-info"))
+                {
+                    parameters.Add(new QueryParameter { Name = "nodeTag", Required = false, Description = "Specific node tag." });
+                }
+                else if (path.Contains("/cluster/observer/decisions"))
+                {
+                    parameters.Add(new QueryParameter { Name = "nodeTag", Required = false, Description = "Specific node tag." });
+                }
+                else if (path.Contains("/rachis/"))
+                {
+                    if (methodName.Contains("Suspend"))
+                    {
+                        parameters.Add(new QueryParameter { Name = "value", Required = true, Description = "Suspend value." });
+                    }
+                    else if (path.Contains("/add"))
+                    {
+                        parameters.Add(new QueryParameter { Name = "url", Required = true, Description = "Node URL." });
+                        parameters.Add(new QueryParameter { Name = "tag", Required = false, Description = "Node tag." });
+                        parameters.Add(new QueryParameter { Name = "watcher", Required = false, Description = "Add as watcher node." });
+                        parameters.Add(new QueryParameter { Name = "maxUtilizedCores", Required = false, Description = "Maximum CPU cores to utilize." });
+                    }
+                }
+
+                // Common pagination for admin list endpoints
+                if (methodName.Contains("List") || methodName.Contains("GetAll") || methodName.Contains("Get"))
+                {
+                    if (!parameters.Any(p => p.Name == "start"))
+                        parameters.Add(new QueryParameter { Name = "start", Required = false, Description = "Number of results to skip." });
+                    if (!parameters.Any(p => p.Name == "pageSize"))
+                        parameters.Add(new QueryParameter { Name = "pageSize", Required = false, Description = "Maximum number of results to return." });
+                }
+            }
+
+            // Identity endpoints
+            if (path.Contains("/identity"))
+            {
+                parameters.Add(new QueryParameter { Name = "name", Required = true, Description = "Identity name." });
+                if (path.Contains("/next-identity"))
+                {
+                    // Already has name
+                }
+                else
+                {
+                    parameters.Add(new QueryParameter { Name = "force", Required = false, Description = "Force update identity value." });
+                }
+            }
+
+            // Bulk insert endpoints
+            if (path.Contains("/bulk-insert") || path.Contains("/bulkinsert"))
+            {
+                parameters.Add(new QueryParameter { Name = "skipOverwriteIfUnchanged", Required = false, Description = "Skip overwrite if document unchanged." });
+            }
+
+            // Subscription endpoints
+            if (path.Contains("/subscriptions"))
+            {
+                if (path.Contains("/state"))
+                {
+                    parameters.Add(new QueryParameter { Name = "name", Required = true, Description = "Subscription name." });
+                }
+            }
+
+            // Sharding endpoints
+            if (path.Contains("/shard"))
+            {
+                parameters.Add(new QueryParameter { Name = "shardNumber", Required = false, Description = "Shard number." });
+                parameters.Add(new QueryParameter { Name = "nodeTag", Required = false, Description = "Node tag." });
+            }
+
+            // Studio endpoints
+            if (path.Contains("/studio/"))
+            {
+                if (path.Contains("/footer/stats"))
+                {
+                    parameters.Add(new QueryParameter { Name = "global", Required = false, Description = "Include global statistics." });
+                }
+            }
+
+            // Certificate endpoints
+            if (path.Contains("/certificates"))
+            {
+                if (path.Contains("/generate"))
+                {
+                    parameters.Add(new QueryParameter { Name = "validMonths", Required = false, Description = "Certificate validity in months." });
+                }
+            }
+
+            // Common parameters for many endpoints
+            if (!parameters.Any())
+            {
+                // Add common pagination if it's a list endpoint
+                if (methodName.Contains("List") || methodName.Contains("GetAll"))
+                {
                     parameters.Add(new QueryParameter { Name = "start", Required = false, Description = "Number of results to skip." });
-                if (!parameters.Any(p => p.Name == "pageSize"))
                     parameters.Add(new QueryParameter { Name = "pageSize", Required = false, Description = "Maximum number of results to return." });
+                }
             }
 
             return parameters;
