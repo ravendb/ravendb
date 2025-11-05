@@ -40,11 +40,11 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public static void Add(DatabaseNotificationCenter notificationCenter, string agentName, string conversationId, int tokenCount, int tokenThreshold, List<ToolCallDetails> toolCalls)
+        public static ExceededTokenThresholdDetails Add(DatabaseNotificationCenter notificationCenter, string agentName, string conversationId, int tokenCount, int tokenThreshold, List<ToolCallDetails> toolCalls)
         {
             var configurationKey = RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold);
             var message = $"In conversation '{conversationId}', the AI Agent '{agentName}' sent a request with {tokenCount} tokens to the LLM, exceeding the configured threshold of {tokenThreshold} tokens. " +
-                          $"You can adjust the limit by setting the '{configurationKey}' configuration value";
+            $"You can adjust the limit by setting the '{configurationKey}' configuration value";
 
             var hasActionTools = toolCalls.Any(tc => tc.Type == ToolType.Action);
             var hasQueryTools = toolCalls.Any(tc => tc.Type == ToolType.Query);
@@ -74,15 +74,16 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 recommendationBuilder.ToString()
                 );
 
-            var alert = AlertRaised.Create(
-                notificationCenter.Database,
-                $"AI Agent '{agentName}': Exceeded Token Threshold",
-                message,
-                AlertReason.AiAgent_ExceededTokenThreshold,
-                NotificationSeverity.Warning,
-                details: details);
+            return details;
+        }
 
-            notificationCenter.Add(alert);
+        public static AlertRaised CreateAlert(ExceededTokenThresholdDetails pendingAlertDetails, string databaseName)
+        {
+            var configurationKey = RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold);
+            var msg = $"In conversation '{pendingAlertDetails.ConversationId}', the AI Agent '{pendingAlertDetails.AgentName}' sent a request with {pendingAlertDetails.TokenCount} tokens to the LLM, exceeding the configured threshold of {pendingAlertDetails.TokenThreshold} tokens. " +
+                      $"You can adjust the limit by setting the '{configurationKey}' configuration value";
+            return AlertRaised.Create(databaseName, $"AI Agent '{pendingAlertDetails.AgentName}': Exceeded Token Threshold",
+                msg, AlertReason.AiAgent_ExceededTokenThreshold, NotificationSeverity.Warning, details: pendingAlertDetails);
         }
 
         public class ToolCallDetails : IDynamicJson
@@ -91,16 +92,23 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             public string Name { get; set; }
             public ToolType Type { get; set; }
             public string Arguments { get; set; }
+            public string Query { get; set; }
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue
+                var djv = new DynamicJsonValue
                 {
                     [nameof(Id)] = Id,
                     [nameof(Name)] = Name,
                     [nameof(Type)] = Type.ToString(),
                     [nameof(Arguments)] = Arguments
                 };
+                if (Type == ToolType.Query)
+                {
+                    djv[nameof(Query)] = Query;
+                }
+
+                return djv;
             }
         }
     }

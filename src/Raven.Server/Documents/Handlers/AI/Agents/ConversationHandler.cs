@@ -164,17 +164,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         bool shouldContinueConversation = true;
         var sw = Stopwatch.StartNew();
 
-        if (_conversationId[^1] == '|')
-        {
-            var res = await server.GenerateClusterIdentityAsync(_conversationId, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
-            _conversationId = res.ClusterId;
-        }
-        else
-        {
-            _conversationId = database.DocumentsStorage.DocumentPut.BuildDocumentId(_conversationId, database.DocumentsStorage.GenerateNextEtag(), out _);
-        }
-        _document.Id = _conversationId;
-
+        var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
         while (shouldContinueConversation)
         {
             using var request = talker.CreateCompletionRequest(_request.Attachments);
@@ -190,13 +180,14 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             {
                 if (_document.TryGetDetailsOfRecentToolCall(_configuration, out var toolCalls))
                 {
-                    ExceededTokenThresholdDetails.Add(
-                        database.NotificationCenter,
-                        _configuration.Name,
-                        _conversationId,
-                        currentTurnUsage.PromptTokens,
-                        database.Configuration.Ai.ToolsTokenUsageThreshold,
-                        toolCalls
+                    pendingAlertsDetails.Add(ExceededTokenThresholdDetails.Add(
+                            database.NotificationCenter,
+                            _configuration.Name,
+                            _conversationId,
+                            currentTurnUsage.PromptTokens,
+                            database.Configuration.Ai.ToolsTokenUsageThreshold,
+                            toolCalls
+                        )
                     );
                 }
             }
@@ -229,6 +220,12 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         _elapsed = sw.Elapsed;
         _conversationId = await TryPersistAsync(context, historyDocs);
 
+        foreach (ExceededTokenThresholdDetails pendingAlertDetails in pendingAlertsDetails)
+        {
+            pendingAlertDetails.ConversationId = _conversationId;
+            database.NotificationCenter.Add(
+                ExceededTokenThresholdDetails.CreateAlert(pendingAlertDetails, database.Name));
+        }
         return (r.Result, talker.AiUsage);
     }
 
@@ -483,6 +480,12 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
+        if (_conversationId[^1] == '|')
+        {
+            var r = await server.GenerateClusterIdentityAsync(_conversationId, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
+            _conversationId = r.ClusterId;
+        }
+
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
         var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
         await database.TxMerger.Enqueue(cmd);
