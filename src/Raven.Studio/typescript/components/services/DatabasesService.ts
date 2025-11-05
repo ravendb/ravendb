@@ -74,10 +74,8 @@ import deleteRevisionsForDocumentsCommand = require("commands/database/documents
 import getRevisionsIdsCommand from "commands/database/documents/getRevisionsIdsCommand";
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentsByIDPrefixCommand = require("commands/database/documents/getDocumentsByIDPrefixCommand");
-import getRemoteAttachmentsConfigurationCommand
-    from "commands/database/settings/getRemoteAttachmentsConfigurationCommand";
-import saveRemoteAttachmentsConfigurationCommand
-    from "commands/database/settings/saveRemoteAttachmentsConfigurationCommand";
+import getRemoteAttachmentsConfigurationCommand from "commands/database/settings/getRemoteAttachmentsConfigurationCommand";
+import saveRemoteAttachmentsConfigurationCommand from "commands/database/settings/saveRemoteAttachmentsConfigurationCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -359,11 +357,15 @@ export default class DatabasesService {
         return new getDocumentWithMetadataCommand(...args).execute();
     }
 
-    async getRemoteAttachmentsConfiguration(...args: ConstructorParameters<typeof getRemoteAttachmentsConfigurationCommand>) {
+    async getRemoteAttachmentsConfiguration(
+        ...args: ConstructorParameters<typeof getRemoteAttachmentsConfigurationCommand>
+    ) {
         return new getRemoteAttachmentsConfigurationCommand(...args).execute();
     }
 
-    async saveRemoteAttachmentsConfiguration(...args: ConstructorParameters<typeof saveRemoteAttachmentsConfigurationCommand>) {
+    async saveRemoteAttachmentsConfiguration(
+        ...args: ConstructorParameters<typeof saveRemoteAttachmentsConfigurationCommand>
+    ) {
         return new saveRemoteAttachmentsConfigurationCommand(...args).execute();
     }
 }

@@ -20,7 +20,7 @@ export default {
     args: {
         databaseAccess: "DatabaseAdmin",
         licenseType: "Enterprise",
-    }
+    },
 } satisfies Meta;
 
 interface RemoteAttachmentsStoryArgs {
@@ -31,11 +31,10 @@ export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
     name: "Remote Attachments",
     render: (args) => {
         const { accessManager, databases } = mockStore;
-        const {databasesService} = mockServices;
+        const { databasesService } = mockServices;
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         databasesService.withRemoteAttachmentsConfiguration();
-
 
         accessManager.with_databaseAccess({
             [db.name]: args.databaseAccess,

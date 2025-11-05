@@ -1,8 +1,6 @@
 import { Icon } from "components/common/Icon";
 import React from "react";
-import {
-    RemoteAttachmentsDestinationFormData
-} from "components/pages/database/settings/remoteAttachments/remoteAttachmentsValidation";
+import { RemoteAttachmentsDestinationFormData } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsValidation";
 import { UseAsyncReturn } from "react-async-hook";
 import { useFormContext } from "react-hook-form";
 import { FormGroup, FormInput, FormLabel, FormSelectCreatable, FormSwitch } from "components/common/Form";
@@ -68,17 +66,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
             <FormGroup>
                 <FormLabel className="d-flex align-items-center gap-1">
                     Bucket name
-                    {asyncTest.result?.Success ? (
-                        <Badge bg="success" pill>
-                            <Icon icon="check" />
-                            Successfully connected
-                        </Badge>
-                    ) : asyncTest.result?.Error ? (
-                        <Badge bg="danger" pill>
-                            <Icon icon="warning" />
-                            Failed connection
-                        </Badge>
-                    ) : null}
+                    <ConnectionPill asyncTest={asyncTest} />
                 </FormLabel>
                 <FormInput
                     control={control}
@@ -156,6 +144,31 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
     );
 }
 
+interface ConnectionPillProps {
+    asyncTest: UseAsyncReturn<Raven.Server.Web.System.NodeConnectionTestResult, []>;
+}
+function ConnectionPill({ asyncTest }: ConnectionPillProps) {
+    if (!asyncTest.result) {
+        return null;
+    }
+
+    if (asyncTest.result.Success) {
+        return (
+            <Badge bg="success" pill>
+                <Icon icon="check" />
+                Successfully connected
+            </Badge>
+        );
+    }
+
+    return (
+        <Badge bg="danger" pill>
+            <Icon icon="warning" />
+            Failed connection
+        </Badge>
+    );
+}
+
 export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDestinationFieldsProps) {
     const { control } = useFormContext<RemoteAttachmentsDestinationFormData>();
 
@@ -169,17 +182,7 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
             <FormGroup>
                 <FormLabel className="d-flex gap-1 align-items-center">
                     Storage container
-                    {asyncTest.result?.Success ? (
-                        <Badge bg="success" pill>
-                            <Icon icon="check" />
-                            Successfully connected
-                        </Badge>
-                    ) : asyncTest.result?.Error ? (
-                        <Badge bg="danger" pill>
-                            <Icon icon="warning" />
-                            Failed connection
-                        </Badge>
-                    ) : null}
+                    <ConnectionPill asyncTest={asyncTest} />
                 </FormLabel>
                 <FormInput
                     name="azure.storageContainer"

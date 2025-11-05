@@ -84,7 +84,7 @@ export default function RemoteAttachments() {
         });
     };
 
-    useRemoteAttachmentsSideEffects({ destinations, setValue, watch });
+    useRemoteAttachmentsSideEffects({ setValue, watch });
 
     if (loadStatus === "loading") {
         return <LoadingView />;
@@ -267,9 +267,9 @@ function DestinationsList({
 }
 
 function RemoteAttachmentsSettingsCard() {
-    const { control, formState } = useFormContext<RemoteAttachmentsFormData>();
+    const { control, formState, watch } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const formValues = useWatch({ control });
+    const formValues = watch();
 
     return (
         <Card>
@@ -366,29 +366,11 @@ function RemoteAttachmentsSettingsCard() {
 }
 
 interface UseDestinationsSideEffectsProps {
-    destinations: RemoteAttachmentsDestinationFormData[];
     setValue: UseFormSetValue<RemoteAttachmentsFormData>;
     watch: UseFormWatch<RemoteAttachmentsFormData>;
 }
 
-const useRemoteAttachmentsSideEffects = ({ destinations, watch, setValue }: UseDestinationsSideEffectsProps) => {
-    // useEffect(() => {
-    //     if (!destinations) {
-    //         return;
-    //     }
-    //
-    //     const isEveryDisabled = destinations.length > 0 && destinations.every((d) => d.disabled);
-    //
-    //     if (isEveryDisabled) {
-    //         setValue("isRemoteAttachmentsEnabled", false);
-    //         setValue("isCheckFrequencyInSecEnabled", false);
-    //         setValue("isMaxItemsToProcessEnabled", false);
-    //         setValue("isConcurrentUploadsEnabled", false);
-    //     } else {
-    //         setValue("isRemoteAttachmentsEnabled", true);
-    //     }
-    // }, [destinations, setValue]);
-
+const useRemoteAttachmentsSideEffects = ({ watch, setValue }: UseDestinationsSideEffectsProps) => {
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
             if (name === "isRemoteAttachmentsEnabled" && !values.isRemoteAttachmentsEnabled) {

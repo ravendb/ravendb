@@ -231,8 +231,19 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             requiredAccess: "DatabaseAdmin",
             search: {
                 innerActions: [
-                    { name: "Enable Remote Attachments" },
+                    {
+                        name: "Enable Remote Attachments",
+                        alternativeNames: ["Turn on Remote Attachments", "Activate Remote Attachments"]
+                    },
                     { name: "Set custom remote attachments frequency" },
+                    {
+                        name: "Add New Destination",
+                        alternativeNames: ["Create Destination", "Add Remote Destination", "New Attachment Destination"]
+                    },
+                    {
+                        name: "Delete destination",
+                        alternativeNames: ["Remove destination", "Delete remote attachment"]
+                    },
                 ],
             },
         }),

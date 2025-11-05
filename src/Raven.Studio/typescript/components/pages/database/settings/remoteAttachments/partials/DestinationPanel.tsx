@@ -53,6 +53,7 @@ export function DestinationPanel({
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const isModified = useAppSelector(remoteAttachmentsSelectors.isDestinationModified(identifier));
     const formValues = watch();
+
     return (
         <RichPanel className="with-status flex-row">
             <RichPanelStatus className={disabled ? "bg-danger" : "bg-success"}>
@@ -73,8 +74,8 @@ export function DestinationPanel({
                                 variant={disabled ? "success" : "secondary"}
                                 onClick={() => onToggle(identifier)}
                             >
-                                <Icon icon={disabled ? "disable" : "play"} />
-                                {disabled ? "Disable" : "Enable"}
+                                <Icon icon={disabled ? "play" : "disable"} />
+                                {disabled ? "Enable" : "Disable"}
                             </Button>
                             <Button
                                 disabled={!formValues.isRemoteAttachmentsEnabled}
@@ -152,10 +153,8 @@ export function DestinationEditorPanel({
               },
     });
 
-    const { control, watch, handleSubmit, trigger, setValue, formState } = form;
+    const { control, watch, handleSubmit, trigger, setValue } = form;
     const formValues = watch();
-
-    console.log("maxym formState", formState.errors);
 
     const asyncTest = useAsyncCallback<Raven.Server.Web.System.NodeConnectionTestResult, []>(async () => {
         const isValid = await trigger(formValues.provider);
@@ -163,16 +162,19 @@ export function DestinationEditorPanel({
             return;
         }
 
-        if (formValues.provider === "s3") {
-            return manageServerService.testPeriodicBackupCredentials(
-                "S3",
-                mapS3ToDto({ ...formValues.s3, isEnabled: true })
-            );
-        } else {
-            return manageServerService.testPeriodicBackupCredentials(
-                "Azure",
-                mapAzureToDto({ ...formValues.azure, isEnabled: true })
-            );
+        switch (formValues.provider) {
+            case "s3":
+                return manageServerService.testPeriodicBackupCredentials(
+                    "S3",
+                    mapS3ToDto({ ...formValues.s3, isEnabled: true })
+                );
+            case "azure":
+                return manageServerService.testPeriodicBackupCredentials(
+                    "Azure",
+                    mapAzureToDto({ ...formValues.azure, isEnabled: true })
+                );
+            default:
+                break;
         }
     });
 
@@ -181,37 +183,25 @@ export function DestinationEditorPanel({
             if (name === "provider") {
                 asyncTest.reset();
 
-                if (values.provider === "s3") {
-                    if (!values.s3) {
-                        setValue("s3", { ...defaultS3FormData, isEnabled: true }, { shouldDirty: true });
+                const setProviderState = (provider: DestinationProviderType, isEnabled: boolean) => {
+                    const defaults = provider === "s3" ? defaultS3FormData : defaultAzureFormData;
+                    if (!values[provider]) {
+                        setValue(provider, { ...defaults, isEnabled }, { shouldDirty: true });
                     } else {
-                        setValue("s3.isEnabled", true);
+                        setValue(`${provider}.isEnabled`, isEnabled);
                     }
-                    if (!values.azure) {
-                        setValue("azure", { ...defaultAzureFormData, isEnabled: false }, { shouldDirty: true });
-                    } else {
-                        setValue("azure.isEnabled", false);
-                    }
-                } else {
-                    if (!values.azure) {
-                        setValue("azure", { ...defaultAzureFormData, isEnabled: true }, { shouldDirty: true });
-                    } else {
-                        setValue("azure.isEnabled", true);
-                    }
-                    if (!values.s3) {
-                        setValue("s3", { ...defaultS3FormData, isEnabled: false }, { shouldDirty: true });
-                    } else {
-                        setValue("s3.isEnabled", false);
-                    }
-                }
+                };
+
+                const activeProvider = values.provider;
+                const providers: DestinationProviderType[] = ["s3", "azure"];
+
+                providers.forEach((p) => setProviderState(p, p === activeProvider));
             }
         });
         return unsubscribe;
     }, []);
 
     const handleSaveDestination: SubmitHandler<RemoteAttachmentsDestinationFormData> = async (data) => {
-        console.log("Saving destination:", data);
-
         const destinationData = {
             ...data,
             s3: data.provider === "s3" ? data.s3 : null,
@@ -234,53 +224,67 @@ export function DestinationEditorPanel({
 
     return (
         <FormProvider {...form}>
-            <div className="panel-bg-2 p-3 border-bottom border-secondary d-flex flex-wrap justify-content-between gap-2">
-                <h3 className="m-0">
-                    <Icon icon="global" addon="settings" color="primary" />
-                    <span>{editingDestinationId ? "Edit Destination" : "Create new Destination"}</span>
-                </h3>
-                <div className="d-flex gap-2">
-                    <Button variant="link" onClick={toggleCreateNewDestinationPinned} className="text-muted" size="sm">
-                        <Icon size="sm" icon={isCreateNewDestinationPinned ? "pinned" : "pin"} margin="m-0" />
-                    </Button>
-                    <Button variant="link" className="text-muted" size="sm" onClick={toggleCreateNewDestinationOpen}>
-                        <Icon size="sm" icon="close" margin="m-0" />
-                    </Button>
+            <form className="h-100 d-flex flex-column" onSubmit={handleSubmit(handleSaveDestination)}>
+                <div className="panel-bg-2 p-3 border-bottom border-secondary d-flex flex-wrap justify-content-between gap-2">
+                    <h3 className="m-0">
+                        <Icon icon="global" addon="settings" color="primary" />
+                        <span>{editingDestinationId ? "Edit Destination" : "Create new Destination"}</span>
+                    </h3>
+                    <div className="d-flex gap-2">
+                        <Button
+                            variant="link"
+                            onClick={toggleCreateNewDestinationPinned}
+                            className="text-muted"
+                            size="sm"
+                        >
+                            <Icon size="sm" icon={isCreateNewDestinationPinned ? "pinned" : "pin"} margin="m-0" />
+                        </Button>
+                        <Button
+                            variant="link"
+                            className="text-muted"
+                            size="sm"
+                            onClick={toggleCreateNewDestinationOpen}
+                        >
+                            <Icon size="sm" icon="close" margin="m-0" />
+                        </Button>
+                    </div>
                 </div>
-            </div>
-            <div className="w-100 flex-grow-1 vstack p-4 overflow-auto">
-                <FormGroup>
-                    <FormLabel>Provider</FormLabel>
-                    <FormSelect name="provider" control={control} options={providerOptions} />
-                </FormGroup>
+                <div className="w-100 flex-grow-1 vstack p-4 overflow-auto">
+                    <FormGroup>
+                        <FormLabel>Provider</FormLabel>
+                        <FormSelect name="provider" control={control} options={providerOptions} />
+                    </FormGroup>
 
-                {formValues.provider === "s3" && <RemoteAttachmentsS3Fields asyncTest={asyncTest} />}
-                {formValues.provider === "azure" && <RemoteAttachmentsAzureFields asyncTest={asyncTest} />}
-            </div>
-            <div className="w-100 p-2 panel-bg-2 border-top d-flex justify-content-between border-secondary">
-                <Button onClick={toggleCreateNewDestinationOpen} variant="link" className="text-muted">
-                    Cancel
-                </Button>
-                <div className="d-flex gap-2">
-                    <ButtonWithSpinner
-                        type="button"
-                        variant="info"
-                        className="rounded-pill"
-                        onClick={asyncTest.execute}
-                        isSpinning={asyncTest.loading}
-                        icon="rocket"
-                    >
-                        Test credentials
-                    </ButtonWithSpinner>
-                    <Button className="rounded-pill" onClick={handleSubmit(handleSaveDestination)}>
-                        <Icon icon="save" />
-                        Apply configuration
-                    </Button>
+                    {formValues.provider === "s3" && <RemoteAttachmentsS3Fields asyncTest={asyncTest} />}
+                    {formValues.provider === "azure" && <RemoteAttachmentsAzureFields asyncTest={asyncTest} />}
                 </div>
-            </div>
+                <div className="w-100 p-2 panel-bg-2 border-top d-flex justify-content-between border-secondary">
+                    <Button onClick={toggleCreateNewDestinationOpen} variant="link" className="text-muted">
+                        Cancel
+                    </Button>
+                    <div className="d-flex gap-2">
+                        <ButtonWithSpinner
+                            type="button"
+                            variant="info"
+                            className="rounded-pill"
+                            onClick={asyncTest.execute}
+                            isSpinning={asyncTest.loading}
+                            icon="rocket"
+                        >
+                            Test credentials
+                        </ButtonWithSpinner>
+                        <Button className="rounded-pill" type="submit">
+                            <Icon icon="save" />
+                            Apply configuration
+                        </Button>
+                    </div>
+                </div>
+            </form>
         </FormProvider>
     );
 }
+
+type DestinationProviderType = RemoteAttachmentsDestinationFormData["provider"];
 
 const providerOptions = [
     {

@@ -85,3 +85,12 @@ window.HTMLElement.prototype.getBoundingClientRect = () => ({
     top: 0,
 });
 global.structuredClone = (val) => JSON.parse(JSON.stringify(val))
+
+window.HTMLElement.prototype.getBoundingClientRect = () => ({
+    width: 500,
+    height: 500,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+});

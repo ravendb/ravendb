@@ -206,7 +206,13 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getDocumentWithMetadata, dto, new document({ Name: "some-name" }));
     }
 
-    withRemoteAttachmentsConfiguration(dto?: MockedValue<Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration>) {
-        return this.mockResolvedValue(this.mocks.getRemoteAttachmentsConfiguration, dto, DatabasesStubs.remoteAttachmentsConfiguration());
+    withRemoteAttachmentsConfiguration(
+        dto?: MockedValue<Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getRemoteAttachmentsConfiguration,
+            dto,
+            DatabasesStubs.remoteAttachmentsConfiguration()
+        );
     }
 }

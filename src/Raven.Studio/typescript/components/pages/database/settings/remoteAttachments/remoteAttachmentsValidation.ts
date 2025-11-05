@@ -9,22 +9,19 @@ const destinationBaseSchema = yup.object({
             const { options } = this;
 
             if (options.context?.destinations) {
-                const destinations = options.context.destinations as Array<{ identifier?: string }>;
+                const destinations = options.context.destinations as {identifier?: string}[];
                 const currentIdentifierInEdit = options.context.currentIdentifier;
 
                 const matches = destinations.filter((dest) => dest.identifier === value);
 
-                // Creating new: require no matches
                 if (!currentIdentifierInEdit) {
                     return matches.length === 0;
                 }
 
-                // Editing: allow if the only match is the one we're editing
                 if (value === currentIdentifierInEdit) {
                     return matches.length <= 1;
                 }
 
-                // Renaming to a different value must be unique
                 return matches.length === 0;
             }
 
@@ -36,21 +33,16 @@ const destinationBaseSchema = yup.object({
 const destinationSchema = yup
     .object({
         provider: yup.string().oneOf(["s3", "azure"]).required(),
-        // Important: allow the non-selected provider object to be null
-        s3: s3Schema
-            .nullable()
-            .when("provider", {
-                is: "s3",
-                then: (schema) => schema.required(),
-                otherwise: (schema) => schema.nullable(),
-            }),
-        azure: azureSchema
-            .nullable()
-            .when("provider", {
-                is: "azure",
-                then: (schema) => schema.required(),
-                otherwise: (schema) => schema.nullable(),
-            }),
+        s3: s3Schema.nullable().when("provider", {
+            is: "s3",
+            then: (schema) => schema.required(),
+            otherwise: (schema) => schema.nullable(),
+        }),
+        azure: azureSchema.nullable().when("provider", {
+            is: "azure",
+            then: (schema) => schema.required(),
+            otherwise: (schema) => schema.nullable(),
+        }),
     })
     .concat(destinationBaseSchema);
 
@@ -86,7 +78,6 @@ const schema = yup.object({
             is: true,
             then: (schema) => schema.required(),
         }),
-    // destinations: yup.array().of(destinationSchema),
 });
 
 export const remoteAttachmentsDestinationYupResolver = yupResolver(destinationSchema);
