@@ -52,7 +52,7 @@ for(const comment of this.Comments)
 
         // set up conversation tracing and expiration
         config.EnableTracing = true;
-        config.ExpirationInSeconds = 60 * 60 * 24;
+        config.ExpirationInSec = 60 * 60 * 24;
 
         store.Maintenance.Send(new AddGenAiOperation(config));
 

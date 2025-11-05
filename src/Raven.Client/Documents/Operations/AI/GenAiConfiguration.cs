@@ -36,7 +36,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
     public bool EnableTracing { get; set; }
 
-    public int? ExpirationInSeconds { get; set; }
+    public int? ExpirationInSec { get; set; }
 
     private List<Transformation> _transforms;
 
@@ -125,7 +125,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(MaxConcurrency)] = MaxConcurrency;
         json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
         json[nameof(EnableTracing)] = EnableTracing;
-        json[nameof(ExpirationInSeconds)] = ExpirationInSeconds;
+        json[nameof(ExpirationInSec)] = ExpirationInSec;
 
         return json;
     }

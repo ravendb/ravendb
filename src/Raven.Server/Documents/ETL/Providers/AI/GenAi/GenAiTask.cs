@@ -209,7 +209,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     Parameters = item.ContextOutput.Context,
                     CreationOptions = new AiConversationCreationOptions
                     {
-                        ExpirationInSec = Configuration.ExpirationInSeconds
+                        ExpirationInSec = Configuration.ExpirationInSec
                     },
                     UserPrompt = json,
                     Attachments = item.ContextOutput.Attachments
