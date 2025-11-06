@@ -346,9 +346,15 @@ namespace Raven.Server.Utils
             log?.AppendLine("Subject key pair prepared.");
 
             // Prepare Distinguished Names
-            var subjectName = new X500DistinguishedName($"CN={commonNameValue}");
-            log?.AppendLine($"issuerDN = {issuerCN}");
+            var subjectName = new X500DistinguishedName(string.Empty);
+            if (string.IsNullOrEmpty(commonNameValue) == false)
+            {
+                var commonNameBuilder = new X500DistinguishedNameBuilder();
+                commonNameBuilder.AddCommonName(commonNameValue);
+                subjectName = commonNameBuilder.Build();
+            }
             log?.AppendLine($"subjectDN = {subjectName}");
+            log?.AppendLine($"issuerDN = {issuerCN}");
 
             // Create the Certificate Request
             var request = new CertificateRequest(subjectName, privateKey, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
@@ -495,17 +501,9 @@ namespace Raven.Server.Utils
             var issuerPrivateKey = serverCertificate.GetRSAPrivateKey();
             var issuerPublicKey = serverCertificate.GetRSAPublicKey();
 
-            // Extract the common name (CN) from the server certificate's subject.
-            string serverCommonName = serverCertificate.GetDisplayName();
-            if (serverCommonName == null)
-            {
-                throw new InvalidOperationException("Could not find Common Name (CN) in the server certificate's subject.");
-            }
-        
-
             // Call the native .NET method to create and sign the client certificate.
             CreateSelfSignedCertificateBasedOnPrivateKey(
-                commonNameValue: $"{serverCommonName.Replace("CN=", "")}-client-communication",
+                commonNameValue: "client-cert-for-cluster-communication",
                 issuerCN: serverCertificate.SubjectName,
                 issuerKeyPair: (issuerPrivateKey, issuerPublicKey),
                 isClientCertificate: true,
