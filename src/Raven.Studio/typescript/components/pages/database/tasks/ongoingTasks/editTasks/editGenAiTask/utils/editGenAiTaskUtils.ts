@@ -89,7 +89,7 @@ const mapToDto = (
         //temporary until UI supports queries
         Queries: null,
         EnableTracing: false,
-        ExpirationInSeconds: null,
+        ExpirationInSec: null,
     };
 };
 
