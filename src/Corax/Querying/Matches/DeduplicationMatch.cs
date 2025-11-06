@@ -7,6 +7,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 
 namespace Corax.Querying.Matches;
 

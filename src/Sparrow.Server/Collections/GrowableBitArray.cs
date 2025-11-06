@@ -1,10 +1,9 @@
 using System;
 using System.Runtime.CompilerServices;
-using Sparrow.Server;
 
-namespace Corax.Utils;
+namespace Sparrow.Server.Collections;
 
-internal unsafe struct GrowableBitArray : IDisposable
+public unsafe struct GrowableBitArray : IDisposable
 {
     internal static readonly int MaxCapacityPerBitmap = (int.MaxValue - sizeof(ByteStringStorage)) / sizeof(ulong);
     internal static readonly long MaxCapacityPerBitmapInBits = MaxCapacityPerBitmap * 64L;
@@ -52,10 +51,20 @@ internal unsafe struct GrowableBitArray : IDisposable
         return _bitArrays[(int)bitmapIdx].Add(pos - bitmapIdx * MaxCapacityPerBitmapInBits);
     }
 
+    public bool Contains(long pos)
+    {
+        var bitmapIdx = (int)(pos / MaxCapacityPerBitmapInBits);
+        return _bitArrays[(int)bitmapIdx].Contains(pos - bitmapIdx * MaxCapacityPerBitmapInBits);
+    }
+
     public void Dispose()
     {
+        if (_bitArrays == null)
+            return;
+        
         for (int i = 0; i < _bitArrays.Length; ++i)
             _bitArrays[i].Dispose();
+        _bitArrays  = null;
     }
 
     private struct BitArray : IDisposable
@@ -83,6 +92,14 @@ internal unsafe struct GrowableBitArray : IDisposable
             var result = *bucket & mask;
             *bucket |= mask;
             return result == 0;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Contains(long id)
+        {
+            var mask = 1UL << (int)(id & 63);
+            var bucket = _bits + (int)(id >> 6);
+            return (*bucket & mask) != 0;
         }
 
         public void Dispose()
