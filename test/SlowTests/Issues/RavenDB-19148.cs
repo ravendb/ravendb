@@ -24,9 +24,11 @@ public class RavenDB_19148 : ClusterTestBase
     public async Task CanAuthUsingWellKnownIssuer()
     {
         var suffix = Guid.NewGuid().ToString().Split('-')[0];
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"auth-{suffix}", out var caKey, out var caName);
+        var caCommonNameValue = $"auth-{suffix}";
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caKey, out var caName);
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey($"admin-{suffix}", caName, caKey, true, false,
             DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
+        CertificateUtils.RemoveOldTestCertificatesFromOsStore(caCommonNameValue);
 
         byte[] caBytes = ca.Export(X509ContentType.Cert);
         var result = await CreateRaftClusterWithSsl(1, true, customSettings:new Dictionary<string, string>

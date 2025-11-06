@@ -37,7 +37,7 @@ namespace SlowTests.Issues
             });
 
             var result = server.AuthenticateConnectionCertificate(client, null, log);
-            Assert.True(RavenServer.AuthenticationStatus.UnfamiliarCertificate == result.Status, log.ToString());
+            Assert.True(RavenServer.AuthenticationStatus.UnfamiliarCertificate == result.Status, $"Expected: {RavenServer.AuthenticationStatus.UnfamiliarCertificate} but got: {result.Status}. Log: {log}");
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
             });
 
             var result = server.AuthenticateConnectionCertificate(client, null, log);
-            Assert.True(RavenServer.AuthenticationStatus.ClusterAdmin == result.Status, log.ToString());
+            Assert.True(RavenServer.AuthenticationStatus.ClusterAdmin == result.Status, $"Expected: {RavenServer.AuthenticationStatus.ClusterAdmin} but got: {result.Status}. Log: {log}");
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
             });
 
             var result = server.AuthenticateConnectionCertificate(client, null, log);
-            Assert.True(RavenServer.AuthenticationStatus.UnfamiliarCertificate == result.Status, log.ToString());
+            Assert.True(RavenServer.AuthenticationStatus.UnfamiliarCertificate == result.Status, $"Expected: {RavenServer.AuthenticationStatus.UnfamiliarCertificate} but got: {result.Status}. Log: {log}");
         }
 
         [RavenFact(RavenTestCategory.Certificates)]
@@ -112,14 +112,15 @@ namespace SlowTests.Issues
             });
 
             var result = server.AuthenticateConnectionCertificate(client, null, log);
-            Assert.True(RavenServer.AuthenticationStatus.ClusterAdmin == result.Status, log.ToString());
+            Assert.True(RavenServer.AuthenticationStatus.ClusterAdmin == result.Status, $"Expected: {RavenServer.AuthenticationStatus.ClusterAdmin} but got: {result.Status}. Log: {log}");
         }
 
         private static string GenerateCaAndServerCert(out byte[] clientCertBytes, string[] sans = null, StringBuilder log = null)
         {
             var suffix = Guid.NewGuid().ToString().Split('-')[0];
 
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"ca-{suffix}", out var caKeyPair, out _);
+            var caCommonNameValue = $"ca-{suffix}";
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caKeyPair, out _);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
             log?.AppendLine($"Created CA: {ca.GetDisplayName()} ({ca.Thumbprint})");
 
@@ -134,6 +135,8 @@ namespace SlowTests.Issues
                 sans: sans);
             var adminCert = CertificateLoaderUtil.CreateCertificate(clientCertBytes);
             log?.AppendLine($"Created admin cert: {adminCert.GetDisplayName()} ({adminCert.Thumbprint})");
+            
+            CertificateUtils.RemoveOldTestCertificatesFromOsStore(caCommonNameValue);
             return caBase64;
         }
 
