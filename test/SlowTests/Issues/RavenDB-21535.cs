@@ -102,7 +102,7 @@ namespace SlowTests.Issues
 
             var client = CertificateLoaderUtil.CreateCertificate(clientCertBytes);
 
-            var server = GetNewServer(new ServerCreationOptions
+            using var server = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
