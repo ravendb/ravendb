@@ -139,7 +139,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
 
     return (
         <div>
-            {formattedThinkingTime && <div className="text-muted">Though for {formattedThinkingTime}</div>}
+            {formattedThinkingTime && <div className="text-muted">Thought for {formattedThinkingTime}</div>}
             <div className="mt-1">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {message.content}
