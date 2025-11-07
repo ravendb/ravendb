@@ -3,6 +3,7 @@ import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
+import AiAssistantUsagePercentageCircle from "components/common/aiAssistant/AiAssistantUsagePercentageCircle";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
@@ -58,9 +59,12 @@ function HeaderTitle() {
 
     if (chatbotTab === "Ask AI") {
         return (
-            <div>
-                <Icon icon="chatbot" />
-                Ask AI
+            <div className="d-flex align-items-center gap-2">
+                <div>
+                    <Icon icon="chatbot" />
+                    Ask AI
+                </div>
+                <AiAssistantUsagePercentageCircle />
             </div>
         );
     }
