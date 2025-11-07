@@ -5,8 +5,6 @@ import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageA
 export class AiAssistantStubs {
     static refinePromptSuccess(): RefinePromptAiAssistantResultDto {
         return {
-            InputTokenCount: 10,
-            OutputTokenCount: 20,
             UsagePercentage: 1,
             RefinedPrompt: "This is your refined prompt",
             Status: "Success",

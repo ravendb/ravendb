@@ -5,13 +5,20 @@ import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import Form from "react-bootstrap/Form";
 import { useAsync } from "react-async-hook";
-import { RefinePromptAiAssistantViewData } from "commands/aiAssistant/refinePromptAiAssistantCommand";
-import { ReactNode } from "react";
-import { useAppSelector } from "components/store";
-import { aiAssistantSelectors } from "../shell/aiAssistantSlice";
+import {
+    RefinePromptAiAssistantResultDto,
+    RefinePromptAiAssistantViewData,
+} from "commands/aiAssistant/refinePromptAiAssistantCommand";
+import { ReactNode, useMemo, useState } from "react";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { aiAssistantActions, aiAssistantSelectors } from "../shell/aiAssistantSlice";
 import RichAlert from "../RichAlert";
 import { aiAssistantConstants } from "./aiAssistantConstants";
 import AiAssistantConsentStatusChecker from "./AiAssistantConsentStatusChecker";
+import { loadableData } from "components/models/common";
+import { createFailureState, createIdleState, createLoadingState, createSuccessState } from "components/utils/common";
+import { processStreamingResponse } from "components/utils/streamingUtils";
+import ButtonWithSpinner from "../ButtonWithSpinner";
 
 interface AiAssistWindowProps {
     closeWindow: () => void;
@@ -21,31 +28,58 @@ interface AiAssistWindowProps {
 }
 
 export default function AiAssistantWindow({ closeWindow, data, acceptResult, successMessage }: AiAssistWindowProps) {
+    const dispatch = useAppDispatch();
     const { aiAssistantService } = useServices();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
-
     const isConsentSuccess = consentStatus.data === "Success";
+
+    const [assistResult, setAssistResult] = useState<loadableData<RefinePromptAiAssistantResultDto>>(createIdleState());
+    const abortController = useMemo(() => new AbortController(), []);
 
     const asyncAssist = useAsync(async () => {
         if (!isConsentSuccess) {
             return null;
         }
 
-        return await aiAssistantService.refinePrompt(data);
-    }, []);
+        setAssistResult(createLoadingState());
 
-    const getAssistResultText = () => {
-        if (!asyncAssist.result || asyncAssist.result.Status !== "Success") {
-            return null;
+        const result = await processStreamingResponse<RefinePromptAiAssistantResultDto>({
+            promiseFn: () => aiAssistantService.refinePrompt(data, abortController),
+            streamPropertyPath: "RefinedPrompt",
+            onChunksCombined: (text) => {
+                setAssistResult((prev) => {
+                    if (prev.data) {
+                        return createSuccessState({
+                            ...prev.data,
+                            RefinedPrompt: text,
+                        });
+                    } else {
+                        return createSuccessState({
+                            RefinedPrompt: text,
+                            Status: "Success",
+                            UsagePercentage: 0,
+                        });
+                    }
+                });
+            },
+        });
+
+        if (result.status === "error") {
+            setAssistResult(createFailureState(result.error));
+            return;
         }
 
-        return asyncAssist.result.RefinedPrompt;
-    };
-
-    const assistResultText = getAssistResultText();
+        dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
+        setAssistResult(createSuccessState(result.data));
+    }, []);
 
     const handleAccept = () => {
-        acceptResult(assistResultText);
+        acceptResult(assistResult.data?.RefinedPrompt || "");
+        closeWindow();
+    };
+
+    const handleClose = () => {
+        abortController.abort();
         closeWindow();
     };
 
@@ -65,38 +99,42 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                         <Icon icon="refine-ai" />
                         AI Assistant
                     </div>
-                    <Button variant="link" className="text-reset" onClick={closeWindow} size="sm">
+                    <Button variant="link" className="text-reset" onClick={handleClose} size="sm">
                         <Icon icon="close" margin="m-0" />
                     </Button>
                 </div>
                 <AiAssistantConsentStatusChecker onConsentGiven={asyncAssist.execute} />
-                {isConsentSuccess && asyncAssist.loading && (
+                {isConsentSuccess && assistResult.status === "loading" && (
                     <div className="hstack align-items-center gap-1">
                         <Spinner size="sm" variant="progress" />
                         Text refine in progress... Please wait.
                     </div>
                 )}
-                {asyncAssist.error && <RichAlert variant="danger">Failed to assist. Please try again.</RichAlert>}
+                {assistResult.error && <RichAlert variant="danger">Failed to assist. Please try again.</RichAlert>}
                 <AiAssistStatus status={asyncAssist.result?.Status} />
-                {assistResultText && (
+                {assistResult.status === "success" && (
                     <div>
                         <div className="mb-2">{successMessage}</div>
                         <Form.Control
-                            defaultValue={assistResultText}
+                            value={assistResult.data.RefinedPrompt}
                             readOnly
                             as="textarea"
-                            rows={3}
-                            className="mb-2"
+                            className="refined-prompt-textarea mb-2"
                         />
                         <div className="hstack gap-2 justify-content-end">
-                            <Button variant="secondary" className="rounded-pill" onClick={closeWindow}>
+                            <Button variant="secondary" className="rounded-pill" onClick={handleClose}>
                                 <Icon icon="cancel" />
                                 Discard
                             </Button>
-                            <Button variant="primary" className="rounded-pill" onClick={handleAccept}>
-                                <Icon icon="check" />
+                            <ButtonWithSpinner
+                                variant="primary"
+                                className="rounded-pill"
+                                onClick={handleAccept}
+                                isSpinning={asyncAssist.loading}
+                                icon="check"
+                            >
                                 Accept
-                            </Button>
+                            </ButtonWithSpinner>
                         </div>
                     </div>
                 )}

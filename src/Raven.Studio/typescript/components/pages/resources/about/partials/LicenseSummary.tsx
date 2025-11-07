@@ -54,10 +54,12 @@ export function LicenseSummary(props: LicenseSummaryProps) {
     const aiAssistantConsentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const aiAssistantUsage = useAppSelector(aiAssistantSelectors.usage);
 
-    // Check AI Assistant usage on load
+    // Check AI Assistant usage if not checked yet
     useEffect(() => {
-        dispatch(aiAssistantActions.checkUsage());
-    }, []);
+        if (aiAssistantUsage.status === "idle") {
+            dispatch(aiAssistantActions.checkUsage());
+        }
+    }, [aiAssistantUsage.status]);
 
     // Check AI Assistant consent if not checked yet
     useEffect(() => {

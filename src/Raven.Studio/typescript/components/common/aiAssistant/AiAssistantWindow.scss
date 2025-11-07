@@ -1,4 +1,5 @@
 @use "Content/scss/colors";
+@use "Content/scss/sizes";
 
 .ai-assistant-window {
     padding: 1px;
@@ -12,5 +13,12 @@
             rgba(86, 115, 243, 0.1) 75%,
             rgba(123, 81, 255, 0.2) 100%
         );
+
+        .refined-prompt-textarea {
+            field-sizing: content;
+            min-height: 75px !important;
+            max-height: 200px;
+            resize: none;
+        }
     }
 }

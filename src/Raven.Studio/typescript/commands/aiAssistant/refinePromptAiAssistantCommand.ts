@@ -12,29 +12,31 @@ interface RefinePromptAiAssistantRequestDto {
 export type RefinePromptAiAssistantViewData = Omit<RefinePromptAiAssistantRequestDto, "OperationType">;
 
 export interface RefinePromptAiAssistantResultDto {
-    InputTokenCount: number;
-    OutputTokenCount: number;
     Status: AiAssistantResponseStatus;
     UsagePercentage: number;
-    RefinedPrompt?: string;
+    RefinedPrompt: string;
 }
 
 export default class refinePromptAiAssistantCommand extends commandBase {
-    constructor(private viewData: RefinePromptAiAssistantViewData) {
+    constructor(private viewData: RefinePromptAiAssistantViewData, private abortController: AbortController) {
         super();
     }
 
-    execute(): JQueryPromise<RefinePromptAiAssistantResultDto> {
-        const url = endpoints.global.aiAssistant.assistantAssist;
+    execute() {
+        const relativeUrl = endpoints.global.aiAssistant.assistantAssist + "?streaming=true";
 
         const dto: RefinePromptAiAssistantRequestDto = {
+            ...this.viewData,
             OperationType: "RefinePrompt",
-            View: this.viewData.View,
-            Message: this.viewData.Message,
         };
 
-        return this.post<RefinePromptAiAssistantResultDto>(url, JSON.stringify(dto)).fail((response: JQueryXHR) =>
-            this.reportError("Failed to run AI Assistant", response.responseText, response.statusText)
-        );
+        return this.fetch({
+            relativeUrl,
+            options: {
+                method: "POST",
+                body: JSON.stringify(dto),
+                signal: this.abortController.signal,
+            },
+        });
     }
 }

@@ -25,6 +25,12 @@ export const aiAssistantSlice = createSlice({
         consentStatusSet: (state, action: PayloadAction<CheckConsentAiAssistantResultDto["Status"]>) => {
             state.consentStatus = createSuccessState(action.payload);
         },
+        usagePercentageSet: (state, action: PayloadAction<number>) => {
+            state.usage = createSuccessState({
+                Status: "Success",
+                UsagePercentage: action.payload,
+            });
+        },
     },
     extraReducers: (builder) => {
         builder
