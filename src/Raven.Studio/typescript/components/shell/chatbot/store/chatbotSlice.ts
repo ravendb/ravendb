@@ -7,8 +7,10 @@ import {
     Update,
 } from "@reduxjs/toolkit";
 import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import { aiAssistantActions } from "components/common/shell/aiAssistantSlice";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
+import { processStreamingResponse } from "components/utils/streamingUtils";
 import router from "plugins/router";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
@@ -155,96 +157,45 @@ const runChat = createAsyncThunk(
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
-        try {
-            const viewTitle = router.activeInstruction().config.title;
+        const viewTitle = router.activeInstruction().config.title;
 
-            const response = await services.aiAssistantService.runChatbot({
-                Message: payload.message,
-                View: viewTitle,
-                ConversationId: chatbot.conversationId,
-            });
+        const result = await processStreamingResponse<RunChatbotAiAssistantResultDto>({
+            promiseFn: () =>
+                services.aiAssistantService.runChatbot({
+                    Message: payload.message,
+                    View: viewTitle,
+                    ConversationId: chatbot.conversationId,
+                }),
+            streamPropertyPath: "Response.Answer",
+            onChunksCombined(text) {
+                dispatch(
+                    chatbotActions.messageUpdated({
+                        id: responseId,
+                        changes: { state: "Success", content: text },
+                    })
+                );
+            },
+        });
 
-            if (response.headers.get("content-type").includes("application/json")) {
-                const data: RunChatbotAiAssistantResultDto = await response.json();
-                return {
-                    ...assistantMessage,
-                    state: data.Status,
-                };
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-
-            let content = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    break;
-                }
-
-                const responseString = decoder.decode(value, { stream: true });
-                const responseLines = responseString.split("\n");
-
-                for (const line of responseLines) {
-                    if (!line.startsWith("data: ")) {
-                        continue;
-                    }
-
-                    const dataString = line.trim().replace("data: ", "");
-                    const data: { text: string | RunChatbotAiAssistantResultDto; done: boolean } =
-                        JSON.parse(dataString);
-
-                    if (!data.done && typeof data.text === "string") {
-                        content += data.text;
-
-                        dispatch(
-                            chatbotActions.messageUpdated({
-                                id: responseId,
-                                changes: {
-                                    state: "Success",
-                                    content,
-                                },
-                            })
-                        );
-                    }
-
-                    if (data.done && typeof data.text === "object") {
-                        const finalData = data.text;
-
-                        dispatch(chatbotActions.conversationIdSet(finalData.ConversationId));
-
-                        return {
-                            ...assistantMessage,
-                            content,
-                            state: finalData.Status,
-                            thinkingTimeInMs: new Date().getTime() - startThinkingTime,
-                            usage: {
-                                TotalTokens: finalData.InputTokenCount,
-                                PromptTokens: finalData.InputTokenCount,
-                                CompletionTokens: finalData.OutputTokenCount,
-                                CachedTokens: 0, // TODO server-side
-                                ReasoningTokens: 0, // TODO server-side
-                            },
-                            relevantLinks: finalData.Response.RelevantLinks,
-                            followUpQuestions: finalData.Response.FollowUpQuestions,
-                        };
-                    }
-                }
-            }
-
+        if (result.status === "error") {
             return {
                 ...assistantMessage,
                 state: "Error",
-                errorMessage: "Failed to finish the AI Assistant response",
-            };
-        } catch (e) {
-            return {
-                ...assistantMessage,
-                state: "Error",
-                errorMessage: e.message,
+                errorMessage: result.error,
             };
         }
+
+        dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
+        dispatch(chatbotActions.conversationIdSet(result.data.ConversationId));
+
+        return {
+            ...assistantMessage,
+            state: result.data.Status,
+            content: result.data.Response.Answer,
+            thinkingTimeInMs: new Date().getTime() - startThinkingTime,
+            relevantLinks: result.data.Response.RelevantLinks,
+            followUpQuestions: result.data.Response.FollowUpQuestions,
+        };
     }
 );
 

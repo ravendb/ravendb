@@ -19,8 +19,6 @@ export interface ChatbotRelevantLink {
 
 export interface RunChatbotAiAssistantResultDto {
     ConversationId: string;
-    InputTokenCount: number;
-    OutputTokenCount: number;
     Status: AiAssistantResponseStatus;
     UsagePercentage: number;
     Response: {
