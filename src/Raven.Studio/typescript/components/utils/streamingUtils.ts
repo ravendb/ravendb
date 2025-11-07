@@ -1,18 +1,20 @@
-interface ProcessStreamingResponseOptions {
+import { Path } from "react-hook-form";
+
+interface ProcessStreamingResponseOptions<T extends object> {
     promiseFn: () => Promise<Response>;
-    streamPropertyPath: string;
+    streamPropertyPath: Path<T>;
     onChunk?: (text: string) => void;
     onChunksCombined?: (text: string) => void;
 }
 
-type ProcessStreamingResult<T> = { status: "error"; error: string } | { status: "success"; data: T };
+type ProcessStreamingResult<T extends object> = { status: "error"; error: string } | { status: "success"; data: T };
 
-export async function processStreamingResponse<T>({
+export async function processStreamingResponse<T extends object>({
     promiseFn,
     onChunk,
     onChunksCombined,
     streamPropertyPath,
-}: ProcessStreamingResponseOptions): Promise<ProcessStreamingResult<T>> {
+}: ProcessStreamingResponseOptions<T>): Promise<ProcessStreamingResult<T>> {
     try {
         const response = await promiseFn();
 
