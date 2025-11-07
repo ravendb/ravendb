@@ -19,6 +19,7 @@ import { loadableData } from "components/models/common";
 import { createFailureState, createIdleState, createLoadingState, createSuccessState } from "components/utils/common";
 import { processStreamingResponse } from "components/utils/streamingUtils";
 import ButtonWithSpinner from "../ButtonWithSpinner";
+import useTypewriter from "components/hooks/useTypewriter";
 
 interface AiAssistWindowProps {
     closeWindow: () => void;
@@ -73,6 +74,11 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
         setAssistResult(createSuccessState(result.data));
     }, []);
 
+    const refinedPromptTypewriter = useTypewriter({
+        text: assistResult.data?.RefinedPrompt,
+        isDone: asyncAssist.status === "success",
+    });
+
     const handleAccept = () => {
         acceptResult(assistResult.data?.RefinedPrompt || "");
         closeWindow();
@@ -116,7 +122,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     <div>
                         <div className="mb-2">{successMessage}</div>
                         <Form.Control
-                            value={assistResult.data.RefinedPrompt}
+                            value={refinedPromptTypewriter}
                             readOnly
                             as="textarea"
                             className="refined-prompt-textarea mb-2"

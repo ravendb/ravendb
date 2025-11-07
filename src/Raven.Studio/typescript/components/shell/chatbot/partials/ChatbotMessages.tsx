@@ -16,6 +16,7 @@ import { ChatbotRelevantLink } from "commands/aiAssistant/runChatbotAiAssistantC
 import { Element } from "hast";
 import { aiAssistantConstants } from "components/common/aiAssistant/aiAssistantConstants";
 import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAssistantConsentStatusChecker";
+import useTypewriter from "components/hooks/useTypewriter";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -98,6 +99,10 @@ function AgentMessage({ message }: AgentMessageProps) {
 function AgentMessageBody({ message }: AgentMessageProps) {
     const dispatch = useAppDispatch();
 
+    const contentTypewriter = useTypewriter({
+        text: message.content,
+    });
+
     if (message.state === "Loading") {
         return (
             <LazyLoad active>
@@ -142,7 +147,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
             {formattedThinkingTime && <div className="text-muted">Thought for {formattedThinkingTime}</div>}
             <div className="mt-1">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                    {message.content}
+                    {contentTypewriter}
                 </ReactMarkdown>
             </div>
             <RelevantLinks links={message.relevantLinks} />
@@ -270,7 +275,7 @@ function RelevantLinks({ links }: { links: ChatbotRelevantLink[] }) {
 
     return (
         <div className="hstack gap-1 flex-wrap mt-1">
-            {links.map((link) => (
+            {links.filter(Boolean).map((link) => (
                 <a
                     key={link.Url}
                     href={link.Url}
@@ -296,7 +301,7 @@ function FollowUpQuestions({ questions }: { questions: string[] }) {
         <div className="mt-2">
             <span className="small-label">Follow up questions</span>
             <div className="vstack gap-1">
-                {questions.map((question) => (
+                {questions.filter(Boolean).map((question) => (
                     <div
                         key={question}
                         className="py-1 px-2 rounded-3 border border-primary cursor-pointer hover-filter"
