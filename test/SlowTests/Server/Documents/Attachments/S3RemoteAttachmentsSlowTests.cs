@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Client;
+using FastTests.Utils;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -19,10 +20,12 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1609,6 +1612,167 @@ namespace SlowTests.Server.Documents.Attachments
 
                 // Verify source attachment no longer exists
                 Assert.Null(await store.Operations.SendAsync(new GetAttachmentOperation(sourceDocId, attachmentName, AttachmentType.Document, null))); 
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CreateRemoteAttachmentThenMakeRevisionsEnabledThenAddAnotherAttachment()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", new StoreAttachmentParameters("foo/bar", profileStream)
+                    {
+                        RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                        ContentType = "image/png",
+                    }));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+                // Remote the attachment
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                // Verify attachment is Remote
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                var remoteAttachment = await store.Operations.SendAsync(new GetAttachmentOperation("users/1", "foo/bar", AttachmentType.Document, null));
+                Assert.Equal(RemoteAttachmentFlags.Remote, remoteAttachment.Details.RemoteParameters.Flags);
+
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = true;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "ImGgE/jPeG"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("ImGgE/jPeG", result.ContentType);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.Equal(2, rev.Count);
+
+                    var att1 = rev[0].GetObjects("@attachments");
+                    var att2 = rev[1].GetObjects("@attachments");
+                    Assert.Equal(1, att1.Length);
+                    Assert.Equal(1, att2.Length);
+
+                }
+
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var hash1 = ctx.GetLazyString("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="))
+                using (var hash2 = ctx.GetLazyString("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U="))
+                using (Slice.From(ctx.Allocator, hash1, out var hash1Slice))
+                using (Slice.From(ctx.Allocator, hash2, out var hash2Slice))
+                {
+                    Assert.False(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash2));
+                    Assert.Equal(0, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).LocalAttachmentsCount);
+                    Assert.Equal(1, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).RemoteAttachmentsCount);
+                    Assert.Equal(1, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).Count);
+                    Assert.Equal(2, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice).LocalAttachmentsCount);
+                    Assert.Equal(0, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice).RemoteAttachmentsCount);
+                    Assert.Equal(2, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice).Count);
+                }
+            }
+        }
+
+
+        [AmazonS3RetryFact]
+        public async Task CreateRemoteAttachmentThenMakeRevisionsEnabledThenOverwriteTheAttachmentWithLocalStream()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", new StoreAttachmentParameters("foo/bar", profileStream)
+                    {
+                        RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                        ContentType = "image/png",
+                    }));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+                // Remote the attachment
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                // Verify attachment is Remote
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                var remoteAttachment = await store.Operations.SendAsync(new GetAttachmentOperation("users/1", "foo/bar", AttachmentType.Document, null));
+                Assert.Equal(RemoteAttachmentFlags.Remote, remoteAttachment.Details.RemoteParameters.Flags);
+
+                await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = true;
+                    configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                });
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "ImGgE/jPeG"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("ImGgE/jPeG", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var rev = await session.Advanced.Revisions.GetMetadataForAsync("users/1");
+                    Assert.Equal(2, rev.Count);
+
+                    var att1 = rev[0].GetObjects("@attachments");
+                    var att2 = rev[1].GetObjects("@attachments");
+                    Assert.Equal(1, att1.Length);
+                    Assert.Equal(1, att2.Length);
+
+                }
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var hash1 = ctx.GetLazyString("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="))
+                using (Slice.From(ctx.Allocator, hash1, out var hash1Slice))
+                {
+                    Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
+                    // 1 doc + 1 rev
+                    Assert.Equal(2, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).LocalAttachmentsCount);
+                    // 1 rev
+                    Assert.Equal(1, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).RemoteAttachmentsCount);
+                    // overall
+                    Assert.Equal(3, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).Count);
+                }
             }
         }
     }

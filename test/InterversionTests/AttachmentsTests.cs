@@ -23,6 +23,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -335,6 +336,81 @@ namespace InterversionTests
                 {
                     if (File.Exists(file))
                         File.Delete(file);
+                }
+            }
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Attachments, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [InlineData(Server62Version)]
+        public async Task ReplicationShouldSendMissingAttachments(string olderVersion)
+        {
+            using (var source = await GetDocumentStoreAsync(olderVersion))
+            using (var destination = GetDocumentStore())
+            {
+                await SetupReplicationAsync(source, destination);
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    for (int i = 0; i < 25; i++)
+                    {
+                        fooStream.Position = 0;
+                        await session.StoreAsync(new User { Name = "Foo" }, $"FoObAr/{i}");
+                        session.Advanced.Attachments.Store($"FoObAr/{i}", "foo.png", fooStream, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentToReplicate<User>(destination, $"FoObAr/{i}", 15 * 1000));
+                    }
+                }
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 25; i++)
+                    {
+                        session.Delete($"FoObAr/{i}");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(new byte[] { 4, 5, 6 }))
+                {
+                    for (int i = 0; i < 25; i++)
+                    {
+                        fooStream2.Position = 0;
+                        session.Advanced.Attachments.Store($"FoObAr/{i}", "foo2.png", fooStream2, "image/png");
+                        await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, $"FoObAr/{i}", "foo2.png", 30 * 1000));
+                    }
+                }
+
+                var buffer = new byte[3];
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+                    for (int i = 0; i < 25; i++)
+                    {
+                        var user = await session.LoadAsync<User>($"FoObAr/{i}");
+                        var attachments = session.Advanced.Attachments.GetNames(user);
+                        Assert.Equal(2, attachments.Length);
+
+                        foreach (var name in attachments)
+                        {
+                            using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                            {
+                                Assert.NotNull(attachment);
+                                Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                                if (attachment.Details.Name == "foo.png")
+                                {
+                                    Assert.Equal(1, buffer[0]);
+                                    Assert.Equal(2, buffer[1]);
+                                    Assert.Equal(3, buffer[2]);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -330,26 +330,20 @@ namespace Raven.Server.Documents.Replication.Incoming
                     {
                         case AttachmentReplicationItem attachmentReplicationItem:
 
-                            var gotStream = false;
                             if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachmentReplicationItem.Base64Hash, out var attachmentStream))
                             {
-                                // we populated the Stream Size to AttachmentSize when we received the attachment stream
+                                // when we created AttachmentReplicationItem with the attachment stream, we put the stream's size into AttachmentSize variable
                                 attachmentReplicationItem.AttachmentSize = attachmentStream.AttachmentSize;
-                                gotStream = true;
                             }
-
-                            if (gotStream == false)
+                            else
                             {
+                                // the attachment stream was not replicated, we check the local storage for the size of the attachment stream
                                 var attachmentSize = AttachmentsStorage.GetAttachmentStreamLength(context, attachmentReplicationItem.Base64Hash);
                                 if (attachmentSize != -1)
                                 {
                                     attachmentReplicationItem.AttachmentSize = attachmentSize;
-                                    gotStream = true;
                                 }
                             }
-
-                            // this is a serious issue, we have an attachment without a stream, the Replication Task will throw in such case, later
-                            Debug.Assert(gotStream == true, "gotStream == true");
 
                             break;
                     }

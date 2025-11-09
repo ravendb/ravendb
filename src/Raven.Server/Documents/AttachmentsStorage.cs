@@ -306,20 +306,9 @@ namespace Raven.Server.Documents
                         });
                     }
 
-                    var keyExists = false;
-                    RemoteAttachmentFlags? existingFlags = null;
-                    if (table.ReadByKey(keySlice, out TableValueReader oldValue))
+                    if (table.ReadByKey(keySlice, out TableValueReader oldValue) && TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue) == RemoteAttachmentFlags.None)
                     {
-                        existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
-                        if (existingFlags == RemoteAttachmentFlags.None)
-                        {
-                            keyExists = true;
-                        }
-                    }
-
-                    if (keyExists)
-                    {
-                        // This is an update to the attachment with the same stream and content type
+                        // This is an update to the local storage attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
 
                         if (expectedChangeVector != null)
@@ -374,7 +363,7 @@ namespace Raven.Server.Documents
                                 // Delete the attachment stream only if we have a different hash
                                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {
-                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || existingFlags is RemoteAttachmentFlags.Remote;
+                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr) is RemoteAttachmentFlags.Remote;
                                     if (putStream)
                                     {
                                         using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
