@@ -7,7 +7,7 @@ public abstract class BackgroundWorkInfo
     public Slice Ticks { get; }
     protected Slice TreeKey { get; }
     protected string Identifier { get; }
-    public DocumentExpirationInfoStatus Status { get; set; }
+    public BackgroundWorkInfoStatus Status { get; set; }
 
     public abstract string GetIdentifier();
     public abstract Slice GetTreeKey();
@@ -16,7 +16,7 @@ public abstract class BackgroundWorkInfo
     {
     }
 
-    protected BackgroundWorkInfo(Slice ticks, Slice treeKey, string identifier, DocumentExpirationInfoStatus status)
+    protected BackgroundWorkInfo(Slice ticks, Slice treeKey, string identifier, BackgroundWorkInfoStatus status)
     {
         Status = status;
         Ticks = ticks;

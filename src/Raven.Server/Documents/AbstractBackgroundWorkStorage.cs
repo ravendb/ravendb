@@ -97,25 +97,25 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
                             }
                             catch (DocumentConflictException)
                             {
-                                item = new TWorkInfo { Status = DocumentExpirationInfoStatus.Conflict };
+                                item = new TWorkInfo { Status = BackgroundWorkInfoStatus.Conflict };
                             }
 
                             switch (item.Status)
                             {
-                                case DocumentExpirationInfoStatus.Process when isFirstInTopology == false:
-                                case DocumentExpirationInfoStatus.Skip when isFirstInTopology == false:
-                                case DocumentExpirationInfoStatus.Conflict when isFirstInTopology == false:
+                                case BackgroundWorkInfoStatus.Process when isFirstInTopology == false:
+                                case BackgroundWorkInfoStatus.Skip when isFirstInTopology == false:
+                                case BackgroundWorkInfoStatus.Conflict when isFirstInTopology == false:
                                     break;
-                                case DocumentExpirationInfoStatus.Process:
-                                case DocumentExpirationInfoStatus.Delete:
+                                case BackgroundWorkInfoStatus.Process:
+                                case BackgroundWorkInfoStatus.Delete:
                                     toProcess.Enqueue(item);
                                     totalCount++;
                                     break;
-                                case DocumentExpirationInfoStatus.Skip:
+                                case BackgroundWorkInfoStatus.Skip:
                                     HandleSkippedItem(item);
                                     totalCount++;
                                     break;
-                                case DocumentExpirationInfoStatus.Conflict:
+                                case BackgroundWorkInfoStatus.Conflict:
                                     HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
                                     break;
                                 default:

@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Expiration
             return command;
         }
 
-        public (Slice, Slice, string, DocumentExpirationInfoStatus)[] Expired { get; set; }
+        public (Slice, Slice, string, BackgroundWorkInfoStatus)[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 

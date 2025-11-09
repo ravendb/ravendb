@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.BackgroundWork;
 
-public enum DocumentExpirationInfoStatus
+public enum BackgroundWorkInfoStatus
 {
     Process,
     Skip,

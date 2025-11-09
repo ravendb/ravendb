@@ -27,8 +27,13 @@ public interface IGetAttachmentStrategy
                 $"Cannot perform '{operation}' for remote attachment '{name}' on document '{documentId}' because the database does not have a {nameof(RemoteAttachmentsConfiguration)} configured.");
         }
 
-        var destination = config.Destinations[attachment.RemoteParameters.Identifier];
-        if (destination == null)
+        if (config.Disabled)
+        {
+            throw new InvalidOperationException(
+                $"Cannot perform '{operation}' for remote attachment '{name}' on document '{documentId}' because the {nameof(RemoteAttachmentsConfiguration)} is disabled.");
+        }
+
+        if (config.Destinations == null || config.Destinations.TryGetValue(attachment.RemoteParameters.Identifier, out var destination) == false)
         {
             throw new InvalidOperationException(
                 $"Cannot perform '{operation}' for remote attachment '{name}' (identifier: '{attachment.RemoteParameters.Identifier}') on document '{documentId}' because the destination is not defined in {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)}.");

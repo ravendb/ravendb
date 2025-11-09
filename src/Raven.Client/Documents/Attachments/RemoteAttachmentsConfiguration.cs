@@ -9,10 +9,11 @@ namespace Raven.Client.Documents.Attachments
 {
     public sealed class RemoteAttachmentsConfiguration : IDynamicJson
     {
-        public Dictionary<string, RemoteAttachmentsDestinationConfiguration> Destinations { get; set; }
+        public Dictionary<string, RemoteAttachmentsDestinationConfiguration> Destinations { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public long? CheckFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
         public int? ConcurrentUploads { get; set; }
+        public bool Disabled { get; set; }
 
         public override int GetHashCode()
         {
@@ -33,6 +34,7 @@ namespace Raven.Client.Documents.Attachments
             hashCode.Add(CheckFrequencyInSec);
             hashCode.Add(MaxItemsToProcess);
             hashCode.Add(ConcurrentUploads);
+            hashCode.Add(Disabled);
 
             return hashCode.ToHashCode();
         }
@@ -53,7 +55,9 @@ namespace Raven.Client.Documents.Attachments
                 return false;
             if (ConcurrentUploads != other.ConcurrentUploads)
                 return false;
-            
+            if (Disabled != other.Disabled)
+                return false;
+
             if (Destinations == null && other.Destinations == null)
                 return true;
 
@@ -73,8 +77,10 @@ namespace Raven.Client.Documents.Attachments
             return true;
         }
 
-        internal bool HasUploader()
+        internal bool HasDestination()
         {
+            if (Disabled)
+                return false;
             if (Destinations == null || Destinations.Count == 0)
                 return false;
 
@@ -90,6 +96,7 @@ namespace Raven.Client.Documents.Attachments
                 [nameof(CheckFrequencyInSec)] = CheckFrequencyInSec,
                 [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
                 [nameof(ConcurrentUploads)] = ConcurrentUploads,
+                [nameof(Disabled)] = Disabled,
             };
         }
 
@@ -97,7 +104,22 @@ namespace Raven.Client.Documents.Attachments
         {
             var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";
 
-            if (HasUploader() == false)
+            if (CheckFrequencyInSec <= 0)
+                throw new InvalidOperationException($"Remote attachments check frequency{databaseNameStr} must be greater than 0.");
+            if (MaxItemsToProcess <= 0)
+                throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
+            if (ConcurrentUploads <= 0)
+                throw new InvalidOperationException($"Concurrent attachments uploads{databaseNameStr} must be greater than 0.");
+
+            if (Destinations == null || Destinations.Count == 0)
+            {
+                // no destinations configured
+                return;
+            }
+
+            // assert the destinations
+            if (Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
+                                      || BackupConfiguration.CanBackupUsing(x.Value.AzureSettings)) == false)
                 throw new InvalidOperationException($"Exactly one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} must be configured.");
 
             foreach (var kvp in Destinations)
@@ -107,13 +129,6 @@ namespace Raven.Client.Documents.Attachments
 
                 kvp.Value.AssertConfiguration(kvp.Key, databaseName);
             }
-
-            if (CheckFrequencyInSec <= 0)
-                throw new InvalidOperationException($"Remote attachments check frequency{databaseNameStr} must be greater than 0.");
-            if (MaxItemsToProcess <= 0)
-                throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
-            if (ConcurrentUploads <= 0)
-                throw new InvalidOperationException($"Concurrent attachments uploads{databaseNameStr} must be greater than 0.");
 
             if (Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
                                         && BackupConfiguration.CanBackupUsing(x.Value.AzureSettings)))

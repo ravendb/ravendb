@@ -11,7 +11,7 @@ public class AttachmentRemoteInfo : BackgroundWorkInfo
     {
     }
 
-    public AttachmentRemoteInfo(Slice ticks, Slice attachmentKey, string destinationIdentifier, DocumentExpirationInfoStatus status)
+    public AttachmentRemoteInfo(Slice ticks, Slice attachmentKey, string destinationIdentifier, BackgroundWorkInfoStatus status)
         : base(ticks, attachmentKey, destinationIdentifier, status)
     {
     }

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents
         private readonly List<Exception> _exceptions = new List<Exception>();
         private long _totalUploaded;
 
-        private bool _allHalted => Configuration == null || Configuration.Destinations.Count == 0 || Configuration.Destinations.All(x => x.Value.Disabled == true);
+        private bool _allHalted => Configuration == null || Configuration.Disabled || Configuration.Destinations == null || Configuration.Destinations.Count == 0 || Configuration.Destinations.All(x => x.Value.Disabled == true);
 
         public RemoteAttachmentsConfiguration Configuration { get; }
 
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
 
         internal async Task<int> ProcessRemoteAttachments(int batchSize, long maxItemsToProcess)
         {
-            if (Configuration.HasUploader() == false)
+            if (Configuration.HasDestination() == false)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Cannot process remote attachments on '{_database.Name}' because no destination is configured.");
@@ -128,17 +128,18 @@ namespace Raven.Server.Documents
 
                                 switch (attachment.Status)
                                 {
-                                    case DocumentExpirationInfoStatus.Delete:
+                                    case BackgroundWorkInfoStatus.Delete:
                                         if (Logger.IsDebugEnabled)
                                             Logger.Debug($"Skipping remote attachment with key: '{attachment.Key}' because it's identifier '{attachment.DestinationIdentifier}' IsNullOrEmpty.");
 
                                         // document or attachment was deleted, need to remove it from remote tree
                                         processed.Enqueue(attachment);
                                         continue;
-                                    case DocumentExpirationInfoStatus.Process:
+                                    case BackgroundWorkInfoStatus.Process:
+                                        // get the destination configuration for the identifier & create new uploader for the attachment
                                         if (directUploaders.TryGetValue(attachment.DestinationIdentifier, out var directUpload) == false)
                                         {
-                                            // get the destination configuration for the identifier & create new uploader for the attachment
+                                            // we are sure the destination exist because we got the item with "Process" status
                                             var destination = Configuration.Destinations[attachment.DestinationIdentifier];
                                             directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, attachment.DestinationIdentifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
 
@@ -396,7 +397,7 @@ namespace Raven.Server.Documents
             return command;
         }
 
-        public (Slice, Slice, string, DocumentExpirationInfoStatus)[] Remote { get; set; }
+        public (Slice, Slice, string, BackgroundWorkInfoStatus)[] Remote { get; set; }
 
         public DateTime CurrentTime { get; set; }
     }

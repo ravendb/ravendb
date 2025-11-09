@@ -35,7 +35,7 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
 
     private bool Equals(RemoteAttachmentsDestinationConfiguration other)
     {
-        if (Identifier != other.Identifier)
+        if (string.Equals(Identifier, other.Identifier, StringComparison.OrdinalIgnoreCase) == false)
             return false;
         if (Disabled != other.Disabled)
             return false;
@@ -90,7 +90,7 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
         if (string.IsNullOrEmpty(Identifier))
             throw new InvalidOperationException($"Identifier{databaseNameStr} must have a value.");
 
-        if (key != Identifier)
+        if (string.Equals(key, Identifier, StringComparison.OrdinalIgnoreCase) == false)
             throw new InvalidOperationException($"Identifier '{Identifier}' does not match the key '{key}'{databaseNameStr}.");
     }
 }

@@ -54,7 +54,7 @@ internal class ArchiveDocumentsCommandDto: IReplayableCommandDto<DocumentsOperat
         return command;
     }
 
-    public (Slice Ticks, Slice LowerId, string Id, DocumentExpirationInfoStatus Status)[] ToArchive { get; set; }
+    public (Slice Ticks, Slice LowerId, string Id, BackgroundWorkInfoStatus Status)[] ToArchive { get; set; }
 
     public DateTime CurrentTime { get; set; }
 }

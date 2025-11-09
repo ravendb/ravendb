@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Refresh
 
             if (allExpired)
             {
-                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id, DocumentExpirationInfoStatus.Process));
+                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
                 totalCount++;
             }
         }

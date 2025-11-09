@@ -11,7 +11,7 @@ public class DocumentExpirationInfo : BackgroundWorkInfo
     {
     }
 
-    public DocumentExpirationInfo(Slice ticks, Slice documentLowerId, string documentId, DocumentExpirationInfoStatus status)
+    public DocumentExpirationInfo(Slice ticks, Slice documentLowerId, string documentId, BackgroundWorkInfoStatus status)
         : base(ticks, documentLowerId, documentId, status)
     {
     }

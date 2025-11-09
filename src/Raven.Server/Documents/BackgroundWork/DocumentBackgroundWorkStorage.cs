@@ -19,10 +19,10 @@ public abstract class DocumentBackgroundWorkStorage : AbstractBackgroundWorkStor
             document.TryGetMetadata(out var metadata) == false ||
             HasPassed(metadata, options.CurrentTime, MetadataPropertyName) == false)
         {
-            return new DocumentExpirationInfo(ticksSlice, clonedId, null, DocumentExpirationInfoStatus.Delete);
+            return new DocumentExpirationInfo(ticksSlice, clonedId, null, BackgroundWorkInfoStatus.Delete);
         }
 
-        return new DocumentExpirationInfo(ticksSlice, clonedId, document.Id, DocumentExpirationInfoStatus.Process);
+        return new DocumentExpirationInfo(ticksSlice, clonedId, document.Id, BackgroundWorkInfoStatus.Process);
     }
 
     [DoesNotReturn]

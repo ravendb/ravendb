@@ -18,6 +18,42 @@ namespace FastTests.Server.Documents.Attachments
         }
 
         [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanPutAndGetRemoteAttachmentsConfigurationWithCaseInsensitiveIdentifier()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(new RemoteAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "S3-uSeRs", new RemoteAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new S3Settings()
+                                {
+                                    BucketName = "testS3Bucket-Users"
+                                },
+                                Disabled = false,
+                                Identifier = "s3-UsErS"
+                            }
+                        }
+                    },
+                    MaxItemsToProcess = 1,
+                }));
+
+                var config = await store.Maintenance.SendAsync(new GetRemoteAttachmentsConfigurationOperation());
+                var destination = config.Destinations.FirstOrDefault();
+                Assert.Equal(1, config.Destinations.Count);
+                Assert.NotNull(destination);
+                Assert.Equal("S3-uSeRs", destination.Key);
+                Assert.Equal("s3-UsErS", destination.Value.Identifier);
+                Assert.Equal("testS3Bucket-Users", destination.Value.S3Settings.BucketName);
+                Assert.Equal(false, destination.Value.Disabled);
+                Assert.Equal(null, config.CheckFrequencyInSec);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task CanPutAndGetRemoteAttachmentsConfigurationWithDefaultRemoteFrequencyInSec()
         {
             using (var store = GetDocumentStore())
@@ -99,7 +135,8 @@ namespace FastTests.Server.Documents.Attachments
                                    }
                                }
                            },
-                    CheckFrequencyInSec = 10000
+                    CheckFrequencyInSec = 10000,
+                    Disabled = true,
                 };
 
                 await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(c2));
@@ -107,6 +144,7 @@ namespace FastTests.Server.Documents.Attachments
                 var config2 = await store.Maintenance.SendAsync(new GetRemoteAttachmentsConfigurationOperation());
                 var destination2 = config2.Destinations.FirstOrDefault();
                 Assert.Equal(1, config2.Destinations.Count);
+                Assert.Equal(true, config2.Disabled);
                 Assert.NotNull(destination2);
                 Assert.Equal("S3-Orders", destination2.Key);
                 Assert.Equal("S3-Orders", destination2.Value.Identifier);

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -195,15 +194,15 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
             if (Database.DocumentsStorage.GetTableValueReaderForDocument(options.Context, documentIdSlice, throwOnConflict: false, out _) == false)
             {
                 // doc was deleted
-                return new AttachmentRemoteInfo(ticksSlice, attachmentKey, null, DocumentExpirationInfoStatus.Delete);
+                return new AttachmentRemoteInfo(ticksSlice, attachmentKey, null, BackgroundWorkInfoStatus.Delete);
             }
 
             if (ShouldSkipItem(identifier))
             {
-                return new AttachmentRemoteInfo(ticksSlice, attachmentKey, identifier, DocumentExpirationInfoStatus.Skip);
+                return new AttachmentRemoteInfo(ticksSlice, attachmentKey, identifier, BackgroundWorkInfoStatus.Skip);
             }
 
-            return new AttachmentRemoteInfo(ticksSlice, attachmentKey, identifier, DocumentExpirationInfoStatus.Process);
+            return new AttachmentRemoteInfo(ticksSlice, attachmentKey, identifier, BackgroundWorkInfoStatus.Process);
         }
     }
 
@@ -274,7 +273,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
 
         if (allShouldRemote)
         {
-            expiredDocs.Enqueue(new AttachmentRemoteInfo(ticksAsSlice, clonedId, id, DocumentExpirationInfoStatus.Process));
+            expiredDocs.Enqueue(new AttachmentRemoteInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
             totalCount++;
         }
     }
@@ -365,7 +364,11 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
     {
         if (Configuration == null)
             throw new InvalidOperationException($"Cannot get remote attachment '{attachment.Key}' because {nameof(RemoteAttachmentsConfiguration)} is not configured on {Database.Name}.");
-        if (Configuration.Destinations.TryGetValue(attachment.RemoteParameters.Identifier, out var destination) == false)
+
+        if (Configuration.Disabled)
+            throw new InvalidOperationException($"Cannot get remote attachment '{attachment.Key}' because {nameof(RemoteAttachmentsConfiguration)} is disabled.");
+
+        if (Configuration.Destinations == null || Configuration.Destinations.TryGetValue(attachment.RemoteParameters.Identifier, out var destination) == false)
             throw new InvalidOperationException($"Cannot get remote attachment '{attachment.Key}' because destination for '{attachment.RemoteParameters.Identifier}' doesn't exist.");
         if (destination.Disabled)
             throw new InvalidOperationException($"Cannot get remote attachment '{attachment.Key}' because destination for '{attachment.RemoteParameters.Identifier}' is disabled.");
@@ -463,7 +466,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
             remoteAttachmentsSender?.Dispose();
             Configuration = dbRecord.RemoteAttachments;
 
-            if (dbRecord.RemoteAttachments.Destinations.All(x => x.Value.Disabled))
+            if (dbRecord.RemoteAttachments.HasDestination() == false)
                 return null;
 
             var cleaner = new RemoteAttachmentsSender(Database, dbRecord.RemoteAttachments);
