@@ -269,7 +269,13 @@ public sealed partial class ClusterStateMachine
     private void AssertStaticIndexesCount(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
     {
         var maxStaticIndexesPerDatabase = licenseStatus.MaxNumberOfStaticIndexesPerDatabase;
-        if (maxStaticIndexesPerDatabase is >= 0 && databaseRecord.Indexes.Count > maxStaticIndexesPerDatabase)
+        if (maxStaticIndexesPerDatabase is null or < 0)
+            return;
+
+        if (databaseRecord.Indexes == null)
+            return;
+
+        if (maxStaticIndexesPerDatabase is >= 0 && databaseRecord.Indexes?.Count > maxStaticIndexesPerDatabase)
         {
             if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                 return;
@@ -282,7 +288,7 @@ public sealed partial class ClusterStateMachine
         if (maxStaticIndexesPerCluster is null or < 0)
             return;
 
-        var totalStaticIndexesCount = GetTotal(DatabaseRecordElementType.StaticIndex, databaseRecord.DatabaseName, context, items, type) + databaseRecord.Indexes.Count;
+        var totalStaticIndexesCount = GetTotal(DatabaseRecordElementType.StaticIndex, databaseRecord.DatabaseName, context, items, type) + databaseRecord.Indexes?.Count;
         if (totalStaticIndexesCount <= maxStaticIndexesPerCluster)
             return;
 
@@ -295,6 +301,10 @@ public sealed partial class ClusterStateMachine
     private void AssertAutoIndexesCount(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, Table items, string type)
     {
         var maxAutoIndexesPerDatabase = licenseStatus.MaxNumberOfAutoIndexesPerDatabase;
+
+        if (databaseRecord.AutoIndexes == null)
+            return;
+
         if (maxAutoIndexesPerDatabase is >= 0 && databaseRecord.AutoIndexes.Count > maxAutoIndexesPerDatabase)
         {
             if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
@@ -304,17 +314,17 @@ public sealed partial class ClusterStateMachine
         }
 
         var maxAutoIndexesPerCluster = licenseStatus.MaxNumberOfAutoIndexesPerCluster;
-        if (maxAutoIndexesPerCluster is >= 0)
-        {
-            var totalAutoIndexesCount = GetTotal(DatabaseRecordElementType.AutoIndex, databaseRecord.DatabaseName, context, items, type) + databaseRecord.AutoIndexes.Count;
-            if (totalAutoIndexesCount <= maxAutoIndexesPerCluster)
-                return;
+        if (maxAutoIndexesPerCluster is null or < 0)
+            return;
 
-            if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-                return;
+        var totalAutoIndexesCount = GetTotal(DatabaseRecordElementType.AutoIndex, databaseRecord.DatabaseName, context, items, type) + databaseRecord.AutoIndexes.Count;
+        if (totalAutoIndexesCount <= maxAutoIndexesPerCluster)
+            return;
 
-            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerCluster}");
-        }
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerCluster}");
     }
 
     private void AssertRevisionConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
@@ -789,6 +799,9 @@ public sealed partial class ClusterStateMachine
 
     private void AssertPeriodicBackupLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
+        if (databaseRecord.PeriodicBackups.All(x => x.Disabled))
+            return;
+
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
             return;
 
@@ -801,15 +814,15 @@ public sealed partial class ClusterStateMachine
         var backupTypes = LicenseManager.GetBackupTypes(databaseRecord.PeriodicBackups);
 
         if (backupTypes.HasSnapshotBackup)
-            if (licenseStatus.HasSnapshotBackups == false)
+            if (licenseStatus.HasSnapshotBackups == false && databaseRecord.PeriodicBackups.Exists(x => x.Disabled == false && x.BackupType == BackupType.Snapshot))
                 throw new LicenseLimitException(LimitType.SnapshotBackup, "Your license doesn't support adding Snapshot backups feature.");
 
         if (backupTypes.HasCloudBackup)
-            if (licenseStatus.HasCloudBackups == false)
+            if (licenseStatus.HasCloudBackups == false && databaseRecord.PeriodicBackups.Exists(x => x.Disabled == false && x.HasCloudBackup()))
                 throw new LicenseLimitException(LimitType.CloudBackup, "Your license doesn't support adding Cloud backups feature.");
 
         if (backupTypes.HasEncryptedBackup)
-            if (licenseStatus.HasEncryptedBackups == false)
+            if (licenseStatus.HasEncryptedBackups == false && databaseRecord.PeriodicBackups.Exists(x => x.Disabled == false && x.BackupEncryptionSettings != null))
                 throw new LicenseLimitException(LimitType.EncryptedBackup, "Your license doesn't support adding Encrypted backups feature.");
 
         foreach (var configuration in databaseRecord.PeriodicBackups)
@@ -820,7 +833,7 @@ public sealed partial class ClusterStateMachine
                     configuration.HasCloudBackup() == false &&
                     configuration.BackupEncryptionSettings?.Key == null)
                 {
-                    if (AssertPeriodicBackup(licenseStatus) == false)
+                    if (AssertPeriodicBackup(licenseStatus) == false && configuration.Disabled == false)
                         throw new LicenseLimitException(LimitType.PeriodicBackup, "Your license doesn't support adding periodic backups.");
                 }
             }
@@ -838,6 +851,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.SinkPullReplications.Count == 0)
             return;
 
+        if (databaseRecord.SinkPullReplications.All(x => x.Disabled))
+            return;
+
         throw new LicenseLimitException(LimitType.PullReplicationAsSink, "Your license doesn't support adding Sink Replication feature.");
     }
 
@@ -852,6 +868,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.HubPullReplications.Count == 0)
             return;
 
+        if (databaseRecord.HubPullReplications.All(x => x.Disabled))
+            return;
+
         throw new LicenseLimitException(LimitType.PullReplicationAsHub, "Your license doesn't support adding Hub Replication feature.");
     }
 
@@ -861,6 +880,9 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (licenseStatus.HasDelayedExternalReplication)
+            return;
+
+        if (databaseRecord.ExternalReplications.All(x => x.Disabled))
             return;
 
         if (licenseStatus.HasExternalReplication == false)
@@ -904,6 +926,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.RavenEtls.Count == 0)
             return;
 
+        if (databaseRecord.RavenEtls.All(x => x.Disabled))
+            return;
+
         throw new LicenseLimitException(LimitType.RavenEtl, "Your license doesn't support adding Raven ETL feature.");
     }
 
@@ -916,6 +941,9 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (databaseRecord.SqlEtls.Count == 0)
+            return;
+
+        if (databaseRecord.SqlEtls.All(x => x.Disabled))
             return;
 
         throw new LicenseLimitException(LimitType.SqlEtl, "Your license doesn't support adding SQL ETL feature.");
@@ -932,6 +960,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.OlapEtls.Count == 0)
             return;
 
+        if (databaseRecord.OlapEtls.All(x => x.Disabled))
+            return;
+
         throw new LicenseLimitException(LimitType.OlapEtl, "Your license doesn't support adding Olap ETL feature.");
     }
 
@@ -946,6 +977,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.QueueEtls.Count == 0)
             return;
 
+        if (databaseRecord.QueueEtls.All(x => x.Disabled))
+            return;
+
         throw new LicenseLimitException(LimitType.QueueEtl, "Your license doesn't support adding Queue ETL feature.");
     }
 
@@ -958,6 +992,9 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (databaseRecord.ElasticSearchEtls.Count == 0)
+            return;
+
+        if (databaseRecord.ElasticSearchEtls.All(x => x.Disabled))
             return;
 
         throw new LicenseLimitException(LimitType.ElasticSearchEtl, "Your license doesn't support adding Elastic Search ETL feature.");
@@ -991,7 +1028,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.DocumentsCompression == null)
             return;
 
-        if (databaseRecord.DocumentsCompression.CompressAllCollections == false && databaseRecord.DocumentsCompression.CompressRevisions == false)
+        if (databaseRecord.DocumentsCompression.CompressAllCollections == false &&
+            databaseRecord.DocumentsCompression.CompressRevisions == false &&
+            databaseRecord.DocumentsCompression.Collections.Length == 0)
             return;
 
         throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
