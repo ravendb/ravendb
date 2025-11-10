@@ -30,16 +30,16 @@
             <div style="flex-grow: 1;" data-bind="react: $root.studioSearchWithDatabaseSwitcherView"></div>
             <ul class="nav navbar-nav navbar-right">
                 <li>
-                    <a href="#" title="Change theme" class="theme-change no-decor" data-bind="click: $data.constructor.chooseTheme">
+                    <button title="Change theme" class="btn theme-change no-decor nav-icon" data-bind="click: $data.constructor.chooseTheme">
                         <i class="icon-theme"></i>
-                    </a>
+                    </button>
                 </li>
                 <li style="display:none"><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
                 <li data-bind="with: notificationCenter">
-                    <a title="Notification Center" href="#" id="notification-toggle" class="btn-toggle no-decor" data-bind="click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() }">
-                        <span class="icon-changes"></span>
+                    <button title="Notification Center"id="notification-toggle" class="btn no-decor nav-icon" data-bind="click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() }">
+                        <i class="icon-changes"></i>
                         <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
-                    </a>
+                    </button>
                 </li>
                 <li>
                     <div data-bind="react: $root.chatbotNavIconView"></div>

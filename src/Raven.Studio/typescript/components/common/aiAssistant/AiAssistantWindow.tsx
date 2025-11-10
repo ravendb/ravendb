@@ -102,7 +102,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
             <div className="ai-assistant-window-inner p-2 rounded-2">
                 <div className="hstack justify-content-between align-items-center mb-2">
                     <div>
-                        <Icon icon="refine-ai" />
+                        <Icon icon="ai-assistant" />
                         AI Assistant
                     </div>
                     <Button variant="link" className="text-reset" onClick={handleClose} size="sm">

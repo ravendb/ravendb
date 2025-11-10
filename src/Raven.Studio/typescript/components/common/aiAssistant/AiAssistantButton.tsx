@@ -20,7 +20,7 @@ export default function AiAssistantButton({ handleClick, right = "14px", bottom 
                 zIndex: 5,
             }}
         >
-            <Icon icon="refine-ai" />
+            <Icon icon="ai-assistant" />
             AI Assistant
         </Button>
     );

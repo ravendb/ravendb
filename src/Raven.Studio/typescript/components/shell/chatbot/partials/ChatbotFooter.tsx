@@ -12,7 +12,7 @@ export default function ChatbotFooter() {
     return (
         <div className="chatbot-footer panel-bg-2 border-top border-secondary p-2 hstack">
             <FooterItem
-                icon="chatbot"
+                icon="ask-ai"
                 title="Ask AI"
                 isActive={chatbotTab === "Ask AI"}
                 handleClick={() => dispatch(chatbotActions.chatbotTabSet("Ask AI"))}

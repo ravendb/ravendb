@@ -1,5 +1,4 @@
 @use "sass:color";
-
 @use "Content/scss/variables";
 
 // TODO replace all panels widh cards -> remove css
@@ -690,4 +689,11 @@ $filtering-input-bg: $toggle-bg !default;
         opacity: 1;
         transition: none;
     }
+}
+
+.ai-gradient::before {
+    background: var(--ai-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }

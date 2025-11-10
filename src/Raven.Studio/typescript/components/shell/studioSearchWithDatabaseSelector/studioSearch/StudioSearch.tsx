@@ -51,7 +51,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                                         active={false}
                                         id="ask-ai"
                                     >
-                                        <Icon icon="ai" />
+                                        <Icon icon="ask-ai" className="ai-gradient" />
                                         <span>
                                             Ask AI &#8226; <span className="text-muted">{searchQuery}</span>
                                         </span>

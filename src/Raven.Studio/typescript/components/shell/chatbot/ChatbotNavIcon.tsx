@@ -3,6 +3,7 @@ import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { chatbotActions, chatbotSelectors } from "./store/chatbotSlice";
 import classNames from "classnames";
+import "./ChatbotNavIcon.scss";
 
 export default function ChatbotNavIcon() {
     const dispatch = useAppDispatch();
@@ -12,10 +13,10 @@ export default function ChatbotNavIcon() {
         <Button
             title="Chatbot"
             variant="link"
-            className={classNames("p-0", { "text-reset": !isOpen })}
+            className={classNames("chatbot-nav-icon", { active: isOpen })}
             onClick={() => dispatch(chatbotActions.isOpenToggled())}
         >
-            <Icon icon="chatbot" margin="m-0" />
+            <Icon icon="ai-assistant" margin="m-0" className="icon-chatbot ai-gradient" />
         </Button>
     );
 }

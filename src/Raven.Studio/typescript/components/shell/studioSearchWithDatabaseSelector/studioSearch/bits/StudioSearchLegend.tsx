@@ -32,8 +32,11 @@ const KeyboardShortcuts = () => {
                     <div className="d-flex align-items-center gap-1">
                         <kbd>Esc</kbd> <span>Close</span>
                     </div>
-                    <div className="d-flex align-items-center gap-1">
-                        <kbd>{isMac ? "⌘" : "Ctrl"}</kbd> <kbd>/</kbd> <Icon icon="chatbot" margin="m-0" /> Ask AI
+                    <div className="d-flex align-items-center gap-1 ms-auto">
+                        <kbd>{isMac ? "⌘" : "Ctrl"}</kbd> <kbd>/</kbd>{" "}
+                        <div className="d-flex align-items-center fs-5">
+                            <Icon icon="ask-ai" className="ai-gradient" /> Ask AI
+                        </div>
                     </div>
                 </Dropdown.Header>
             </div>

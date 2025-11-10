@@ -61,7 +61,7 @@ function HeaderTitle() {
         return (
             <div className="d-flex align-items-center gap-2">
                 <div>
-                    <Icon icon="chatbot" />
+                    <Icon icon="ask-ai" className="ai-gradient" />
                     Ask AI
                 </div>
                 <AiAssistantUsagePercentageCircle />
