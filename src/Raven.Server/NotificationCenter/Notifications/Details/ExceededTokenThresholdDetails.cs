@@ -10,7 +10,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
     {
         private ExceededTokenThresholdDetails() { }
 
-        private ExceededTokenThresholdDetails(string agentName, string conversationId, int tokenCount, int tokenLimit, List<ToolCallDetails> toolCalls, string recommendation)
+        private ExceededTokenThresholdDetails(string agentName, string conversationId, long tokenCount, long tokenLimit, List<ToolCallDetails> toolCalls, string recommendation)
         {
             AgentName = agentName;
             ConversationId = conversationId;
@@ -22,8 +22,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public string AgentName { get; set; }
         public string ConversationId { get; set; }
-        public int TokenCount { get; set; }
-        public int TokenThreshold { get; set; }
+        public long TokenCount { get; set; }
+        public long TokenThreshold { get; set; }
         public List<ToolCallDetails> ToolCalls { get; set; }
         public string Recommendation { get; set; }
 
@@ -40,7 +40,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public static ExceededTokenThresholdDetails Add(DatabaseNotificationCenter notificationCenter, string agentName, string conversationId, int tokenCount, int tokenThreshold, List<ToolCallDetails> toolCalls)
+        public static ExceededTokenThresholdDetails Add(DatabaseNotificationCenter notificationCenter, string agentName, string conversationId, long tokenCount, long tokenThreshold, List<ToolCallDetails> toolCalls)
         {
             var configurationKey = RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold);
             var message = $"In conversation '{conversationId}', the AI Agent '{agentName}' sent a request with {tokenCount} tokens to the LLM, exceeding the configured threshold of {tokenThreshold} tokens. " +
