@@ -9,7 +9,8 @@ namespace Raven.Client.Documents.Attachments
 {
     public sealed class RemoteAttachmentsConfiguration : IDynamicJson
     {
-        public Dictionary<string, RemoteAttachmentsDestinationConfiguration> Destinations { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        internal static readonly StringComparer KeyComparer = StringComparer.OrdinalIgnoreCase;
+        public Dictionary<string, RemoteAttachmentsDestinationConfiguration> Destinations { get; set; } = new(KeyComparer);
         public long? CheckFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
         public int? ConcurrentUploads { get; set; }
@@ -24,10 +25,14 @@ namespace Raven.Client.Documents.Attachments
             }
             else
             {
-                foreach (var kvp in Destinations)
+                hashCode.Add(Destinations.Count);
+
+                var orderedKeys = Destinations.Keys.OrderBy(k => k, KeyComparer);
+                foreach (var key in orderedKeys)
                 {
-                    hashCode.Add(kvp.Key.GetHashCode());
-                    hashCode.Add(kvp.Value.GetHashCode());
+                    // Use the KeyComparer to get the case-insensitive hash code for the key.
+                    hashCode.Add(KeyComparer.GetHashCode(key));
+                    hashCode.Add(Destinations[key] == null ? 0 : Destinations[key].GetHashCode());
                 }
             }
 
@@ -71,9 +76,11 @@ namespace Raven.Client.Documents.Attachments
             {
                 if (other.Destinations.TryGetValue(kvp.Key, out var otherConfig) == false)
                     return false;
-                if (kvp.Value.Equals(otherConfig) == false)
+
+                if (Equals(kvp.Value, otherConfig) == false)
                     return false;
             }
+
             return true;
         }
 
@@ -117,22 +124,18 @@ namespace Raven.Client.Documents.Attachments
                 return;
             }
 
-            // assert the destinations
-            if (Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
-                                      || BackupConfiguration.CanBackupUsing(x.Value.AzureSettings)) == false)
-                throw new InvalidOperationException($"Exactly one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} must be configured.");
-
             foreach (var kvp in Destinations)
             {
                 if (kvp.Value == null)
                     throw new InvalidOperationException($"Destination configuration for key {kvp.Key} is null{databaseNameStr}.");
 
                 kvp.Value.AssertConfiguration(kvp.Key, databaseName);
-            }
 
-            if (Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
-                                        && BackupConfiguration.CanBackupUsing(x.Value.AzureSettings)))
-                throw new InvalidOperationException($"Only one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} can be configured.");
+                if (BackupConfiguration.CanBackupUsing(kvp.Value.S3Settings) == false && BackupConfiguration.CanBackupUsing(kvp.Value.AzureSettings) == false)
+                    throw new InvalidOperationException($"Exactly one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} must be configured.");
+                if (BackupConfiguration.CanBackupUsing(kvp.Value.S3Settings) && BackupConfiguration.CanBackupUsing(kvp.Value.AzureSettings))
+                    throw new InvalidOperationException($"Only one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} can be configured.");
+            }
         }
     }
 }

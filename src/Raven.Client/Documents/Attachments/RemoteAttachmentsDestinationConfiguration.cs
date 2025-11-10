@@ -14,10 +14,32 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
     public override int GetHashCode()
     {
         var hashCode = new HashCode();
-        hashCode.Add(Identifier);
+        hashCode.Add(Identifier == null ? 0 : RemoteAttachmentsConfiguration.KeyComparer.GetHashCode(Identifier));
         hashCode.Add(Disabled);
-        hashCode.Add(S3Settings);
-        hashCode.Add(AzureSettings);
+        if (S3Settings != null)
+        {
+            // Do NOT include fields ignored by S3Settings.Equals().
+            hashCode.Add(S3Settings.Disabled);
+            hashCode.Add(S3Settings.AwsRegionName);
+            hashCode.Add(S3Settings.BucketName);
+            hashCode.Add(S3Settings.RemoteFolderName);
+            hashCode.Add(S3Settings.CustomServerUrl);
+            hashCode.Add(S3Settings.ForcePathStyle);
+            hashCode.Add(S3Settings.StorageClass);
+        }
+        else
+        {
+            hashCode.Add(0);
+        }
+        if (AzureSettings != null)
+        {
+            hashCode.Add(AzureSettings.Disabled);
+            hashCode.Add(AzureSettings.RemoteFolderName);
+        }
+        else
+        {
+            hashCode.Add(0);
+        }
 
         return hashCode.ToHashCode();
     }

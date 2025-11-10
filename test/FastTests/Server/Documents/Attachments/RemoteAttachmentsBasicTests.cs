@@ -435,6 +435,18 @@ namespace FastTests.Server.Documents.Attachments
                     CheckFrequencyInSec = 1
                 })));
                 Assert.Contains("Identifier 'conf-identifier' does not match the key 'test'", e.Message);
+
+                e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(new RemoteAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "S3-Users", null
+                        }
+                    },
+                    CheckFrequencyInSec = 1000,
+                })));
+                Assert.Contains("Destination configuration for key S3-Users is null", e.Message);
             }
         }
     }
