@@ -16,9 +16,10 @@ import router from "plugins/router";
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 
-interface ChatbotRunChatData {
-    message: string;
-}
+type ChatbotRunChatData = {
+    message?: string;
+    actionResponses?: Record<string, any>;
+};
 
 interface ChatbotMessageBase {
     id: string;
@@ -38,6 +39,8 @@ export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     usage: Raven.Client.Documents.Operations.AI.AiUsage;
     relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
     followUpQuestions: string[];
+    endpoints: RunChatbotAiAssistantResultDto["Endpoints"];
+    additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
 }
 
 export type ChatbotMessage = ChatbotUserMessage | ChatbotAssistantMessage;
@@ -49,8 +52,9 @@ interface ChatbotState {
     chatbotResourcesTab: ChatbotResourcesTab;
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
-    runChatLastMessage: string;
+    lastRunData: ChatbotRunChatData;
     isNotificationsVisibleAndPinned: boolean;
+    currentIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -66,8 +70,9 @@ const initialState: ChatbotState = {
     chatbotResourcesTab: "Help and resources",
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
-    runChatLastMessage: null,
+    lastRunData: null,
     isNotificationsVisibleAndPinned: false,
+    currentIndexDefinition: null,
 };
 
 export const chatbotSlice = createSlice({
@@ -101,11 +106,14 @@ export const chatbotSlice = createSlice({
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
-        runChatLastMessageSet: (state, action: PayloadAction<string>) => {
-            state.runChatLastMessage = action.payload;
+        lastRunDataSet: (state, action: PayloadAction<ChatbotRunChatData>) => {
+            state.lastRunData = action.payload;
         },
         isNotificationsVisibleAndPinnedSet: (state, action: PayloadAction<boolean>) => {
             state.isNotificationsVisibleAndPinned = action.payload;
+        },
+        currentIndexDefinitionSet: (state, action: PayloadAction<Raven.Client.Documents.Indexes.IndexDefinition>) => {
+            state.currentIndexDefinition = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -121,9 +129,9 @@ export const chatbotSlice = createSlice({
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
-        const { aiAssistant, chatbot } = getState() as RootState;
+        const { aiAssistant, chatbot, databases } = getState() as RootState;
 
-        dispatch(chatbotActions.runChatLastMessageSet(payload.message));
+        dispatch(chatbotActions.lastRunDataSet(payload));
 
         if (aiAssistant.consentStatus.data !== "Success") {
             throw new Error("AI Assistant consent is required");
@@ -135,10 +143,12 @@ const runChat = createAsyncThunk(
             content: payload.message,
         };
 
-        if (chatbot.conversationId) {
-            dispatch(chatbotActions.messageAdded(userMessage));
-        } else {
-            dispatch(chatbotActions.messagesSet([userMessage]));
+        if (!payload.actionResponses) {
+            if (chatbot.conversationId) {
+                dispatch(chatbotActions.messageAdded(userMessage));
+            } else {
+                dispatch(chatbotActions.messagesSet([userMessage]));
+            }
         }
 
         const responseId = _.uniqueId();
@@ -153,6 +163,8 @@ const runChat = createAsyncThunk(
             usage: null,
             relevantLinks: [],
             followUpQuestions: [],
+            endpoints: {},
+            additionalContext: {},
         };
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
@@ -163,8 +175,13 @@ const runChat = createAsyncThunk(
             promiseFn: () =>
                 services.aiAssistantService.runChatbot({
                     Message: payload.message,
-                    View: viewTitle,
+                    View: JSON.stringify({
+                        Title: viewTitle,
+                        DatabaseName: databases.activeDatabaseName,
+                        IndexDefinition: viewTitle === "Edit Index" ? chatbot.currentIndexDefinition : null,
+                    }),
                     ConversationId: chatbot.conversationId,
+                    ActionsResponses: payload.actionResponses,
                 }),
             streamPropertyPath: "Response.Answer",
             onChunksCombined(text) {
@@ -195,15 +212,17 @@ const runChat = createAsyncThunk(
             thinkingTimeInMs: new Date().getTime() - startThinkingTime,
             relevantLinks: result.data.Response.RelevantLinks,
             followUpQuestions: result.data.Response.FollowUpQuestions,
+            endpoints: result.data.Endpoints ?? {},
+            additionalContext: result.data.AdditionalContext ?? {},
         };
     }
 );
 
 const retryRunChat = createAsyncThunk(chatbotSlice.name + "/retryRunChat", async (_, { dispatch, getState }) => {
     const { chatbot } = getState() as RootState;
-    const { runChatLastMessage } = chatbot;
+    const { lastRunData } = chatbot;
 
-    return await dispatch(runChat({ message: runChatLastMessage }));
+    return await dispatch(runChat(lastRunData));
 });
 
 export const chatbotActions = {
@@ -223,6 +242,6 @@ export const chatbotSelectors = {
     isLastMessage: (state: RootState, id: string) =>
         chatbotMessagesSelectors.selectIds(state.chatbot.messages).at(-1) === id,
     conversationId: (state: RootState) => state.chatbot.conversationId,
-    runChatLastMessage: (state: RootState) => state.chatbot.runChatLastMessage,
+    lastRunData: (state: RootState) => state.chatbot.lastRunData,
     isNotificationsVisibleAndPinned: (state: RootState) => state.chatbot.isNotificationsVisibleAndPinned,
 };

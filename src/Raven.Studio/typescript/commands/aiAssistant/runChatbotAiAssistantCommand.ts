@@ -8,14 +8,20 @@ interface RunChatbotAssistAiAssistantRequestDto {
     Message: string;
     RavenVersion: string;
     ConversationId?: string;
+    ActionsResponses?: Record<string, any>;
 }
 
-export type RunChatbotAiAssistantViewData = Omit<RunChatbotAssistAiAssistantRequestDto, "OperationType" | "RavenVersion">;
+export type RunChatbotAiAssistantViewData = Omit<
+    RunChatbotAssistAiAssistantRequestDto,
+    "OperationType" | "RavenVersion"
+>;
 
 export interface ChatbotRelevantLink {
     Title: string;
     Url: string;
 }
+
+export type AdditionalContextOption = "DatabaseName" | "IndexName" | "CollectionName" | "DocumentId";
 
 export interface RunChatbotAiAssistantResultDto {
     ConversationId: string;
@@ -26,6 +32,14 @@ export interface RunChatbotAiAssistantResultDto {
         RelevantLinks: ChatbotRelevantLink[];
         FollowUpQuestions: string[];
     };
+    AdditionalContext: Record<
+        string,
+        {
+            Message: string;
+            Option: AdditionalContextOption;
+        }
+    >;
+    Endpoints: Record<string, { Endpoints: string[] }>;
 }
 
 export default class runChatbotAiAssistantCommand extends commandBase {

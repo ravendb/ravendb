@@ -11,7 +11,7 @@ import ChatbotCommonActions from "./ChatbotCommonActions";
 export default function ChatbotPanelAskAi() {
     const dispatch = useAppDispatch();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
-    const runChatLastMessage = useAppSelector(chatbotSelectors.runChatLastMessage);
+    const lastRunData = useAppSelector(chatbotSelectors.lastRunData);
 
     const isConsentSuccess = consentStatus.data === "Success";
 
@@ -35,7 +35,7 @@ export default function ChatbotPanelAskAi() {
     };
 
     const onConsentGiven = () => {
-        if (runChatLastMessage) {
+        if (lastRunData) {
             dispatch(chatbotActions.retryRunChat());
         }
     };

@@ -6,17 +6,35 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import ReactMarkdown, { Components } from "react-markdown";
 import Table from "react-bootstrap/Table";
 import Code, { CodeLanguage, supportedCodeLanguages } from "components/common/Code";
-import { isValidElement, useEffect, useRef } from "react";
+import { isValidElement, useEffect, useMemo, useRef } from "react";
 import remarkGfm from "remark-gfm";
 import Button from "react-bootstrap/Button";
 import RichAlert from "components/common/RichAlert";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotSelectors } from "../store/chatbotSlice";
-import { ChatbotRelevantLink } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import {
+    AdditionalContextOption,
+    ChatbotRelevantLink,
+    RunChatbotAiAssistantResultDto,
+} from "commands/aiAssistant/runChatbotAiAssistantCommand";
 import { Element } from "hast";
 import { aiAssistantConstants } from "components/common/aiAssistant/aiAssistantConstants";
 import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAssistantConsentStatusChecker";
 import useTypewriter from "components/hooks/useTypewriter";
+import { DatabaseSwitcherOption } from "components/shell/studioSearchWithDatabaseSelector/databaseSwitcher/databaseSwitcherTypes";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import NoDatabasePlaceholder from "components/shell/studioSearchWithDatabaseSelector/databaseSwitcher/bits/NoDatabasePlaceholder";
+import { SelectOption } from "components/common/select/Select";
+import DatabaseOptionItem from "components/shell/studioSearchWithDatabaseSelector/databaseSwitcher/bits/DatabaseOptionItem";
+import DatabaseSingleValue from "components/shell/studioSearchWithDatabaseSelector/databaseSwitcher/bits/DatabaseSingleValue";
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import { useForm } from "react-hook-form";
+import { tryHandleSubmit } from "components/utils/common";
+import { FormGroup, FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
+import Form from "react-bootstrap/Form";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -138,6 +156,14 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         );
     }
 
+    if (Object.keys(message.additionalContext).length > 0) {
+        return <AdditionalContext additionalContext={message.additionalContext} />;
+    }
+
+    if (Object.keys(message.endpoints).length > 0) {
+        return <Endpoints endpoints={message.endpoints} />;
+    }
+
     const formattedThinkingTime = message.thinkingTimeInMs
         ? `${moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s`
         : null;
@@ -152,6 +178,182 @@ function AgentMessageBody({ message }: AgentMessageProps) {
             </div>
             <RelevantLinks links={message.relevantLinks} />
             <FollowUpQuestions questions={message.followUpQuestions} />
+        </div>
+    );
+}
+
+function AdditionalContext({
+    additionalContext,
+}: {
+    additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
+}) {
+    const dispatch = useAppDispatch();
+    const allAdditionalContextOptions = Object.values(additionalContext).map((option) => option.Option);
+
+    const isOption = (option: AdditionalContextOption) => allAdditionalContextOptions.includes(option);
+
+    const getToolCallId = (option: AdditionalContextOption) => {
+        return Object.keys(additionalContext).find((key) => additionalContext[key].Option === option);
+    };
+
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const allDatabases = useAppSelector(databaseSelectors.allDatabases);
+
+    const databaseOptions: DatabaseSwitcherOption[] = useMemo(() => {
+        const sortedByNameDatabases = allDatabases.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedByStatusDatabases = [
+            ...sortedByNameDatabases.filter((item) => !item.isDisabled),
+            ...sortedByNameDatabases.filter((item) => item.isDisabled),
+        ];
+
+        return sortedByStatusDatabases.map((db) => ({
+            value: db.name,
+            isSharded: db.isSharded,
+            environment: db.environment,
+            isDisabled: db.isDisabled,
+        }));
+    }, [allDatabases]);
+
+    const collectionOptions: SelectOption[] = useAppSelector(collectionsTrackerSelectors.collectionNames).map((x) => ({
+        value: x,
+        label: x,
+    }));
+
+    const { control, handleSubmit, formState } = useForm<ActionContextFormData>({
+        defaultValues: {
+            databaseName:
+                isOption("DatabaseName") && activeDatabaseName
+                    ? (databaseOptions?.find((x) => x.value === activeDatabaseName)?.value ?? null)
+                    : null,
+            collectionName: null,
+            documentId: null,
+            indexName: null,
+        },
+        resolver: yupResolver(actionContextSchema),
+    });
+
+    const onSubmit = (data: any) => {
+        tryHandleSubmit(async () => {
+            const actionResponses: Record<string, any> = {};
+
+            if (isOption("DatabaseName")) {
+                actionResponses[getToolCallId("DatabaseName")] = data.databaseName;
+            }
+            if (isOption("CollectionName")) {
+                actionResponses[getToolCallId("CollectionName")] = data.collectionName;
+            }
+            if (isOption("DocumentId")) {
+                actionResponses[getToolCallId("DocumentId")] = data.documentId;
+            }
+            if (isOption("IndexName")) {
+                actionResponses[getToolCallId("IndexName")] = data.indexName;
+            }
+
+            await dispatch(chatbotActions.runChat({ actionResponses }));
+        });
+    };
+
+    return (
+        <Form onSubmit={handleSubmit(onSubmit)} className="border border-secondary rounded-2 p-2">
+            <div className="small-label text-center fs-6 mb-2">Additional context</div>
+            {isOption("DatabaseName") && (
+                <div>
+                    <FormGroup>
+                        <FormLabel>Database</FormLabel>
+                        <FormSelect
+                            control={control}
+                            name="databaseName"
+                            placeholder={<NoDatabasePlaceholder />}
+                            options={databaseOptions}
+                            components={{ Option: DatabaseOptionItem, SingleValue: DatabaseSingleValue }}
+                        />
+                    </FormGroup>
+                </div>
+            )}
+            {isOption("CollectionName") && (
+                <div>
+                    <FormGroup>
+                        <FormLabel>Collection</FormLabel>
+                        <FormSelectAutocomplete control={control} name="collectionName" options={collectionOptions} />
+                    </FormGroup>
+                </div>
+            )}
+            {isOption("DocumentId") && (
+                <div>
+                    <FormGroup>
+                        <FormLabel>Document ID</FormLabel>
+                        <FormInput type="text" control={control} name="documentId" />
+                    </FormGroup>
+                </div>
+            )}
+            {isOption("IndexName") && (
+                <div>
+                    <FormGroup>
+                        <FormLabel>Index name</FormLabel>
+                        <FormInput type="text" control={control} name="indexName" />
+                    </FormGroup>
+                </div>
+            )}
+            <div className="d-flex justify-content-end">
+                <ButtonWithSpinner variant="primary" type="submit" isSpinning={formState.isSubmitting} icon="arrow-up">
+                    Send
+                </ButtonWithSpinner>
+            </div>
+        </Form>
+    );
+}
+
+const actionContextSchema = yup.object({
+    databaseName: yup.string().nullable(),
+    collectionName: yup.string().nullable(),
+    documentId: yup.string().nullable(),
+    indexName: yup.string().nullable(),
+});
+
+type ActionContextFormData = yup.InferType<typeof actionContextSchema>;
+
+function Endpoints({ endpoints }: { endpoints: RunChatbotAiAssistantResultDto["Endpoints"] }) {
+    const dispatch = useAppDispatch();
+
+    const handleGetDataFromEndpoints = async () => {
+        const actionResponses: Record<string, any> = {};
+
+        for (const toolId of Object.keys(endpoints)) {
+            for (const endpoint of endpoints[toolId].Endpoints) {
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                actionResponses[toolId] = {
+                    [endpoint]: data,
+                };
+            }
+        }
+
+        await dispatch(chatbotActions.runChat({ actionResponses }));
+    };
+
+    return (
+        <div className="border border-secondary rounded-2 p-2">
+            <div className="small-label text-center fs-6 mb-2">Get data from endpoints</div>
+            <ul>
+                {Object.values(endpoints)
+                    .flatMap((x) => x.Endpoints)
+                    .map((endpoint) => (
+                        <li key={endpoint} className="text-break">
+                            {endpoint}
+                        </li>
+                    ))}
+            </ul>
+            <div className="hstack gap-2 mt-2">
+                <Button variant="primary" onClick={handleGetDataFromEndpoints}>
+                    <Icon icon="check" />
+                    Yes
+                </Button>
+                <Button variant="secondary" onClick={() => {}}>
+                    <Icon icon="cancel" />
+                    No (TODO)
+                </Button>
+            </div>
         </div>
     );
 }
