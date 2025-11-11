@@ -150,10 +150,23 @@ public class RavenDB_24407 : RavenTestBase
         {
             Assert.True(chatDoc.LinkedConversations.Count > 0);
 
+            var prev = new System.Text.StringBuilder();
+            prev.AppendLine("=== Linked Conversations ===");
+            foreach (var conversationId in chatDoc.LinkedConversations)
+            {
+                var c = await GetChat(store, conversationId);
+                prev.AppendLine($"- {conversationId}");
+                prev.AppendLine(Dump(c));
+            }
+
+            prev.AppendLine("=== Current Conversation ===");
+            prev.Append(Dump(chatDoc));
+            
             // assert that the summarization happened during mid-chat (after a tool call)
             var historyChat = await GetChat(store, chatDoc.LinkedConversations.First());
             var lastMsg = historyChat.Messages.Last();
-            Assert.Equal("tool", lastMsg.Role);
+            Assert.True("tool" == lastMsg.Role, "Expected last history message role 'tool' but was '" + lastMsg.Role + "'.\n" +
+                                                prev);
         }
         else
         {
@@ -291,5 +304,21 @@ public class RavenDB_24407 : RavenTestBase
         {
             return await session.LoadAsync<Chat>(chatId);
         }
+    }
+
+    string Dump(Chat c)
+    {
+        var sb = new System.Text.StringBuilder();
+        if (c?.Messages == null)
+            return "(no messages)";
+        for (int i = 0; i < c.Messages.Count; i++)
+        {
+            var m = c.Messages[i];
+            var content = m.Content?.ToString(Formatting.None) ?? "";
+            if (content.Length > 300)
+                content = content.Substring(0, 300); //the start is usually the most relevant
+            sb.AppendLine($"[{i}] role={m.Role} content={content}");
+        }
+        return sb.ToString();
     }
 }
