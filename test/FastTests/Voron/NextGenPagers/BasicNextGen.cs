@@ -48,7 +48,7 @@ public class BasicNextGen : StorageTest
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public void CannotRecoverWhenJournalsAreGone(bool flush, bool sync)
+    public void CannotRecoverWhenJournalsAreGone2(bool flush, bool sync)
     {
         RequireFileBasedPager();
 
