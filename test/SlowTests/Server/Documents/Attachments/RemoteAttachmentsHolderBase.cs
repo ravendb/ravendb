@@ -7,7 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Server.Documents.Attachments;
+using Raven.Client.Extensions;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;

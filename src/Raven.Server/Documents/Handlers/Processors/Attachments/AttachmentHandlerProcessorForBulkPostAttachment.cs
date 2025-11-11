@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Server.Documents.Attachments;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;

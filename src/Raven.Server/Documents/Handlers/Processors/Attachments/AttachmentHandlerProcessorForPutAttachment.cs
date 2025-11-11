@@ -57,8 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     Stream = stream,
                     Hash = hash,
                     ContentType = contentType,
-                    RemoteAt = remoteAttachmentParameters?.At,
-                    RemoteIdentifier = remoteAttachmentParameters?.Identifier,
+                    RemoteAttachmentParameters = remoteAttachmentParameters
                 };
                 await stream.FlushAsync(token);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);

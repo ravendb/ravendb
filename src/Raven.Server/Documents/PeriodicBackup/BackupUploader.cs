@@ -76,9 +76,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void ExecuteDelete()
         {
-            CreateDeletionTaskIfNeeded(_settings.S3Settings, DeleteFromS3, S3Name, _settings.FolderName, _settings.FileName);
-            CreateDeletionTaskIfNeeded(_settings.AzureSettings, DeleteFromAzure, AzureName, _settings.FolderName, _settings.FileName);
-            CreateDeletionTaskIfNeeded(_settings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName, _settings.FolderName, _settings.FileName);
+            CreateDeletionTaskIfNeeded(_settings.S3Settings, DeleteFromS3, S3Name);
+            CreateDeletionTaskIfNeeded(_settings.AzureSettings, DeleteFromAzure, AzureName);
+            CreateDeletionTaskIfNeeded(_settings.GoogleCloudSettings, DeleteFromGoogleCloud, GoogleCloudName);
 
             // deletion from Glacier and FTP destinations is not supported
 
@@ -250,8 +250,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _threads.Add(thread);
         }
-
-        private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T, string, string> deleteFromServer, string targetName, string folderName, string fileName)
+        private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T> deleteFromServer, string targetName)
             where T : BackupSettings
         {
             if (BackupConfiguration.CanBackupUsing(settings) == false)
@@ -266,7 +265,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     NativeMemory.EnsureRegistered();
 
                     AddInfo($"Starting the delete of backup file from {targetName}.");
-                    deleteFromServer(settings, folderName, fileName);
+                    deleteFromServer(settings);
                 }
                 catch (Exception e)
                 {

@@ -3,7 +3,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Attachments;
+namespace Raven.Client.Extensions;
 
 /// <summary>
 /// Provides extension methods for working with attachment remote parameters.

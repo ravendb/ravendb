@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -113,18 +112,11 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
             public Stream Stream;
             public string Hash;
-            public DateTime? RemoteAt;
-            public string RemoteIdentifier;
+            public RemoteAttachmentParameters RemoteAttachmentParameters;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                RemoteAttachmentParameters remoteParameters = null;
-                if (RemoteAt.HasValue)
-                {
-                    remoteParameters = new RemoteAttachmentParameters(RemoteIdentifier, RemoteAt.Value) {  Flags = RemoteAttachmentFlags.None };
-                }
-
-                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, Stream.Length, remoteParameters, ExpectedChangeVector, Stream);
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, Stream.Length, RemoteAttachmentParameters, ExpectedChangeVector, Stream);
                 return 1;
             }
 
@@ -138,13 +130,12 @@ namespace Raven.Server.Documents.Handlers
                     ContentType = ContentType,
                     Stream = Stream,
                     Hash = Hash,
-                    RemoteAt = RemoteAt,
-                    RemoteIdentifier = RemoteIdentifier
+                    RemoteAttachmentParameters = RemoteAttachmentParameters
                 };
             }
         }
 
-        public class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        internal sealed class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -177,8 +168,7 @@ namespace Raven.Server.Documents.Handlers
         public string ContentType;
         public Stream Stream;
         public string Hash;
-        public DateTime? RemoteAt;
-        public string RemoteIdentifier;
+        public RemoteAttachmentParameters RemoteAttachmentParameters;
         public AttachmentHandler.MergedPutAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedPutAttachmentCommand
@@ -190,13 +180,12 @@ namespace Raven.Server.Documents.Handlers
                 Stream = Stream,
                 Hash = Hash,
                 Database = database,
-                RemoteAt = RemoteAt,
-                RemoteIdentifier = RemoteIdentifier
+                RemoteAttachmentParameters = RemoteAttachmentParameters,
             };
         }
     }
 
-    internal class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
+    internal sealed class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
     {
         public string DocumentId;
         public string Name;
@@ -214,7 +203,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    internal sealed class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         public List<AttachmentRequest> Deletes;
         public DocumentDatabase Database;
@@ -236,7 +225,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    internal class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
+    internal sealed class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
     {
         public List<AttachmentRequest> Deletes;
         public MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)

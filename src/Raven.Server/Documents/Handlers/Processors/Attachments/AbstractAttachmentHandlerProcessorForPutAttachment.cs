@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Sparrow.Json;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 if (string.IsNullOrEmpty(remoteAtStr) == false)
                 {
                     var remoteAtDt = TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(remoteAtStr, "remoteAt");
-                    remoteAttachmentParameters = new RemoteAttachmentParameters(remoteIdentifierStr, remoteAtDt);
+                    remoteAttachmentParameters = new RemoteAttachmentParameters(remoteIdentifierStr, remoteAtDt) { Flags = RemoteAttachmentFlags.None};
                 }
 
                 var requestBodyStream = RequestHandler.RequestBodyStream();

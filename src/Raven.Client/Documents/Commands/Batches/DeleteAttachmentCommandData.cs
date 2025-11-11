@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -24,7 +23,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Id { get; }
         public string Name { get; }
         public string ChangeVector { get; }
-        public CommandType Type { get => CommandType.AttachmentDELETE; }
+        public CommandType Type { get; } = CommandType.AttachmentDELETE;
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {

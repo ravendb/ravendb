@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Attachments;
+using Raven.Client.Extensions;
 using Raven.Server.Exceptions.Attachments;
 
 namespace Raven.Server.Documents.Indexes.Static

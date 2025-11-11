@@ -7,7 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.Attachments;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;

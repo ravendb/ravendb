@@ -42,11 +42,11 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
         _onProgress.Invoke(_backupResult.Progress);
     }
 
-    protected void DeleteFromS3(S3Settings settings, string folderName, string fileName)
+    protected void DeleteFromS3(S3Settings settings)
     {
         using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
-            var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+            var key = CombinePathAndKey(settings.RemoteFolderName, _settings.FolderName, _settings.FileName);
             client.DeleteObject(key);
 
             if (_logger.IsInfoEnabled)
@@ -54,11 +54,11 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
         }
     }
 
-    protected void DeleteFromAzure(AzureSettings settings, string folderName, string fileName)
+    protected void DeleteFromAzure(AzureSettings settings)
     {
         using (var client = RavenAzureClient.Create(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
-            var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+            var key = CombinePathAndKey(settings.RemoteFolderName, _settings.FolderName, _settings.FileName);
             client.DeleteBlobs(new List<string> { key });
 
             if (_logger.IsInfoEnabled)
@@ -66,11 +66,11 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
         }
     }
 
-    protected void DeleteFromGoogleCloud(GoogleCloudSettings settings, string folderName, string fileName)
+    protected void DeleteFromGoogleCloud(GoogleCloudSettings settings)
     {
         using (var client = new RavenGoogleCloudClient(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
-            var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+            var key = CombinePathAndKey(settings.RemoteFolderName, _settings.FolderName, _settings.FileName);
             client.DeleteObject(key);
 
             if (_logger.IsInfoEnabled)

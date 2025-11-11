@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.Attachments;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
