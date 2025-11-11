@@ -1,0 +1,139 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="Validate" />
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/bench/">
+    <Project Path="bench/BulkInsert.Benchmark/BulkInsert.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/Indexing.Benchmark/Indexing.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/Micro.Benchmark/Micro.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/Regression.Benchmark/Regression.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/ServerStoreTxMerger.Benchmark/ServerStoreTxMerger.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/SubscriptionFailover.Benchmark/SubscriptionFailover.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/Subscriptions.Benchmark/Subscriptions.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/TimeSeries.Benchmark/TimeSeries.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/Vector.Benchmark/Vector.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/Voron.Benchmark/Voron.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="bench/VxSort.Benchmark/VxSort.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="agents.md" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="RavenDB.ruleset" />
+    <File Path="src/CommonAssemblyInfo.cs" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Corax/Corax.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="src/Raven.Client/Raven.Client.csproj" />
+    <Project Path="src/Raven.Embedded/Raven.Embedded.csproj" />
+    <Project Path="src/Raven.Pal/Raven.Pal.vcxproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+      <Platform Solution="Debug|Any CPU" Project="Win32" />
+      <Platform Solution="Release|Any CPU" Project="Win32" />
+      <Build Solution="*|Any CPU" Project="false" />
+    </Project>
+    <Project Path="src/Raven.Server/Raven.Server.csproj" />
+    <Project Path="src/Raven.Studio/Raven.Studio.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="src/Raven.TestDriver/Raven.TestDriver.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="src/Sparrow.Server/Sparrow.Server.csproj" />
+    <Project Path="src/Sparrow/Sparrow.csproj" />
+    <Project Path="src/Voron/Voron.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/BenchmarkTests/BenchmarkTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/EmbeddedTests/EmbeddedTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/FastTests/FastTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/InterversionTests/InterversionTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/LicenseTests/LicenseTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/RachisTests/RachisTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/SlowTests.Issues/SlowTests.Issues.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/SlowTests.Tools/SlowTests.Tools.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/SlowTests/SlowTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/StressTests/StressTests.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/Tests.Infrastructure/Tests.Infrastructure.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/Tryouts.Fast/Tryouts.Fast.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/Tryouts/Tryouts.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Raven.Debug/Raven.Debug.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="tools/Raven.Migrator/Raven.Migrator.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="tools/rvn/rvn.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="tools/TypingsGenerator/TypingsGenerator.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="tools/Voron.Dictionary.Generator/Voron.Dictionary.Generator.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="tools/Voron.Recovery/Voron.Recovery.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Properties Name="CodealikeProperties" Scope="PostLoad">
+    <Property Name="SolutionGuid" Value="6944aade-3195-477c-8aed-9ebe2902fc57" />
+  </Properties>
+</Solution>
