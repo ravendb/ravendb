@@ -40,8 +40,6 @@ function BuildServer ( $srcDir, $outDir, $target) {
         $commandArgs += '/p:ContinuousIntegrationBuild=true'
     }
 
-    $commandArgs += '/p:RuntimeFrameworkVersion=10.0.0-rtm.25513.102'
-
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
