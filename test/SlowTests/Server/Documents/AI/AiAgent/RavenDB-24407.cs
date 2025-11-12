@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -150,23 +151,10 @@ public class RavenDB_24407 : RavenTestBase
         {
             Assert.True(chatDoc.LinkedConversations.Count > 0);
 
-            var prev = new System.Text.StringBuilder();
-            prev.AppendLine("=== Linked Conversations ===");
-            foreach (var conversationId in chatDoc.LinkedConversations)
-            {
-                var c = await GetChat(store, conversationId);
-                prev.AppendLine($"- {conversationId}");
-                prev.AppendLine(Dump(c));
-            }
-
-            prev.AppendLine("=== Current Conversation ===");
-            prev.Append(Dump(chatDoc));
-            
-            // assert that the summarization happened during mid-chat (after a tool call)
             var historyChat = await GetChat(store, chatDoc.LinkedConversations.First());
             var lastMsg = historyChat.Messages.Last();
-            Assert.True("tool" == lastMsg.Role, "Expected last history message role 'tool' but was '" + lastMsg.Role + "'.\n" +
-                                                prev);
+
+            await AssertWithDumpAsync(lastMsg.Role, async () => await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations));
         }
         else
         {
@@ -306,11 +294,22 @@ public class RavenDB_24407 : RavenTestBase
         }
     }
 
-    string Dump(Chat c)
+    private static async Task AssertWithDumpAsync(
+        string lastMsgRole,
+        Func<Task<string>> dumpFactory)
     {
-        var sb = new System.Text.StringBuilder();
+        if (lastMsgRole != "tool")
+        {
+            var msg = await dumpFactory(); // build dump only on failure
+            Assert.Fail($"Expected last history message role 'tool' but was '{lastMsgRole}'.\n{msg}");
+        }
+    }
+
+    private static string Dump(Chat c)
+    {
         if (c?.Messages == null)
             return "(no messages)";
+        var sb = new System.Text.StringBuilder();
         for (int i = 0; i < c.Messages.Count; i++)
         {
             var m = c.Messages[i];
@@ -319,6 +318,23 @@ public class RavenDB_24407 : RavenTestBase
                 content = content.Substring(0, 300); //the start is usually the most relevant
             sb.AppendLine($"[{i}] role={m.Role} content={content}");
         }
+        return sb.ToString();
+    }
+
+    private static async Task<string> DumpAllAsync(DocumentStore store, Chat current, IEnumerable<string> links)
+     {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("=== Linked Conversations ===");
+        if (links != null)
+            foreach (var id in links)
+            {
+                var c = await store.OpenAsyncSession().LoadAsync<Chat>(id);
+                sb.AppendLine($"- {id}");
+                sb.AppendLine(Dump(c));
+            }
+
+        sb.AppendLine("=== Current Conversation ===");
+        sb.Append(Dump(current));
         return sb.ToString();
     }
 }
