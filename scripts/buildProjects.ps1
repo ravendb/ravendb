@@ -200,8 +200,6 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
         $commandArgs += '/p:ContinuousIntegrationBuild=true'
     }
 
-    $commandArgs += '/p:RuntimeFrameworkVersion=10.0.0-rtm.25513.102'
-
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
