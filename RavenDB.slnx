@@ -55,7 +55,7 @@
     </Project>
     <Project Path="src/Raven.Client/Raven.Client.csproj" />
     <Project Path="src/Raven.Embedded/Raven.Embedded.csproj" />
-    <Project Path="src/Raven.Pal/Raven.Pal.vcxproj">
+    <Project Path="src/Raven.Pal/Raven.Pal.vcxproj" Id="01d4353f-2be9-4d98-b890-fa8364ffdef1">
       <BuildType Solution="Validate|*" Project="Release" />
       <Platform Solution="Debug|Any CPU" Project="Win32" />
       <Platform Solution="Release|Any CPU" Project="Win32" />
