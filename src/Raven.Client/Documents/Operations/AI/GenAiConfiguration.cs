@@ -103,6 +103,12 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         else if (GenAiTransformation.ValidateScript(out var error) == false)
             errors.Add(error);
 
+        if (string.IsNullOrEmpty(Prompt))
+            errors.Add($"{nameof(Prompt)} must be provided");
+
+        if (string.IsNullOrEmpty(JsonSchema) && string.IsNullOrEmpty(SampleObject))
+            errors.Add("You must provide either a JSON schema or a sample object");
+
         if (TestMode == false && string.IsNullOrEmpty(UpdateScript))
             errors.Add("You must provide an update function");
 
