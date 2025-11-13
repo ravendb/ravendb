@@ -106,11 +106,32 @@ namespace Raven.Server.Rachis.Remote
 
         private void Send(JsonOperationContext context, BlittableJsonReaderObject msg, Action afterFlush = null)
         {
-            using (_disposerLock.EnsureNotDisposed())
-            using (var writer = new RachisBlittableJsonTextWriter(context, _stream, afterFlush))
+            var disposerLock = _disposerLock.EnsureNotDisposed();
+            try
             {
-                context.Write(writer, msg);
-                _info.LastSent = DateTime.UtcNow;
+                var writer = new RachisBlittableJsonTextWriter(context, _stream, afterFlush);
+                try
+                {
+                    context.Write(writer, msg);
+                    _info.LastSent = DateTime.UtcNow;
+                }
+                finally
+                {
+                    try
+                    {
+                        writer.Dispose();
+                    }
+                    catch
+                    {
+                        // Suppress exception from Dispose() thrown in the finalizer so it will ensure
+                        // the outer 'finally' (which releases the lock) will be executed. Failure to do so causes a deadlock.
+                        // This is the workaround for .NET 10 issue - https://github.com/dotnet/runtime/issues/121578
+                    }
+                }
+            }
+            finally
+            {
+                disposerLock?.Dispose();
             }
         }
 
