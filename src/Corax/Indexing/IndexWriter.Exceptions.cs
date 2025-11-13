@@ -38,7 +38,7 @@ public partial class IndexWriter
             $"{Environment.NewLine}\tLENGTH: {token.Length}." +
             $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
             $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
-            $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
+            $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_analyzersContext.EncodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_analyzersContext.TokensBufferHandler.Length}" +
             $"{Environment.NewLine}Original span contains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
             $"{Environment.NewLine}Field " +
             $"{Environment.NewLine}\tid: {field.Id}" +

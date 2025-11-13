@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -13,14 +14,18 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1638,6 +1643,165 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [RavenTheory(RavenTestCategory.Replication)]
+        [InlineData(ResolveConflictScriptWithPut)]
+        [InlineData(ResolveConflictScriptWithDel)]
+        [InlineData(ResolveConflictScriptWithLoad)]
+        public async Task ConflictResolutionThrowsMeaningfulExceptionOnUsingForbiddenMethod_OnReplication(string script)
+        {
+            const string id = "users/1";
+
+            Options options = new() { ModifyDatabaseRecord = ConflictsResolutionScriptProvided };
+            
+            using var store1 = GetDocumentStore(options);
+            using var store2 = GetDocumentStore(options);
+            
+            using (var s1 = store1.OpenSession())
+            {
+                s1.Store(new User { Name = "test" }, id);
+                s1.SaveChanges();
+            }
+            
+            using (var s2 = store2.OpenSession())
+            {
+                s2.Store(new User { Name = "test2" }, id);
+                s2.SaveChanges();
+            }
+
+            await SetupReplicationAsync(store1, store2);
+
+            WaitUntilHasConflict(store2, id);
+
+            DocumentDatabase db = await GetDocumentDatabaseInstanceFor(store2);
+            db.NotificationCenter.GetStored(out var actions);
+
+            var alerts = actions
+                .Select(item => AlertRaised.FromJson("", item.Json))
+                .ToArray();
+
+            AlertRaised alert = Assert.Single(alerts);
+            
+            Assert.Equal(alert.AlertType, AlertType.Replication);
+            Assert.Equal(alert.Severity, NotificationSeverity.Error);
+            Assert.Equal(alert.Type, NotificationType.AlertRaised);
+
+            void ConflictsResolutionScriptProvided(DatabaseRecord record)
+            {
+                record.ConflictSolverConfig = new()
+                {
+                    ResolveToLatest = false,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>
+                    {
+                        { "Users", new ScriptResolver { Script = script } }
+                    }
+                };
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.Replication)]
+        [InlineData(ResolveConflictScriptWithPut)]
+        [InlineData(ResolveConflictScriptWithDel)]
+        [InlineData(ResolveConflictScriptWithLoad)]
+        public async Task ConflictResolutionThrowsMeaningfulExceptionOnUsingForbiddenMethod_WithScript(string script)
+        {
+            const string id = "users/1";
+
+            Options options = new() { ModifyDatabaseRecord = NoConflictResolutionAtAll };
+            
+            using var store1 = GetDocumentStore(options);
+            using var store2 = GetDocumentStore(options);
+            
+            using (var s1 = store1.OpenSession())
+            {
+                s1.Store(new User { Name = "test" }, id);
+                s1.SaveChanges();
+            }
+            
+            using (var s2 = store2.OpenSession())
+            {
+                s2.Store(new User { Name = "test2" }, id);
+                s2.SaveChanges();
+            }
+
+            await SetupReplicationAsync(store1, store2);
+
+            WaitUntilHasConflict(store2, id);
+
+            var db = await GetDocumentDatabaseInstanceFor(store2);
+            db.NotificationCenter.GetStored(out var actions);
+
+            var alerts = actions
+                .Select(item => AlertRaised.FromJson("", item.Json))
+                .ToArray();
+
+            // Alerts should not be raised now.
+            Assert.Empty(alerts);
+
+            Dictionary<string, ScriptResolver> users = new()
+            {
+                { "Users", new ScriptResolver { Script = script } }
+            };
+            
+            AsyncQueue<DynamicJsonValue> notificationsQueue = new();
+            using (db.NotificationCenter.TrackActions(notificationsQueue, null))
+            {
+                // Update the script to the new one
+                await store2.Maintenance.Server.SendAsync(new ModifyConflictSolverOperation(store2.Database, users, resolveToLatest: false));
+
+                var alert = await notificationsQueue.DequeueUntilAsync(static item =>
+                    {
+                        var alertType = item[nameof(AlertRaised.AlertType)];
+                        var severity = item[nameof(AlertRaised.Severity)];
+                        var message = item[nameof(AlertRaised.Message)];
+
+                        if (alertType == null || severity == null || message == null)
+                        {
+                            return false;
+                        }
+
+                        return alertType.ToString() == nameof(AlertType.Replication) &&
+                               severity.ToString() == nameof(NotificationSeverity.Error) &&
+                               message.ToString().Contains(id);
+                    }
+                );
+            }
+
+            void NoConflictResolutionAtAll(DatabaseRecord record)
+            {
+                record.ConflictSolverConfig = new()
+                {
+                    ResolveToLatest = false,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                };
+            }
+        }
+
+
+        private const string ResolveConflictScriptWithPut =
+            """
+            put("Conflicts/", {
+              Name: 'Conflict',
+              "@metadata": {
+                "@collection": "Conflicts",
+              }
+            });
+
+            return null;
+            """;
+
+        private const string ResolveConflictScriptWithDel =
+            """
+            del("Conflicts/1");
+            return null;
+            """;
+
+        private const string ResolveConflictScriptWithLoad =
+            """
+            let c = load("Conflicts/1");
+            return null;
+            """;
+
+
         [RavenFact(RavenTestCategory.Replication)]
         public void LocalIsLongerThanRemote()
         {
@@ -1657,6 +1821,7 @@ namespace SlowTests.Server.Replication
 
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
+
 
         private class UserIndex : AbstractIndexCreationTask<User>
         {

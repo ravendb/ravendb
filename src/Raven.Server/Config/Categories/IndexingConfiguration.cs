@@ -605,6 +605,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.ElapsedSinceQueriedPersistIntervalInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting ElapsedSinceQueriedPersistInterval { get; set; }
         
+        [Description("Use default search analyzer for dynamic fields if not set explicitly.")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

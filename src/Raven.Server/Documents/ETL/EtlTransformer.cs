@@ -60,38 +60,28 @@ namespace Raven.Server.Documents.ETL
             if (debugMode)
                 DocumentScript.DebugMode = true;
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.LoadTo, LoadToFunctionTranslator);
 
             foreach (var collection in LoadToDestinations)
             {
                 var name = Transformation.LoadTo + collection;
-                DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,
-                    (value, values) => LoadToFunctionTranslator(collection, value, values)));
+                DocumentScript.ScriptEngine.SetClrFunc(name, (value, values) => LoadToFunctionTranslator(collection, value, values));
             }
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.LoadAttachment, LoadAttachment);
 
-            const string loadCounter = Transformation.CountersTransformation.Load;
-            DocumentScript.ScriptEngine.SetValue(loadCounter, new ClrFunction(DocumentScript.ScriptEngine, loadCounter, LoadCounter));
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.CountersTransformation.Load, LoadCounter);
 
-            const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(loadTimeSeries, new ClrFunction(DocumentScript.ScriptEngine, loadTimeSeries, LoadTimeSeries));
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.TimeSeriesTransformation.LoadTimeSeries.Name, LoadTimeSeries);
 
-            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunction(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
+            DocumentScript.ScriptEngine.SetClrFunc("getAttachments", GetAttachments);
+            DocumentScript.ScriptEngine.SetClrFunc("hasAttachment",HasAttachment);
+            DocumentScript.ScriptEngine.SetClrFunc("getCounters",  GetCounters);
+            DocumentScript.ScriptEngine.SetClrFunc("hasCounter",  HasCounter);
+            DocumentScript.ScriptEngine.SetClrFunc("getRevisionsCount", GetRevisionsCount);
 
-            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunction(DocumentScript.ScriptEngine, "hasAttachment", HasAttachment));
-
-            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunction(DocumentScript.ScriptEngine, "getCounters", GetCounters));
-
-            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunction(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
-
-            DocumentScript.ScriptEngine.SetValue("getRevisionsCount", new ClrFunction(DocumentScript.ScriptEngine, "getRevisionsCount", GetRevisionsCount));
-
-            const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(hasTimeSeries, new ClrFunction(DocumentScript.ScriptEngine, hasTimeSeries, HasTimeSeries));
-
-            const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
-            DocumentScript.ScriptEngine.SetValue(getTimeSeries, new ClrFunction(DocumentScript.ScriptEngine, getTimeSeries, GetTimeSeries));
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.TimeSeriesTransformation.HasTimeSeries.Name, HasTimeSeries);
+            DocumentScript.ScriptEngine.SetClrFunc(Transformation.TimeSeriesTransformation.GetTimeSeries.Name, GetTimeSeries);
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)

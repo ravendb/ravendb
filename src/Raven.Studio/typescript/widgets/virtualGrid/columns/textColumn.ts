@@ -10,12 +10,12 @@ type preparedValue = {
     typeCssClass: string;
 }
 
-class textColumn<T extends object> implements virtualColumn {
+class textColumn<T extends object, THeader extends string = string> implements virtualColumn {
     protected gridController: virtualGridController<T>;
 
     public valueAccessor: ((item: T) => any) | string;
 
-    public header: string;
+    public header: THeader;
 
     public width: string;
 
@@ -24,7 +24,7 @@ class textColumn<T extends object> implements virtualColumn {
     constructor(
         gridController: virtualGridController<T>,
         valueAccessor: ((item: T) => any) | string,
-        header: string, 
+        header: THeader, 
         width: string,
         opts: textColumnOpts<T> = {}) {
         this.opts = opts;

@@ -9,12 +9,12 @@
         .nav-link {
             border: 0;
             cursor: pointer;
-            color: colors.$base-text-muted-color;
+            color: colors.$text-muted-var;
 
             &.active {
                 background: transparent;
                 border-bottom: 2px solid colors.$node-var;
-                color: colors.$base-text-emphasis-color;
+                color: colors.$text-emphasis-var;
             }
 
             &:hover {

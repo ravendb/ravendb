@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Esprima;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -20,6 +22,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 using Exception = System.Exception;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
@@ -308,7 +311,8 @@ namespace Raven.Server.Documents.TcpHandlers
             if (q.Where != null)
             {
                 writer.Write("if (");
-                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(q.Where);
+                QueryExpression modified = HandleRefresh(q.Where);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(modified);
                 writer.WriteLine(" )");
                 writer.WriteLine("{");
             }
@@ -357,6 +361,26 @@ namespace Raven.Server.Documents.TcpHandlers
                 Includes = includes?.ToArray(),
                 CounterIncludes = counterIncludes?.ToArray()
             };
+        }
+
+        private static QueryExpression HandleRefresh(QueryExpression qe)
+        {
+            // handle '@metadata'.'@refresh' = null and '@metadata'.'@refresh' != null
+            // in a special manner, turning them into exists calls for better support
+            
+            // @refresh = null is translated to "not exists(@refresh)"
+            // @refresh != null is translated to "exists(@refresh)"
+            if (qe is not BinaryExpression be)
+                return qe;
+            if (be.Operator is not OperatorType.Equal && be.Operator is not OperatorType.NotEqual)
+                return qe;
+            if (be.Left is not FieldExpression { FieldValueWithoutAlias: Constants.Documents.Metadata.Refresh } || 
+                be.Right is not ValueExpression { Value: ValueTokenType.Null })
+                return qe;
+            var me = new MethodExpression("exists", [be.Left]);
+            if (be.Operator is not OperatorType.NotEqual)
+                return new NegatedExpression(me);
+            return me;
         }
 
         protected override async Task OnClientAckAsync(string clientReplyChangeVector)

@@ -19,10 +19,10 @@ public class EntriesModificationsTests : NoDisposalNeeded
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         var entries = new EntriesModifications(0);
         
-        entries.Addition(bsc, 2, -1, 1);
-        entries.Removal(bsc, 1, -1,1);
-        entries.Addition(bsc, 3, -1,1);
-        entries.Removal(bsc, 2, -1,1);
+        entries.Addition(bsc, 2, -1, 1, InserterMode.ExactInsert);
+        entries.Removal(bsc, 1, -1,1, InserterMode.ExactInsert);
+        entries.Addition(bsc, 3, -1,1, InserterMode.ExactInsert);
+        entries.Removal(bsc, 2, -1,1, InserterMode.ExactInsert);
         entries.Prepare(bsc);
 
         AssertEntriesCase(ref entries);

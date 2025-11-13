@@ -57,6 +57,24 @@ namespace Sparrow.Json
 
             return _context.WriteAsync(stream, this, token);
         }
+
+        public static void BlittableValidation(JsonOperationContext context, byte* mem, int size)
+        {
+            var bllitable = new BlittableJsonReaderObject(context, mem, size);
+            bllitable.BlittableValidation();
+        }
+        
+        //Only initiate directly for validation in Recovery tool
+        private BlittableJsonReaderObject(JsonOperationContext context, byte* mem, int size)
+            : base(context)
+        {
+            if (size == 0)
+                ThrowOnZeroSize(size);
+
+            _isRoot = true;
+            _mem = mem; // get beginning of memory pointer
+            _size = size; // get document size
+        }
         
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
             : this(mem, size, context)
@@ -71,15 +89,8 @@ namespace Sparrow.Json
         }
 
         private BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context)
-            : base(context)
+            : this(context, mem, size)
         {
-            if (size == 0)
-                ThrowOnZeroSize(size);
-
-            _isRoot = true;
-            _mem = mem; // get beginning of memory pointer
-            _size = size; // get document size
-
             NoCache = NoCache;
 
             var propOffsetStart = _size - 2;

@@ -123,7 +123,8 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(PinToMentorNode)] = PinToMentorNode,
                 [nameof(AllowEtlOnNonEncryptedChannel)] = AllowEtlOnNonEncryptedChannel,
-                [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => x.ToJson()))
+                [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => x.ToJson())),
+                [nameof(Disabled)] = Disabled
             };
 
             return result;
