@@ -21,8 +21,9 @@ Open bash terminal, and create file /etc/systemd/system/ravendb.service, using s
     LimitMEMLOCK=infinity
     TasksMax=infinity
     StartLimitBurst=0
+    AmbientCapabilities=CAP_NET_BIND_SERVICE  
     Restart=on-failure
-    Type=simple
+    Type=exec
     TimeoutStopSec=300
     User=<desired user>
     ExecStart=/path/to/RavenDB/run.sh

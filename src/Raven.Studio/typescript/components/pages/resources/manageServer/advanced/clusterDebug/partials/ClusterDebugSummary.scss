@@ -2,11 +2,14 @@
 @use "Content/scss/colors";
 
 table.cluster-debug-summary {
+    --bs-table-bg: var(--panel-bg-1) !important;
+
     thead {
         th {
             background-color: colors.$panel-header-bg-var !important;
         }
     }
+
     td,
     th {
         min-width: 250px;

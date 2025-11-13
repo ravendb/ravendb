@@ -32,8 +32,8 @@ public class RavenDB_24495 : ClusterTestBase
     public async Task CanReplaceServerCertificate_WithBouncyCastleGeneratedCertificate(bool with2Eku)
     {
         var result = await CreateRaftClusterWithSsl(3, with2Eku: with2Eku);
-        
-        var newCertBytes = CertificateUtils.CreateSelfSignedTestCertificate("server-bc", "replace-server-cert-test", with2Eku: with2Eku);
+        var suffix = Guid.NewGuid().ToString().Split('-')[0];
+        var newCertBytes = CertificateUtils.CreateSelfSignedTestCertificate($"server-bc-{suffix}", $"replace-server-cert-test-{suffix}", with2Eku: with2Eku);
         
         var first = result.Certificates.ServerCertificate.Value.Thumbprint;
         var certForCommunication = result.Certificates.ServerCertificateForCommunication.Value;
@@ -54,8 +54,9 @@ public class RavenDB_24495 : ClusterTestBase
     [RavenFact(RavenTestCategory.Certificates)]
     public async Task CreateZipArchive_ShouldHaveTheSameContent()
     {
-        const string certName = "test";
-        var clientCertBytes = CertificateUtils.CreateSelfSignedTestCertificate(certName, "zip-archive-test", with2Eku: true);
+        var suffix = Guid.NewGuid().ToString().Split('-')[0];
+        var certName = $"test-{suffix}";
+        var clientCertBytes = CertificateUtils.CreateSelfSignedTestCertificate(certName, $"zip-archive-test-{suffix}", with2Eku: true);
 
         using var ms = new MemoryStream();
         using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
@@ -74,10 +75,13 @@ public class RavenDB_24495 : ClusterTestBase
         var bcResult = ms2.ToArray();
 
         string dnExtractedCert = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(dnResult, $"{certName}.crt"));
-        string bcextractedCert = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(bcResult, $"{certName}.crt"));
+        string bcExtractedCert = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(bcResult, $"{certName}.crt"));
+        
+        string dnExtractedKey = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(dnResult, $"{certName}.key"));
+        string bcExtractedKey = PemUtils.NormalizePemContent(await ExtractFileFromZipAsync(bcResult, $"{certName}.key"));
 
-        // Checking only cert here because the private key is saved in PKCS8 now while in BouncyCastle it is saved in PKCS1
-        Assert.Equal(bcextractedCert, dnExtractedCert);
+        Assert.Equal(bcExtractedCert, dnExtractedCert);
+        Assert.Equal(bcExtractedKey, dnExtractedKey);
     }
 
     [RavenFact(RavenTestCategory.Certificates)]

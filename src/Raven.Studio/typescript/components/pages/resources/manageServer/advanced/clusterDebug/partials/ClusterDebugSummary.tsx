@@ -91,7 +91,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
 
     return (
         <React.Fragment key="summary">
-            <Table variant="dark" bordered responsive className="mb-1 rounded-1 overflow-hidden cluster-debug-summary">
+            <Table bordered responsive className="mb-1 rounded-1 overflow-hidden cluster-debug-summary">
                 <thead>
                     <tr>
                         <th></th>

@@ -194,6 +194,10 @@
             
             head.appendChild(bs5link);
             head.appendChild(link);
+
+            document.addEventListener("DOMContentLoaded", function() {
+                document.body.setAttribute("data-theme", themeToUse);
+            });
         </script>
 
         <script type="text/javascript">

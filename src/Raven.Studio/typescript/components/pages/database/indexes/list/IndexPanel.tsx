@@ -603,6 +603,9 @@ function getSideBySideResetDisabledReason(index: IndexSharedInfo) {
     if (IndexUtils.isAutoIndex(index)) {
         return "Auto index cannot be reset side by side";
     }
+    if (index.type === "MapReduce" && index.reduceOutputCollectionName != null) {
+        return "Side by side index reset is not supported for map-reduce indexes with output reduce to collection";
+    }
 
     return null;
 }

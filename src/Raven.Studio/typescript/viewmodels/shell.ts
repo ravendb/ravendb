@@ -675,6 +675,9 @@ class shell extends viewModelBase {
         studioSettings.default.registerOnSettingChangedHandler(
             name => name === "sendUsageStats",
             (name, track: simpleStudioSetting<boolean>) => eventsCollector.default.setEnabled(track.getValue()));
+        
+        const theme = document.body.getAttribute("data-theme");
+        eventsCollector.default.reportCustomEvent("theme_load", { theme });
     }
 
     static openFeedbackForm() {

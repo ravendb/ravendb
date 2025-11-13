@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -19,22 +20,36 @@ namespace Raven.Client.Documents.Operations.Replication
     public sealed class UpdatePullReplicationAsSinkOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly PullReplicationAsSink _pullReplication;
-
+        private readonly bool _useServerCertificate;
+        
+        // Kept for the binary compatibility purposes.
+        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication) : this(pullReplication, false)
+        {
+        }
+        
         /// <inheritdoc cref="UpdatePullReplicationAsSinkOperation"/>
         /// <param name="pullReplication">
         /// The <see cref="PullReplicationAsSink"/> object containing the updated configuration for the pull replication sink task.
         /// This configuration includes details such as the source database, connection strings, allowed paths for data flow 
         /// between the sink and hub, and an optional private key for a certificate used in secure communication.
         /// </param>
+        /// <param name="useServerCertificate">Makes the replication use the server certificate. Requires <see cref="PullReplicationAsSink.CertificateWithPrivateKey"/> to be null.</param>
         /// <exception cref="AuthorizationException">
         /// Thrown if the provided certificate does not include a private key but is required for secure replication.
         /// </exception>
-        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication)
+        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false)
         {
             _pullReplication = pullReplication;
+            _useServerCertificate = useServerCertificate;
 
             if (pullReplication.CertificateWithPrivateKey != null)
             {
+                if (useServerCertificate)
+                    throw new ArgumentException(
+                        $"When {nameof(useServerCertificate)} is set to true, " +
+                        $"{nameof(PullReplicationAsSink.CertificateWithPrivateKey)} should be null to use server certificate.");
+                
+                
                 var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
                 using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
                     pullReplication.CertificatePassword,
@@ -48,22 +63,22 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdatePullEdgeReplication(conventions, _pullReplication);
+            return new UpdatePullEdgeReplication(conventions, _pullReplication, _useServerCertificate);
         }
 
-        private sealed class UpdatePullEdgeReplication : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        private class UpdatePullEdgeReplication(DocumentConventions conventions, PullReplicationAsSink pullReplication, bool useServerCertificate) : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
-            private readonly DocumentConventions _conventions;
-            private readonly PullReplicationAsSink _pullReplication;
-
-            public UpdatePullEdgeReplication(DocumentConventions conventions, PullReplicationAsSink pullReplication)
-            {
-                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-                _pullReplication = pullReplication ?? throw new ArgumentNullException(nameof(pullReplication));
-            }
-
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
+                DynamicJsonValue replication = pullReplication.ToJson();
+                
+                // Aligned with ServerStore.UpdatePullReplicationAsSink to not introduce breaking changes
+                if (pullReplication.CertificateWithPrivateKey == null && useServerCertificate)
+                {
+                    int removed = replication.Properties.RemoveAll(pair => pair.Name == nameof(PullReplicationAsSink.CertificateWithPrivateKey));
+                    Debug.Assert(removed > 0);
+                }
+                
                 url = $"{node.Url}/databases/{node.Database}/admin/tasks/sink-pull-replication";
 
                 var request = new HttpRequestMessage
@@ -73,11 +88,11 @@ namespace Raven.Client.Documents.Operations.Replication
                     {
                         var json = new DynamicJsonValue
                         {
-                            ["PullReplicationAsSink"] = _pullReplication.ToJson()
+                            ["PullReplicationAsSink"] = replication
                         };
 
                         await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-pull-replication")).ConfigureAwait(false);
-                    }, _conventions)
+                    }, conventions)
                 };
 
                 return request;

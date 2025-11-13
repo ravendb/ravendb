@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static ThreadLocal<LowerCaseKeywordAnalyzer> WildcardAnalyzer = new ThreadLocal<LowerCaseKeywordAnalyzer>(() => new());
-        public static bool TryGetAnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, out Query query, float? boost = null, float? similarity = null)
+        public static bool TryGetAnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, out Query query, Index index, float? boost = null, float? similarity = null)
         {
             if (type != LuceneTermType.String && type != LuceneTermType.Prefix && type != LuceneTermType.WildCard)
                 throw new InvalidOperationException("Analyzed terms can be only created from string values.");
@@ -178,7 +178,8 @@ namespace Raven.Server.Documents.Queries
             if (boost.HasValue == false)
                 boost = 1;
 
-            if (type is LuceneTermType.Prefix or LuceneTermType.WildCard)
+            bool analyzerOverriden = TryGetSearchAnalyzerForImplicitField(out analyzer);
+            if (type is LuceneTermType.Prefix or LuceneTermType.WildCard && analyzerOverriden is false)
             {
                 var analyzerToUse = analyzer switch
                 {
@@ -197,8 +198,13 @@ namespace Raven.Server.Documents.Queries
                     // in wildcard queries
                     _ => analyzer
                 };
+
+                analyzerOverriden = true;
                 Debug.Assert(analyzer != null);
             }
+
+            if (analyzerOverriden == false)
+                analyzerOverriden = TryGetSearchAnalyzerForImplicitField(out analyzer);
 
             var tokenStream = analyzer.ReusableTokenStream(fieldName, new StringReader(term));
             var terms = new List<string>();
@@ -257,6 +263,22 @@ namespace Raven.Server.Documents.Queries
 
             query = pq;
             return true;
+
+            bool TryGetSearchAnalyzerForImplicitField(out Analyzer newAnalyzer)
+            {
+                if (index.Definition.HasDynamicFields && index.Configuration.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery && analyzer is LuceneRavenPerFieldAnalyzerWrapper perFieldAnalyzerWrapper)
+                {
+                    var isExplicit = perFieldAnalyzerWrapper.IsExplicitField(fieldName);
+                    if (isExplicit == false)
+                    {
+                        newAnalyzer = perFieldAnalyzerWrapper.DefaultSearchAnalyzerFactory(fieldName);
+                        return true;
+                    }
+                }
+
+                newAnalyzer = analyzer;
+                return false;
+            }
         }
 
         public static unsafe string GetTermValue(string value, LuceneTermType type, bool exact)

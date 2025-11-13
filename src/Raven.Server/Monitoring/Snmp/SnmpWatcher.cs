@@ -23,6 +23,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.Monitoring.Snmp.Providers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
@@ -279,12 +280,12 @@ namespace Raven.Server.Monitoring.Snmp
                             if (privacyPassword == null)
                                 throw new ArgumentNullException(nameof(privacyPassword));
 
-                            return new DESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
+                            return new DotnetDESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
                         case SnmpPrivacyProtocol.AES:
                             if (privacyPassword == null)
                                 throw new ArgumentNullException(nameof(privacyPassword));
 
-                            return new AESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
+                            return new DotnetAESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
                         default:
                             throw new InvalidOperationException($"Unknown privacy protocol '{privacyProtocol}'.");
                     }

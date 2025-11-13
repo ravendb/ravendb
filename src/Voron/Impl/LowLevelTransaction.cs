@@ -44,6 +44,7 @@ namespace Voron.Impl
         private readonly bool _disposeAllocator;
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
+        private bool _updateLastWorkTime = true;
         
         public object ImmutableExternalState;
 
@@ -1123,7 +1124,11 @@ namespace Voron.Impl
 
             if (WriteToJournalIsRequired())
             {
-                Environment.LastWorkTime = DateTime.UtcNow;
+                if (_updateLastWorkTime)
+                {
+                    Environment.LastWorkTime = DateTime.UtcNow;
+                }
+                
                 CommitStage2_WriteToJournal();
             }
             
@@ -1244,7 +1249,10 @@ namespace Voron.Impl
             }
 
             if (AsyncCommit.Result)
-                Environment.LastWorkTime = DateTime.UtcNow;
+            {
+                if (_updateLastWorkTime)
+                    Environment.LastWorkTime = DateTime.UtcNow;
+            }
 
             BeforeCommitFinalization?.Invoke(this);
             CommitStage3_DisposeTransactionResources();
@@ -1470,6 +1478,15 @@ namespace Voron.Impl
             // the event cannot be called outside this class while we need to call it in 
             // StorageEnvironment.TransactionAfterCommit
             AfterCommitWhenNewTransactionsPrevented?.Invoke(this);
+        }
+
+        /// <summary>
+        /// This prevents updating last work time even if the transaction is committed. Useful for updating internal data which is not
+        /// part of work ordered by a user.
+        /// </summary>
+        public void DisableLastWorkTimeUpdate()
+        {
+            _updateLastWorkTime = false;
         }
 
 #if DEBUG

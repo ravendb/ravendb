@@ -7,6 +7,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
@@ -29,9 +30,13 @@ internal sealed class AdminIndexHandlerProcessorForState : AbstractAdminIndexHan
         {
             case IndexState.Normal:
                 index.Enable();
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Enabled index '{name}'.");
                 break;
             case IndexState.Disabled:
                 index.Disable();
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                    RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "CHANGE", $"Disabled index '{name}'.");
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

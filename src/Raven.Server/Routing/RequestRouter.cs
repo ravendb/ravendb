@@ -115,14 +115,14 @@ namespace Raven.Server.Routing
                         else
                         {
                             auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
-                                $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                $"with certificate '{feature.Certificate?.GetDisplayName()} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
 
                             var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
                             if (conLifetime != null)
                             {
                                 var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
-                                 $"certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                 $"certificate '{feature.Certificate?.GetDisplayName()} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                  $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
 
                                 CancellationTokenRegistration cancellationTokenRegistration = default;
@@ -287,7 +287,7 @@ namespace Raven.Server.Routing
                     if (auditLog != null)
                     {
                         auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
-                            $"(Cert: {context.Connection.ClientCertificate?.Subject} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
+                            $"(Cert: {context.Connection.ClientCertificate?.GetDisplayName()} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
                     }
 
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;

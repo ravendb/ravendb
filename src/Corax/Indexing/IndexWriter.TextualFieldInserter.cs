@@ -434,7 +434,8 @@ public unsafe partial class IndexWriter
                     _ => termContainerId
                 };
 
-                if (entries.Long != null)
+                Debug.Assert(entry.InserterMode is not InserterMode.Ignore);
+                if (entries.Long != null && entry.InserterMode is InserterMode.Numerical)
                 {
                     recordedTermContainerId |= 1; // marker!
                     recordedTerm.Long = entries.Long.Value;

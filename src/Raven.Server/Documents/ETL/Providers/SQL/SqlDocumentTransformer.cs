@@ -57,12 +57,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
-            
-            DocumentScript.ScriptEngine.SetValue("varchar",
-                new ClrFunction(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
 
-            DocumentScript.ScriptEngine.SetValue("nvarchar",
-                new ClrFunction(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
+            DocumentScript.ScriptEngine.SetClrFunc("varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values));
+            DocumentScript.ScriptEngine.SetClrFunc("nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values));
         }
 
         protected override string[] LoadToDestinations { get; }

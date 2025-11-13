@@ -1867,7 +1867,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, StringBuilder log = null)
         {
             var authenticationStatus = new AuthenticateConnection(TwoFactor)
             {
@@ -1894,13 +1894,14 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
-            else if (CertificateHasWellKnownIssuer(certificate, out var issuer))
+            else if (CertificateHasWellKnownIssuer(certificate, out var issuer, log))
             {
                 string authLogMessage;
 
                 if (Configuration.Security.ValidateSanForCertificateWithWellKnownIssuer)
                 {
-                    if (AreCertificateSansValid(certificate))
+                    log?.AppendLine($"Validating SAN for certificate with {certificate.GetDisplayName()} ({certificate.Thumbprint}) well known issuer '{issuer}'");
+                    if (AreCertificateSansValid(certificate, log))
                     {
                         authLogMessage =
                             $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
@@ -1912,7 +1913,7 @@ namespace Raven.Server
                     else
                     {
                         authLogMessage =
-                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                             "Certificate's *issuer* is trusted by the cluster. " +
                             "Rejecting the connection based on certificate SAN not matching server domain.";
                         authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
@@ -1921,7 +1922,7 @@ namespace Raven.Server
                 else 
                 {
                     authLogMessage =
-                        $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                         "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster. " +
                         $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
                     authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
@@ -2002,7 +2003,7 @@ namespace Raven.Server
             if (certWithSameHash == null)
             {
                 if (_authAuditLog.IsInfoEnabled)
-                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                                        "Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
                                        $"Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.");
 
@@ -2047,7 +2048,7 @@ namespace Raven.Server
 
             if (_authAuditLog.IsInfoEnabled)
                 _authAuditLog.Info(
-                    $"Connection from {remoteAddress} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    $"Connection from {remoteAddress} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     "Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the cluster. " +
                     $"Registering the new certificate explicitly based on permissions of existing certificate '{certWithSameHash.Thumbprint}'. Security Clearance: {newCertDef.SecurityClearance}, " +
                     $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, newCertDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
@@ -2328,13 +2329,13 @@ namespace Raven.Server
                                 if (tcpAuditLog != null)
                                 {
                                     tcpAuditLog.Info(
-                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Error: {e}");
+                                        $"Failed to negotiate TCP connection from '{remoteEndPoint}' with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Error: {e}");
                                 }
                                 throw;
                             }
 
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
+                                tcpAuditLog.Info($"Opened TCP connection '{remoteEndPoint}' with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
 
                             if (ShouldUseDataCompression(header))
                             {
@@ -2368,7 +2369,7 @@ namespace Raven.Server
                         finally
                         {
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                                tcpAuditLog.Info($"Closed TCP connection '{remoteEndPoint}' with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'.");
                         }
                     }
                 }
@@ -2458,7 +2459,7 @@ namespace Raven.Server
                         {
                             if (tcpAuditLog != null)
                                 tcpAuditLog.Info(
-                                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
+                                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
 
                             if (Logger.IsInfoEnabled)
                             {
@@ -2478,7 +2479,7 @@ namespace Raven.Server
                     {
                         var msg = $"Protocol '{header.OperationVersion}' for '{header.Operation}' was not found.";
                         if (tcpAuditLog != null)
-                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. {msg}");
+                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. {msg}");
 
                         if (Logger.IsInfoEnabled)
                         {
@@ -2519,7 +2520,7 @@ namespace Raven.Server
                 {
                     if (tcpAuditLog != null)
                         tcpAuditLog.Info(
-                            $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
+                            $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
 
                     if (Logger.IsInfoEnabled)
                     {
@@ -2540,7 +2541,7 @@ namespace Raven.Server
 
             if (tcpAuditLog != null)
                 tcpAuditLog.Info(
-                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
+                    $"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.GetDisplayName()} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName ?? "Server"}.");
             return header;
         }
 
@@ -3058,7 +3059,7 @@ namespace Raven.Server
 
             if (_authAuditLog.IsInfoEnabled)
                 _authAuditLog.Info(
-                    $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     $"Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the replication hub. Old certificate: {replicationHubAccess.Thumbprint} ");
         }
 
@@ -3261,14 +3262,18 @@ namespace Raven.Server
             return serverCertificate != null && certificate.Equals(serverCertificate);
         }
 
-        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer)
+        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer, StringBuilder log = null)
         {
             issuer = null;
             if (WellKnownIssuers == null)
+            {
+                log?.AppendLine("No well known issuers configured");
                 return false;
+            }
 
             foreach (var knownIssuer in WellKnownIssuers)
             {
+                log?.AppendLine($"Checking if {knownIssuer.GetDisplayName()} ({knownIssuer.Thumbprint}) is a well known issuer for {cert.GetDisplayName()} ({cert.Thumbprint})");
                 using var chain = new X509Chain(false);
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 chain.ChainPolicy.DisableCertificateDownloads = true;
@@ -3278,14 +3283,16 @@ namespace Raven.Server
                 if (chain.Build(cert))
                 {
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
+                    log?.AppendLine($"Issuer is a well known issuer: {issuer} for {cert.GetDisplayName()} ({cert.Thumbprint})");
                     return true;
                 }
             }
 
+            log?.AppendLine($"No well known issuer found for {cert.GetDisplayName()} ({cert.Thumbprint})");
             return false;
         }
 
-        private bool AreCertificateSansValid(X509Certificate2 cert)
+        private bool AreCertificateSansValid(X509Certificate2 cert, StringBuilder log = null)
         {
             var serverDomain = new Uri(ServerStore.GetNodeHttpServerUrl()).Host;
             var sans = CertificateUtils.GetCertificateAlternativeNames(cert).ToList();
@@ -3295,12 +3302,14 @@ namespace Raven.Server
                 {
                     _authAuditLog.Info("Certificate does not contain any SAN.");
                 }
+                log?.AppendLine("Certificate does not contain any SAN.");
 
                 return false;
             }
 
             foreach (var san in sans)
             {
+                log?.AppendLine($"Checking if {san} is a valid SAN for domain {serverDomain}");
                 if (san.StartsWith("*."))
                 {
                     var array = san.Split("*.");
@@ -3310,6 +3319,7 @@ namespace Raven.Server
                         {
                             _authAuditLog.Info($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
                         }
+                        log?.AppendLine($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
 
                         continue;
                     }
@@ -3318,16 +3328,21 @@ namespace Raven.Server
                         serverDomain.Length > array[1].Length &&
                         serverDomain[..(serverDomain.Length - array[1].Length - 1)].Contains('.') == false)
                     {
+                        log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) contains valid SAN {san}");
                         return true;
                     }
                 }
                 else
                 {
                     if (string.Compare(serverDomain, san, StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) contains valid SAN {san}");
                         return true;
+                    }
                 }
             }
 
+            log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) does not contain a valid SAN for domain {serverDomain}");
             return false;
         }
 

@@ -138,6 +138,7 @@ LimitAS=infinity
 LimitMEMLOCK=infinity
 TasksMax=infinity
 StartLimitBurst=0
+AmbientCapabilities=CAP_NET_BIND_SERVICE  
 Restart=on-failure
 Type=exec
 TimeoutStopSec=300

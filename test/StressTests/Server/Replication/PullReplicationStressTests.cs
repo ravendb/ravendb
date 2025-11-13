@@ -29,11 +29,11 @@ namespace StressTests.Server.Replication
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
-            var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates, with2Eku: with2Eku);
+            var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true, with2Eku: with2Eku);
+            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
 
-            var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: false);
-            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates, with2Eku: with2Eku);
+            var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true, with2Eku: with2Eku);
+            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
 
             var hubDB = GetDatabaseName();
             var sinkDB = GetDatabaseName();
@@ -42,7 +42,7 @@ namespace StressTests.Server.Replication
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
-            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: false);
+            var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
@@ -77,15 +77,18 @@ namespace StressTests.Server.Replication
                 var timeout = 5000;
                 Assert.True(WaitForDocument(sinkStore, "foo/bar", timeout), sinkStore.Identifier);
                 
-                // test if certificate is retained when we don't send one
-                // sending null as cert - but it should copy old one
+                // Test if certificate is retained when we don't send one and specify the flag to keep the old one.
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
-                {
-                    TaskId = sinkTaskId,
-                    Name = pullReplicationName,
-                    HubName = pullReplicationName,
-                    ConnectionStringName = "ConnectionString-" + hubStore.Database
-                }));
+                    {
+                        TaskId = sinkTaskId,
+                        Name = pullReplicationName,
+                        HubName = pullReplicationName,
+                        ConnectionStringName = "ConnectionString-" + hubStore.Database,
+                        
+                        CertificateWithPrivateKey = null
+                    }, 
+                    useServerCertificate: true
+                ));
                 
                 using (var hubSession = hubStore.OpenSession())
                 {
