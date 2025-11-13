@@ -1,4 +1,4 @@
-import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch, FormErrorIcon } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { AiAgentTrimmingMethod, EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ClickableCard from "components/common/ClickableCard";
@@ -6,8 +6,7 @@ import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
-import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
-import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
+import CollapseButton from "components/common/CollapseButton";
 import Collapse from "react-bootstrap/Collapse";
 
 export default function EditAiAgentTrimmingSection() {
@@ -50,8 +49,8 @@ export default function EditAiAgentTrimmingSection() {
                         <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </h3>
-                <EditAiAgentErrorIcon fieldNames={["trimming"]} openPanel={setIsPanelOpen} />
-                <EditAiAgentCollapseButton isPanelOpen={isPanelOpen} toggleIsPanelOpen={toggleIsPanelOpen} />
+                <FormErrorIcon control={control} paths={["trimming"]} onError={() => setIsPanelOpen(true)} />
+                <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
             </div>
             <div className="mb-1">You can configure trimming of long conversations by summarizing older messages.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>

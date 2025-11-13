@@ -1,12 +1,12 @@
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 
-interface EditAiAgentCollapseButtonProps {
+interface CollapseButtonProps {
     isPanelOpen: boolean;
     toggleIsPanelOpen: () => void;
 }
 
-export default function EditAiAgentCollapseButton({ isPanelOpen, toggleIsPanelOpen }: EditAiAgentCollapseButtonProps) {
+export default function CollapseButton({ isPanelOpen, toggleIsPanelOpen }: CollapseButtonProps) {
     return (
         <Button variant="link" size="xs" onClick={toggleIsPanelOpen} className="text-reset">
             {isPanelOpen ? (
