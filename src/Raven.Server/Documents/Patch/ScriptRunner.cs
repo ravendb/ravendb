@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Patch
 
                 //console.log
                 ObjectInstance consoleObject = new JsObject(ScriptEngine);
-                consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunction(ScriptEngine, "log", OutputDebug), false, false, false));
+                consoleObject.SetClfFunc("log", OutputDebug);
                 ScriptEngine.SetValue("console", consoleObject);
 
                 //spatial.distance
@@ -324,16 +324,14 @@ namespace Raven.Server.Documents.Patch
                 var includeDocumentFunc = new ClrFunction(ScriptEngine, "include", IncludeDoc);
                 ObjectInstance includesObject = new JsObject(ScriptEngine);
                 includesObject.FastSetProperty("document", new PropertyDescriptor(includeDocumentFunc, false, false, false));
-                includesObject.FastSetProperty("cmpxchg", new PropertyDescriptor(new ClrFunction(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false));
-                includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunction(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
+                includesObject.SetClfFunc("cmpxchg", IncludeCompareExchangeValue);
+                includesObject.SetClfFunc("revisions", IncludeRevisions);
                 ScriptEngine.SetValue("includes", includesObject);
 
                 // archived API
-                var unarchiveDocumentFunc = new ClrFunction(ScriptEngine, "unarchive", UnarchiveDoc);
-                var archiveAtDocumentFunc = new ClrFunction(ScriptEngine, "archiveAt", ArchiveAt);
                 ObjectInstance archivedObject = new JsObject(ScriptEngine);
-                archivedObject.FastSetProperty("archiveAt", new PropertyDescriptor(archiveAtDocumentFunc, false, false, false));
-                archivedObject.FastSetProperty("unarchive", new PropertyDescriptor(unarchiveDocumentFunc, false, false, false));
+                archivedObject.SetClfFunc("archiveAt", ArchiveAt);
+                archivedObject.SetClfFunc("unarchive", UnarchiveDoc);
                 ScriptEngine.SetValue("archived", archivedObject);
 
                 // includes - backward compatibility
@@ -462,29 +460,14 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-                var append = new ClrFunction(ScriptEngine, "append", (thisObj, values) =>
-                    AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var increment = new ClrFunction(ScriptEngine, "increment", (thisObj, values) =>
-                    IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var delete = new ClrFunction(ScriptEngine, "delete", (thisObj, values) =>
-                    DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var get = new ClrFunction(ScriptEngine, "get", (thisObj, values) =>
-                    GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var getStats = new ClrFunction(ScriptEngine, "getStats", (thisObj, values) =>
-                    GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
                 var obj = new JsObject(ScriptEngine);
-                obj.FastSetDataProperty("append", append);
-                obj.FastSetDataProperty("increment", increment);
-                obj.FastSetDataProperty("delete", delete);
-                obj.FastSetDataProperty("get", get);
+                obj.SetClfFunc("append", (thisObj, values) => AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("increment", (thisObj, values) => IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("delete", (thisObj, values) => DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("get", (thisObj, values) => GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
                 obj.FastSetDataProperty("doc", args[0]);
                 obj.FastSetDataProperty("name", args[1]);
-                obj.FastSetDataProperty("getStats", getStats);
+                obj.SetClfFunc("getStats", (thisObj, values) => GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 return obj;
             }
