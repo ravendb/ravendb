@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Patch
 
                 foreach (var ts in runner._timeSeriesDeclaration)
                 {
-                    ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
+                    ScriptEngine.SetClrFunc(ts.Key, (self, args) => InvokeTimeSeriesFunction(ts.Key, args));
                 }
             }
 

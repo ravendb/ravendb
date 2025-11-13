@@ -28,11 +28,8 @@ internal sealed class
     {
         base.Initialize(debugMode);
         
-        DocumentScript.ScriptEngine.SetValue("varchar",
-            new ClrFunction(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
-
-        DocumentScript.ScriptEngine.SetValue("nvarchar",
-            new ClrFunction(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
+        DocumentScript.ScriptEngine.SetClrFunc("varchar", (_, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values));
+        DocumentScript.ScriptEngine.SetClrFunc("nvarchar", (_, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values));
     }
     
     private JsValue ToVarcharTranslator(JsValue type, JsValue[] args)
