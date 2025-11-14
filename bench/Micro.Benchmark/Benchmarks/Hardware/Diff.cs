@@ -171,7 +171,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             original.ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_Diff(source, modified, size);
         }
 
-        [Benchmark(Baseline = true)]
+        [Benchmark]
         public void Naive_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_Diff()
         {
             original.ComputeWord_32Bytes_WithPrefetch_Indirect_NoCount_StreamedLayout_While_Diff(source, modified, size);
