@@ -3507,9 +3507,13 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<IndexReadOperationBase.QueryResult, QueryResultsIterationState>(queryContext.Documents,
+                                        var pulsedEnumerator = new PulsedTransactionEnumerator<IndexReadOperationBase.QueryResult, QueryResultsIterationState>(queryContext.Documents,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(queryContext.Documents, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
+
+                                        pulsedEnumerator.OnPulse += retriever.ClearCache; // we have to clear cached blittables because they are no longer valid after cloning the transaction
+
+                                        enumerator = pulsedEnumerator;
                                     }
 
                                     using (enumerator)
