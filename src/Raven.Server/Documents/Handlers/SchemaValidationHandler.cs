@@ -21,7 +21,7 @@ public sealed class SchemaValidationHandler : DatabaseRequestHandler
     }
 
     [RavenAction("/databases/*/schema-validation/validate", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
-    public async Task ValidateSchemaValidation()
+    public async Task ValidateSchema()
     {
         using (var processor = new SchemaValidationHandlerProcessorForValidate(this))
             await processor.ExecuteAsync();

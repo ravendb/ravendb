@@ -24,7 +24,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
     {
         _ = RequestHandler.Database.Operations.AddLocalOperation(
             operationId,
-            OperationType.ValidateSchemaValidation,
+            OperationType.ValidateSchema,
             $"Schema validation for collection '{Parameters.Collection}' '{RequestHandler.Database.Name}'",
             detailedDescription: null,
             StartValidation,
@@ -73,7 +73,7 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
                         
                         if (stop.Elapsed > nextProgressReport)
                         {
-                            onProgress(new ValidateSchemaValidationProgress
+                            onProgress(new ValidateSchemaProgress
                             {
                                 ValidatedCount = totalValidated,
                                 ErrorCount = actualErrorCount

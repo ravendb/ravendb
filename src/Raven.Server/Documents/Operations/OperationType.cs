@@ -83,5 +83,5 @@ public enum OperationType
     AdoptOrphanedRevisions,
     
     [Description("Validate Schema Validation")]
-    ValidateSchemaValidation
+    ValidateSchema
 }

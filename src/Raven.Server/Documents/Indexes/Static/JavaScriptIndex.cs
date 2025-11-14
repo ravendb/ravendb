@@ -68,7 +68,7 @@ function map(name, lambda) {
             engine.SetClrFunc("id", GetDocumentId);
             
             var schemaValidatorObject = new JsObject(engine);
-            schemaValidatorObject.FastSetProperty("validate", new PropertyDescriptor(new ClrFunction(engine, "validate", SchemaValidate), false, false, false));
+            schemaValidatorObject.SetClfFunc("validate", SchemaValidate);
             engine.SetValue("schema", schemaValidatorObject);
         }
 

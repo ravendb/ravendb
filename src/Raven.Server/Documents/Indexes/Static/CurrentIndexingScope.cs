@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
         {
-            var schemaValidator = Current.Index._schemaValidator.validator;
+            var schemaValidator = Current.Index._schemaValidator.Validator;
             if (schemaValidator == null)
                 throw new InvalidOperationException("Schema validation was not configured for this index.");
 

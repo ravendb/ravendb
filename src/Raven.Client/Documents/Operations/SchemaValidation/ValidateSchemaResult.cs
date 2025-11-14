@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.SchemaValidation;
 
-public class ValidateSchemaValidationProgress : IOperationProgress
+public class ValidateSchemaProgress : IOperationProgress
 {
     public long ErrorCount { get; set; }
     public long ValidatedCount { get; set; }
@@ -19,7 +19,7 @@ public class ValidateSchemaValidationProgress : IOperationProgress
 
     public IOperationProgress Clone()
     {
-        return new ValidateSchemaValidationProgress
+        return new ValidateSchemaProgress
         {
             ErrorCount = ErrorCount,
             ValidatedCount = ValidatedCount,
@@ -29,7 +29,7 @@ public class ValidateSchemaValidationProgress : IOperationProgress
     public bool CanMerge => true;
     public void MergeWith(IOperationProgress progress)
     {
-        if (progress is not ValidateSchemaValidationProgress p)
+        if (progress is not ValidateSchemaProgress p)
             return;
         
         ErrorCount += p.ErrorCount;
@@ -37,7 +37,7 @@ public class ValidateSchemaValidationProgress : IOperationProgress
     }
 }
 
-public sealed class ValidateSchemaResult : ValidateSchemaValidationProgress, IOperationResult
+public sealed class ValidateSchemaResult : ValidateSchemaProgress, IOperationResult
 {
     public Dictionary<string, string> Errors { get; set; }
     

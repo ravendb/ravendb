@@ -73,7 +73,7 @@ public class SchemaValidatorCache : IDisposable
                     _logger.Error(errorMessage, e);
 
                 const string title = "Schema Validation Configuration";
-                var alert = AlertRaised.Create(_notificationCenter.Database, title, errorMessage, AlertType.SchemaValidationConfiguration_Error, NotificationSeverity.Error, details:new ExceptionDetails(e));
+                var alert = AlertRaised.Create(_notificationCenter.Database, title, errorMessage, AlertReason.SchemaValidationConfiguration_Error, NotificationSeverity.Error, details:new ExceptionDetails(e));
                 _notificationCenter.Add(alert);
                 
                 continue;

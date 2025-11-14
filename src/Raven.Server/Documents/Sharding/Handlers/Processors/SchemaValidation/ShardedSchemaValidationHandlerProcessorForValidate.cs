@@ -25,9 +25,9 @@ internal sealed class ShardedSchemaValidationHandlerProcessorForValidate : Abstr
             ? Math.Max(1, Parameters.MaxErrorMessages.Value / RequestHandler.DatabaseContext.ShardCount) 
             : null;
         
-        _ = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartValidateSchemaOperationResult>, ValidateSchemaResult, ValidateSchemaValidationProgress>(
+        _ = RequestHandler.DatabaseContext.Operations.AddRemoteOperation<OperationIdResult<StartValidateSchemaOperationResult>, ValidateSchemaResult, ValidateSchemaProgress>(
                 operationId,
-                OperationType.ValidateSchemaValidation,
+                OperationType.ValidateSchema,
                 $"Schema validation for collection '{Parameters.Collection}' '{RequestHandler.DatabaseName}'",
                 detailedDescription: null,
                 commandFactory: (_, _) => new ValidateSchemaOperation.ValidateSchemaCommand(RequestHandler.ShardExecutor.Conventions, Parameters, operationId),

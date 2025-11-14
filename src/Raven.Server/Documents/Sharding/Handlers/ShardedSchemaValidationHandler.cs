@@ -22,7 +22,7 @@ public sealed class ShardedSchemaValidationHandler : ShardedDatabaseRequestHandl
     }
     
     [RavenShardedAction("/databases/*/schema-validation/validate", "POST")]
-    public async Task ValidateSchemaValidation()
+    public async Task ValidateSchema()
     {
         using (var processor = new ShardedSchemaValidationHandlerProcessorForValidate(this))
             await processor.ExecuteAsync();

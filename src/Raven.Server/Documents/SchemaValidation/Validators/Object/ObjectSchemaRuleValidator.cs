@@ -27,7 +27,7 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         _schemaPath = schemaPath;
         _exclude = exclude?.ToHashSet();
 
-        if (exclude != null)
+        if (exclude != null && _namedPropertyValidators != null)
         {
             foreach (var lazyStringValue in exclude)
             {

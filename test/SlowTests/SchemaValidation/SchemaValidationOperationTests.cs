@@ -182,7 +182,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
                 StartEtag = 1
             }));
         });
-        Assert.Contains("Parameter 'Etag' is not supported for schema validation on a sharded database.", e.Message);
+        Assert.Contains("Parameter 'StartEtag' is not supported for schema validation on a sharded database", e.Message);
     }
     
     private class TestObj

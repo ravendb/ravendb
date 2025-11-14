@@ -26,7 +26,7 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
 
             var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "SchemaValidation/Validate");
-            Parameters = JsonDeserializationServer.Parameters.ValidateSchemaValidationOperationParameters(json);
+            Parameters = JsonDeserializationServer.Parameters.ValidateSchemaOperationParameters(json);
 
             ValidateParameters();
 
