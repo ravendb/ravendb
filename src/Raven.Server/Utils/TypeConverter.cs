@@ -113,7 +113,7 @@ namespace Raven.Server.Utils
             if (value is byte[])
                 return true;
 
-            if (value is IDynamicJsonValueConvertible)
+            if (value is IDynamicJson)
                 return true;
 
             if (value is IEnumerable enumerable)

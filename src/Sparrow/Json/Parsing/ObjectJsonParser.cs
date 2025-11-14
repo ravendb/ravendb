@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -622,7 +622,7 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                if (current is IDynamicJsonValueConvertible convertible)
+                if (current is IDynamicJson convertible)
                 {
                     current = convertible.ToJson();
                     continue;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -103,7 +103,7 @@ namespace Raven.Server.ServerWide.Commands
         }
         }
 
-        public sealed class ClusterTransactionErrorInfo : IDynamicJsonValueConvertible
+        public sealed class ClusterTransactionErrorInfo : IDynamicJson
         {
             public string Message;
             public ConcurrencyViolation Violation;

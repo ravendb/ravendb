@@ -93,7 +93,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
         public int ChangelogPageNumber { get; set; }
     }
     
-    public class BuildCompatibilityInfo : IDynamicJsonValueConvertible
+    public class BuildCompatibilityInfo : IDynamicJson
     {
         public string FullVersion { get; set; }
         public bool CanDowngradeFollowingUpgrade { get; set; }
