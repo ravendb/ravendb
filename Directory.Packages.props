@@ -46,7 +46,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.3" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.2" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.652701" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.28" />
     <PackageVersion Include="Microsoft.DotNet.xunit.performance" Version="1.0.0-alpha-build0041" />
@@ -84,7 +84,7 @@
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
     <PackageVersion Include="MongoDB.Driver.GridFS" Version="2.30.0" />
     <PackageVersion Include="Mono.Posix.NETStandard" Version="1.0.0" />
-    <PackageVersion Include="MySqlConnector" Version="2.5.0" />
+    <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
@@ -123,6 +123,7 @@
     <PackageVersion Include="System.Linq.Async" Version="6.0.3" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+    <PackageVersion Include="System.Net.ServerSentEvents" Version="10.0.0" />
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.0" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
     <PackageVersion Include="System.Reflection.Metadata" Version="10.0.0" />
