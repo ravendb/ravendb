@@ -158,7 +158,7 @@ for(const comment of this.Comments)
         var secondBatchCompleted = await WaitForValueAsync(() =>
         {
             var stats = etlProcess.GetPerformanceStats()
-                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > 1)
+                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > 2)
                 .ToArray();
 
             return stats.Length > 0;
@@ -172,6 +172,14 @@ for(const comment of this.Comments)
             changeVector = session.Advanced.GetChangeVectorFor(doc);
         }
         Assert.NotNull(changeVector);
+
+        var stateUpdated = await WaitForValueAsync(() =>
+        {
+            var status = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
+        
+            return status.ChangeVector == changeVector;
+        }, expectedVal: true, timeout: 60_000);
+        Assert.True(stateUpdated);
 
         var op = new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi);
         var taskInfo = await store.Maintenance.SendAsync(op);
