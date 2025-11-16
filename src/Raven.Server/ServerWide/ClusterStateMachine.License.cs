@@ -182,6 +182,7 @@ public sealed partial class ClusterStateMachine
         var command = (PutLicenseCommand)CommandBase.CreateFrom(bjro);
         if (command.SkipLicenseAssertion)
             return;
+
         try
         {
             newLicenseLimits = LicenseManager.GetLicenseStatus(command.Value);
@@ -194,9 +195,10 @@ public sealed partial class ClusterStateMachine
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
         AssertClusterSizeAndCores(serverStore, newLicenseLimits);
-        foreach (var database in serverStore.DatabasesLandlord.DatabasesCache.Values.GetEnumerator())
+
+        foreach (var databaseName in serverStore.Cluster.GetDatabaseNames(context))
         {
-            DatabaseRecord databaseRecord = serverStore.Cluster.ReadDatabase(context, ShardHelper.ToDatabaseName(database.Result.Name));
+            var databaseRecord = serverStore.Cluster.ReadDatabase(context, ShardHelper.ToDatabaseName(databaseName));
 
             AssertMultiNodeSharding(databaseRecord, newLicenseLimits, context);
             AssertStaticIndexesCount(databaseRecord, newLicenseLimits, context, items, type);
