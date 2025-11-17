@@ -1084,37 +1084,52 @@ return docs[0];`,
         };
     }
 
+    private static generateIdentifier(): string {
+        return crypto.randomUUID();
+    }
+
+    private static generateDestinations(count: number) {
+        const destinations: Record<string, Raven.Client.Documents.Attachments.RemoteAttachmentsDestinationConfiguration> = {};
+
+        for (let i = 0; i < count; i++) {
+            const id = this.generateIdentifier();
+            const name = `Destination_${i + 1}`;
+
+            destinations[name] = {
+                Disabled: false,
+                Identifier: id,
+                S3Settings: {
+                    BucketName: "test",
+                    StorageClass: "GlacierInstantRetrieval",
+                    AwsSessionToken: "test",
+                    AwsAccessKey: "test",
+                    AwsSecretKey: "test",
+                    AwsRegionName: "eu-central-1",
+                    CustomServerUrl: "",
+                    ForcePathStyle: false,
+                    RemoteFolderName: "",
+                    Disabled: false,
+                    GetBackupConfigurationScript: undefined,
+                },
+                AzureSettings: {
+                    AccountKey: "",
+                    AccountName: "",
+                    RemoteFolderName: "",
+                    SasToken: "",
+                    StorageContainer: "",
+                    Disabled: false,
+                    GetBackupConfigurationScript: undefined,
+                },
+            };
+        }
+
+        return destinations;
+    }
+
     static remoteAttachmentsConfiguration(): Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration {
         return {
             Disabled: false,
-            Destinations: {
-                Test: {
-                    Disabled: false,
-                    Identifier: "123123",
-                    S3Settings: {
-                        BucketName: "test",
-                        StorageClass: "GlacierInstantRetrieval",
-                        AwsSessionToken: "test",
-                        AwsAccessKey: "test",
-                        AwsSecretKey: "test",
-                        AwsRegionName: "eu-central-1",
-                        CustomServerUrl: "",
-                        ForcePathStyle: false,
-                        RemoteFolderName: "",
-                        Disabled: false,
-                        GetBackupConfigurationScript: undefined,
-                    },
-                    AzureSettings: {
-                        AccountKey: "",
-                        AccountName: "",
-                        RemoteFolderName: "",
-                        SasToken: "",
-                        StorageContainer: "",
-                        Disabled: false,
-                        GetBackupConfigurationScript: undefined,
-                    },
-                },
-            },
+            Destinations: this.generateDestinations(5),
             MaxItemsToProcess: 32,
             CheckFrequencyInSec: 5 * TimeInSeconds.Minute,
         };

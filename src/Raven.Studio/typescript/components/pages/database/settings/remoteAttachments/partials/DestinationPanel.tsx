@@ -34,6 +34,7 @@ import {
 } from "components/pages/database/settings/remoteAttachments/partials/RemoteAttachmentsFields";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 
 interface DestinationPanelProps extends RemoteAttachmentsDestinationFormData {
     onEdit: (id: string) => void;
@@ -106,18 +107,10 @@ export function DestinationPanel({
 }
 
 interface CreateNewDestinationPanelProps {
-    toggleCreateNewDestinationOpen: () => void;
-    toggleCreateNewDestinationPinned: () => void;
-    isCreateNewDestinationPinned: boolean;
-    editingDestinationId?: string | null;
+    editingDestinationId?: string;
 }
 
-export function DestinationEditorPanel({
-    toggleCreateNewDestinationOpen,
-    isCreateNewDestinationPinned,
-    toggleCreateNewDestinationPinned,
-    editingDestinationId,
-}: CreateNewDestinationPanelProps) {
+export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestinationPanelProps) {
     const { manageServerService } = useServices();
     const dispatch = useAppDispatch();
     const destinations = useAppSelector(remoteAttachmentsSelectors.destinations);
@@ -125,6 +118,8 @@ export function DestinationEditorPanel({
     const editingDestination = editingDestinationId
         ? destinations.find((d) => d.identifier === editingDestinationId)
         : null;
+
+    const { close } = useViewSheet();
 
     const form = useForm<RemoteAttachmentsDestinationFormData>({
         resolver: remoteAttachmentsDestinationYupResolver,
@@ -219,37 +214,19 @@ export function DestinationEditorPanel({
             dispatch(remoteAttachmentsActions.addDestination(destinationData));
         }
 
-        toggleCreateNewDestinationOpen();
+        close();
     };
 
     return (
         <FormProvider {...form}>
             <form className="h-100 d-flex flex-column" onSubmit={handleSubmit(handleSaveDestination)}>
-                <div className="panel-bg-2 p-3 border-bottom border-secondary d-flex flex-wrap justify-content-between gap-2">
+                <ViewSheet.Header className="panel-bg-2 align-items-center">
                     <h3 className="m-0">
                         <Icon icon="global" addon="settings" color="primary" />
                         <span>{editingDestinationId ? "Edit Destination" : "Create new Destination"}</span>
                     </h3>
-                    <div className="d-flex gap-2">
-                        <Button
-                            variant="link"
-                            onClick={toggleCreateNewDestinationPinned}
-                            className="text-muted"
-                            size="sm"
-                        >
-                            <Icon size="sm" icon={isCreateNewDestinationPinned ? "pinned" : "pin"} margin="m-0" />
-                        </Button>
-                        <Button
-                            variant="link"
-                            className="text-muted"
-                            size="sm"
-                            onClick={toggleCreateNewDestinationOpen}
-                        >
-                            <Icon size="sm" icon="close" margin="m-0" />
-                        </Button>
-                    </div>
-                </div>
-                <div className="w-100 flex-grow-1 vstack p-4 overflow-auto">
+                </ViewSheet.Header>
+                <ViewSheet.Body className="w-100 flex-grow-1 vstack p-4 overflow-auto">
                     <FormGroup>
                         <FormLabel>Provider</FormLabel>
                         <FormSelect name="provider" control={control} options={providerOptions} />
@@ -257,9 +234,9 @@ export function DestinationEditorPanel({
 
                     {formValues.provider === "s3" && <RemoteAttachmentsS3Fields asyncTest={asyncTest} />}
                     {formValues.provider === "azure" && <RemoteAttachmentsAzureFields asyncTest={asyncTest} />}
-                </div>
-                <div className="w-100 p-2 panel-bg-2 border-top d-flex justify-content-between border-secondary">
-                    <Button onClick={toggleCreateNewDestinationOpen} variant="link" className="text-muted">
+                </ViewSheet.Body>
+                <ViewSheet.Footer className="w-100 p-2 panel-bg-2 border-top d-flex justify-content-between border-secondary">
+                    <Button onClick={close} variant="link" className="text-muted">
                         Cancel
                     </Button>
                     <div className="d-flex gap-2">
@@ -278,7 +255,7 @@ export function DestinationEditorPanel({
                             Apply configuration
                         </Button>
                     </div>
-                </div>
+                </ViewSheet.Footer>
             </form>
         </FormProvider>
     );

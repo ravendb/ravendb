@@ -1,15 +1,7 @@
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import {
-    FormProvider,
-    SubmitHandler,
-    useForm,
-    useFormContext,
-    UseFormSetValue,
-    UseFormWatch,
-    useWatch,
-} from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm, useFormContext, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { LoadingView } from "components/common/LoadingView";
@@ -22,20 +14,17 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import Card from "react-bootstrap/Card";
 import { FormGroup, FormInput, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
-    RemoteAttachmentsDestinationFormData,
     RemoteAttachmentsFormData,
     remoteAttachmentsYupResolver,
 } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsValidation";
 import { HrHeader } from "components/common/HrHeader";
 import Button from "react-bootstrap/Button";
-import useBoolean from "hooks/useBoolean";
 import { remoteAttachmentsActions } from "./store/remoteAttachmentsSlice";
 import { remoteAttachmentsSelectors } from "./store/remoteAttachmentsSliceSelectors";
 import { remoteAttachmentsUtils } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsUtils";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
-import SplitView from "components/common/splitView/SplitView";
 import {
     DestinationEditorPanel,
     DestinationPanel,
@@ -43,6 +32,7 @@ import {
 import useConfirm from "components/common/ConfirmDialog";
 import { RemoteAttachmentsInfoHub } from "components/pages/database/settings/remoteAttachments/partials/RemoteAttachmentsInfoHub";
 import classNames from "classnames";
+import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 
 export default function RemoteAttachments() {
     const { reportEvent } = useEventsCollector();
@@ -53,9 +43,6 @@ export default function RemoteAttachments() {
 
     const destinations = useAppSelector(remoteAttachmentsSelectors.destinations);
     const isAnyModified = useAppSelector(remoteAttachmentsSelectors.isAnyModified);
-    const { value: isCreateNewDestinationOpen, toggle: toggleCreateNewDestinationOpen } = useBoolean(false);
-    const { value: isCreateNewDestinationPinned, toggle: toggleCreateNewDestinationPinned } = useBoolean(false);
-    const [editingDestinationId, setEditingDestinationId] = useState<string>(null);
 
     const form = useForm<RemoteAttachmentsFormData>({
         resolver: remoteAttachmentsYupResolver,
@@ -100,88 +87,49 @@ export default function RemoteAttachments() {
     }
 
     return (
-        <div className="position-relative h-100">
-            <SplitView
-                initialPanelWidth="30%"
-                isPanelPinned={isCreateNewDestinationPinned}
-                isPanelOpen={isCreateNewDestinationOpen}
-            >
-                <SplitView.Body className="content-padding">
-                    <FormProvider {...form}>
-                        <Form onSubmit={handleSubmit(handleSave)}>
-                            <Col xxl={12}>
-                                <Row className="gy-sm">
-                                    <Col>
-                                        <AboutViewHeading title="Remote attachments" icon="remote-attachment" />
-                                        {hasDatabaseAdminAccess && (
-                                            <ButtonWithSpinner
-                                                type="submit"
-                                                variant="primary"
-                                                className="mb-3"
-                                                disabled={!isAnyModified && !formState.isDirty}
-                                                icon="save"
-                                                isSpinning={formState.isSubmitting}
-                                            >
-                                                Save
-                                            </ButtonWithSpinner>
-                                        )}
-                                        <div className="my-4">
-                                            <HrHeader>
-                                                <Icon icon="config" />
-                                                Configuration
-                                            </HrHeader>
-                                            <RemoteAttachmentsSettingsCard />
-                                        </div>
-                                        <DestinationsList
-                                            isCreateNewDestinationOpen={isCreateNewDestinationOpen}
-                                            toggleCreateNewDestinationOpen={toggleCreateNewDestinationOpen}
-                                            setEditingDestinationId={setEditingDestinationId}
-                                            editingDestinationId={editingDestinationId}
-                                        />
-                                    </Col>
-                                    <Col sm={12} lg={4}>
-                                        <RemoteAttachmentsInfoHub />
-                                    </Col>
-                                </Row>
+        <div className="content-padding position-relative h-100">
+            <FormProvider {...form}>
+                <Form onSubmit={handleSubmit(handleSave)}>
+                    <Col xxl={12}>
+                        <Row className="gy-sm">
+                            <Col>
+                                <AboutViewHeading title="Remote attachments" icon="remote-attachment" />
+                                {hasDatabaseAdminAccess && (
+                                    <ButtonWithSpinner
+                                        type="submit"
+                                        variant="primary"
+                                        className="mb-3"
+                                        disabled={!isAnyModified && !formState.isDirty}
+                                        icon="save"
+                                        isSpinning={formState.isSubmitting}
+                                    >
+                                        Save
+                                    </ButtonWithSpinner>
+                                )}
+                                <div className="my-4">
+                                    <HrHeader>
+                                        <Icon icon="config" />
+                                        Configuration
+                                    </HrHeader>
+                                    <RemoteAttachmentsSettingsCard />
+                                </div>
+                                <DestinationsList />
                             </Col>
-                        </Form>
-                    </FormProvider>
-                </SplitView.Body>
-                <SplitView.Panel>
-                    <DestinationEditorPanel
-                        editingDestinationId={editingDestinationId}
-                        isCreateNewDestinationPinned={isCreateNewDestinationPinned}
-                        toggleCreateNewDestinationPinned={toggleCreateNewDestinationPinned}
-                        toggleCreateNewDestinationOpen={() => {
-                            if (isCreateNewDestinationOpen) {
-                                toggleCreateNewDestinationOpen();
-                            }
-                            setEditingDestinationId(null);
-                        }}
-                    />
-                </SplitView.Panel>
-            </SplitView>
+                            <Col sm={12} lg={4}>
+                                <RemoteAttachmentsInfoHub />
+                            </Col>
+                        </Row>
+                    </Col>
+                </Form>
+            </FormProvider>
         </div>
     );
 }
 
-interface DestinationsListProps {
-    setEditingDestinationId: (id: string) => void;
-    editingDestinationId: string;
-    isCreateNewDestinationOpen: boolean;
-    toggleCreateNewDestinationOpen: () => void;
-}
-
-function DestinationsList({
-    setEditingDestinationId,
-    editingDestinationId,
-    isCreateNewDestinationOpen,
-    toggleCreateNewDestinationOpen,
-}: DestinationsListProps) {
+function DestinationsList() {
     const confirm = useConfirm();
     const { getValues } = useFormContext<RemoteAttachmentsFormData>();
     const dispatch = useAppDispatch();
-
     const destinations = useAppSelector(remoteAttachmentsSelectors.destinations);
     const destinationsTotal = useAppSelector(remoteAttachmentsSelectors.destinationsTotal);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -198,42 +146,38 @@ function DestinationsList({
 
         if (confirmed) {
             dispatch(remoteAttachmentsActions.removeDestination(id));
-            if (editingDestinationId === id) {
-                setEditingDestinationId(null);
-                if (isCreateNewDestinationOpen) {
-                    toggleCreateNewDestinationOpen();
-                }
-            }
         }
     };
 
     const editDestination = async (id: string) => {
-        setEditingDestinationId(id);
-        if (!isCreateNewDestinationOpen) {
-            toggleCreateNewDestinationOpen();
-        }
+        handleOpenSheet(id);
     };
 
     const toggleDestination = async (id: string) => {
         dispatch(remoteAttachmentsActions.toggleDestinationDisabled(id));
     };
 
-    const addNewDestination = () => {
-        setEditingDestinationId(null);
-        if (!isCreateNewDestinationOpen) {
-            toggleCreateNewDestinationOpen();
-        }
+    const { open } = useViewSheet();
+
+    const handleOpenSheet = (editDestinationId?: string) => {
+        open({
+            component: (
+                <ViewSheet className="h-100">
+                    <DestinationEditorPanel editingDestinationId={editDestinationId} />
+                </ViewSheet>
+            ),
+        });
     };
 
     return (
-        <div>
+        <div className="mb-4">
             <HrHeader
                 right={
                     hasDatabaseAdminAccess && (
                         <Button
                             disabled={!formValues.isRemoteAttachmentsEnabled}
                             size="sm"
-                            onClick={addNewDestination}
+                            onClick={() => handleOpenSheet()}
                             variant="info"
                             className="rounded-pill"
                         >

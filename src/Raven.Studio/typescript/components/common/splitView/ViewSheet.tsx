@@ -88,7 +88,7 @@ function SheetFooter(props: Required<PropsWithChildren> & ClassNameProps) {
     );
 }
 
-interface OpenSheetOptions {
+export interface OpenSheetOptions {
     component: ReactNode;
     initialWidth?: ViewSheetWidth;
     minWidth?: ViewSheetWidth;
