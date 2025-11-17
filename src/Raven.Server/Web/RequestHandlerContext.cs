@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
@@ -11,8 +12,9 @@ namespace Raven.Server.Web
 {
     public sealed class RequestHandlerContext : IDisposable
     {
-        private static readonly DisposableScope DisposedSentinel = new();
-        private DisposableScope _disposables;
+        // It uses inline disposables instead of DisposableScope to save ~64bytes.
+        private IDisposable[] _disposables;
+        private int _disposableCount;
 
         public HttpContext HttpContext;
         public RavenServer RavenServer;
@@ -27,29 +29,43 @@ namespace Raven.Server.Web
 
         public void RegisterForDisposal(IDisposable disposable)
         {
-            if (ReferenceEquals(_disposables, DisposedSentinel))
-                throw new ObjectDisposedException(nameof(RequestHandlerContext));
+            _disposables ??= new IDisposable[4];
 
-            var disposables = _disposables;
-            if (disposables == null)
+            if (_disposableCount >= _disposables.Length)
             {
-                disposables = new DisposableScope();
-                _disposables = disposables;
+                Array.Resize(ref _disposables, _disposables.Length * 2);
             }
 
-            disposables.EnsureDispose(disposable);
+            _disposables[_disposableCount++] = disposable;
         }
 
         public void Dispose()
         {
-            var disposables = _disposables;
-           
-            if (ReferenceEquals(disposables, DisposedSentinel) || disposables == null)
+            if (_disposables == null)
                 return;
 
-            _disposables = DisposedSentinel;
+            List<Exception> errors = null;
 
-            disposables.Dispose();
+            while (_disposableCount >= 1)
+            {
+                _disposableCount--;
+
+                IDisposable disposable = _disposables[_disposableCount];
+                try
+                {
+                    disposable.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors ??= [];
+                    errors.Add(e);
+                }
+            }
+
+            _disposables = null;
+
+            if (errors != null)
+                throw new AggregateException(errors);
         }
     }
 }
