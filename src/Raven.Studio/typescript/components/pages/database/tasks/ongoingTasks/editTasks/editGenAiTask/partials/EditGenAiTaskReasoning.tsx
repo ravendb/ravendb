@@ -16,9 +16,32 @@ import { EditGenAiTaskFormData } from "../utils/editGenAiTaskValidation";
 import useToolQueryDetails from "components/pages/database/aiHub/aiAgents/hooks/useToolQueryDetails";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { DotList } from "components/common/dotList/DotList";
+import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
+
+interface Message {
+    role: "system" | "user" | "assistant" | "tool";
+    content: string;
+    tool_call_id?: string;
+    tool_calls?: {
+        id: string;
+        function: {
+            name: string;
+            arguments: string;
+        };
+    }[];
+    date: string;
+}
+
+type ConversationDocument = Omit<
+    Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument,
+    "Messages" | "Parameters"
+> & {
+    Messages: Message[];
+    Parameters: Record<string, string>;
+};
 
 interface EditGenAiTaskReasoningProps {
-    conversationDocument: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument;
+    conversationDocument: ConversationDocument;
 }
 
 export default function EditGenAiTaskReasoning({ conversationDocument }: EditGenAiTaskReasoningProps) {
@@ -28,9 +51,7 @@ export default function EditGenAiTaskReasoning({ conversationDocument }: EditGen
 
     const toolMessages = conversationDocument.Messages.filter((message) => message.role === "tool");
 
-    const canShowMessage = (
-        message: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Messages"][number]
-    ) => {
+    const canShowMessage = (message: Message) => {
         if (message.role !== "system" && message.role !== "user" && message.role !== "assistant") {
             return false;
         }
@@ -76,9 +97,9 @@ export default function EditGenAiTaskReasoning({ conversationDocument }: EditGen
 }
 
 interface ReasoningMessageProps {
-    message: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Messages"][number];
-    toolMessages: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Messages"];
-    parametersFromUser: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Parameters"];
+    message: Message;
+    toolMessages: Message[];
+    parametersFromUser: Record<string, string>;
 }
 
 function ReasoningMessage({ message, toolMessages, parametersFromUser }: ReasoningMessageProps) {
@@ -101,7 +122,7 @@ function ReasoningMessage({ message, toolMessages, parametersFromUser }: Reasoni
 }
 
 interface SystemMessageProps {
-    message: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Messages"][number];
+    message: Message;
 }
 
 function SystemMessage({ message }: SystemMessageProps) {
@@ -119,7 +140,7 @@ function SystemMessage({ message }: SystemMessageProps) {
 }
 
 interface UserMessageProps {
-    message: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Messages"][number];
+    message: Message;
 }
 
 function UserMessage({ message }: UserMessageProps) {
@@ -143,9 +164,9 @@ function UserMessage({ message }: UserMessageProps) {
 }
 
 interface AssistantMessageProps {
-    message: TODO;
-    toolMessages: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Messages"];
-    parametersFromUser: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Parameters"];
+    message: Message;
+    toolMessages: Message[];
+    parametersFromUser: Record<string, string>;
 }
 
 function AssistantMessage({ message, toolMessages, parametersFromUser }: AssistantMessageProps) {
@@ -156,7 +177,7 @@ function AssistantMessage({ message, toolMessages, parametersFromUser }: Assista
     return (
         <div>
             <div className="mb-1">Based on the user role input Assistant Role was enabled and tool was called.</div>
-            {message.tool_calls.map((toolCall: TODO) => (
+            {message.tool_calls.map((toolCall) => (
                 <AssistantToolResponse
                     key={toolCall.id}
                     name={toolCall.function.name}
@@ -173,7 +194,7 @@ interface AssistantToolResponseProps {
     name: string;
     toolContent: string;
     parametersFromModel: string;
-    parametersFromUser: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument["Parameters"];
+    parametersFromUser: Record<string, string>;
 }
 
 function AssistantToolResponse({
@@ -223,7 +244,7 @@ interface ToolCallBodyProps {
 
 function ToolCallBody({ name, toolContent, parametersFromUser, parametersFromModel }: ToolCallBodyProps) {
     const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(parametersFromModel);
-    const argumentsMode = aiAgentsUtils.getAceEditorMode(prettifiedArguments);
+    const argumentsMode = aceEditorUtils.getAceEditorMode(prettifiedArguments);
     const rqlLanguageService = useRqlLanguageService();
 
     const { control } = useFormContext<EditGenAiTaskFormData>();
@@ -267,7 +288,7 @@ function ToolCallBody({ name, toolContent, parametersFromUser, parametersFromMod
                     defaultValue={queryWithParameters}
                     readOnly
                     mode="rql"
-                    height={aiAgentsUtils.getAceEditorHeight(queryWithParameters, 200)}
+                    height={aceEditorUtils.getAceEditorHeight(queryWithParameters, { maxLineCount: 8 })}
                     languageService={rqlLanguageService}
                 />
             </div>
@@ -277,7 +298,7 @@ function ToolCallBody({ name, toolContent, parametersFromUser, parametersFromMod
                     defaultValue={prettifiedArguments}
                     readOnly
                     mode={argumentsMode}
-                    height={aiAgentsUtils.getAceEditorHeight(prettifiedArguments)}
+                    height={aceEditorUtils.getAceEditorHeight(prettifiedArguments)}
                 />
             </div>
             <QueryToolResponseContent content={toolContent} />
@@ -297,7 +318,7 @@ function QueryToolResponseContent({ content }: QueryToolResponseContentProps) {
         () => (isTable ? JSON.parse(content).map((x: any) => new document(x)) : []),
         [content, isTable]
     );
-    const contentMode = aiAgentsUtils.getAceEditorMode(content);
+    const contentMode = aceEditorUtils.getAceEditorMode(content);
 
     const { columnDefs } = useDocumentColumnsProvider({
         documents: tableData,

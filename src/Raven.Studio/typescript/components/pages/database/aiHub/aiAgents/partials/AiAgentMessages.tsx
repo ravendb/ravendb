@@ -21,6 +21,7 @@ import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 import genUtils from "common/generalUtils";
 import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
 import useToolQueryDetails from "../hooks/useToolQueryDetails";
+import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -122,7 +123,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
         () => (isTable ? JSON.parse(message.content).map((x: any) => new document(x)) : []),
         [message.content, isTable]
     );
-    const contentMode = aiAgentsUtils.getAceEditorMode(message.content);
+    const contentMode = aceEditorUtils.getAceEditorMode(message.content);
 
     const { columnDefs } = useDocumentColumnsProvider({
         documents: tableData,
@@ -310,7 +311,7 @@ function AgentMessage({
         setIsWaitingForActionToolSubmit(isRequireParameters);
     }, [isRequireParameters]);
 
-    const contentMode = aiAgentsUtils.getAceEditorMode(agentMessage.content);
+    const contentMode = aceEditorUtils.getAceEditorMode(agentMessage.content);
 
     return (
         <div>
@@ -356,7 +357,7 @@ function AgentMessage({
                                     { component: <AceEditor.FormatAction /> },
                                     { component: <AceEditor.ToggleNewLinesAction /> },
                                 ]}
-                                height={aiAgentsUtils.getAceEditorHeight(agentMessage.content)}
+                                height={aceEditorUtils.getAceEditorHeight(agentMessage.content)}
                                 wrapEnabled={contentMode === "text" ? true : false}
                                 setOptions={{
                                     indentedSoftWrap: contentMode === "text" ? true : false,
@@ -477,7 +478,7 @@ interface ToolCallBodyProps {
 
 function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps) {
     const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
-    const argumentsMode = aiAgentsUtils.getAceEditorMode(prettifiedArguments);
+    const argumentsMode = aceEditorUtils.getAceEditorMode(prettifiedArguments);
 
     const id = useUniqueId("tool-call-details");
 
@@ -528,7 +529,7 @@ function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps)
                     defaultValue={prettifiedArguments}
                     readOnly
                     mode={argumentsMode}
-                    height={aiAgentsUtils.getAceEditorHeight(prettifiedArguments)}
+                    height={aceEditorUtils.getAceEditorHeight(prettifiedArguments)}
                 />
             </div>
             {toolCall?.queryToolResult && <ToolMessage message={toolCall.queryToolResult} type="query" />}
@@ -572,7 +573,7 @@ function ToolDetailsQuery({
                 defaultValue={queryWithParameters}
                 readOnly
                 mode="rql"
-                height={aiAgentsUtils.getAceEditorHeight(queryWithParameters, 200)}
+                height={aceEditorUtils.getAceEditorHeight(queryWithParameters, { maxLineCount: 8 })}
                 languageService={rqlLanguageService}
             />
         </div>
