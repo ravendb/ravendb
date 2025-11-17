@@ -901,124 +901,244 @@ namespace Orders
                 ],
             },
             OutputDocument: null,
-            Results: new Array(10).fill(null).map((_, idx) => ({
-                ContextOutput: {
-                    Context: {
-                        Text: "This is spam",
-                        Author: "Bob",
-                        Id: "comment/" + idx,
-                    },
-                    IsCached: true,
-                    AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
-                    Attachments: [],
-                },
-                ModelOutput: {
-                    Usage: {
-                        PromptTokens: 22,
-                        CompletionTokens: 28,
-                        CachedTokens: 10,
-                        ReasoningTokens: 20,
-                        TotalTokens: 80,
-                    },
-                    Output: {
-                        Blocked: true,
-                        Reason: "Spam detected",
-                    },
-                    ConversationDocument: {
-                        Agent: null,
-                        Parameters: {
-                            Name: "Chai",
-                            CategoryId: "categories/1-A",
+            Results: [
+                {
+                    ContextOutput: {
+                        Context: {
+                            Text: "This is spam",
+                            Author: "Bob",
+                            Id: "comment/1",
                         },
-                        Messages: [
-                            {
-                                role: "system",
-                                content: "Get product category based on name",
-                                date: "2025-11-14T11:52:05.0963677Z",
+                        IsCached: true,
+                        AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [],
+                    },
+                    ModelOutput: {
+                        Usage: {
+                            PromptTokens: 22,
+                            CompletionTokens: 28,
+                            CachedTokens: 10,
+                            ReasoningTokens: 20,
+                            TotalTokens: 80,
+                        },
+                        Output: {
+                            Blocked: true,
+                            Reason: "Spam detected",
+                        },
+                        ConversationDocument: {
+                            Agent: null,
+                            Parameters: {
+                                Name: "Chai",
+                                CategoryId: "categories/1-A",
                             },
-                            {
-                                role: "user",
-                                content: "AI Agent Parameters:\nName = Chai\r\nCategoryId = categories/1-A\r\n",
-                                date: "2025-11-14T11:52:05.0963919Z",
-                            },
-                            {
-                                role: "user",
-                                content: '{"Name":"Chai","CategoryId":"categories/1-A"}',
-                                date: "2025-11-14T11:52:05.0964144Z",
-                            },
-                            {
-                                role: "assistant",
-                                content: null,
-                                tool_calls: [
-                                    {
-                                        id: "call_XtK92jZdo34uCuKbaX2VIqF0",
-                                        type: "function",
-                                        function: {
-                                            name: "GetCategoryDocument",
-                                            arguments: '{"ProductCategoryId":"categories/1-A"}',
+                            Messages: [
+                                {
+                                    role: "system",
+                                    content: "Get product category based on name",
+                                    date: "2025-11-14T11:52:05.0963677Z",
+                                },
+                                {
+                                    role: "user",
+                                    content: "AI Agent Parameters:\nName = Chai\r\nCategoryId = categories/1-A\r\n",
+                                    date: "2025-11-14T11:52:05.0963919Z",
+                                },
+                                {
+                                    role: "user",
+                                    content: '{"Name":"Chai","CategoryId":"categories/1-A"}',
+                                    date: "2025-11-14T11:52:05.0964144Z",
+                                },
+                                {
+                                    role: "assistant",
+                                    content: null,
+                                    tool_calls: [
+                                        {
+                                            id: "call_XtK92jZdo34uCuKbaX2VIqF0",
+                                            type: "function",
+                                            function: {
+                                                name: "GetCategoryDocument",
+                                                arguments: '{"ProductCategoryId":"categories/1-A"}',
+                                            },
                                         },
+                                    ],
+                                    refusal: null,
+                                    annotations: [],
+                                    date: "2025-11-14T11:52:06.1390164Z",
+                                    usage: {
+                                        PromptTokens: 162,
+                                        CompletionTokens: 20,
+                                        TotalTokens: 182,
+                                        CachedTokens: 0,
+                                        ReasoningTokens: 0,
                                     },
-                                ],
-                                refusal: null,
-                                annotations: [],
-                                date: "2025-11-14T11:52:06.1390164Z",
-                                usage: {
-                                    PromptTokens: 162,
-                                    CompletionTokens: 20,
-                                    TotalTokens: 182,
-                                    CachedTokens: 0,
-                                    ReasoningTokens: 0,
                                 },
-                            },
-                            {
-                                tool_call_id: "call_XtK92jZdo34uCuKbaX2VIqF0",
-                                role: "tool",
-                                content:
-                                    '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales","@metadata":{"@id":"categories/1-A","@last-modified":"2018-07-27T12:15:47.7253469Z"}}]',
-                                date: "2025-11-14T11:52:06.1405566Z",
-                            },
-                            {
-                                role: "assistant",
-                                content: '{"Category":"Beverages"}',
-                                refusal: null,
-                                annotations: [],
-                                date: "2025-11-14T11:52:08.1190319Z",
-                                usage: {
-                                    PromptTokens: 66,
-                                    CompletionTokens: 50,
-                                    TotalTokens: 116,
-                                    CachedTokens: 0,
-                                    ReasoningTokens: 0,
+                                {
+                                    tool_call_id: "call_XtK92jZdo34uCuKbaX2VIqF0",
+                                    role: "tool",
+                                    content:
+                                        '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales","@metadata":{"@id":"categories/1-A","@last-modified":"2018-07-27T12:15:47.7253469Z"}}]',
+                                    date: "2025-11-14T11:52:06.1405566Z",
                                 },
+                                {
+                                    role: "assistant",
+                                    content: '{"Category":"Beverages"}',
+                                    refusal: null,
+                                    annotations: [],
+                                    date: "2025-11-14T11:52:08.1190319Z",
+                                    usage: {
+                                        PromptTokens: 66,
+                                        CompletionTokens: 50,
+                                        TotalTokens: 116,
+                                        CachedTokens: 0,
+                                        ReasoningTokens: 0,
+                                    },
+                                },
+                            ],
+                            LinkedConversations: [],
+                            TotalUsage: {
+                                PromptTokens: 410,
+                                CompletionTokens: 70,
+                                TotalTokens: 480,
+                                CachedTokens: 0,
+                                ReasoningTokens: 0,
                             },
-                        ],
-                        LinkedConversations: [],
-                        TotalUsage: {
-                            PromptTokens: 410,
-                            CompletionTokens: 70,
-                            TotalTokens: 480,
-                            CachedTokens: 0,
-                            ReasoningTokens: 0,
-                        },
-                        OpenActionCalls: {},
-                        LastMessageAt: "2025-11-14T11:52:08.1190319Z",
-                        CreatedAt: "2025-11-14T11:52:05.0963258Z",
-                        Expires: null,
-                        CurrentUsage: {
-                            PromptTokens: 248,
-                            CompletionTokens: 50,
-                            TotalTokens: 298,
-                            CachedTokens: 0,
-                            ReasoningTokens: 0,
-                        },
-                        RemainingToolIterations: 16,
-                        "@metadata": {
-                            "@collection": "@conversations",
+                            OpenActionCalls: {},
+                            LastMessageAt: "2025-11-14T11:52:08.1190319Z",
+                            CreatedAt: "2025-11-14T11:52:05.0963258Z",
+                            Expires: null,
+                            CurrentUsage: {
+                                PromptTokens: 248,
+                                CompletionTokens: 50,
+                                TotalTokens: 298,
+                                CachedTokens: 0,
+                                ReasoningTokens: 0,
+                            },
+                            RemainingToolIterations: 16,
+                            "@metadata": {
+                                "@collection": "@conversations",
+                            },
                         },
                     },
+                    DocumentId: null,
                 },
-                DocumentId: null,
-            })),
+                {
+                    ContextOutput: {
+                        Context: {
+                            Text: "This is spam",
+                            Author: "Bob",
+                            Id: "comment/2",
+                        },
+                        IsCached: true,
+                        AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [],
+                    },
+                    ModelOutput: {
+                        Usage: {
+                            PromptTokens: 22,
+                            CompletionTokens: 28,
+                            CachedTokens: 10,
+                            ReasoningTokens: 20,
+                            TotalTokens: 80,
+                        },
+                        Output: {
+                            Blocked: true,
+                            Reason: "Spam detected",
+                        },
+                        ConversationDocument: {
+                            Agent: null,
+                            Parameters: {
+                                Name: "Chai",
+                                CategoryId: "categories/1-A",
+                            },
+                            Messages: [
+                                {
+                                    role: "system",
+                                    content: "Get product category based on name",
+                                    date: "2025-11-14T11:52:05.0963677Z",
+                                },
+                                {
+                                    role: "user",
+                                    content: "AI Agent Parameters:\nName = Chai\r\nCategoryId = categories/1-A\r\n",
+                                    date: "2025-11-14T11:52:05.0963919Z",
+                                },
+                                {
+                                    role: "user",
+                                    content: '{"Name":"Chai","CategoryId":"categories/1-A"}',
+                                    date: "2025-11-14T11:52:05.0964144Z",
+                                },
+                                {
+                                    role: "assistant",
+                                    content: null,
+                                    tool_calls: [
+                                        {
+                                            id: "call_XtK92jZdo34uCuKbaX2VIqF0",
+                                            type: "function",
+                                            function: {
+                                                name: "GetCategoryDocument",
+                                                arguments: '{"ProductCategoryId":"categories/1-A"}',
+                                            },
+                                        },
+                                    ],
+                                    refusal: null,
+                                    annotations: [],
+                                    date: "2025-11-14T11:52:06.1390164Z",
+                                    usage: {
+                                        PromptTokens: 162,
+                                        CompletionTokens: 20,
+                                        TotalTokens: 182,
+                                        CachedTokens: 0,
+                                        ReasoningTokens: 0,
+                                    },
+                                },
+                                {
+                                    tool_call_id: "call_XtK92jZdo34uCuKbaX2VIqF0",
+                                    role: "tool",
+                                    content:
+                                        '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales","@metadata":{"@id":"categories/1-A","@last-modified":"2018-07-27T12:15:47.7253469Z"}}]',
+                                    date: "2025-11-14T11:52:06.1405566Z",
+                                },
+                                {
+                                    role: "assistant",
+                                    content: '{"Category":"Beverages"}',
+                                    refusal: null,
+                                    annotations: [],
+                                    date: "2025-11-14T11:52:08.1190319Z",
+                                    usage: {
+                                        PromptTokens: 66,
+                                        CompletionTokens: 50,
+                                        TotalTokens: 116,
+                                        CachedTokens: 0,
+                                        ReasoningTokens: 0,
+                                    },
+                                },
+                            ],
+                            LinkedConversations: [],
+                            TotalUsage: {
+                                PromptTokens: 410,
+                                CompletionTokens: 70,
+                                TotalTokens: 480,
+                                CachedTokens: 0,
+                                ReasoningTokens: 0,
+                            },
+                            OpenActionCalls: {},
+                            LastMessageAt: "2025-11-14T11:52:08.1190319Z",
+                            CreatedAt: "2025-11-14T11:52:05.0963258Z",
+                            Expires: null,
+                            CurrentUsage: {
+                                PromptTokens: 248,
+                                CompletionTokens: 50,
+                                TotalTokens: 298,
+                                CachedTokens: 0,
+                                ReasoningTokens: 0,
+                            },
+                            RemainingToolIterations: 16,
+                            "@metadata": {
+                                "@collection": "@conversations",
+                            },
+                        },
+                    },
+                    DocumentId: null,
+                },
+            ],
         };
     }
 
