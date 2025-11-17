@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -619,12 +619,6 @@ namespace Sparrow.Json.Parsing
                 if (current is Enum)
                 {
                     current = current.ToString();
-                    continue;
-                }
-
-                if (current is IDynamicJson convertible)
-                {
-                    current = convertible.ToJson();
                     continue;
                 }
 
