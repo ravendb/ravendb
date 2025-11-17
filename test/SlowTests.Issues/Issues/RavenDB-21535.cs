@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -20,11 +22,12 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanNotAccess_WithoutSAN()
         {
-            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes);
+            var log = new StringBuilder();
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, log: log);
 
             var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
-            var server = GetNewServer(new ServerCreationOptions
+            using var server = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
@@ -34,8 +37,8 @@ namespace SlowTests.Issues
                 }
             });
 
-            var result = server.AuthenticateConnectionCertificate(client, null);
-            Assert.Equal(RavenServer.AuthenticationStatus.UnfamiliarCertificate, result.Status);
+            var result = server.AuthenticateConnectionCertificate(client, null, log);
+            Assert.True(RavenServer.AuthenticationStatus.UnfamiliarCertificate == result.Status, $"Expected: {RavenServer.AuthenticationStatus.UnfamiliarCertificate} but got: {result.Status}. Log: {log}");
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
@@ -46,11 +49,12 @@ namespace SlowTests.Issues
         [InlineData("localhost", "localhost")]
         public void KnownIssuerCert_CanAccess_WithValidSAN(string publicDomain, string san)
         {
-            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, san);
+            var log = new StringBuilder();
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, [san], log);
 
             var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
-            var server = GetNewServer(new ServerCreationOptions
+            using var server = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
@@ -60,8 +64,8 @@ namespace SlowTests.Issues
                 }
             });
 
-            var result = server.AuthenticateConnectionCertificate(client, null);
-            Assert.Equal(RavenServer.AuthenticationStatus.ClusterAdmin, result.Status);
+            var result = server.AuthenticateConnectionCertificate(client, null, log);
+            Assert.True(RavenServer.AuthenticationStatus.ClusterAdmin == result.Status, $"Expected: {RavenServer.AuthenticationStatus.ClusterAdmin} but got: {result.Status}. Log: {log}");
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
@@ -72,11 +76,12 @@ namespace SlowTests.Issues
         [InlineData("aaa.localhost", "aaa.localhost.bbb")]
         public void KnownIssuerCert_CanNotAccess_WithInvalidSAN(string publicDomain, string san)
         {
-            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, san);
+            var log = new StringBuilder();
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, [san], log);
 
             var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
-            var server = GetNewServer(new ServerCreationOptions
+            using var server = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
@@ -86,18 +91,19 @@ namespace SlowTests.Issues
                 }
             });
 
-            var result = server.AuthenticateConnectionCertificate(client, null);
-            Assert.Equal(RavenServer.AuthenticationStatus.UnfamiliarCertificate, result.Status);
+            var result = server.AuthenticateConnectionCertificate(client, null, log);
+            Assert.True(RavenServer.AuthenticationStatus.UnfamiliarCertificate == result.Status, $"Expected: {RavenServer.AuthenticationStatus.UnfamiliarCertificate} but got: {result.Status}. Log: {log}");
         }
 
         [RavenFact(RavenTestCategory.Certificates)]
         public void KnownIssuerCert_CanAccess_WhenSANValidation_IsDisabled_AndNotMatchingServerDomainName()
         {
-            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, LocalDomainName);
+            var log = new StringBuilder();
+            string caBase64 = GenerateCaAndServerCert(out byte[] clientCertBytes, [LocalDomainName], log);
 
             var client = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes);
 
-            var server = GetNewServer(new ServerCreationOptions
+            using var server = GetNewServer(new ServerCreationOptions
             {
                 CustomSettings = new Dictionary<string, string>
                 {
@@ -106,16 +112,18 @@ namespace SlowTests.Issues
                 }
             });
 
-            var result = server.AuthenticateConnectionCertificate(client, null);
-            Assert.Equal(RavenServer.AuthenticationStatus.ClusterAdmin, result.Status);
+            var result = server.AuthenticateConnectionCertificate(client, null, log);
+            Assert.True(RavenServer.AuthenticationStatus.ClusterAdmin == result.Status, $"Expected: {RavenServer.AuthenticationStatus.ClusterAdmin} but got: {result.Status}. Log: {log}");
         }
 
-        private static string GenerateCaAndServerCert(out byte[] clientCertBytes, params string[] sans)
+        private static string GenerateCaAndServerCert(out byte[] clientCertBytes, string[] sans = null, StringBuilder log = null)
         {
             var suffix = Guid.NewGuid().ToString().Split('-')[0];
             
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"ca-{suffix}", out var caKeyPair, out _);
+            var caCommonNameValue = $"ca-{suffix}";
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caKeyPair, out _);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
+            log?.AppendLine($"Created CA: {ca.GetDisplayName()} ({ca.Thumbprint})");
 
             CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue: $"admin-{suffix}",
@@ -126,6 +134,10 @@ namespace SlowTests.Issues
                 notAfter: DateTime.UtcNow.Date.AddMonths(1),
                 out clientCertBytes,
                 sans: sans);
+            var adminCert = CertificateLoaderUtil.CreateCertificateFromAny(clientCertBytes);
+            log?.AppendLine($"Created admin cert: {adminCert.GetDisplayName()} ({adminCert.Thumbprint})");
+            
+            CertificateUtils.RemoveOldTestCertificatesFromOsStore(caCommonNameValue);
             return caBase64;
         }
 

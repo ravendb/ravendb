@@ -54,6 +54,9 @@ namespace Raven.Server.Documents.ETL.Stats
 
         private EtlPerformanceStats CreatePerformanceStats(bool completed)
         {
+            if (Scope == null || Stats == null)
+                return null;
+
             return new EtlPerformanceStats(Scope.Duration)
             {
                 Id = Id,
@@ -81,9 +84,6 @@ namespace Raven.Server.Documents.ETL.Stats
         {
             if (_performanceStats != null)
                 return _performanceStats;
-
-            if (Scope == null || Stats == null)
-                return null;
 
             if (Completed)
                 return ToPerformanceStats();

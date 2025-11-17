@@ -25,7 +25,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
@@ -52,6 +51,12 @@ namespace Raven.Server.Documents.Patch
         private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
         private static readonly string AllowStringCompilationKey = RavenConfiguration.GetKey(x => x.Patching.AllowStringCompilation);
 
+        /// <summary>
+        /// This class holds a <see cref="SingleRun"/> with its underlying <see cref="Engine"/>.
+        ///
+        /// It uses one of the two fields to hold it. It's either <see cref="Value"/> that is a strong reference or
+        /// <see cref="WeakValue"/> that the value might be moved to when <see cref="RunIdleOperations"/> is performed.
+        /// </summary>
         public sealed class Holder
         {
             public Holder(long generation)
@@ -65,17 +70,18 @@ namespace Raven.Server.Documents.Patch
             public WeakReference<SingleRun> WeakValue;
         }
 
-        private readonly ConcurrentQueue<Holder> _cache = new ConcurrentQueue<Holder>();
+        private readonly ConcurrentQueue<Holder> _cache = new();
         private readonly ScriptRunnerCache _parent;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
-        public readonly List<Prepared<Script>> ScriptsSource = new List<Prepared<Script>>();
+        private readonly List<Prepared<Script>> _scriptsSource = new();
 
         public int NumberOfCachedScripts => _cache.Count(x =>
             x.Value != null ||
             x.WeakValue?.TryGetTarget(out _) == true);
 
-        internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
+        private readonly Dictionary<string, DeclaredFunction> _timeSeriesDeclaration = new();
+        private Dictionary<string, Func<JsValue, JsValue[], JsValue>> _clrFunctions = null;
 
         public long Runs;
         private DateTime _lastRun;
@@ -100,7 +106,7 @@ namespace Raven.Server.Documents.Patch
                 ["CachedScriptsCount"] = _cache.Count
             };
             if (detailed)
-                djv["ScriptsSource"] = ScriptsSource;
+                djv["ScriptsSource"] = _scriptsSource;
 
             return djv;
         }
@@ -115,7 +121,7 @@ namespace Raven.Server.Documents.Patch
                     // we cannot be sure about projected elements, they might use strict mode reserved words like 'package'
                     strict = false;
                 }
-                ScriptsSource.Add(Engine.PrepareScript(script, strict: strict));
+                _scriptsSource.Add(Engine.PrepareScript(script, strict: strict));
             }
             catch (Exception e)
             {
@@ -125,7 +131,17 @@ namespace Raven.Server.Documents.Patch
 
         public void AddTimeSeriesDeclaration(DeclaredFunction func)
         {
-            TimeSeriesDeclaration.Add(func.Name, func);
+            _timeSeriesDeclaration.Add(func.Name, func);
+        }
+
+        /// <summary>
+        /// Sets a clr function <paramref name="func"/> under <see cref="name"/>.
+        /// If the function was set before, it will be overwritten.
+        /// </summary>
+        public void SetClrFunction(string name, Func<JsValue, JsValue[], JsValue> func)
+        {
+            _clrFunctions ??= new Dictionary<string, Func<JsValue, JsValue[], JsValue>>();
+            _clrFunctions[name] = func;
         }
 
         public ReturnRun GetRunner(bool ignoreValidationErrors, out SingleRun run)
@@ -150,7 +166,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, ScriptsSource, ignoreValidationErrors);
+                    holder.Value = new SingleRun(_parent.Database, _parent.Configuration, this, _scriptsSource, ignoreValidationErrors);
                 }
             }
 
@@ -283,18 +299,18 @@ namespace Raven.Server.Documents.Patch
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
-                ScriptEngine.SetValue(GetMetadataMethod, new ClrFunction(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
-                ScriptEngine.SetValue("metadataFor", new ClrFunction(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
-                ScriptEngine.SetValue("id", new ClrFunction(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
-                ScriptEngine.SetValue("count", new ClrFunction(ScriptEngine, "count", JavaScriptUtils.Count));
-                ScriptEngine.SetValue("key", new ClrFunction(ScriptEngine, "key", JavaScriptUtils.Key));
-                ScriptEngine.SetValue("sum", new ClrFunction(ScriptEngine, "sum", JavaScriptUtils.Sum));
+                ScriptEngine.SetClrFunc(GetMetadataMethod, JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetClrFunc("metadataFor", JavaScriptUtils.GetMetadata);
+                ScriptEngine.SetClrFunc("id", JavaScriptUtils.GetDocumentId);
+                ScriptEngine.SetClrFunc("count", JavaScriptUtils.Count);
+                ScriptEngine.SetClrFunc("key", JavaScriptUtils.Key);
+                ScriptEngine.SetClrFunc("sum", JavaScriptUtils.Sum);
 
-                ScriptEngine.SetValue("output", new ClrFunction(ScriptEngine, "output", OutputDebug));
+                ScriptEngine.SetClrFunc("output", OutputDebug);
 
                 //console.log
                 ObjectInstance consoleObject = new JsObject(ScriptEngine);
-                consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunction(ScriptEngine, "log", OutputDebug), false, false, false));
+                consoleObject.SetClfFunc("log", OutputDebug);
                 ScriptEngine.SetValue("console", consoleObject);
 
                 //spatial.distance
@@ -308,57 +324,64 @@ namespace Raven.Server.Documents.Patch
                 var includeDocumentFunc = new ClrFunction(ScriptEngine, "include", IncludeDoc);
                 ObjectInstance includesObject = new JsObject(ScriptEngine);
                 includesObject.FastSetProperty("document", new PropertyDescriptor(includeDocumentFunc, false, false, false));
-                includesObject.FastSetProperty("cmpxchg", new PropertyDescriptor(new ClrFunction(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false));
-                includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunction(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
+                includesObject.SetClfFunc("cmpxchg", IncludeCompareExchangeValue);
+                includesObject.SetClfFunc("revisions", IncludeRevisions);
                 ScriptEngine.SetValue("includes", includesObject);
 
                 // archived API
-                var unarchiveDocumentFunc = new ClrFunction(ScriptEngine, "unarchive", UnarchiveDoc);
-                var archiveAtDocumentFunc = new ClrFunction(ScriptEngine, "archiveAt", ArchiveAt);
                 ObjectInstance archivedObject = new JsObject(ScriptEngine);
-                archivedObject.FastSetProperty("archiveAt", new PropertyDescriptor(archiveAtDocumentFunc, false, false, false));
-                archivedObject.FastSetProperty("unarchive", new PropertyDescriptor(unarchiveDocumentFunc, false, false, false));
+                archivedObject.SetClfFunc("archiveAt", ArchiveAt);
+                archivedObject.SetClfFunc("unarchive", UnarchiveDoc);
                 ScriptEngine.SetValue("archived", archivedObject);
 
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
 
-                ScriptEngine.SetValue("load", new ClrFunction(ScriptEngine, "load", LoadDocument));
-                ScriptEngine.SetValue("LoadDocument", new ClrFunction(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
+                ScriptEngine.SetClrFunc("load", LoadDocument);
+                ScriptEngine.SetClrFunc("LoadDocument", ThrowOnLoadDocument);
 
-                ScriptEngine.SetValue("loadPath", new ClrFunction(ScriptEngine, "loadPath", LoadDocumentByPath));
-                ScriptEngine.SetValue("del", new ClrFunction(ScriptEngine, "del", DeleteDocument));
-                ScriptEngine.SetValue("DeleteDocument", new ClrFunction(ScriptEngine, "DeleteDocument", ThrowOnDeleteDocument));
-                ScriptEngine.SetValue("put", new ClrFunction(ScriptEngine, "put", PutDocument));
-                ScriptEngine.SetValue("PutDocument", new ClrFunction(ScriptEngine, "PutDocument", ThrowOnPutDocument));
-                ScriptEngine.SetValue("cmpxchg", new ClrFunction(ScriptEngine, "cmpxchg", CompareExchange));
+                ScriptEngine.SetClrFunc("loadPath", LoadDocumentByPath);
+                ScriptEngine.SetClrFunc("del", DeleteDocument);
+                ScriptEngine.SetClrFunc("DeleteDocument", ThrowOnDeleteDocument);
+                ScriptEngine.SetClrFunc("put", PutDocument);
+                ScriptEngine.SetClrFunc("PutDocument", ThrowOnPutDocument);
+                ScriptEngine.SetClrFunc("cmpxchg", CompareExchange);
 
-                ScriptEngine.SetValue("counter", new ClrFunction(ScriptEngine, "counter", GetCounter));
-                ScriptEngine.SetValue("counterRaw", new ClrFunction(ScriptEngine, "counterRaw", GetCounterRaw));
-                ScriptEngine.SetValue("incrementCounter", new ClrFunction(ScriptEngine, "incrementCounter", IncrementCounter));
-                ScriptEngine.SetValue("deleteCounter", new ClrFunction(ScriptEngine, "deleteCounter", DeleteCounter));
+                ScriptEngine.SetClrFunc("counter", GetCounter);
+                ScriptEngine.SetClrFunc("counterRaw", GetCounterRaw);
+                ScriptEngine.SetClrFunc("incrementCounter", IncrementCounter);
+                ScriptEngine.SetClrFunc("deleteCounter", DeleteCounter);
 
-                ScriptEngine.SetValue("lastModified", new ClrFunction(ScriptEngine, "lastModified", GetLastModified));
+                ScriptEngine.SetClrFunc("lastModified", GetLastModified);
 
-                ScriptEngine.SetValue("startsWith", new ClrFunction(ScriptEngine, "startsWith", StartsWith));
-                ScriptEngine.SetValue("endsWith", new ClrFunction(ScriptEngine, "endsWith", EndsWith));
-                ScriptEngine.SetValue("regex", new ClrFunction(ScriptEngine, "regex", Regex));
+                ScriptEngine.SetClrFunc("startsWith", StartsWith);
+                ScriptEngine.SetClrFunc("endsWith", EndsWith);
+                ScriptEngine.SetClrFunc("regex", Regex);
 
-                ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunction(ScriptEngine, "Raven_ExplodeArgs", ExplodeArgs));
-                ScriptEngine.SetValue("Raven_Min", new ClrFunction(ScriptEngine, "Raven_Min", Raven_Min));
-                ScriptEngine.SetValue("Raven_Max", new ClrFunction(ScriptEngine, "Raven_Max", Raven_Max));
+                ScriptEngine.SetClrFunc("Raven_ExplodeArgs", ExplodeArgs);
+                ScriptEngine.SetClrFunc("Raven_Min", Raven_Min);
+                ScriptEngine.SetClrFunc("Raven_Max", Raven_Max);
 
-                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunction(ScriptEngine, "convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString));
-                ScriptEngine.SetValue("convertToTimeSpanString", new ClrFunction(ScriptEngine, "convertToTimeSpanString", ConvertToTimeSpanString));
-                ScriptEngine.SetValue("compareDates", new ClrFunction(ScriptEngine, "compareDates", CompareDates));
+                ScriptEngine.SetClrFunc("convertJsTimeToTimeSpanString", ConvertJsTimeToTimeSpanString);
+                ScriptEngine.SetClrFunc("convertToTimeSpanString", ConvertToTimeSpanString);
+                ScriptEngine.SetClrFunc("compareDates", CompareDates);
 
-                ScriptEngine.SetValue("toStringWithFormat", new ClrFunction(ScriptEngine, "toStringWithFormat", ToStringWithFormat));
+                ScriptEngine.SetClrFunc("toStringWithFormat", ToStringWithFormat);
 
-                ScriptEngine.SetValue("scalarToRawString", new ClrFunction(ScriptEngine, "scalarToRawString", ScalarToRawString));
+                ScriptEngine.SetClrFunc("scalarToRawString", ScalarToRawString);
 
                 //TimeSeries
-                ScriptEngine.SetValue("timeseries", new ClrFunction(ScriptEngine, "timeseries", TimeSeries));
+                ScriptEngine.SetClrFunc("timeseries", TimeSeries);
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
+
+                // Clr Functions, apply if any
+                if (runner._clrFunctions != null)
+                {
+                    foreach ((string name, Func<JsValue, JsValue[], JsValue> value) in runner._clrFunctions)
+                    {
+                        ScriptEngine.SetClrFunc(name, value);
+                    }
+                }
 
                 foreach (var script in scriptsSource)
                 {
@@ -373,9 +396,9 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
 
-                foreach (var ts in runner.TimeSeriesDeclaration)
+                foreach (var ts in runner._timeSeriesDeclaration)
                 {
-                    ScriptEngine.SetValue(ts.Key, NamedInvokeTimeSeriesFunction(ts.Key));
+                    ScriptEngine.SetClrFunc(ts.Key, (self, args) => InvokeTimeSeriesFunction(ts.Key, args));
                 }
             }
 
@@ -437,29 +460,14 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new ArgumentException($"{_timeSeriesSignature}: This method requires 2 arguments but was called with {args.Length}");
 
-                var append = new ClrFunction(ScriptEngine, "append", (thisObj, values) =>
-                    AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var increment = new ClrFunction(ScriptEngine, "increment", (thisObj, values) =>
-                    IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var delete = new ClrFunction(ScriptEngine, "delete", (thisObj, values) =>
-                    DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var get = new ClrFunction(ScriptEngine, "get", (thisObj, values) =>
-                    GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
-                var getStats = new ClrFunction(ScriptEngine, "getStats", (thisObj, values) =>
-                    GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
-
                 var obj = new JsObject(ScriptEngine);
-                obj.FastSetDataProperty("append", append);
-                obj.FastSetDataProperty("increment", increment);
-                obj.FastSetDataProperty("delete", delete);
-                obj.FastSetDataProperty("get", get);
+                obj.SetClfFunc("append", (thisObj, values) => AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("increment", (thisObj, values) => IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("delete", (thisObj, values) => DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("get", (thisObj, values) => GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
                 obj.FastSetDataProperty("doc", args[0]);
                 obj.FastSetDataProperty("name", args[1]);
-                obj.FastSetDataProperty("getStats", getStats);
+                obj.SetClfFunc("getStats", (thisObj, values) => GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 return obj;
             }
@@ -1011,7 +1019,7 @@ namespace Raven.Server.Documents.Patch
 
             public override string ToString()
             {
-                return string.Join(Environment.NewLine, _runner.ScriptsSource);
+                return string.Join(Environment.NewLine, _runner._scriptsSource);
             }
 
             private static JsValue GetLastModified(JsValue self, JsValue[] args)
@@ -1628,7 +1636,7 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("InvokeTimeSeriesFunction");
 
-                if (_runner.TimeSeriesDeclaration.TryGetValue(name, out var func) == false)
+                if (_runner._timeSeriesDeclaration.TryGetValue(name, out var func) == false)
                     throw new InvalidOperationException($"Failed to invoke time series function. Unknown time series name '{name}'.");
 
                 object[] tsFunctionArgs = GetTimeSeriesFunctionArgs(name, args, out string docId, out var lazyIds);
@@ -2093,7 +2101,7 @@ namespace Raven.Server.Documents.Patch
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
-            private JsValue[] _args = Array.Empty<JsValue>();
+            private JsValue[] _args = [];
             private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
             public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null, CancellationToken token = default)

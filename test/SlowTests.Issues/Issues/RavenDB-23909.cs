@@ -21,8 +21,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
         using (var store = GetDocumentStore(options))
         {
             var (configuration, _) = AddEmbeddingsGenerationTask(store);
-
-
+            
             using (var session = store.OpenSession())
             {
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);

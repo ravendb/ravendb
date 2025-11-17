@@ -67,26 +67,23 @@ namespace SlowTests.Blittable
             }
         }
 
-        //Todo Fixing the clone implementation to support this situation or throw clear error
-        [RavenFact(RavenTestCategory.Core, Skip = "Should fixing the clone implementation to support this situation or throw clear error")]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clone_WhenContainItemsOfObjects_AndOriginAndCloneOnSameContext_ShouldBeEqualToOrigin()
         {
             //Arrange
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using var context = JsonOperationContext.ShortTermSingleUse();
+            var data = new
             {
-                var data = new
-                {
-                    Property = new[] { new { Prop = "Value1" }, new { Prop = "Value2" } }
-                };
-                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
-                readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
+                Property = new object[] { new { Prop1 = "Value1" }, new { Prop2 = "Value2" } }
+            };
+            var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
+            readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
-                //Action
-                var actual = expected.Clone(context);
+            //Action
+            var actual = expected.Clone(context);
 
-                //Assert
-                Assert.Equal(expected, actual);
-            }
+            //Assert
+            Assert.Equal(expected, actual);
         }
 
         [RavenFact(RavenTestCategory.Core)]

@@ -57,7 +57,8 @@ class configurationItem {
         "Storage.JournalsCompressionAcceleration",
         "Indexing.Storage.DisableSharedJournals",
         "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
-        "Indexing.ElapsedSinceQueriedPersistIntervalInMin"
+        "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
+        "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery"
         
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*

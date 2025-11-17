@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public abstract class AbstractAiSettings : IDynamicJsonValueConvertible
+public abstract class AbstractAiSettings : IDynamicJson
 {
     public abstract void ValidateFields(List<string> errors);
 

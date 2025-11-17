@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -25,7 +25,7 @@ public class ServerLimitsDetails : INotificationDetails
         return djv;
     }
 
-    public class ServerLimitInfo : IDynamicJsonValueConvertible
+    public class ServerLimitInfo : IDynamicJson
     {
         public long Value { get; set; }
         public long Max { get; set; }

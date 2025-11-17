@@ -31,9 +31,29 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Error(message);
     }
 
+    public void Error(string message, params object[] args)
+    {
+        _logger.Error(message, args);
+    }
+
     public void Error(string message, Exception exception)
     {
         _logger.Error(exception, message);
+    }
+
+    public void Error(Exception exception, string message, params object[] args)
+    {
+        _logger.Error(exception, message, args);
+    }
+
+    public void Error<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+    {
+        _logger.Error(message, argument1, argument2);
+    }
+    
+    public void Error<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+    {
+        _logger.Error(message, argument1, argument2, argument3);
     }
 
     public void Info(string message)
@@ -41,9 +61,29 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Info(message);
     }
 
+    public void Info(string message, params object[] args)
+    {
+        _logger.Info(message, args);
+    }
+
     public void Info(string message, Exception exception)
     {
         _logger.Info(exception, message);
+    }
+
+    public void Info(Exception exception, string message, params object[] args)
+    {
+        _logger.Info(exception, message, args);
+    }
+
+    public void Info<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+    {
+        _logger.Info(message, argument1, argument2);
+    }
+
+    public void Info<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+    {
+        _logger.Info(message, argument1, argument2, argument3);   
     }
 
     public void Debug(string message)
@@ -51,19 +91,59 @@ public sealed class RavenLogger : IRavenLogger
         _logger.Debug(message);
     }
 
+    public void Debug(string message, params object[] args)
+    {
+        _logger.Debug(message, args);
+    }
+
     public void Debug(string message, Exception exception)
     {
         _logger.Debug(exception, message);
     }
-    
+
+    public void Debug(Exception exception, string message, params object[] args)
+    {
+        _logger.Debug(exception, message, args);
+    }
+
+    public void Debug<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+    {
+        _logger.Debug(message, argument1, argument2);   
+    }
+
+    public void Debug<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+    {
+        _logger.Debug(message, argument1, argument2, argument3);  
+    }
+
     public void Warn(string message)
     {
         _logger.Warn(message);
     }
 
+    public void Warn(string message, params object[] args)
+    {
+        _logger.Warn(message, args);
+    }
+
     public void Warn(string message, Exception exception)
     {
         _logger.Warn(exception, message);
+    }
+
+    public void Warn(Exception exception, string message, params object[] args)
+    {
+        _logger.Warn(exception, message, args);  
+    }
+
+    public void Warn<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+    {
+        _logger.Warn(message, argument1, argument2);
+    }
+
+    public void Warn<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+    {
+        _logger.Warn(message, argument1, argument2, argument3);
     }
 
     public void Fatal(string message)
@@ -73,6 +153,11 @@ public sealed class RavenLogger : IRavenLogger
         Console.Error.WriteLine(message);
     }
 
+    public void Fatal(string message, params object[] args)
+    {
+        _logger.Fatal(message, args);
+    }
+
     public void Fatal(string message, Exception exception)
     {
         _logger.Fatal(exception, message);
@@ -80,14 +165,49 @@ public sealed class RavenLogger : IRavenLogger
         Console.Error.WriteLine(message + Environment.NewLine + exception);
     }
 
+    public void Fatal(Exception exception, string message, params object[] args)
+    {
+        _logger.Fatal(exception, message, args);
+    }
+
+    public void Fatal<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+    {
+        _logger.Fatal(message, argument1, argument2);
+    }
+
+    public void Fatal<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+    {
+        _logger.Fatal(message, argument1, argument2, argument3);   
+    }
+
     public void Trace(string message)
     {
         _logger.Trace(message);
     }
 
+    public void Trace(string message, params object[] args)
+    {
+        _logger.Trace(message, args);
+    }
+
     public void Trace(string message, Exception exception)
     {
         _logger.Trace(exception, message);
+    }
+
+    public void Trace(Exception exception, string message, params object[] args)
+    {
+        _logger.Trace(exception, message, args); 
+    }
+
+    public void Trace<TArgument1, TArgument2>(string message, TArgument1 argument1, TArgument2 argument2)
+    {
+        _logger.Trace(message, argument1, argument2);
+    }
+
+    public void Trace<TArgument1, TArgument2, TArgument3>(string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3)
+    {
+        _logger.Trace(message, argument1, argument2, argument3);
     }
 
     public bool IsEnabled(LogLevel logLevel)

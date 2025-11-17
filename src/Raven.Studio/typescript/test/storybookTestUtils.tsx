@@ -1,13 +1,9 @@
 import { mockServices } from "./mocks/services/MockServices";
 import React from "react";
-import { configureMockServices, ServiceProvider } from "components/hooks/useServices";
-import { ChangesProvider } from "hooks/useChanges";
-import { mockHooks } from "test/mocks/hooks/MockHooks";
-import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
-import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
+import { configureMockServices } from "components/hooks/useServices";
 import { ReactRenderer } from "@storybook/react-webpack5";
 import { PartialStoryFn } from "storybook/internal/types";
-import { DialogProvider } from "components/common/Dialog";
+import { MockProviders } from "./rtlTestUtils";
 
 type StoryFunction = PartialStoryFn<
     ReactRenderer,
@@ -39,17 +35,9 @@ function forceStoryRerender() {
 
 export function withStorybookContexts(Story: StoryFunction) {
     return (
-        <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
-            <ConfirmDialogProvider>
-                <DialogProvider>
-                    <ServiceProvider services={mockServices.context}>
-                        <ChangesProvider changes={mockHooks.useChanges.mock}>
-                            <Story />
-                        </ChangesProvider>
-                    </ServiceProvider>
-                </DialogProvider>
-            </ConfirmDialogProvider>
-        </DirtyFlagProvider>
+        <MockProviders>
+            <Story />
+        </MockProviders>
     );
 }
 

@@ -324,7 +324,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         var chatCompletionClient = etlProcess.GetChatCompletionClient();
         chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
         {
-            if (ctx.Contains(config.Prompt))
+            if (ctx.Contains(config.Prompt) || ctx.Contains("AI Agent Parameters:"))
                 return Task.CompletedTask;
 
             if (Interlocked.Decrement(ref triggerOn) <= 0)

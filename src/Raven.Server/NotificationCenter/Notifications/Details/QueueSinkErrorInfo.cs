@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public class QueueSinkErrorInfo : IDynamicJsonValueConvertible
+    public class QueueSinkErrorInfo : IDynamicJson
     {
         public QueueSinkErrorInfo(string error)
         {

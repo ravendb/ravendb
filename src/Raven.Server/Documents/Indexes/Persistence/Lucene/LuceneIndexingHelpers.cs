@@ -65,7 +65,7 @@ public static class LuceneIndexingHelpers
             analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
         }
 
-        var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
+        var perFieldAnalyzerWrapper = (forQuerying == false || index.Configuration.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery) && indexDefinition.HasDynamicFields
             ? new LuceneRavenPerFieldAnalyzerWrapper(
                 defaultAnalyzerToUse,
                 fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
@@ -100,9 +100,7 @@ public static class LuceneIndexingHelpers
                     {
                         // if we have default field options then we need to take into account overrides for regular fields
 
-                        if (defaultAnalyzer == null)
-                            defaultAnalyzer = CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
-
+                        defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, defaultAnalyzer);
                         continue;
                     }

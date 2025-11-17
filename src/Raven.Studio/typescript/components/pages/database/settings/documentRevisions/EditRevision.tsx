@@ -116,6 +116,9 @@ export default function EditRevision(props: EditRevisionProps) {
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
+    const isAgeRetentionActive =
+        formValues.isMinimumRevisionAgeToKeepEnabled && formValues.minimumRevisionAgeToKeep > 0;
+
     return (
         <Modal size="lg" show onHide={toggle} contentClassName="modal-border bulge-info">
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
@@ -142,7 +145,17 @@ export default function EditRevision(props: EditRevisionProps) {
                         Purge revisions on document delete
                     </FormSwitch>
                     <FormSwitch control={control} name="isMinimumRevisionsToKeepEnabled">
-                        Limit # of revisions to keep
+                        <span>
+                            Set the number of revisions to keep
+                            <br />
+                            <span className="text-muted">
+                                (
+                                {isAgeRetentionActive
+                                    ? "The minimum number of revisions to keep (age-based retention enabled)"
+                                    : "The maximum number of revisions to keep"}
+                                )
+                            </span>
+                        </span>
                     </FormSwitch>
                     {formValues.isMinimumRevisionsToKeepEnabled && (
                         <div>
@@ -165,7 +178,7 @@ export default function EditRevision(props: EditRevisionProps) {
                         </div>
                     )}
                     <FormSwitch control={control} name="isMinimumRevisionAgeToKeepEnabled">
-                        Limit # of revisions to keep by age
+                        Set the number of revisions to keep by age
                     </FormSwitch>
                     {formValues.isMinimumRevisionAgeToKeepEnabled && (
                         <div className="mb-2">
@@ -192,7 +205,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     {(formValues.isMinimumRevisionsToKeepEnabled || formValues.isMinimumRevisionAgeToKeepEnabled) && (
                         <>
                             <FormSwitch control={control} name="isMaximumRevisionsToDeleteUponDocumentUpdateEnabled">
-                                Set # of revisions to delete upon document update
+                                Set the number of revisions to delete upon document update
                             </FormSwitch>
                             {formValues.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled && (
                                 <InputGroup className="mb-2">
@@ -228,7 +241,7 @@ export default function EditRevision(props: EditRevisionProps) {
                             {formValues.minimumRevisionsToKeep > 0 && (
                                 <>
                                     <li>
-                                        {formValues.minimumRevisionAgeToKeep > 0 ? (
+                                        {isAgeRetentionActive ? (
                                             <>
                                                 <span>At least</span>{" "}
                                                 <strong>{formValues.minimumRevisionsToKeep}</strong> of the latest
@@ -243,7 +256,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                         </span>
                                         will be kept.
                                     </li>
-                                    {formValues.minimumRevisionAgeToKeep > 0 ? (
+                                    {isAgeRetentionActive ? (
                                         <li>
                                             Older revisions will be removed if they exceed{" "}
                                             <strong>{formattedMinimumRevisionAgeToKeep}</strong> on next revision

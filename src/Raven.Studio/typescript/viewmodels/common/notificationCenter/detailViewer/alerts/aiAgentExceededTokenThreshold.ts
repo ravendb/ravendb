@@ -14,6 +14,7 @@ interface ToolCallItem {
     name: string;
     type: string;
     arguments: string;
+    query: string;
 }
 
 class aiAgentExceededTokenThreshold extends abstractAlertDetails {
@@ -43,7 +44,8 @@ class aiAgentExceededTokenThreshold extends abstractAlertDetails {
             id: tc.Id,
             name: tc.Name,
             type: tc.Type,
-            arguments: tc.Arguments
+            arguments: tc.Arguments,
+            query: tc.Query
         }));
     }
     
@@ -54,16 +56,17 @@ class aiAgentExceededTokenThreshold extends abstractAlertDetails {
         grid.headerVisible(true);
 
         grid.init(() => this.fetcher(), () => {
-            const nameColumn = new textColumn<ToolCallItem>(grid, x => x.name, "Tool Name", "20%", {
-                sortable: x => x.name
-            });
-            const typeColumn = new textColumn<ToolCallItem>(grid, x => x.type, "Type", "15%", {
-                sortable: x => x.type
-            });
-            const argumentsColumn = new textColumn<ToolCallItem>(grid, x => x.arguments, "Arguments", "50%");
-            const idColumn = new textColumn<ToolCallItem>(grid, x => x.id, "ID", "15%");
-
-            return [nameColumn, typeColumn, argumentsColumn, idColumn];
+            return [
+                new textColumn<ToolCallItem>(grid, (x) => x.name, "Tool Name", "20%", {
+                    sortable: (x) => x.name,
+                }),
+                new textColumn<ToolCallItem>(grid, (x) => x.type, "Type", "15%", {
+                    sortable: (x) => x.type,
+                }),
+                new textColumn<ToolCallItem>(grid, (x) => x.arguments != null ? x.arguments : "N/A", "Arguments", "25%"),
+                new textColumn<ToolCallItem>(grid, (x) => x.query != null ? x.query : "N/A", "Query", "25%"),
+                new textColumn<ToolCallItem>(grid, (x) => x.id, "ID", "15%"),
+            ];
         });
 
         this.columnPreview.install(".aiAgentExceededTokenThresholdDetails", ".js-ai-agent-token-threshold-tooltip",

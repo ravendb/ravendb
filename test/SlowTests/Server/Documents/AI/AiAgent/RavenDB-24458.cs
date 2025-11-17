@@ -66,6 +66,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agents[1].Name = agents[0].Name;
             await store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agents[1], AiAgentBasics.OutputSchema.Instance));
             await AssertAgentInRecordAsync(store, agents[1]);
+
+            var res = await store.Maintenance.SendAsync(new DeleteAiAgentOperation(agents[0].Identifier));
+            Assert.NotNull(res);
+
+            var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new GetAiAgentsOperation(agents[0].Identifier)));
+            Assert.Contains($"AI Agent 'shopping-assistant' doesn't exists", e.Message);
         }
 
         private static async Task AssertAgentInRecordAsync(DocumentStore store, AiAgentConfiguration agent)

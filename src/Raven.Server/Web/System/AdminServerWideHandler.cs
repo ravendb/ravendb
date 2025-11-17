@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -140,7 +140,7 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse(typeAsString, out OngoingTaskType type) == false)
                 throw new ArgumentException($"{typeAsString} is unknown task type.");
 
-            Func<BlittableJsonReaderObject, IDynamicJsonValueConvertible> converter;
+            Func<BlittableJsonReaderObject, IDynamicJson> converter;
             switch (type)
             {
                 case OngoingTaskType.Backup:
@@ -223,7 +223,7 @@ namespace Raven.Server.Web.System
         }
 
         private async Task GetTaskConfigurationsAsync<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
-            where T : IDynamicJsonValueConvertible
+            where T : IDynamicJson
         {
             var taskName = GetStringQueryString("name", required: false);
 
@@ -245,8 +245,8 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public sealed class ServerWideTasksResult<T> : IDynamicJsonValueConvertible
-        where T : IDynamicJsonValueConvertible
+    public sealed class ServerWideTasksResult<T> : IDynamicJson
+        where T : IDynamicJson
     {
         public List<T> Results;
 

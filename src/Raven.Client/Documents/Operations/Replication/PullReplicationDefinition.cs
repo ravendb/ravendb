@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.Replication
     /// The definition of a pull replication task.
     /// This defines the settings and behavior for pulling data between replication hubs and sinks.
     /// </summary>
-    public sealed class PullReplicationDefinition : IDynamicJsonValueConvertible
+    public sealed class PullReplicationDefinition : IDynamicJson
     {
         /// <summary>
         /// The delay duration for replication. Data will not be replicated until the specified delay has passed.

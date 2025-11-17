@@ -23,13 +23,12 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
-using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Exceptions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -62,6 +61,7 @@ namespace FastTests
             Replication = new ReplicationTestBase2(this);
             Databases = new DatabasesTestBase(this);
             Etl = new EtlTestBase(this);
+            LicenseHelper = new LicenseTestBase(this);
         }
 
         public async ValueTask<DatabaseRecord> GetDatabaseRecordAsync(IDocumentStore store, string database = null)

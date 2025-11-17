@@ -85,6 +85,30 @@ namespace Raven.Server.Documents.Indexes.Static
                 case NodeType.CatchClause:
                     VisitCatchClause(statement.As<CatchClause>());
                     break;
+                case NodeType.ChainExpression:
+                    VisitChainExpression(statement.As<ChainExpression>());
+                    break;
+                case NodeType.TemplateLiteral:
+                    VisitTemplateLiteral(statement.As<TemplateLiteral>());
+                    break;
+                case NodeType.ForOfStatement:
+                    VisitForOfStatement(statement.As<ForOfStatement>());
+                    break;
+                case NodeType.ClassDeclaration:
+                    VisitClassDeclaration(statement.As<ClassDeclaration>());
+                    break;
+                case NodeType.ImportDeclaration:
+                    VisitImportDeclaration(statement.As<ImportDeclaration>());
+                    break;
+                case NodeType.ExportNamedDeclaration:
+                    VisitExportNamedDeclaration(statement.As<ExportNamedDeclaration>());
+                    break;
+                case NodeType.ExportAllDeclaration:
+                    VisitExportAllDeclaration(statement.As<ExportAllDeclaration>());
+                    break;
+                case NodeType.ExportDefaultDeclaration:
+                    VisitExportDefaultDeclaration(statement.As<ExportDefaultDeclaration>());
+                    break;
                 default:
                     VisitUnknownNode(statement);
                     break;
@@ -323,6 +347,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 case NodeType.SpreadElement:
                     VisitSpreadElement(expression.As<SpreadElement>());
                     break;
+                case NodeType.ChainExpression:
+                    VisitChainExpression(expression.As<ChainExpression>());
+                    break;
+                case NodeType.TemplateLiteral:
+                    VisitTemplateLiteral(expression.As<TemplateLiteral>());
+                    break;
                 default:
                     VisitUnknownNode(expression);
                     break;
@@ -357,6 +387,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitThisExpression(ThisExpression thisExpression)
         {
+        }
+
+        public virtual void VisitChainExpression(ChainExpression chainExpression)
+        {
+            VisitExpression(chainExpression.Expression);
         }
 
         public virtual void VisitSequenceExpression(SequenceExpression sequenceExpression)
@@ -684,6 +719,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitTaggedTemplateExpression(TaggedTemplateExpression taggedTemplateExpression)
         {
+            // Visit the tag (callee) and the template literal (quasi)
+            VisitExpression(taggedTemplateExpression.Tag);
+            VisitTemplateLiteral(taggedTemplateExpression.Quasi);
         }
 
         public virtual void VisitSuper(Super super)
@@ -717,6 +755,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitTemplateLiteral(TemplateLiteral templateLiteral)
         {
+            foreach (var q in templateLiteral.Quasis)
+            {
+                VisitTemplateElement(q);
+            }
+            foreach (var expr in templateLiteral.Expressions)
+            {
+                VisitExpression(expr);
+            }
         }
 
         public virtual void VisitTemplateElement(TemplateElement templateElement)

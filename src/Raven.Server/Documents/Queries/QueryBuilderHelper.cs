@@ -534,7 +534,7 @@ public static class QueryBuilderHelper
     
     internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping,
         FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
-        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false)
+        bool exact = false, bool isSorting = false, bool hasBoost = false, bool handleSearch = false, bool forceDefaultSearchAnalyzer = false)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         FieldMetadata metadata;
@@ -576,7 +576,12 @@ public static class QueryBuilderHelper
             var mode = exact
                 ? FieldIndexingMode.Exact
                 : FieldIndexingMode.Normal;
-            metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer, hasBoost: hasBoost);
+            //Context: dynamic field without explicit configuration. For search query we might want to use the default search analyzer:
+            var analyzer = handleSearch && forceDefaultSearchAnalyzer 
+                ? indexMapping.SearchAnalyzer(fieldName) 
+                : indexMapping.DefaultAnalyzer;
+            
+            metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, analyzer, hasBoost: hasBoost);
         }
 
         return metadata;
