@@ -106,6 +106,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
         destinations,
     };
 }
+
 export const remoteAttachmentsUtils = {
     mapToDto,
     mapFromDto,

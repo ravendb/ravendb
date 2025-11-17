@@ -1,6 +1,7 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { azureSchema, s3Schema } from "components/common/formDestinations/utils/formDestinationsValidation";
+import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
 
 const destinationBaseSchema = yup.object({
     identifier: yup
@@ -9,7 +10,7 @@ const destinationBaseSchema = yup.object({
             const { options } = this;
 
             if (options.context?.destinations) {
-                const destinations = options.context.destinations as {identifier?: string}[];
+                const destinations = options.context.destinations as { identifier?: string }[];
                 const currentIdentifierInEdit = options.context.currentIdentifier;
 
                 const matches = destinations.filter((dest) => dest.identifier === value);
@@ -32,7 +33,7 @@ const destinationBaseSchema = yup.object({
 
 const destinationSchema = yup
     .object({
-        provider: yup.string().oneOf(["s3", "azure"]).required(),
+        provider: yup.string().oneOf(remoteAttachmentsConstants.destinationProviderList).required(),
         s3: s3Schema.nullable().when("provider", {
             is: "s3",
             then: (schema) => schema.required(),

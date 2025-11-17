@@ -35,6 +35,7 @@ import {
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
+import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
 
 interface DestinationPanelProps extends RemoteAttachmentsDestinationFormData {
     onEdit: (id: string) => void;
@@ -188,7 +189,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
                 };
 
                 const activeProvider = values.provider;
-                const providers: DestinationProviderType[] = ["s3", "azure"];
+                const providers = remoteAttachmentsConstants.destinationProviderList as DestinationProviderType[];
 
                 providers.forEach((p) => setProviderState(p, p === activeProvider));
             }

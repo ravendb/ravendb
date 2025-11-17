@@ -1089,7 +1089,10 @@ return docs[0];`,
     }
 
     private static generateDestinations(count: number) {
-        const destinations: Record<string, Raven.Client.Documents.Attachments.RemoteAttachmentsDestinationConfiguration> = {};
+        const destinations: Record<
+            string,
+            Raven.Client.Documents.Attachments.RemoteAttachmentsDestinationConfiguration
+        > = {};
 
         for (let i = 0; i < count; i++) {
             const id = this.generateIdentifier();
