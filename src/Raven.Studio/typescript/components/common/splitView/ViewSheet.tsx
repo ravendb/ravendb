@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import { ComponentProps, PropsWithChildren, ReactNode, useCallback } from "react";
 import Button, { ButtonProps } from "react-bootstrap/Button";
 import { useSplitViewContext } from "./SplitView";
-import { splitViewSelectors, splitViewActions } from "./store/splitViewSlice";
+import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
 
 export type ViewSheetWidth = number | `${number}%`;
 

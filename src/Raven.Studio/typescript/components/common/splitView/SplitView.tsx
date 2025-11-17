@@ -5,8 +5,8 @@ import useResizableWidth from "components/hooks/useResizableWidth";
 import classNames from "classnames";
 import SizeGetter from "../SizeGetter";
 import { ClassNameProps } from "components/models/common";
-import { splitViewActions, splitViewSelectors } from "./store/splitViewSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
+import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
 
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
