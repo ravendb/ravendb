@@ -399,8 +399,8 @@ namespace Raven.Server.Utils
                         pt.Dispose();
                     }
 
-                    if (CurrentProcessThread == null)
-                        throw new InvalidOperationException("Unable to get the current process thread: " + CurrentUnmanagedThreadId + ", this should not be possible");
+                    // if (CurrentProcessThread == null)
+                    //     throw new InvalidOperationException("Unable to get the current process thread: " + CurrentUnmanagedThreadId + ", this should not be possible");
                 }
 
                 AffinityHelper.ResetThreadAffinity(this);
