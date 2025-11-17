@@ -498,6 +498,60 @@ if($output.Blocked)
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task CanReproduceNullScopeNreInEtlStats(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        config.Prompt = "Check if the following blog post comment is spam or not";
+        config.Collection = "Posts";
+        config.SampleObject = JsonConvert.SerializeObject(new
+        {
+            Blocked = true,
+            Reason = "Concise reason for why this comment was marked as spam or ham"
+        });
+        config.UpdateScript = @"    
+const idx = this.Comments.findIndex(c => c.Id == $input.Id);  
+if($output.Blocked)
+{
+    this.Comments.splice(idx, 1);
+}";
+        config.GenAiTransformation = new GenAiTransformation
+        {
+            Script = @"
+for(const comment of this.Comments)
+{
+    ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
+}
+"
+        };
+
+        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+
+        var db = await GetDatabase(store.Database);
+
+        var hit = await WaitForValueAsync(() =>
+        {
+            var process = db.EtlLoader.Processes.FirstOrDefault();
+            if (process == null)
+                return false;
+
+            var latest = process.GetLatestPerformanceStats();
+            if (latest == null)
+                return false;
+
+
+            latest.ToPerformanceStats(); // if NRE happens, the test fails immediately
+
+            return true;
+
+        }, expectedVal: true, timeout: 5000);
+
+        Assert.True(hit, "ToPerformanceStats() should not throw NullReferenceException anymore.");
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldUseTaskIdentifierInMetadataHashes(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -659,7 +713,7 @@ for(const comment of this.Comments)
         var value = await WaitForValueAsync(() =>
         {
             stats = etlProcess.GetPerformanceStats()
-                .Where(x => x.NumberOfLoadedItems > 0)
+                .Where(x => x != null && x.NumberOfLoadedItems > 0)
                 .ToArray();
             return stats.Length > 0;
         }, expectedVal: true, timeout: 60_000);
@@ -725,7 +779,7 @@ for(const comment of this.Comments)
         value = await WaitForValueAsync(() =>
         {
             stats2 = etlProcess.GetPerformanceStats()
-                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag == etag + 1 && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
+                .Where(x => x != null && x.NumberOfLoadedItems > 0 && x.LastLoadedEtag == etag + 1 && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
                 .ToArray();
             return stats2.Length > 0;
         }, expectedVal: true, timeout: 60_000);
