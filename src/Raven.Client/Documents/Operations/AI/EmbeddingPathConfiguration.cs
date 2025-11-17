@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public class EmbeddingPathConfiguration : IDynamicJsonValueConvertible
+public class EmbeddingPathConfiguration : IDynamicJson
 {
     public string Path { get; set; }
     

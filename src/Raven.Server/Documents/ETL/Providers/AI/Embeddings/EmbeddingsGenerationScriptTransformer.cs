@@ -57,22 +57,22 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
             DocumentScript.DebugMode = true;
 
         ObjectInstance embeddingsObject = new JsObject(DocumentScript.ScriptEngine);
-        embeddingsObject.FastSetProperty("generate", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "generate", EmbeddingsGenerate), false, false, false));
+        embeddingsObject.SetClfFunc("generate", EmbeddingsGenerate);
         DocumentScript.ScriptEngine.SetValue("embeddings", embeddingsObject);
 
         ObjectInstance textObject = new JsObject(DocumentScript.ScriptEngine);
-        textObject.FastSetProperty("split", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "split", SplitPlainText), false, false, false));
-        textObject.FastSetProperty("splitLines", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitLines", SplitPlainTextLines), false, false, false));
-        textObject.FastSetProperty("splitParagraphs", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitParagraphs", SplitPlainTextParagraphs), false, false, false));
+        textObject.SetClfFunc("split", SplitPlainText);
+        textObject.SetClfFunc("splitLines",  SplitPlainTextLines);
+        textObject.SetClfFunc("splitParagraphs", SplitPlainTextParagraphs);
         DocumentScript.ScriptEngine.SetValue("text", textObject);
 
         ObjectInstance markdownObject = new JsObject(DocumentScript.ScriptEngine);
-        markdownObject.FastSetProperty("splitLines", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitLines", SplitMarkDownLines), false, false, false));
-        markdownObject.FastSetProperty("splitParagraphs", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "splitParagraphs", SplitMarkDownParagraphs), false, false, false));
+        markdownObject.SetClfFunc("splitLines", SplitMarkDownLines);
+        markdownObject.SetClfFunc("splitParagraphs", SplitMarkDownParagraphs);
         DocumentScript.ScriptEngine.SetValue("markdown", markdownObject);
 
         ObjectInstance htmlObject = new JsObject(DocumentScript.ScriptEngine);
-        htmlObject.FastSetProperty("strip", new PropertyDescriptor(new ClrFunction(DocumentScript.ScriptEngine, "strip", StripHtml), false, false, false));
+        htmlObject.SetClfFunc("strip", StripHtml);
         DocumentScript.ScriptEngine.SetValue("html", htmlObject);
     }
 

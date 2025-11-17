@@ -57,7 +57,7 @@ public class RavenDB_25274 : RavenTestBase
             certificateBytes = ms2.ToArray();
         }
 
-        var certificate = new X509Certificate2(certificateBytes, password);
+        var certificate = CertificateLoaderUtil.CreateCertificateFromAny(certificateBytes, password);
         Assert.Equal(notAfter.Date, certificate.NotAfter.ToUniversalTime().Date);
     }
 }

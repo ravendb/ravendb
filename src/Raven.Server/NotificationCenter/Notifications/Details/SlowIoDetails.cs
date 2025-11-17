@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -27,7 +27,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             return djv;
         }
 
-        public sealed class SlowWriteInfo : IDynamicJsonValueConvertible
+        public sealed class SlowWriteInfo : IDynamicJson
         {
             public string Key => $"{Type}/{Path}";
 

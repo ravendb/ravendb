@@ -387,11 +387,22 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 }
                 _parent.ProcessInBackground(new StoreEmbeddings(works, Configuration.Quantization));
             }
+            catch (HttpOperationException httpEx)
+            {
+                var enrichedException = new HttpOperationException($"{httpEx.Message}{Environment.NewLine}ResponseContent:{Environment.NewLine}{httpEx.ResponseContent}", httpEx);
+                PropagateExceptionToWorks(enrichedException);
+            }
             catch (Exception e)
+            {
+                PropagateExceptionToWorks(e);
+            }
+
+            return;
+            void PropagateExceptionToWorks(Exception exToPropagate)
             {
                 foreach (var work in works)
                 {
-                    work.TaskCompletionSource.TrySetException(e);
+                    work.TaskCompletionSource.TrySetException(exToPropagate);
                     work.Owner.RemoveFromCache(work.CacheKey);
                 }
             }

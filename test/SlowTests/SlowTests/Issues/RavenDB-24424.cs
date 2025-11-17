@@ -40,9 +40,9 @@ public class RavenDB_24424 : RavenTestBase
             
         ZipFile.ExtractToDirectory(filePath, folder);
 
-        using (var server = GetNewServer(new ServerCreationOptions { DeletePrevious = false, RunInMemory = false, DataDirectory = folder, RegisterForDisposal = false }))
+        using (var server = GetNewServer(new ServerCreationOptions { DeletePrevious = false, RunInMemory = false, DataDirectory = folder }))
         {
-            var storeOptions = new Options() { RunInMemory = false, DeleteDatabaseOnDispose = false, Server = server, ModifyDatabaseName = _ => "TestBackup_1"};
+            var storeOptions = new Options() { Server = server, ModifyDatabaseName = _ => "TestBackup_1"};
 
             using (var store = GetDocumentStore(storeOptions))
             {

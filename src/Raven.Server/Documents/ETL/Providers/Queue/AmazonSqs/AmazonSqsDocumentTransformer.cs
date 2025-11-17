@@ -36,16 +36,13 @@ public sealed class AmazonSqsDocumentTransformer<T> : QueueDocumentTransformer<T
     {
         base.Initialize(debugMode);
 
-        DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo,
-            new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo,
-                LoadToFunctionTranslatorWithAttributes));
+        DocumentScript.ScriptEngine.SetClrFunc(Transformation.LoadTo, LoadToFunctionTranslatorWithAttributes);
 
         foreach (var queueName in LoadToDestinations)
         {
             var name = Transformation.LoadTo + queueName;
 
-            DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,
-                (self, args) => LoadToFunctionTranslatorWithAttributes(queueName, args)));
+            DocumentScript.ScriptEngine.SetClrFunc(name, (self, args) => LoadToFunctionTranslatorWithAttributes(queueName, args));
         }
     }
 }

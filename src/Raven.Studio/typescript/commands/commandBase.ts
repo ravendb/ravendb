@@ -91,7 +91,7 @@ class commandBase {
     }
 
     protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database | string, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
-        const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
+        const requestExecution = protractedCommandsDetector.instance.requestStarted(5000, timeToAlert);
 
         // ContentType:
         //

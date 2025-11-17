@@ -32,7 +32,8 @@ public class RavenDB_24984 : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, "your whole purpose is to run the tool called 'MyTool'")
+        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, "your whole purpose is to run the tool called 'MyTool'. When you finish," +
+                                                                                                " set Answer to exactly the last tool value as plain text, with no other text")
         {
             Identifier = "shopping-assistant",
             Actions =
@@ -44,10 +45,52 @@ public class RavenDB_24984 : RavenTestBase
                     ParametersSampleObject = "{}"
                 }
             ],
-            MaxModelIterationsPerCall = maxModelIterationsPerCall
+            MaxModelIterationsPerCall = maxModelIterationsPerCall,
         };
 
-        await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance);
+        var schemaJson = """
+                         {
+                           "name": "ZnYyQ3BUOGZYUXY3YXJqQm1uTGVOVytLeXdxQW82L0k5T0R4VGs3cFJzZz0",
+                           "strict": true,
+                           "schema": {
+                             "type": "object",
+                             "properties": {
+                               "Answer": {
+                                 "type": "string",
+                                 "description": "Answer to the user question"
+                               },
+                               "Relevant": {
+                                 "type": "boolean"
+                               },
+                               "RelevantOrdersId": {
+                                 "type": "array",
+                                 "items": {
+                                   "type": "string",
+                                   "description": "The order ids relevant to the query or response"
+                                 }
+                               },
+                               "MatchingProductsId": {
+                                 "type": "array",
+                                 "items": {
+                                   "type": "string",
+                                   "description": "All the product ids referenced either by the user or the system"
+                                 }
+                               }
+                             },
+                             "parallel_tool_calls" : false,
+                             "required": [
+                               "Answer",
+                               "Relevant",
+                               "RelevantOrdersId",
+                               "MatchingProductsId"
+                             ],
+                             "additionalProperties": false
+                           }
+                         }
+                         """;
+        agent.OutputSchema = schemaJson;
+        await store.AI.CreateAgentAsync(agent);
+
         var chat = store.AI.Conversation(
             agent.Identifier,
             "chats/",
@@ -56,7 +99,7 @@ public class RavenDB_24984 : RavenTestBase
         int lastNumber = 1;
         chat.Handle<object>("MyTool", _ => lastNumber++.ToString());
 
-        chat.SetUserPrompt("call the 'MyTool' tool until it returns the string '10' (or greater)");
+        chat.SetUserPrompt("call the 'MyTool' tool until it returns a value >= 10");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
         var result = await chat.RunAsync<AiAgentBasics.OutputSchema>(cts.Token);

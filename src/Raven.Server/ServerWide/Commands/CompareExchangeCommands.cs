@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -175,7 +175,7 @@ namespace Raven.Server.ServerWide.Commands
             return JsonDeserializationCluster.CompareExchangeResult(((BlittableJsonReaderObject)remoteResult).Clone(ContextToWriteResult));
         }
 
-        public sealed class CompareExchangeResult : IDynamicJsonValueConvertible
+        public sealed class CompareExchangeResult : IDynamicJson
         {
             public long Index;
             public object Value;

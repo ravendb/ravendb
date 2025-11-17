@@ -815,19 +815,20 @@ $zindexes: (
     "dropdown": 1000,
     "sticky": 1020,
     "scoped-modal": 1030,
-    "notification-center": 1035,
     "selection-actions": 1035,
     "menu-resize": 1035,
     "fixed": 1037,
     "offcanvas-backdrop": 1040,
     "topalert": 1083,
-    "modal-backdrop": 1050,
-    "offcanvas": 1055,
-    "modal": 1085,
     "toast": 1090,
     "menu-xs": 1090,
+    "notification-center-pinned": 1100,
     "popover": 1101,
     "tooltip": 1101,
+    "notification-center": 1102,
+    "modal-backdrop": 1103,
+    "modal": 1104,
+    "offcanvas": 1111,
     "loading-overlay": 2490,
     "processing-spinner": 2500,
     "ace-fullScreen": 9999,
@@ -840,12 +841,14 @@ $zindex-sticky: map.get($zindexes, "sticky") !default;
 $zindex-fixed: map.get($zindexes, "fixed") !default;
 $zindex-selection-actions: map.get($zindexes, "selection-actions") !default;
 $zindex-offcanvas-backdrop: map.get($zindexes, "backdrop") !default;
-$zindex-modal-backdrop: map.get($zindexes, "modal-dropdown") !default;
+$zindex-modal-backdrop: map.get($zindexes, "modal-backdrop") !default;
 $zindex-offcanvas: map.get($zindexes, "offcanvas") !default;
 $zindex-modal: map.get($zindexes, "modal") !default;
 $zindex-popover: map.get($zindexes, "popover") !default;
 $zindex-tooltip: map.get($zindexes, "tooltip") !default;
 $zindex-toast: map.get($zindexes, "toast") !default;
+$zindex-notification-center: map.get($zindexes, "notification-center") !default;
+$zindex-notification-center-pinned: map.get($zindexes, "notification-center-pinned") !default;
 // scss-docs-end zindex-stack
 
 // scss-docs-start zindex-levels-map

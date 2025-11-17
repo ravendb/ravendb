@@ -998,6 +998,13 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+        public void ClearCache()
+        {
+            _loadedDocuments?.Clear();
+            _loadedDocumentsByAliasName?.Clear();
+            _timeSeriesRetriever?.ClearCache();
+        }
+        
         private sealed class QueryKey : ScriptRunnerCache.Key
         {
             private readonly Dictionary<string, DeclaredFunction> _functions;

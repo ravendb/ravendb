@@ -385,7 +385,7 @@ namespace Raven.Server.Documents.Queries
                 switch (methodType)
                 {
                     case MethodType.Search:
-                        return HandleSearch(query, me, metadata, parameters, analyzer, proximity);
+                        return HandleSearch(query, me, metadata, parameters, analyzer, proximity, index);
                     case MethodType.Fuzzy:
                         return HandleFuzzy(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, exact);
                     case MethodType.Proximity:
@@ -847,7 +847,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query HandleSearch(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
-            Analyzer analyzer, int? proximity)
+            Analyzer analyzer, int? proximity, Index index)
         {
 
             QueryFieldName fieldName;
@@ -887,7 +887,7 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException("Proximity search works only on simple string terms, not wildcard or prefix ones", metadata.QueryText, parameters);
 
                 // this will return PQ, unless there is a single term
-                LuceneQueryHelper.TryGetAnalyzedTerm(fieldName, valueAsString, type, analyzer, out var t);
+                LuceneQueryHelper.TryGetAnalyzedTerm(fieldName, valueAsString, type, analyzer, out var t, index);
                 if (t is not PhraseQuery pq)
                     throw new InvalidQueryException("Proximity search works only on multiple search terms", metadata.QueryText, parameters);
 
@@ -901,7 +901,7 @@ namespace Raven.Server.Documents.Queries
             Lucene.Net.Search.Query firstQuery = null;
             foreach (var v in GetValues())
             {
-                if (LuceneQueryHelper.TryGetAnalyzedTerm(fieldName, v, GetTermType(v), analyzer, out var t) == false)
+                if (LuceneQueryHelper.TryGetAnalyzedTerm(fieldName, v, GetTermType(v), analyzer, out var t, index) == false)
                     continue;
                 
                 if (firstQuery == null && q == null)

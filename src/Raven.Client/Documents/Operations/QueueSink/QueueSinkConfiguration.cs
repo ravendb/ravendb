@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.QueueSink;
 /// <summary>
 /// The configuration for a queue sink task, which allows integrating with external queueing systems.
 /// </summary>
-public class QueueSinkConfiguration : IDynamicJsonValueConvertible, IDatabaseTask
+public class QueueSinkConfiguration : IDynamicJson, IDatabaseTask
 {
     private bool _initialized;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        public sealed class PingResult : IDynamicJsonValueConvertible
+        public sealed class PingResult : IDynamicJson
         {
             public string Url;
             public SetupAliveInfo SetupAlive;

@@ -1249,7 +1249,7 @@ namespace Raven.Server.Documents
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            return maxLastWork.AddMilliseconds(dbSize / 1024L);
+            return maxLastWork.AddMilliseconds((dbSize / 1024L) * 0.5);
         }
 
         public Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Replication
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, RavenLogger log)
         {
             _replicationLoader = replicationLoader ??
-                throw new ArgumentNullException($"{nameof(ResolveConflictOnReplicationConfigurationChange)} must have replicationLoader instance");
+                                 throw new ArgumentNullException($"{nameof(ResolveConflictOnReplicationConfigurationChange)} must have replicationLoader instance");
             _database = _replicationLoader.Database;
             _log = log;
         }
@@ -58,6 +58,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Waited for 60 seconds to close 'ResolveConflictOnReplicationConfigurationChange' gracefully, will dispose it anyway.");
                 }
             }
+
             _runOnce.Dispose();
         }
 
@@ -132,11 +133,11 @@ namespace Raven.Server.Documents.Replication
                             if (ScriptConflictResolversCache.TryGetValue(collection, out var scriptResolver) && scriptResolver != null)
                             {
                                 if (TryResolveConflictByScriptInternal(
-                                    context,
-                                    scriptResolver,
-                                    conflicts,
-                                    collection,
-                                    resolvedConflict: out resolved))
+                                        context,
+                                        scriptResolver,
+                                        conflicts,
+                                        collection,
+                                        resolvedConflict: out resolved))
                                 {
                                     resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
                                     resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: false));
@@ -237,6 +238,7 @@ namespace Raven.Server.Documents.Replication
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
+
             var copy = new Dictionary<string, ScriptResolver>();
             foreach (var kvp in conflictSolver.ResolveByCollection)
             {
@@ -246,11 +248,13 @@ namespace Raven.Server.Documents.Replication
                 {
                     continue;
                 }
+
                 copy[collection] = new ScriptResolver
                 {
                     Script = script
                 };
             }
+
             ScriptConflictResolversCache = copy;
         }
 
@@ -280,7 +284,7 @@ namespace Raven.Server.Documents.Replication
                         AlertReason.Replication,
                         NotificationSeverity.Error,
                         "Mismatched Collections On Replication Resolve"
-                        );
+                    );
                     _database.NotificationCenter.Add(differentCollectionNameAlert);
                     return false;
                 }
@@ -290,10 +294,10 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void PutResolvedDocument(
-           DocumentsOperationContext context,
-           DocumentConflict resolved,
-           bool resolvedToLatest,
-           DocumentConflict incoming = null)
+            DocumentsOperationContext context,
+            DocumentConflict resolved,
+            bool resolvedToLatest,
+            DocumentConflict incoming = null)
         {
             resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromClusterTransaction);
 
@@ -304,10 +308,8 @@ namespace Raven.Server.Documents.Replication
             // to avoid feature conflicts on the document due to one-way external replication
             // if this is not the case (resolvedToLatest == false), we should generate a new change vector since it was changed locally.
             // in a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
-            
-            var changeVector = resolvedToLatest ?
-                context.GetChangeVector(resolved.ChangeVector) :
-                ChangeVector.MergeWithNewDatabaseChangeVector(context, resolved.ChangeVector);
+
+            var changeVector = resolvedToLatest ? context.GetChangeVector(resolved.ChangeVector) : ChangeVector.MergeWithNewDatabaseChangeVector(context, resolved.ChangeVector);
 
             if (resolved.Doc == null)
             {
@@ -432,7 +434,7 @@ namespace Raven.Server.Documents.Replication
 
                 var patch = new PatchConflict(_database, conflicts);
                 updatedConflict = conflicts[0];
-                var patchRequest = new PatchRequest(scriptResolver.Script, PatchRequestType.Conflict);
+                var patchRequest = new ConflictPatchRequest(scriptResolver.Script);
                 if (patch.TryResolveConflict(context, patchRequest, out BlittableJsonReaderObject resolved) == false)
                 {
                     return false;
@@ -461,6 +463,7 @@ namespace Raven.Server.Documents.Replication
 
                 _database.NotificationCenter.Add(alert);
             }
+
             return false;
         }
 
@@ -505,24 +508,24 @@ namespace Raven.Server.Documents.Replication
             {
                 if (group.Count() == 1)
                     continue;
-                
+
                 bool found = false;
                 foreach (var attachment in group)
                 {
                     if (found == false && resolvedAttachmentsMetadata.Any(x =>
-                            x.Name == attachment.Name && 
-                            x.Hash == attachment.Hash && 
+                            x.Name == attachment.Name &&
+                            x.Hash == attachment.Hash &&
                             x.ContentType == attachment.ContentType))
                     {
                         found = true;
-                       // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure
-                       // all nodes have the same change vector value after replication
-                        var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId, 
+                        // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure
+                        // all nodes have the same change vector value after replication
+                        var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId,
                             attachment.Name, attachment.ContentType, attachment.Hash,
-                            stream: null, expectedChangeVector: null,  updateDocument: false);
+                            stream: null, expectedChangeVector: null, updateDocument: false);
                         continue;
                     }
-                    
+
                     if (resolvedToLatest)
                     {
                         // delete duplicates
@@ -538,9 +541,11 @@ namespace Raven.Server.Documents.Replication
                             found = true;
                             continue;
                         }
+
                         // rename duplicates
                         var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
-                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null, attachment.Hash, attachment.ContentType, usePartialKey: false, updateDocument: false, extractCollectionName: false);
+                        _database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, resolved.LowerId, attachment.Name, resolved.LowerId, newName, changeVector: null, attachment.Hash, attachment.ContentType, usePartialKey: false,
+                            updateDocument: false, extractCollectionName: false);
                     }
                 }
             }

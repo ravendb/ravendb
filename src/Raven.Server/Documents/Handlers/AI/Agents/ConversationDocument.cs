@@ -374,7 +374,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             if (m.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) == false)
             {
                 continue;
-}
+            }
 
             switch (role)
             {
@@ -394,13 +394,23 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
                             ToolType toolType = GetToolType(configuration, name);
 
-                            toolCalls.Add(new ExceededTokenThresholdDetails.ToolCallDetails
+                            var tc = new ExceededTokenThresholdDetails.ToolCallDetails
                             {
                                 Id = id,
                                 Name = name,
                                 Type = toolType,
                                 Arguments = arguments
-                            });
+                            };
+
+                            if (toolType == ToolType.Query)
+                            {
+                                var q = configuration.FindQuery(name);
+                                if (q != null)
+                                {
+                                    tc.Query = q.Query;
+                                }
+                            }
+                            toolCalls.Add(tc);
                         }
                         return true;
                     }

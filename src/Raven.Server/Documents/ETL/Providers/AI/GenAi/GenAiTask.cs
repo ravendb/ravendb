@@ -23,6 +23,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -168,22 +169,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results.Count;
     }
 
-    private AiAgentConfiguration _agent;
-
-    private AiAgentConfiguration Agent => _agent ??= new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
-    {
-        OutputSchema = Configuration.JsonSchema,
-        SampleObject = Configuration.SampleObject,
-        Queries = Configuration.Queries
-    };
-
     private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope)
     {
         using (var statsScope = scope.For(GenAiOperations.LoadToModel))
         {
             context.CloseTransaction();
 
-            List<Task<(string Result, AiUsage Usage)>> tasks = [];
+            List<Task<GenAiHandlerResult>> tasks = [];
             Task[] executingTasks = new Task[Math.Max(1, _maxConcurrency)];
             Array.Fill(executingTasks, Task.CompletedTask);
             List<GenAiResultItem> itemsSentToModel = [];
@@ -203,22 +195,27 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 statsScope.TotalSentToModel++;
 
                 string json = item.ContextOutput.Context.ToString();
-                Task<(string Result, AiUsage Usage)> task;
+                Task<GenAiHandlerResult> task;
 
-                var handler = new GenAiConversationHandler(Database.ServerStore, Database)
+                var agentConfiguration = CreateAgentConfiguration(context, item);
+                var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
                     // GenAI task uses full access
                     Authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(Database.ServerStore.Server.Certificate.ClientCertificate, $"GenAI access for '{Name}'")
                 };
-                handler.Initialize(Agent, $"GenAI/{item.DocumentId}", new RequestBody
+
+                handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
-                    CreationOptions = new AiConversationCreationOptions(),
+                    Parameters = item.ContextOutput.Context,
+                    CreationOptions = new AiConversationCreationOptions
+                    {
+                        ExpirationInSec = Configuration.ExpirationInSec
+                    },
                     UserPrompt = json,
-                    Attachments = item.ContextOutput.Attachments,
+                    Attachments = item.ContextOutput.Attachments
                 }, changeVector: null);
 
                 handler.SetClient(_chatCompletionClient);
-
                 try
                 {
                     task = handler.HandleRequest(CancellationToken);
@@ -227,7 +224,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 {
                     // if we failed to _start_, we want to handle it in the same manner
                     // and deal with the error in ProcessModelResults
-                    task = Task.FromException<(string Result, AiUsage Usage)>(e);
+                    task = Task.FromException<GenAiHandlerResult>(e);
                 }
 
                 itemsSentToModel.Add(item);
@@ -249,7 +246,29 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<(string Result, AiUsage Usage)>> tasks, GenAiStatsScope statsScope)
+    private AiAgentConfiguration CreateAgentConfiguration(DocumentsOperationContext context, GenAiResultItem item)
+    {
+        var agentParameters = new List<AiAgentParameter>();
+        var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
+        foreach (var name in contextObjPropNames)
+        {
+            agentParameters.Add(new AiAgentParameter(name));
+        }
+
+        var agentConfiguration = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
+        {
+            OutputSchema = Configuration.JsonSchema,
+            SampleObject = Configuration.SampleObject,
+            Queries = Configuration.Queries,
+            Parameters = agentParameters,
+            ChatTrimming = null
+        };
+
+        AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agentConfiguration);
+        return agentConfiguration;
+    }
+
+    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
     {
         List<Exception> exceptions = null;
 
@@ -270,28 +289,29 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 continue; // so we won't try to save it 
             }
 
-            (string result, AiUsage usage) = task.Result;
+            var result = task.Result;
 
             item.ModelOutput = new ModelOutput
             {
-                Output = context.Sync.ReadForMemory(result, item.DocumentId)
+                Output = context.Sync.ReadForMemory(result.Response, item.DocumentId)
             };
 
             statsScope.Usage ??= new AiUsage();
-            statsScope.Usage.CachedTokens += usage.CachedTokens;
-            statsScope.Usage.CompletionTokens += usage.CompletionTokens;
-            statsScope.Usage.PromptTokens += usage.PromptTokens;
-            statsScope.Usage.TotalTokens += usage.TotalTokens;
+            statsScope.Usage.CachedTokens += result.Usage.CachedTokens;
+            statsScope.Usage.CompletionTokens += result.Usage.CompletionTokens;
+            statsScope.Usage.PromptTokens += result.Usage.PromptTokens;
+            statsScope.Usage.TotalTokens += result.Usage.TotalTokens;
 
             if (Configuration.TestMode)
             {
-                item.ModelOutput.Usage = usage;
+                item.ModelOutput.Usage = result.Usage;
+                item.ModelOutput.ConversationDocument = context.Sync.ReadForMemory(result.ConversationDocument, item.DocumentId);
             }
         }
 
         return exceptions;
 
-        Exception HandleItemError(Task<(string Result, AiUsage Usage)> task, GenAiResultItem item)
+        Exception HandleItemError(Task<GenAiHandlerResult> task, GenAiResultItem item)
         {
             var singleEx = task.Exception.ExtractSingleInnerException();
 
@@ -419,7 +439,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     throw new AggregateException(exceptions);
 
                 // Remove ContextOutputs (as they're unnecessary for the next stage)
-                items.ForEach(item => item.ContextOutput.Attachments = null );
+                items.ForEach(item => item.ContextOutput.Attachments = null);
                 break;
             case TestStage.ApplyUpdateScript:
                 {

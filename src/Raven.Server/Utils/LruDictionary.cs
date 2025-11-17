@@ -61,4 +61,10 @@ public sealed class LruDictionary<TKey, TValue> where TKey : notnull
             }
         }
     }
+    
+    public void Clear()
+    {
+        _cache.Clear();
+        _list.Clear();
+    }
 }

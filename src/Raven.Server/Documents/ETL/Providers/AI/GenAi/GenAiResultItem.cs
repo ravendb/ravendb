@@ -31,11 +31,13 @@ public class ModelOutput
 {
     public BlittableJsonReaderObject Output { get; set; }
     public AiUsage Usage { get; set; }
+    public BlittableJsonReaderObject ConversationDocument { get; set; }
 
     public DynamicJsonValue ToJson() => new()
     {
-        [nameof(Usage)] = Usage?.ToJson(), 
-        [nameof(Output)] = Output
+        [nameof(Usage)] = Usage?.ToJson(),
+        [nameof(Output)] = Output,
+        [nameof(ConversationDocument)] = ConversationDocument
     };
 }
 

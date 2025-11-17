@@ -31,6 +31,8 @@ namespace Raven.Server.Utils.Enumerators
             _state = state;
             _innerEnumerator = _getEnumerator(state);
         }
+        
+        public Action OnPulse;
 
         public bool MoveNext()
         {
@@ -38,6 +40,7 @@ namespace Raven.Server.Utils.Enumerators
             {
                 Debug.Assert(_context.Transaction.InnerTransaction.IsWriteTransaction == false, $"{nameof(PulsedTransactionEnumerator<T, TState>)} is meant to be used with read transactions only");
 
+                OnPulse?.Invoke();
                 _context.CloneReadTransaction();
 
                 _innerEnumerator = _getEnumerator != null ? _getEnumerator(_state) : _getEnumerable(_state).GetEnumerator();

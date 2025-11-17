@@ -1,7 +1,9 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -77,5 +79,31 @@ public class TasksManagementTests : RavenTestBase
         var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.EmbeddingsGeneration));
 
         Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void EmbeddingsGenerationConfiguration_WithoutChunkingOptions_ShouldProvideMeaningfulError()
+    {
+        using var store = GetDocumentStore();
+
+        var configuration = new EmbeddingsGenerationConfiguration
+        {
+            Name = "ai-task-testing",
+            ConnectionStringName = "ai-service-connection",
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration { Path = "PostContent" }],
+            Collection = "Posts",
+            ChunkingOptionsForQuerying = DefaultChunkingOptions
+        };
+
+        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, EmbeddedSettings = new EmbeddedSettings() };
+
+        var putAiConnectionStringResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
+        Assert.NotNull(putAiConnectionStringResult.RaftCommandIndex);
+
+        var exception = Record.Exception(() => store.Maintenance.Send(new AddEmbeddingsGenerationOperation(configuration)));
+        Assert.NotNull(exception);
+        Assert.IsType<RavenException>(exception);
+        Assert.True(exception.Message.Contains("Path 'PostContent': ChunkingOptions must be provided"),
+            $"The exception must include a description of the problem regarding the missing ChunkingOptions, but it didn't:{Environment.NewLine}`{exception.Message}`");
     }
 }

@@ -661,6 +661,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaximumConcurrentBatchesForHnswAcceleration { get; set; }
 
+        [Description("Use default search analyzer for dynamic fields if not set explicitly.")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
+        
         [Description("EXPERT: Disable shared journals between indexes.")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.None)]

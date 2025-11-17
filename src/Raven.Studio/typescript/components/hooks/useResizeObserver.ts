@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useIsMounted } from "hooks/useIsMounted";
 
 type Size = {
@@ -9,56 +9,50 @@ type Size = {
 
 type UseResizeObserverOptions<T extends HTMLElement = HTMLElement> = {
     ref: RefObject<T>;
-    onResize?: (size: Size) => void;
     box?: "border-box" | "content-box" | "device-pixel-content-box";
-};
-
-const initialSize: Size = {
-    width: undefined,
-    height: undefined,
 };
 
 export function useResizeObserver<T extends HTMLElement = HTMLElement>(options: UseResizeObserverOptions<T>): Size {
     const { ref, box = "content-box" } = options;
-    const [{ width, height }, setSize] = useState<Size>(initialSize);
+    const [width, setWidth] = useState<number>();
+    const [height, setHeight] = useState<number>();
+
     const isMounted = useIsMounted();
-    const previousSize = useRef<Size>({ ...initialSize });
-    const onResize = useRef<((size: Size) => void) | undefined>(options.onResize);
 
     useEffect(() => {
-        if (!ref.current) {
+        if (!ref.current || !isMounted()) {
+            return;
+        }
+
+        const clientRect = ref.current.getBoundingClientRect();
+
+        if (clientRect?.width) {
+            setWidth(clientRect.width);
+        }
+        if (clientRect?.height) {
+            setHeight(clientRect.height);
+        }
+    }, [isMounted]);
+
+    useEffect(() => {
+        if (!ref.current || !isMounted()) {
             return;
         }
 
         if (typeof window === "undefined" || !("ResizeObserver" in window)) {
+            console.warn("ResizeObserver not supported");
             return;
         }
 
         const observer = new ResizeObserver(([entry]) => {
-            const boxProp =
-                box === "border-box"
-                    ? "borderBoxSize"
-                    : box === "device-pixel-content-box"
-                      ? "devicePixelContentBoxSize"
-                      : "contentBoxSize";
+            const newWidth = extractSize(entry, box, "inlineSize");
+            const newHeight = extractSize(entry, box, "blockSize");
 
-            const newWidth = extractSize(entry, boxProp, "inlineSize");
-            const newHeight = extractSize(entry, boxProp, "blockSize");
-
-            const hasChanged = previousSize.current.width !== newWidth || previousSize.current.height !== newHeight;
-
-            if (hasChanged) {
-                const newSize: Size = { width: newWidth, height: newHeight };
-                previousSize.current.width = newWidth;
-                previousSize.current.height = newHeight;
-
-                if (onResize.current) {
-                    onResize.current(newSize);
-                } else {
-                    if (isMounted()) {
-                        setSize(newSize);
-                    }
-                }
+            if (newWidth) {
+                setWidth(newWidth);
+            }
+            if (newHeight) {
+                setHeight(newHeight);
             }
         });
 
@@ -67,27 +61,42 @@ export function useResizeObserver<T extends HTMLElement = HTMLElement>(options: 
         return () => {
             observer.disconnect();
         };
-    }, [box, ref?.current, isMounted]);
+    }, [box, isMounted]);
 
     return { width, height };
 }
 
-type BoxSizesKey = keyof Pick<ResizeObserverEntry, "borderBoxSize" | "contentBoxSize" | "devicePixelContentBoxSize">;
-
 function extractSize(
     entry: ResizeObserverEntry,
-    box: BoxSizesKey,
+    box: ResizeObserverBoxOptions,
     sizeType: keyof ResizeObserverSize
 ): number | undefined {
-    if (!entry[box]) {
-        if (box === "contentBoxSize") {
+    const boxKey = getBoxKey(box);
+
+    if (!entry[boxKey]) {
+        if (boxKey === "contentBoxSize") {
             return entry.contentRect[sizeType === "inlineSize" ? "width" : "height"];
         }
         return undefined;
     }
 
-    return Array.isArray(entry[box])
-        ? entry[box][0][sizeType]
+    return Array.isArray(entry[boxKey])
+        ? entry[boxKey][0][sizeType]
         : // @ts-expect-error Support Firefox's non-standard behavior
           (entry[box][sizeType] as number);
+}
+
+type BoxSizesKey = keyof Pick<ResizeObserverEntry, "borderBoxSize" | "contentBoxSize" | "devicePixelContentBoxSize">;
+
+function getBoxKey(box: ResizeObserverBoxOptions): BoxSizesKey {
+    switch (box) {
+        case "border-box":
+            return "borderBoxSize";
+        case "device-pixel-content-box":
+            return "devicePixelContentBoxSize";
+        case "content-box":
+            return "contentBoxSize";
+        default:
+            return "contentBoxSize";
+    }
 }

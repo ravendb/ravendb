@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
+        void ClearCache();
     }
 
     public struct RetrieverInput

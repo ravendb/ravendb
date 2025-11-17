@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
@@ -369,7 +369,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
     }
 
-    public sealed class DocumentRecord : SubscriptionRecord, IDynamicJsonValueConvertible
+    public sealed class DocumentRecord : SubscriptionRecord, IDynamicJson
     {
         public string DocumentId;
         public string ChangeVector;
@@ -384,7 +384,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
     }
 
-    public sealed class RevisionRecord : SubscriptionRecord, IDynamicJsonValueConvertible
+    public sealed class RevisionRecord : SubscriptionRecord, IDynamicJson
     {
         public string DocumentId;
         public string Previous;
