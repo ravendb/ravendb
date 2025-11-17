@@ -54,7 +54,8 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
 
     const form = useForm<EditGenAiTaskFormData>({
         mode: "all",
-        resolver: yupResolver(editGenAiTaskSchema),
+        resolver: (data, _, options) =>
+            yupResolver(editGenAiTaskSchema)(data, { allQueryNames: data.queries?.map((x) => x.name) ?? [] }, options),
         defaultValues: async () => {
             if (taskId) {
                 try {

@@ -58,9 +58,37 @@ function mergeToolResults(messages: AiAgentMessage[], allQueriesNames: string[])
     return messages;
 }
 
+function getAceEditorHeight(content: string, maxHeightInPx = 320): `${number}px` {
+    if (!content) {
+        return "100px";
+    }
+
+    const lineHeight = 26;
+    const minimumLineCount = 4;
+    const lineCount = content.split("\n").length;
+    const effectiveLineCount = Math.max(lineCount, minimumLineCount);
+
+    if (effectiveLineCount <= 12) {
+        const halfLineHeight = lineHeight / 2; // to show that there is more content
+        return `${effectiveLineCount * lineHeight + halfLineHeight}px`;
+    }
+
+    return `${maxHeightInPx}px`;
+}
+
+function getAceEditorMode(content: string): "json" | "text" {
+    if (content?.startsWith("{") && content?.endsWith("}")) {
+        return "json";
+    }
+
+    return "text";
+}
+
 export const aiAgentsUtils = {
     mapMessageFromDoc,
     messageDateFormat: "HH:mm A",
     mergeToolResults,
     getPrettifiedContent,
+    getAceEditorHeight,
+    getAceEditorMode,
 };

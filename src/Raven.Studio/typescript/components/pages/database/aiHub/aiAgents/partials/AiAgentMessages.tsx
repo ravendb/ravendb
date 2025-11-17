@@ -19,11 +19,8 @@ import Badge from "react-bootstrap/Badge";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 import genUtils from "common/generalUtils";
-import queryCriteria from "models/database/query/queryCriteria";
-import savedQueriesStorage from "common/storage/savedQueriesStorage";
-import { useAppSelector } from "components/store";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
+import useToolQueryDetails from "../hooks/useToolQueryDetails";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -125,7 +122,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
         () => (isTable ? JSON.parse(message.content).map((x: any) => new document(x)) : []),
         [message.content, isTable]
     );
-    const contentMode = getAceEditorMode(message.content);
+    const contentMode = aiAgentsUtils.getAceEditorMode(message.content);
 
     const { columnDefs } = useDocumentColumnsProvider({
         documents: tableData,
@@ -313,7 +310,7 @@ function AgentMessage({
         setIsWaitingForActionToolSubmit(isRequireParameters);
     }, [isRequireParameters]);
 
-    const contentMode = getAceEditorMode(agentMessage.content);
+    const contentMode = aiAgentsUtils.getAceEditorMode(agentMessage.content);
 
     return (
         <div>
@@ -359,7 +356,7 @@ function AgentMessage({
                                     { component: <AceEditor.FormatAction /> },
                                     { component: <AceEditor.ToggleNewLinesAction /> },
                                 ]}
-                                height={getAgentAceEditorHeight(agentMessage.content)}
+                                height={aiAgentsUtils.getAceEditorHeight(agentMessage.content)}
                                 wrapEnabled={contentMode === "text" ? true : false}
                                 setOptions={{
                                     indentedSoftWrap: contentMode === "text" ? true : false,
@@ -480,7 +477,7 @@ interface ToolCallBodyProps {
 
 function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps) {
     const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
-    const argumentsMode = getAceEditorMode(prettifiedArguments);
+    const argumentsMode = aiAgentsUtils.getAceEditorMode(prettifiedArguments);
 
     const id = useUniqueId("tool-call-details");
 
@@ -531,17 +528,12 @@ function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps)
                     defaultValue={prettifiedArguments}
                     readOnly
                     mode={argumentsMode}
-                    height={getAgentAceEditorHeight(prettifiedArguments)}
+                    height={aiAgentsUtils.getAceEditorHeight(prettifiedArguments)}
                 />
             </div>
             {toolCall?.queryToolResult && <ToolMessage message={toolCall.queryToolResult} type="query" />}
         </div>
     );
-}
-
-interface Argument {
-    key: string;
-    value: any;
 }
 
 function ToolDetailsQuery({
@@ -553,74 +545,13 @@ function ToolDetailsQuery({
     parametersFromUser?: Record<string, string>;
     parametersFromModel?: string;
 }) {
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const rqlLanguageService = useRqlLanguageService();
 
-    const getLlmParametersForQuery = (matches: string[]): Argument[] => {
-        try {
-            const parametersObject = JSON.parse(parametersFromModel);
-            return matches
-                .map((x) => ({ key: x, value: parametersObject[x] }))
-                .filter((x) => x.value && !Object.keys(parametersFromUser).includes(x.key));
-        } catch {
-            return [];
-        }
-    };
-
-    const getAgentParametersForQuery = (matches: string[]): Argument[] => {
-        return matches.map((x) => ({ key: x, value: parametersFromUser?.[x] })).filter((x) => x.value);
-    };
-
-    const getArgumentFormattedValue = (value: string): string => {
-        if (typeof value === "number") {
-            return value;
-        }
-        return JSON.stringify(value);
-    };
-
-    const getQueryWithParameters = (): string => {
-        const regexToFind$: RegExp = /\$\w+/g;
-        const allMatches = queryText.match(regexToFind$)?.map((x) => x.replace("$", "")) || [];
-        const uniqueMatches = [...new Set(allMatches)];
-
-        const llmParametersForQuery = getLlmParametersForQuery(uniqueMatches);
-        const agentParametersForQuery = getAgentParametersForQuery(uniqueMatches);
-
-        let resultQuery = "";
-
-        if (llmParametersForQuery.length > 0) {
-            resultQuery += `// LLM parameters\n`;
-            resultQuery += llmParametersForQuery
-                .map((x) => `$${x.key} = ${getArgumentFormattedValue(x.value)}`)
-                .join("\n");
-            resultQuery += "\n\n";
-        }
-
-        if (agentParametersForQuery.length > 0) {
-            resultQuery += `// Agent parameters\n`;
-            resultQuery += agentParametersForQuery
-                .map((x) => `$${x.key} = ${getArgumentFormattedValue(x.value)}`)
-                .join("\n");
-            resultQuery += "\n\n";
-        }
-
-        resultQuery += queryText;
-
-        return resultQuery;
-    };
-
-    const queryWithParameters = getQueryWithParameters();
-
-    const linkToQuery = () => {
-        const query = queryCriteria.empty();
-
-        query.queryText(queryWithParameters);
-        query.recentQuery(true);
-        const queryDto = query.toStorageDto();
-        savedQueriesStorage.saveAndNavigate(databaseName, queryDto, {
-            newWindow: true,
-        });
-    };
+    const { linkToQuery, queryWithParameters } = useToolQueryDetails({
+        queryText,
+        parametersFromUser,
+        parametersFromModel,
+    });
 
     return (
         <div>
@@ -641,35 +572,9 @@ function ToolDetailsQuery({
                 defaultValue={queryWithParameters}
                 readOnly
                 mode="rql"
-                height={getAgentAceEditorHeight(queryWithParameters, 200)}
+                height={aiAgentsUtils.getAceEditorHeight(queryWithParameters, 200)}
                 languageService={rqlLanguageService}
             />
         </div>
     );
-}
-
-function getAgentAceEditorHeight(content: string, maxHeightInPx = 320): `${number}px` {
-    if (!content) {
-        return "100px";
-    }
-
-    const lineHeight = 26;
-    const minimumLineCount = 4;
-    const lineCount = content.split("\n").length;
-    const effectiveLineCount = Math.max(lineCount, minimumLineCount);
-
-    if (effectiveLineCount <= 12) {
-        const halfLineHeight = lineHeight / 2; // to show that there is more content
-        return `${effectiveLineCount * lineHeight + halfLineHeight}px`;
-    }
-
-    return `${maxHeightInPx}px`;
-}
-
-function getAceEditorMode(content: string): "json" | "text" {
-    if (content?.startsWith("{") && content?.endsWith("}")) {
-        return "json";
-    }
-
-    return "text";
 }

@@ -1,4 +1,4 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer, VirtualItem } from "@tanstack/react-virtual";
 import AceEditor from "components/common/ace/AceEditor";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useRef } from "react";
@@ -9,17 +9,18 @@ import ReactAce from "react-ace";
 import { EditGenAiTaskFormData } from "../utils/editGenAiTaskValidation";
 import { FieldPath } from "react-hook-form";
 import EditGenAiTaskAttachmentsButton from "./EditGenAiTaskAttachmentsButton";
+import EditGenAiTaskReasoning from "./EditGenAiTaskReasoning";
 
 interface EditGenAiTaskReadOnlyVirtualListProps {
-    data: { value: string; attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] }[];
+    data: {
+        value: string;
+        attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[];
+        conversationDocument?: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument;
+    }[];
     name: Extract<FieldPath<EditGenAiTaskFormData>, "playgroundContexts" | "playgroundModelOutputs">;
 }
 
 export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGenAiTaskReadOnlyVirtualListProps) {
-    const dispatch = useAppDispatch();
-
-    const hoverIndex = useAppSelector(editGenAiTaskSelectors.hoverIndex);
-
     const listRef = useRef<HTMLDivElement>(null);
 
     const virtualizer = useVirtualizer({
@@ -28,17 +29,6 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
         getScrollElement: () => listRef.current,
         overscan: 5,
     });
-
-    const getTooltipText = (): string => {
-        if (name === "playgroundContexts") {
-            return "Context object ID";
-        }
-        if (name === "playgroundModelOutputs") {
-            return "Model output object ID";
-        }
-
-        return null;
-    };
 
     if (!data || data.length === 0) {
         return null;
@@ -55,9 +45,7 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
                             key={virtualRow.key}
                             data-index={virtualRow.index}
                             ref={virtualizer.measureElement}
-                            className={classNames("py-1", {
-                                "ace-hover": hoverIndex === virtualRow.index,
-                            })}
+                            className="py-1"
                             style={{
                                 position: "absolute",
                                 top: 0,
@@ -66,25 +54,64 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
                                 transform: `translateY(${virtualRow.start}px)`,
                                 transition: "unset",
                             }}
-                            onMouseEnter={() => dispatch(editGenAiTaskActions.hoverIndexSet(virtualRow.index))}
-                            onMouseLeave={() => dispatch(editGenAiTaskActions.hoverIndexSet(null))}
                         >
-                            <div style={{ position: "relative" }}>
-                                <Editor key={virtualRow.key} value={entry.value} />
-                                <div style={{ position: "absolute", bottom: 10, right: 40 }} className="d-flex gap-1">
-                                    <EditGenAiTaskAttachmentsButton attachments={entry.attachments} />
-                                    <Badge
-                                        bg="secondary"
-                                        title={getTooltipText()}
-                                        className="d-flex align-items-center"
-                                    >
-                                        {virtualRow.index + 1}
-                                    </Badge>
-                                </div>
-                            </div>
+                            {entry.conversationDocument && (
+                                <EditGenAiTaskReasoning conversationDocument={entry.conversationDocument} />
+                            )}
+                            <EditorWrapper
+                                name={name}
+                                rowIndex={virtualRow.index}
+                                rowKey={virtualRow.key}
+                                value={entry.value}
+                                attachments={entry.attachments}
+                            />
                         </div>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+interface EditorWrapperProps {
+    rowIndex: number;
+    rowKey: VirtualItem["key"];
+    name: EditGenAiTaskReadOnlyVirtualListProps["name"];
+    value: string;
+    attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[];
+}
+
+function EditorWrapper({ rowIndex, name, rowKey, value, attachments }: EditorWrapperProps) {
+    const dispatch = useAppDispatch();
+
+    const hoverIndex = useAppSelector(editGenAiTaskSelectors.hoverIndex);
+
+    const getTooltipText = (): string => {
+        if (name === "playgroundContexts") {
+            return "Context object ID";
+        }
+        if (name === "playgroundModelOutputs") {
+            return "Model output object ID";
+        }
+
+        return null;
+    };
+
+    return (
+        <div
+            style={{ position: "relative" }}
+            onMouseEnter={() => dispatch(editGenAiTaskActions.hoverIndexSet(rowIndex))}
+            onMouseLeave={() => dispatch(editGenAiTaskActions.hoverIndexSet(null))}
+            className={classNames({
+                "ace-hover": hoverIndex === rowIndex,
+            })}
+        >
+            <Editor key={rowKey} value={value} />
+            <div style={{ position: "absolute", bottom: 10, right: 40 }} className="d-flex gap-1">
+                <EditGenAiTaskAttachmentsButton attachments={attachments} />
+                <Badge bg="secondary" title={getTooltipText()} className="d-flex align-items-center">
+                    {rowIndex + 1}
+                </Badge>
             </div>
         </div>
     );

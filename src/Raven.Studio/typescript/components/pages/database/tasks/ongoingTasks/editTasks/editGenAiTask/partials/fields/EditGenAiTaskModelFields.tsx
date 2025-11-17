@@ -1,4 +1,11 @@
-import { FormAceEditor, FormLabel, FormGroup } from "components/common/Form";
+import {
+    FormAceEditor,
+    FormLabel,
+    FormGroup,
+    FormErrorIcon,
+    FormSwitch,
+    FormDurationPicker,
+} from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { useRef } from "react";
@@ -7,9 +14,18 @@ import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
 import Code from "components/common/Code";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
+import CollapseButton from "components/common/CollapseButton";
+import Collapse from "react-bootstrap/Collapse";
+import Button from "react-bootstrap/Button";
+import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
+import useEditGenAiTaskToolsSection from "../../hooks/useEditGenAiTaskToolsSection";
+import useBoolean from "components/hooks/useBoolean";
+import EditGenAiTaskQueryToolItem from "./EditGenAiTaskQueryToolItem";
 
 export default function EditGenAiTaskModelFields() {
-    const { control, setValue } = useFormContext();
+    const { control, setValue } = useFormContext<EditGenAiTaskFormData>();
+    const toolsEditor = useEditGenAiTaskToolsSection();
+    const { value: isToolsPanelOpen, setValue: setIsToolsPanelOpen, toggle: toggleIsToolsPanelOpen } = useBoolean(true);
 
     const formValues = useWatch({ control });
 
@@ -61,6 +77,86 @@ export default function EditGenAiTaskModelFields() {
                 jsonSchemaSyntaxHelp={<JsonSchemaSyntaxHelp />}
                 canRegenerateSchemaName="canRegenerateSchema"
             />
+            <div className="hstack mt-3">
+                <h3 className="m-0">
+                    Define query tools
+                    <PopoverWithHoverWrapper message={<>TODO</>}>
+                        <Icon icon="info-new" />
+                    </PopoverWithHoverWrapper>
+                </h3>
+                <FormErrorIcon control={control} paths={["queries"]} onError={() => setIsToolsPanelOpen(true)} />
+                <CollapseButton isExpanded={isToolsPanelOpen} toggle={toggleIsToolsPanelOpen} />
+            </div>
+            <div className="mb-1">Tools are a controlled way to pass context to the LLM.</div>
+            <Collapse in={isToolsPanelOpen} mountOnEnter unmountOnExit>
+                <div>
+                    <div className="panel-bg-1 p-3 rounded-2 border border-secondary mb-2">
+                        <div className="hstack justify-content-between">
+                            <div className="hstack gap-2">
+                                <div className="tool-icon bg-faded-primary border border-primary">
+                                    <Icon icon="query" color="primary" margin="m-0" />
+                                </div>
+                                <div>
+                                    Query tools
+                                    <PopoverWithHoverWrapper message={<>TODO</>}>
+                                        <Icon icon="info-new" />
+                                    </PopoverWithHoverWrapper>
+                                </div>
+                            </div>
+                            <Button variant="primary" className="rounded-pill" onClick={toolsEditor.handleAddQuery}>
+                                <Icon icon="plus" />
+                                Add new query tool
+                            </Button>
+                        </div>
+                        <div className="vstack">
+                            {toolsEditor.queriesFieldArray.fields.map((field, index) => (
+                                <EditGenAiTaskQueryToolItem
+                                    key={field.id}
+                                    index={index}
+                                    remove={() => toolsEditor.handleRemoveQuery(index)}
+                                    save={() => toolsEditor.handleSaveQuery(index)}
+                                    edit={() => toolsEditor.handleEditQuery(index)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </Collapse>
+            <TracingFields />
+        </>
+    );
+}
+
+function TracingFields() {
+    const { control } = useFormContext<EditGenAiTaskFormData>();
+
+    const formValues = useWatch({
+        control,
+    });
+
+    return (
+        <>
+            <FormGroup marginClass="mb-0 mt-2">
+                <FormSwitch control={control} name="isEnableTracing">
+                    Enable tracing
+                    <PopoverWithHoverWrapper message={<>TODO</>}>
+                        <Icon icon="info-new" />
+                    </PopoverWithHoverWrapper>
+                </FormSwitch>
+            </FormGroup>
+            {formValues.isEnableTracing && (
+                <FormGroup marginClass="mt-1">
+                    <FormSwitch control={control} name="isSetTracingExpiration">
+                        Set tracing expiration
+                        <PopoverWithHoverWrapper message={<>TODO</>}>
+                            <Icon icon="info-new" />
+                        </PopoverWithHoverWrapper>
+                    </FormSwitch>
+                    {formValues.isSetTracingExpiration && (
+                        <FormDurationPicker control={control} name="tracingExpirationInSeconds" showDays isFlexGrow />
+                    )}
+                </FormGroup>
+            )}
         </>
     );
 }
