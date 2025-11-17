@@ -668,8 +668,10 @@ namespace Sparrow.Json
             switch (current)
             {
                 case JsonParserToken.String:
+                    // RavenDB-25340: When we have pre-compressed string data, we must handle it via the full write strategy because the state
+                    // StringBuffer points to compressed data but the state StringSize is the uncompressed size instead.
                     BlittableJsonToken stringToken;
-                    if (typeof(TWriteStrategy) == typeof(WriteNone))
+                    if (typeof(TWriteStrategy) == typeof(WriteNone) && _state.CompressedSize.HasValue == false)
                     {
                         stringToken = BlittableJsonToken.String;
                         start = _writer.WriteValue(_state.StringBuffer, _state.StringSize, _state.EscapePositions);

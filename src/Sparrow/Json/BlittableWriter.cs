@@ -846,12 +846,6 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Write(buffer, size);
             position += size;
 
-            if (escapePositions.IsEmpty)
-            {
-                position += WriteVariableSizeInt(0);
-                goto Finish;
-            }
-
             // we write the number of the escape sequences required
             // and then we write the distance to the _next_ escape sequence
             position += WriteVariableSizeInt(escapePositions.Length);
@@ -860,7 +854,6 @@ namespace Sparrow.Json
             foreach (var pos in escapePositions)
                 position += WriteVariableSizeInt(pos);
 
-            Finish:
             _position = position;
             return startPos;
         }
