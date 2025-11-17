@@ -1,0 +1,49 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.dot-list {
+    display: flex;
+    flex-direction: column;
+
+    .dot-list-item {
+        display: flex;
+        position: relative;
+
+        .dot-list-item-line-container {
+            position: relative;
+            width: 8px;
+
+            .dot-list-item-dot {
+                position: absolute;
+                background-color: colors.$primary-var;
+                top: 6px;
+                width: 8px;
+                height: 8px;
+                border-radius: 100%;
+                z-index: 1;
+            }
+
+            .dot-list-item-line {
+                position: absolute;
+                background-color: colors.$border-color-light-var;
+                top: 6px;
+                bottom: 0;
+                left: 3px;
+                width: 2px;
+                z-index: 0;
+                height: 100%;
+            }
+        }
+
+        &:last-child {
+            .dot-list-item-line {
+                height: 0;
+            }
+        }
+
+        .dot-list-item-content {
+            padding-left: sizes.$gutter-xs;
+            flex-grow: 1;
+        }
+    }
+}
