@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { FormProvider, SubmitHandler, useForm, useFormContext, UseFormSetValue, UseFormWatch } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm, useFormContext, UseFormReturn } from "react-hook-form";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { LoadingView } from "components/common/LoadingView";
@@ -31,10 +31,10 @@ import {
 } from "components/pages/database/settings/remoteAttachments/partials/DestinationPanel";
 import useConfirm from "components/common/ConfirmDialog";
 import { RemoteAttachmentsInfoHub } from "components/pages/database/settings/remoteAttachments/partials/RemoteAttachmentsInfoHub";
-import classNames from "classnames";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 
 export default function RemoteAttachments() {
+    // TODO: Add license restrictions. I cant do that at the moment because the key is missing in `LicenseStatus`
     const { reportEvent } = useEventsCollector();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -53,7 +53,7 @@ export default function RemoteAttachments() {
             ),
     });
 
-    const { handleSubmit, watch, formState, setValue, reset } = form;
+    const { handleSubmit, formState, reset } = form;
 
     useDirtyFlag(formState.isDirty || isAnyModified);
 
@@ -71,7 +71,7 @@ export default function RemoteAttachments() {
         });
     };
 
-    useRemoteAttachmentsSideEffects({ setValue, watch });
+    useRemoteAttachmentsSideEffects(form);
 
     if (loadStatus === "loading") {
         return <LoadingView />;
@@ -191,21 +191,15 @@ function DestinationsList() {
                 <Icon icon="global" />
                 Destinations
             </HrHeader>
-            <div
-                className={classNames({
-                    "opacity-25": !formValues.isRemoteAttachmentsEnabled,
-                })}
-            >
-                {destinations.map((field, index) => (
-                    <DestinationPanel
-                        {...field}
-                        key={index}
-                        onEdit={editDestination}
-                        onDelete={deleteDestination}
-                        onToggle={toggleDestination}
-                    />
-                ))}
-            </div>
+            {destinations.map((field, index) => (
+                <DestinationPanel
+                    {...field}
+                    key={index}
+                    onEdit={editDestination}
+                    onDelete={deleteDestination}
+                    onToggle={toggleDestination}
+                />
+            ))}
         </div>
     );
 }
@@ -269,6 +263,7 @@ function RemoteAttachmentsSettingsCard() {
                         name="maxItemsToProcess"
                         control={control}
                         type="number"
+                        placeholder="Enter any number (default is unlimited)"
                         disabled={
                             !hasDatabaseAdminAccess ||
                             formState.isSubmitting ||
@@ -309,18 +304,18 @@ function RemoteAttachmentsSettingsCard() {
     );
 }
 
-interface UseDestinationsSideEffectsProps {
-    setValue: UseFormSetValue<RemoteAttachmentsFormData>;
-    watch: UseFormWatch<RemoteAttachmentsFormData>;
-}
-
-const useRemoteAttachmentsSideEffects = ({ watch, setValue }: UseDestinationsSideEffectsProps) => {
+const useRemoteAttachmentsSideEffects = ({
+    watch,
+    setValue,
+    clearErrors,
+}: UseFormReturn<RemoteAttachmentsFormData>) => {
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
             if (name === "isRemoteAttachmentsEnabled" && !values.isRemoteAttachmentsEnabled) {
                 setValue("isCheckFrequencyInSecEnabled", false);
                 setValue("isMaxItemsToProcessEnabled", false);
                 setValue("isConcurrentUploadsEnabled", false);
+                clearErrors(["checkFrequencyInSec", "maxItemsToProcess", "concurrentUploads"]);
             }
         });
         return unsubscribe;

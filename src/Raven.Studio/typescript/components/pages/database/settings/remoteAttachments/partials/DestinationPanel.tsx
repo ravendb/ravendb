@@ -1,7 +1,6 @@
 import {
     RemoteAttachmentsDestinationFormData,
     remoteAttachmentsDestinationYupResolver,
-    RemoteAttachmentsFormData,
 } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsValidation";
 import {
     RichPanel,
@@ -18,7 +17,7 @@ import { Icon } from "components/common/Icon";
 import { useServices } from "hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { remoteAttachmentsSelectors } from "components/pages/database/settings/remoteAttachments/store/remoteAttachmentsSliceSelectors";
-import { FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import {
     defaultAzureFormData,
     defaultS3FormData,
@@ -51,10 +50,8 @@ export function DestinationPanel({
     onDelete,
     onToggle,
 }: DestinationPanelProps) {
-    const { watch } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const isModified = useAppSelector(remoteAttachmentsSelectors.isDestinationModified(identifier));
-    const formValues = watch();
 
     return (
         <RichPanel className="with-status flex-row">
@@ -71,26 +68,14 @@ export function DestinationPanel({
                     </RichPanelInfo>
                     {hasDatabaseAdminAccess && (
                         <RichPanelActions>
-                            <Button
-                                disabled={!formValues.isRemoteAttachmentsEnabled}
-                                variant={disabled ? "success" : "secondary"}
-                                onClick={() => onToggle(identifier)}
-                            >
+                            <Button variant={disabled ? "success" : "secondary"} onClick={() => onToggle(identifier)}>
                                 <Icon icon={disabled ? "play" : "disable"} />
                                 {disabled ? "Enable" : "Disable"}
                             </Button>
-                            <Button
-                                disabled={!formValues.isRemoteAttachmentsEnabled}
-                                variant="secondary"
-                                onClick={() => onEdit(identifier)}
-                            >
+                            <Button variant="secondary" onClick={() => onEdit(identifier)}>
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
-                            <Button
-                                disabled={!formValues.isRemoteAttachmentsEnabled}
-                                variant="danger"
-                                onClick={() => onDelete(identifier)}
-                            >
+                            <Button variant="danger" onClick={() => onDelete(identifier)}>
                                 <Icon icon="trash" margin="m-0" />
                             </Button>
                         </RichPanelActions>

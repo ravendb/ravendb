@@ -1137,4 +1137,13 @@ return docs[0];`,
             CheckFrequencyInSec: 5 * TimeInSeconds.Minute,
         };
     }
+
+    static emptyRemoteAttachmentsConfiguration(): Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration {
+        return {
+            Disabled: true,
+            MaxItemsToProcess: null,
+            CheckFrequencyInSec: null,
+            Destinations: {}
+        };
+    }
 }

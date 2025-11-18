@@ -49,6 +49,8 @@ import shardedDatabase = require("models/resources/shardedDatabase");
 import assertUnreachable = require("components/utils/assertUnreachable");
 import getDocumentRevisionsPhysicalSizeCommand = require("commands/database/documents/getDocumentRevisionPhysicalSizeCommand");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
+import getRemoteAttachmentsConfigurationCommand = require("commands/database/settings/getRemoteAttachmentsConfigurationCommand");
+import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 
 
 class editDocument extends shardViewModelBase {
@@ -181,6 +183,8 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
+    remoteAttachmentsDisabled = ko.observable<boolean>(false);
+
     isFullScreenEditor = ko.observable(false);
 
     collapseDocsWhenOpening = ko.observable<boolean>(false);
@@ -200,6 +204,8 @@ class editDocument extends shardViewModelBase {
         this.bindToCurrentInstance("forceCreateRevision", "copyChangeVectorToClipboard",
             "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab",
             "revisionNavigate", "changeLeftRevision", "changeRightRevision");
+
+        this.loadRemoteAttachmentsConfiguration();
     }
 
     canActivate(args: any) {
@@ -1259,6 +1265,17 @@ class editDocument extends shardViewModelBase {
 
         return loadTask;
     }
+
+    private loadRemoteAttachmentsConfiguration() {
+            new getRemoteAttachmentsConfigurationCommand(this.db)
+                .execute()
+                .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
+                        this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration.Disabled);
+                })
+                .fail(() => {
+                    this.remoteAttachmentsDisabled(false);
+                });
+        }
 
     async enterCompareModeAndCompareWithPrevious(): Promise<void> {
         const changeVector = this.document().__metadata.changeVector();

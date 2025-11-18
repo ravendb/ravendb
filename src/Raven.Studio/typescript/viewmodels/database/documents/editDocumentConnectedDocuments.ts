@@ -21,7 +21,7 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import genUtils = require("common/generalUtils");
 import _ = require("lodash")
-import prismjs = require("prismjs");
+import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -162,10 +162,10 @@ class connectedDocuments {
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
-                transformValue: (x: Raven.Client.Documents.Attachments.RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment"></i>` : `<i class="icon-attachment"></i>`,
+                transformValue: (x: Raven.Client.Documents.Attachments.RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
             }),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.crudActionsProvider().deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
@@ -183,7 +183,11 @@ class connectedDocuments {
                     extraClass: () => 'btn-link',
                     title: () => "Download attachment"
                 }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' })
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
+                transformValue: (x: Raven.Client.Documents.Attachments.RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
+            }),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
         ];
 
         this.countersColumns = [
@@ -276,12 +280,15 @@ class connectedDocuments {
                             onValue(timeSeriesItem.numberOfEntries.toLocaleString());
                             break;
                         case "Remote parameters": {
-                            if (value == null) {
+                            const remoteParametersValue = value as RemoteAttachmentParameters;
+                            if (remoteParametersValue == null) {
                                 return;
                             }
-                            const json = JSON.stringify(value, null, 4);
-                            const html = prismjs.highlight(json, prismjs.languages.javascript, "js");
-                            onValue(_.isObject(value) ? html : genUtils.escapeHtml((value)), _.isObject(value) ? json : value);
+
+                            const attachmentMetadataHtml = `<div><strong>Upload time:</strong> ${moment(remoteParametersValue.At).format(genUtils.dateFormat)}
+<strong>Destination ID:</strong> ${remoteParametersValue.Identifier}
+<strong>Flags:</strong> ${remoteParametersValue.Flags}</div>`
+                            onValue(attachmentMetadataHtml, value);
                             break;
                         }
                         case "Remote flags": {

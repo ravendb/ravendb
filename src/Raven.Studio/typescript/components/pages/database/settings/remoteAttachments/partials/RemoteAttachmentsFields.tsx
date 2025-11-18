@@ -20,13 +20,13 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
 
     return (
         <div className="vstack mt-3">
-            <FormSwitch control={control} name="s3.isUseCustomHost" className="w-100 mb-3" color="secondary">
+            <FormSwitch control={control} name="s3.isUseCustomHost" className="w-100 mb-3">
                 Use a custom S3 host
             </FormSwitch>
 
             <Collapse in={s3Values?.isUseCustomHost} mountOnEnter unmountOnExit>
                 <div>
-                    <FormSwitch control={control} name="s3.forcePathStyle" className="w-100 mb-3" color="secondary">
+                    <FormSwitch control={control} name="s3.forcePathStyle" className="w-100 mb-3">
                         <span className="d-flex gap-1 align-items-center">
                             Force path style
                             <PopoverWithHoverWrapper

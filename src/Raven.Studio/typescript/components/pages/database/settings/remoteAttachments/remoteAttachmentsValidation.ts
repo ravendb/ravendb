@@ -27,7 +27,8 @@ const destinationBaseSchema = yup.object({
             }
 
             return true;
-        }),
+        })
+        .required(),
     disabled: yup.boolean(),
 });
 
