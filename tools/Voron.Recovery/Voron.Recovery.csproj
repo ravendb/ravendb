@@ -26,6 +26,7 @@
     <PackageReference Include="System.Diagnostics.EventLog" />
     <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Reflection.Metadata" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="ZstdSharp.Port" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
