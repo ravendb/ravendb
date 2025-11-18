@@ -189,25 +189,32 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void MarkAsRemoteAttachment(DocumentsOperationContext context, AttachmentDetailsServer attachment, Slice keySlice)
+        public void MarkAsRemoteAttachment(DocumentsOperationContext context, BlittableJsonReaderObject attachmentMetadata, Slice lowerDocumentId, string documentId)
         {
-            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, attachment.DocumentId, out Slice lowerDocumentId))
+            // we have attachment that should be remote
+            if (attachmentMetadata.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
+                attachmentMetadata.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
+                attachmentMetadata.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                attachmentMetadata.TryGet(nameof(AttachmentName.Size), out long size) == false)
+                throw new ArgumentException($"The attachment info is missing a mandatory value: {attachmentMetadata}");
+
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out var nameSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out var contentTypeSlice))
+            using (Slice.External(context.Allocator, hash, out var hashSlice))
+            using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                       hashSlice, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
-                if (TryGetDocumentTableValueReaderForAttachment(context, attachment.DocumentId, attachment.Name, lowerDocumentId, out var documentTvr) == false)
-                    throw new DocumentDoesNotExistException($"Cannot update metadata of remote attachment '{attachment.Name}' on a non existent document '{attachment.DocumentId}'.");
+                if (TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out var documentTvr) == false)
+                    throw new DocumentDoesNotExistException($"Cannot update metadata of remote attachment '{name}' on a non existent document '{documentId}'.");
 
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 if (table.ReadByKey(keySlice, out TableValueReader attachmentTvr) == false)
-                    throw new AttachmentDoesNotExistException($"Cannot update metadata of remote attachment '{keySlice}' that belongs to document '{attachment.DocumentId}' because it doesn't exists.");
+                    throw new AttachmentDoesNotExistException($"Cannot update metadata of remote attachment '{keySlice}' that belongs to document '{lowerDocumentId}' because it doesn't exists.");
 
                 var attachmentEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
-                var size = TableValueToLong((int)AttachmentsTable.Size, ref attachmentTvr);
                 var remoteAt = TableValueToLong((int)AttachmentsTable.RemoteAt, ref attachmentTvr);
 
-                using (TableValueToSlice(context, (int)AttachmentsTable.Name, ref attachmentTvr, out var nameSlice))
-                using (TableValueToSlice(context, (int)AttachmentsTable.ContentType, ref attachmentTvr, out var contentTypeSlice))
-                using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref attachmentTvr, out var hashSlice))
                 using (TableValueToSlice(context, (int)AttachmentsTable.Identifier, ref attachmentTvr, out var identifierSlice))
                 using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -229,7 +236,7 @@ namespace Raven.Server.Documents
                     context.Transaction.CheckIfShouldDeleteAttachmentStream(hashSlice);
                 }
 
-                UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, attachment.DocumentId, documentTvr, changeVector, extractCollectionName: false, out _);
+                // The document will be updated by the caller, after all its attachments will be marked as "Remote"
             }
         }
 
@@ -783,6 +790,23 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (DocumentIdWorker.GetLower(context.Allocator, documentId, out var lowerDocumentIdSlice))
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
+            {
+                foreach (Attachment attachment in GetAttachmentsForDocumentInternal(context, type, lowerDocumentIdSlice, changeVectorSlice, table))
+                    yield return attachment;
+            }
+        }
+
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, Slice lowerDocumentIdSlice)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            foreach (Attachment attachment in GetAttachmentsForDocumentInternal(context, type, lowerDocumentIdSlice, Slices.Empty, table))
+                yield return attachment;
+
+        }
+
+        private static IEnumerable<Attachment> GetAttachmentsForDocumentInternal(DocumentsOperationContext context, AttachmentType type, Slice lowerDocumentIdSlice, Slice changeVectorSlice,
+            Table table)
+        {
             using (AttachmentKey.GetPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : changeVectorSlice, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
@@ -1592,6 +1616,11 @@ namespace Raven.Server.Documents
             private const byte RevisionType = (byte)'r';
 
             public static int GetSizeOfDocId(ReadOnlySpan<byte> key) => FindNextSeparator(key, 0);
+
+            public static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractLowerDocumentIdSliceFromAttachmentKey(DocumentsOperationContext context, Slice key, out Slice lowerDocumentId)
+            {
+                return Slice.External(context.Allocator, key.Content, 0, GetSizeOfDocId(key), out lowerDocumentId);
+            }
 
             public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentName(JsonOperationContext context,
                 LazyStringValue key)

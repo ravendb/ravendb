@@ -19,7 +19,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -55,154 +54,74 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         });
     }
 
-    // example key: s3-identifier|categories/1-a|d|image.jpg|S5Opbm22FH1LW5SAC3wRb3HA64QM7odd26djlt5cAkM=|image/jpeg
-    private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractIdentifierStringAndDocumentIdSliceFromRemoteAttachmentKey(DocumentsOperationContext context, Slice key, out string identifier, out Slice documentIdSlice)
+    private IEnumerator<BlittableJsonReaderObject> EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(BlittableJsonReaderArray attachments, DateTime currentTime, Func<string, bool> shouldSkip)
     {
-        identifier = ExtractIdentifierStringFromRemoteAttachmentKey(context, key, out var sizeOfIdentifier);
-        var s = sizeOfIdentifier + 1;
-
-        var sizeOfId = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, s) - s;
-        var d2 = Slice.External(context.Allocator, key.Content, s, sizeOfId, out documentIdSlice);
-        return d2;
-    }
-
-    private static LazyStringValue ExtractIdentifierStringFromRemoteAttachmentKey(DocumentsOperationContext context, Slice key, out int sizeOfIdentifier)
-    {
-        sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
-        using var d1 = Slice.External(context.Allocator, key.Content, 0, sizeOfIdentifier, out var identifierSlice);
-        return GetStringFromIdSlice(context, identifierSlice);
-    }
-
-    private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractIdentifierStringAndAttachmentKeySlice(DocumentsOperationContext context, Slice key, out LazyStringValue identifier, out Slice attachmentKeySlice)
-    {
-        identifier = ExtractIdentifierStringFromRemoteAttachmentKey(context, key, out _);
-        var d2 = ExtractAttachmentKeySliceFromRemoteAttachmentKey(context, key, out attachmentKeySlice);
-
-        return d2;
-    }
-
-    private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractAttachmentKeySliceFromRemoteAttachmentKey(DocumentsOperationContext context, Slice key, out Slice attachmentKeySlice)
-    {
-        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
-        var sizeOfAttachmentKey = key.Content.Length - sizeOfIdentifier - 1; // -1 for record separator
-
-        var d2 = Slice.External(context.Allocator, key.Content, sizeOfIdentifier + 1, sizeOfAttachmentKey, out attachmentKeySlice);
-        return d2;
-    }
-
-    public unsafe ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractHashSliceFromAttachmentId(DocumentsOperationContext context, Slice key, out Slice hashSlice)
-    {
-        var p = key.Content.Ptr;
-        var size = key.Size;
-        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(p, size));
-        p = p + sizeOfIdentifier + 1; // skip identifier and record separator
-        size = size - sizeOfIdentifier - 1; // skip identifier and record separator
-        byte* pp = ExtractHashFromAttachmentIdInternal(p, size);
-        var d1 = Slice.External(context.Allocator, pp, AttachmentsStorage.AttachmentHashSize, out hashSlice);
-
-        return d1;
-    }
-
-    internal static unsafe byte* ExtractHashFromAttachmentIdInternal(byte* p, int size)
-    {
-        AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(p, size, out _, out _, out _, out int attachmentHashIndex);
-        var pp = p + attachmentHashIndex;
-        return pp;
-    }
-
-    protected override unsafe void ProcessDocument(DocumentsOperationContext context, Slice attachmentKey, string identifier, DateTime currentTime)
-    {
-        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(attachmentKey.Content.Ptr, attachmentKey.Size));
-        using (var lowerDocId = _documentInfoHelper.GetDocumentId(attachmentKey, sizeOfIdentifier + 1))
+        foreach (BlittableJsonReaderObject attachmentInMetadata in attachments)
         {
-            if (lowerDocId == null)
+            if (attachmentInMetadata.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsObject) == false)
+                continue;
+            if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Flags), out object flagsObj) && Enum.TryParse(flagsObj.ToString(), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.Remote)
             {
-                throw new InvalidOperationException($"Couldn't process the remote attachment. Remote attachment key is '{attachmentKey}'.");
+                // this attachment is already remote
+                continue;
+            }
+            if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Identifier), out LazyStringValue identifierFromMetadata) == false)
+                continue;
+            if (HasPassed(remoteParamsObject, currentTime, MetadataPropertyName) == false)
+                continue;
+
+            if (shouldSkip.Invoke(identifierFromMetadata))
+                continue;
+
+            yield return attachmentInMetadata;
+        }
+    }
+
+    protected override void ProcessDocument(DocumentsOperationContext context, Slice treeKey, string docId, DateTime currentTime)
+    {
+        using (var doc = Database.DocumentsStorage.Get(context, treeKey, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
+        {
+            if (doc == null || doc.TryGetMetadata(out var metadata) == false)
+                return;
+
+            if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return;
+
+            foreach (var attachmentInMetadata in EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(attachments, currentTime, ShouldSkipItem))
+            {
+                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, attachmentInMetadata, treeKey, docId);
             }
 
-            using (var doc = Database.DocumentsStorage.Get(context, lowerDocId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
-            {
-                if (doc == null || doc.TryGetMetadata(out var metadata) == false)
-                    return;
-
-                if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                    return;
-
-                using var attachmentKeyDisposable = ExtractAttachmentKeySliceFromRemoteAttachmentKey(context, attachmentKey, out Slice attachmentKeySlice);
-                var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, attachmentKeySlice);
-                if (nameByKey == null)
-                    return;
-
-                for (var i = 0; i < attachments.Length; i++)
-                {
-                    var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
-                    if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
-                        continue;
-                    if (attachmentInMetadata.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsObject) == false)
-                        continue;
-                    if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Identifier), out LazyStringValue identifierFromMetadata) == false)
-                        continue;
-                    if (identifierFromMetadata != identifier)
-                        continue;
-
-                    if (name == nameByKey)
-                    {
-                        if (HasPassed(remoteParamsObject, currentTime, MetadataPropertyName) == false)
-                            return;
-
-                        Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, new AttachmentDetailsServer()
-                        {
-                            Name = name,
-                            DocumentId = doc.Id
-                        }, attachmentKeySlice);
-
-                        break;
-                    }
-                }
-            }
+            Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, docId);
         }
     }
 
     public void Put(DocumentsOperationContext context, Slice attachmentKey, string processDateString, string identifier)
     {
-        using (CreateRemoteAttachmentsKeyWithIdentifier(context, attachmentKey, identifier, out Slice key))
-            base.Put(context, key, processDateString);
+        using (AttachmentsStorage.AttachmentKey.ExtractLowerDocumentIdSliceFromAttachmentKey(context, attachmentKey, out var lowerDocumentId))
+            base.Put(context, lowerDocumentId, processDateString);
     }
 
-    private unsafe ByteStringContext.InternalScope CreateRemoteAttachmentsKeyWithIdentifier(DocumentsOperationContext context, Slice attachmentKey, string identifier, out Slice outSlice)
+    protected override AttachmentRemoteInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice docId, Slice ticksSlice)
     {
-        // something like: my-s3-cool-storage|categories/1-a|d|image.jpg|S5Opbm22FH1LW5SAC3wRb3HA64QM7odd26djlt5cAkM=|image/jpeg
-        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, identifier, out _, out Slice identifierSlice))
+        using (var doc = Database.DocumentsStorage.Get(options.Context, docId, DocumentFields.Data | DocumentFields.Id))
         {
-            var size = identifierSlice.Content.Length + 1 + attachmentKey.Content.Length; // identifier + record separator + attachmentKey 
-            var scope = context.Allocator.Allocate(size, out ByteString keyMem);
-            var pos = 0;
-            Memory.Copy(keyMem.Ptr + pos, identifierSlice.Content.Ptr, identifierSlice.Content.Length);
-            pos = identifierSlice.Content.Length;
-            keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
-            Memory.Copy(keyMem.Ptr + pos, attachmentKey.Content.Ptr, attachmentKey.Content.Length);
-
-            outSlice = new Slice(SliceOptions.Key, keyMem);
-            return scope;
-        }
-    }
-
-    protected override AttachmentRemoteInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice attachmentKey, Slice ticksSlice)
-    {
-        using (ExtractIdentifierStringAndDocumentIdSliceFromRemoteAttachmentKey(options.Context, attachmentKey, out string identifier, out Slice documentIdSlice))
-        {
-            if (Database.DocumentsStorage.GetTableValueReaderForDocument(options.Context, documentIdSlice, throwOnConflict: false, out _) == false)
+            if (doc == null
+                || doc.TryGetMetadata(out var metadata) == false
+                || metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
                 // doc was deleted
-                return new AttachmentRemoteInfo(ticksSlice, attachmentKey, null, BackgroundWorkInfoStatus.Delete);
+                return new AttachmentRemoteInfo(ticksSlice, docId, null, BackgroundWorkInfoStatus.Delete);
             }
 
-            if (ShouldSkipItem(identifier))
+            foreach (var _ in EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(attachments, options.CurrentTime, ShouldSkipItem))
             {
-                return new AttachmentRemoteInfo(ticksSlice, attachmentKey, identifier, BackgroundWorkInfoStatus.Skip);
+                // this document has at least one attachment to upload
+                return new AttachmentRemoteInfo(ticksSlice, docId, doc.Id, BackgroundWorkInfoStatus.Process);
             }
 
-            return new AttachmentRemoteInfo(ticksSlice, attachmentKey, identifier, BackgroundWorkInfoStatus.Process);
+            // nothing to upload
+            return new AttachmentRemoteInfo(ticksSlice, docId, null, BackgroundWorkInfoStatus.Delete);
         }
     }
 
@@ -262,9 +181,9 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
 
-        using (CreateRemoteAttachmentsKeyWithIdentifier(context, attachmentKey, identifier, out Slice key))
+        using (AttachmentsStorage.AttachmentKey.ExtractLowerDocumentIdSliceFromAttachmentKey(context, attachmentKey, out var lowerDocumentId))
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
-            tree.MultiDelete(ticksSlice, key);
+            tree.MultiDelete(ticksSlice, lowerDocumentId);
     }
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<AttachmentRemoteInfo> expiredDocs, ref int totalCount)
@@ -273,7 +192,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
 
         if (allShouldRemote)
         {
-            expiredDocs.Enqueue(new AttachmentRemoteInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
+            expiredDocs.Enqueue(id == null ? new AttachmentRemoteInfo(ticksAsSlice, clonedId, null, BackgroundWorkInfoStatus.Delete) : new AttachmentRemoteInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
             totalCount++;
         }
     }
@@ -296,68 +215,39 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         }
     }
 
-    private unsafe (bool AllHasPassed, string Id) GetConflictedRemoteAttachment(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
+    private (bool AllHasPassed, string Id) GetConflictedRemoteAttachment(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
     {
-        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(clonedId.Content.Ptr, clonedId.Size));
-        using (var docId = _documentInfoHelper.GetDocumentId(clonedId, sizeOfIdentifier + 1))
+        var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
+
+        if (conflicts.Count <= 0)
+            return (true, null);
+
+        string id = null;
+        var allHashPassed = true;
+
+        foreach (var conflict in conflicts)
         {
-            var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-
-            if (conflicts.Count <= 0)
-                return (true, null);
-
-            var allHashPassed = true;
-            LazyStringValue identifier = null;
-
-            foreach (var conflict in conflicts)
+            using (conflict)
             {
-                using (conflict)
+                id = conflict.Id;
+                if (conflict.Doc.TryGetMetadata(out var metadata) == false)
+                    continue;
+
+                if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                    continue;
+
+                foreach (var _ in EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(attachments, currentTime, s => false))
                 {
-                    if (conflict.Doc.TryGetMetadata(out var metadata) == false)
-                        continue;
-
-                    if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                        continue;
-
-                    using var d = ExtractIdentifierStringAndAttachmentKeySlice(context, clonedId, out identifier, out var attachmentKeySlice);
-                    var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, attachmentKeySlice);
-                    if (nameByKey == null)
-                        continue;
-                    var found = false;
-                    var hasPassed = false;
-                    for (var i = 0; i < attachments.Length; i++)
-                    {
-                        var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
-                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
-                            continue;
-                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsObject) == false)
-                            continue;
-                        if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Identifier), out LazyStringValue identifierFromMetadata) == false)
-                            continue;
-                        if (identifierFromMetadata != identifier)
-                            continue;
-
-                        if (name == nameByKey)
-                        {
-                            found = true;
-                            hasPassed = HasPassed(attachmentInMetadata, currentTime, MetadataPropertyName);
-                            break;
-                        }
-                    }
-
-                    if (found == false)
-                        continue;
-
-                    if (hasPassed)
-                        continue;
-
                     allHashPassed = false;
                     break;
                 }
-            }
 
-            return (allHashPassed, identifier);
+                if (allHashPassed == false)
+                    break;
+            }
         }
+
+        return (allHashPassed, id);
     }
 
     public DirectFileDownloader GetDownloader(Attachment attachment, OperationCancelToken tcs)

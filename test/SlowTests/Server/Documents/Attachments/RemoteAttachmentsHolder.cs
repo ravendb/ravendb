@@ -470,6 +470,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
 
             var remoteAt = Attachments.First().RemoteParameters.At;
 
+            // this will delete the remote entry from remote tree because the configuration identifier doesn't exist
             database2.Time.UtcDateTime = () => remoteAt.AddMinutes(1);
             await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
             await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
@@ -483,8 +484,8 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
             await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
             GetStorageAttachmentsMetadataFromAllAttachments(database2);
 
-            var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-            await AssertAllRemoteAttachments(store2, cloudObjects, size, identifier1);
+            // nothing should happen, after we added the configuration with the missing identifier, because the item was cleared from the background work tree on previous batch
+            var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
         }
     }
 

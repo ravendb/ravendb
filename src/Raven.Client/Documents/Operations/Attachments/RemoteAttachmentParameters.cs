@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Attachments;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Attachments;
@@ -59,7 +60,8 @@ public class RemoteAttachmentParameters : IDynamicJson
     /// Gets or sets flags controlling the remote upload behavior.
     /// Use <see cref="RemoteAttachmentFlags.Remote"/> to mark the attachment for remote handling.
     /// </summary>
-    public RemoteAttachmentFlags Flags { get; set; }
+    [ForceJsonSerialization]
+    internal RemoteAttachmentFlags Flags { get; set; }
 
     /// <summary>
     /// Converts this instance into a <see cref="DynamicJsonValue"/> suitable for RavenDB internal serialization.
@@ -68,12 +70,11 @@ public class RemoteAttachmentParameters : IDynamicJson
     /// <returns>A <see cref="DynamicJsonValue"/> representing this instance.</returns>
     public DynamicJsonValue ToJson()
     {
-        var json = new DynamicJsonValue
+        return new DynamicJsonValue
         {
             [nameof(At)] = At,
             [nameof(Identifier)] = Identifier,
             [nameof(Flags)] = Flags.ToString()
         };
-        return json;
     }
 }

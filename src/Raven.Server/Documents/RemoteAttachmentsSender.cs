@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -6,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.Documents.Attachments;
@@ -76,7 +78,7 @@ namespace Raven.Server.Documents
 
             var totalCount = 0;
             var currentTime = _database.Time.GetUtcNow();
-            var directUploaders = new Dictionary<string, AttachmentUploader>();
+            var directUploaders = new ConcurrentDictionary<string, AttachmentUploader>();
             var uploadTasks = new Task<AttachmentRemoteInfo>[Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber];
 
             try
@@ -112,12 +114,13 @@ namespace Raven.Server.Documents
                             return totalCount;
                         }
 
+                        var processing = new HashSet<string>();
                         Array.Fill(uploadTasks, Task.FromResult<AttachmentRemoteInfo>(null));
 
                         try
                         {
                             // upload the attachments to cloud and update the document
-                            foreach (var attachment in toRemote)
+                            foreach (AttachmentRemoteInfo document in toRemote)
                             {
                                 _token.ThrowIfCancellationRequested();
 
@@ -126,26 +129,23 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                switch (attachment.Status)
+                                if (processing.Add(document.DestinationIdentifier) == false)
+                                {
+                                    // this document was processed or is currently being processed in this batch, we can skip the upload for it
+                                    processed.Enqueue(document);
+                                    continue;
+                                }
+
+                                switch (document.Status)
                                 {
                                     case BackgroundWorkInfoStatus.Delete:
                                         if (Logger.IsDebugEnabled)
-                                            Logger.Debug($"Skipping remote attachment with key: '{attachment.Key}' because it's identifier '{attachment.DestinationIdentifier}' IsNullOrEmpty.");
+                                            Logger.Debug($"Skipping remote attachment with key: '{document.Key}' because it's identifier '{document.DestinationIdentifier}' IsNullOrEmpty.");
 
                                         // document or attachment was deleted, need to remove it from remote tree
-                                        processed.Enqueue(attachment);
+                                        processed.Enqueue(document);
                                         continue;
                                     case BackgroundWorkInfoStatus.Process:
-                                        // get the destination configuration for the identifier & create new uploader for the attachment
-                                        if (directUploaders.TryGetValue(attachment.DestinationIdentifier, out var directUpload) == false)
-                                        {
-                                            // we are sure the destination exist because we got the item with "Process" status
-                                            var destination = Configuration.Destinations[attachment.DestinationIdentifier];
-                                            directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, attachment.DestinationIdentifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
-
-                                            directUploaders[attachment.DestinationIdentifier] = directUpload;
-                                        }
-
                                         var index = Task.WaitAny(uploadTasks);
                                         try
                                         {
@@ -158,12 +158,12 @@ namespace Raven.Server.Documents
                                         }
                                         finally
                                         {
-                                            uploadTasks[index] = CreateUploadTaskAsync(directUpload, attachment);
+                                            uploadTasks[index] = CreateUploadTaskAsync(directUploaders, currentTime, document);
                                         }
 
                                         break;
                                     default:
-                                        throw new ArgumentOutOfRangeException(nameof(attachment.Status), $"Attachment '{attachment.Key} with identifier '{attachment.DestinationIdentifier}' had unexpected status '{attachment.Status}'.");
+                                        throw new ArgumentOutOfRangeException(nameof(document.Status), $"Attachment '{document.Key} with identifier '{document.DestinationIdentifier}' had unexpected status '{document.Status}'.");
                                 }
                             }
                         }
@@ -199,13 +199,13 @@ namespace Raven.Server.Documents
                         {
                             // we had skipped items
                             if (Logger.IsDebugEnabled)
-                                Logger.Debug($"Skipping retiring of '{toRemote.Count - processed.Count:#,#;;0}' attachments, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => processed.Contains(x) == false))}");
+                                Logger.Debug($"Skipping upload attachments of '{toRemote.Count - processed.Count:#,#;;0}' documents, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => processed.Contains(x) == false))}");
                         }
 
                         if (processed.Count == 0)
                         {
                             if (Logger.IsDebugEnabled)
-                                Logger.Debug($"Skipping retiring whole batch of '{toRemote.Count:#,#;;0}' attachments, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => processed.Contains(x) == false))}");
+                                Logger.Debug($"Skipping upload attachments of whole batch of '{toRemote.Count:#,#;;0}' documents, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => processed.Contains(x) == false))}");
 
                             if (_exceptions.Count == 0)
                             {
@@ -259,54 +259,79 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task<AttachmentRemoteInfo> CreateUploadTaskAsync(AttachmentUploader uploader, AttachmentRemoteInfo attachment)
+        private async Task<AttachmentRemoteInfo> CreateUploadTaskAsync(ConcurrentDictionary<string, AttachmentUploader> uploaders, DateTime currentTime, AttachmentRemoteInfo document)
         {
+            var s = 0L;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (_database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, attachment.Key, out Slice hashSlice))
             using (context.OpenReadTransaction())
             {
-                var hash = hashSlice.ToString();
-                var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, hash);
-                long? attachmentLength;
-                Stream attachmentStream;
-                if (objectSizeFromMetadata.HasValue)
-                {
-                    // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
-                    attachmentLength = AttachmentsStorage.GetAttachmentStreamLength(context, hashSlice);
-                    attachmentStream = objectSizeFromMetadata == attachmentLength ? null : _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
-                }
-                else
-                {
-                    (attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
-                }
-
-                if (attachmentStream == null)
-                {
-                    // attachment was deleted or already exist in cloud, need to remove it from remote tree
-                    if (Logger.IsDebugEnabled)
-                    {
-                        Logger.Debug($"Skipping upload of attachment with '{hash}' on {uploader.GetBackupDescription()}.");
-                    }
-                }
-                else
+                foreach (Attachment attachment in _database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, AttachmentType.Document, document.Key))
                 {
                     _token.ThrowIfCancellationRequested();
 
-                    await using (attachmentStream)
-                    await using (var stream = uploader.StreamForBackupDestination(_database, string.Empty, hash))
+                    if (attachment.RemoteParameters.IsRemoteStorageAttachment())
                     {
-                        if (Logger.IsDebugEnabled)
-                        {
-                            Logger.Debug($"Starting the upload of remote attachment '{hash}' on {uploader.GetBackupDescription()}.");
-                        }
-
-                        await attachmentStream.CopyToAsync(stream, _token.Token);
+                        continue;
                     }
 
-                    attachment.Size = attachmentLength.Value;
+                    if (attachment.RemoteParameters != null)
+                    {
+                        if (currentTime < attachment.RemoteParameters.At)
+                            continue;
+
+                        var identifier = attachment.RemoteParameters.Identifier;
+
+                        // get the destination configuration for the identifier & create new uploader for the attachment
+                        if (uploaders.TryGetValue(identifier, out var uploader) == false)
+                        {
+                            // we are sure the destination exist because we got the item with "Process" status
+                            var destination = Configuration.Destinations[identifier];
+                            uploader = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
+
+                            uploaders[identifier] = uploader;
+                        }
+
+                        var hash = attachment.Base64Hash.ToString();
+                        var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, attachment.Base64Hash.ToString());
+                        Stream attachmentStream;
+                        if (objectSizeFromMetadata.HasValue)
+                        {
+                            // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
+                            attachmentStream = objectSizeFromMetadata == attachment.Size ? null : _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
+                        }
+                        else
+                        {
+                            attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
+                        }
+
+                        if (attachmentStream == null)
+                        {
+                            // attachment was deleted or already exist in cloud, need to remove it from remote tree
+                            if (Logger.IsDebugEnabled)
+                            {
+                                Logger.Debug($"Skipping upload of attachment with '{hash}' on {uploader.GetBackupDescription()}.");
+                            }
+                        }
+                        else
+                        {
+                            await using (attachmentStream)
+                            await using (var stream = uploader.StreamForBackupDestination(_database, string.Empty, hash))
+                            {
+                                if (Logger.IsDebugEnabled)
+                                {
+                                    Logger.Debug($"Starting the upload of remote attachment '{hash}' on {uploader.GetBackupDescription()}.");
+                                }
+
+                                await attachmentStream.CopyToAsync(stream, _token.Token);
+                            }
+
+                            s += attachment.Size;
+                        }
+                    }
                 }
 
-                return attachment;
+                document.Size = s;
+                return document;
             }
         }
 

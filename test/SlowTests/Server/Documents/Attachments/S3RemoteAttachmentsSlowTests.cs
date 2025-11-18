@@ -213,7 +213,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
 
-                    Assert.Equal("\u0012conf-identifier-s3\0\u001eorders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", key);
+                    Assert.Equal("orders/0", key);
 
                     using (var session = store.OpenSession())
                     {
@@ -289,7 +289,7 @@ namespace SlowTests.Server.Documents.Attachments
                         key = infos.First().Key.ToString();
                     });
 
-                    Assert.Equal($"\u0012conf-identifier-s3\0\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                    Assert.Equal("orders/3", key);
 
                     PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
                     {
@@ -363,7 +363,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                             key = arr.First().Key.ToString();
                         });
-                        Assert.Equal("\u0012conf-identifier-s3\0\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                        Assert.Equal("orders/3", key);
                     }
 
                     PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
