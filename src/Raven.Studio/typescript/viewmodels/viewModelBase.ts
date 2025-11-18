@@ -171,7 +171,8 @@ abstract class viewModelBase {
         const discardStayResult = $.Deferred<confirmDialogResult>();
         const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", {
             buttons: [discard, stay],
-            forceRejectWithResolve: true
+            forceRejectWithResolve: true,
+            isCancelHidden: true
         });
 
         confirmation.done((result: confirmDialogResult) => {
