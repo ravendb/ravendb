@@ -17,6 +17,11 @@ public abstract class FileUploaderDownloaderBase
         TaskCancelToken = taskCancelToken;
     }
 
+    protected string CombinePathAndKey(string path)
+    {
+        return CombinePathAndKey(path, _settings.FolderName, _settings.FileName);
+    }
+
     protected string CombinePathAndKey(string path, string folderName, string fileName)
     {
         if (path?.EndsWith('/') == true)

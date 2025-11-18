@@ -8,7 +8,7 @@ namespace Raven.Client.Extensions;
 /// <summary>
 /// Provides extension methods for working with attachment remote parameters.
 /// </summary>
-public static class RemoteAttachmentExtensions
+internal static class RemoteAttachmentExtensions
 {
     /// <summary>
     /// Determines whether the attachment parameters indicate a local (non-remote) attachment.

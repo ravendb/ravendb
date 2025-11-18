@@ -46,7 +46,7 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
     {
         using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
-            var key = CombinePathAndKey(settings.RemoteFolderName, _settings.FolderName, _settings.FileName);
+            var key = CombinePathAndKey(settings.RemoteFolderName);
             client.DeleteObject(key);
 
             if (_logger.IsInfoEnabled)
@@ -58,7 +58,7 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
     {
         using (var client = RavenAzureClient.Create(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
-            var key = CombinePathAndKey(settings.RemoteFolderName, _settings.FolderName, _settings.FileName);
+            var key = CombinePathAndKey(settings.RemoteFolderName);
             client.DeleteBlobs(new List<string> { key });
 
             if (_logger.IsInfoEnabled)
@@ -70,7 +70,7 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
     {
         using (var client = new RavenGoogleCloudClient(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
         {
-            var key = CombinePathAndKey(settings.RemoteFolderName, _settings.FolderName, _settings.FileName);
+            var key = CombinePathAndKey(settings.RemoteFolderName);
             client.DeleteObject(key);
 
             if (_logger.IsInfoEnabled)

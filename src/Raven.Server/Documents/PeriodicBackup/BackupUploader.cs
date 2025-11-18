@@ -182,11 +182,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private string CombinePathAndKey(string path)
-        {
-            return CombinePathAndKey(path, _settings.FolderName, _settings.FileName);
-        }
-
         private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
             where S : BackupSettings
             where T : CloudUploadStatus
