@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -125,13 +124,6 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         }
     }
 
-    [DoesNotReturn]
-    protected override void ThrowWrongDateFormat(Slice treeKey, string expirationDate)
-    {
-        throw new InvalidOperationException(
-            $"The due date format for attachment with key '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
-    }
-
     private bool ShouldSkipItem(string identifier)
     {
         if (Configuration?.Destinations == null)
@@ -171,7 +163,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         return scope;
     }
 
-    public unsafe void RemoveRemotePutValue(DocumentsOperationContext context, Slice attachmentKey, string identifier, long ticks)
+    public unsafe void RemoveRemotePutValue(DocumentsOperationContext context, Slice attachmentKey, long ticks)
     {
         var ticksBigEndian = Bits.SwapBytes(ticks);
 
@@ -194,24 +186,6 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         {
             expiredDocs.Enqueue(id == null ? new AttachmentRemoteInfo(ticksAsSlice, clonedId, null, BackgroundWorkInfoStatus.Delete) : new AttachmentRemoteInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
             totalCount++;
-        }
-    }
-
-    private const string AlertTitle = "Remote Attachments";
-    private const string WarnMessage = "A remote attachment was skipped.";
-    private long _counter = 0;
-
-    protected override void HandleSkippedItem(AttachmentRemoteInfo item)
-    {
-        if (_logger.IsDebugEnabled)
-        {
-            _logger.Debug($"Skipping remote attachment '{item.Key}' with identifier '{item.DestinationIdentifier}'");
-        }
-
-        if (_counter++ % 1024 == 0)
-        {
-            var alert = AlertRaised.Create(Database.Name, AlertTitle, WarnMessage, AlertReason.Attachments_RemoteAttachmentWithoutIdentifier, NotificationSeverity.Warning, key: nameof(AlertReason.Attachments_RemoteAttachmentWithoutIdentifier));
-            Database.NotificationCenter.Add(alert);
         }
     }
 
@@ -297,7 +271,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         // Handle case where remote attachment is being removed
         if (newRemoteAtDt.HasValue == false)
         {
-            RemoveRemotePutValue(context, keySlice, currentIdentifier, currentDt);
+            RemoveRemotePutValue(context, keySlice, currentDt);
             return -1L;
         }
 
@@ -312,7 +286,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         }
 
         // Something changed - remove the old entry and add the new one
-        RemoveRemotePutValue(context, keySlice, currentIdentifier, currentDt);
+        RemoveRemotePutValue(context, keySlice, currentDt);
         TryPutRemoteAttachment(context, keySlice, newRemoteAtDt, newIdentifier, out currentDt);
 
         return currentDt;

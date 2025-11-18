@@ -379,8 +379,7 @@ namespace Raven.Server.Documents
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
                                             var existingRemoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, ref partialTvr);
-                                            var existingIdentifier = TableValueToString(context, (int)AttachmentsTable.Identifier, ref partialTvr);
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingIdentifier, existingRemoteAtTicks);
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingRemoteAtTicks);
                                         }
                                     }
                                 }
@@ -1392,8 +1391,7 @@ namespace Raven.Server.Documents
                 }
 
                 var remoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, ref tvr);
-                var identifier = TableValueToString(context, (int)AttachmentsTable.Identifier, ref tvr);
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, identifier, remoteAtTicks);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, remoteAtTicks);
             }
 
             table.Delete(tvr.Id);
@@ -1401,12 +1399,12 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, 
-             long lastModifiedTicks, DocumentFlags flags, string identifier, long remoteAtTicks)
+             long lastModifiedTicks, DocumentFlags flags, long remoteAtTicks)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
             if (remoteAtTicks != -1)
             {
-                RemoteAttachmentsStorage.RemoveRemotePutValue(context, key, identifier, remoteAtTicks);
+                RemoteAttachmentsStorage.RemoveRemotePutValue(context, key, remoteAtTicks);
             }
             // We may have another operation in the same transaction that would cause us to re-create
             // the missing references, let's move the actual stream delete to the end of the transaction
@@ -1476,8 +1474,7 @@ namespace Raven.Server.Documents
                         var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
 
                         long remoteAtTicks = isRevision ? -1L : TableValueToLong((int)AttachmentsTable.RemoteAt, ref before.Reader);
-                        LazyStringValue identifier = isRevision ? null : TableValueToString(context, (int)AttachmentsTable.Identifier, ref before.Reader);
-                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, identifier, remoteAtTicks);
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, remoteAtTicks);
                     }
                 });
             }

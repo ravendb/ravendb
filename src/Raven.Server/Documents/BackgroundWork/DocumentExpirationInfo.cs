@@ -2,27 +2,22 @@
 
 namespace Raven.Server.Documents.BackgroundWork;
 
-public class DocumentExpirationInfo : BackgroundWorkInfo
+public class DocumentExpirationInfo
 {
-    public Slice LowerId => TreeKey;
-    public string Id => Identifier;
+    public Slice Ticks { get; }
+    public Slice LowerId { get; }
+    public string Id { get; }
+    public BackgroundWorkInfoStatus Status { get; set; }
 
     public DocumentExpirationInfo()
     {
     }
 
-    public DocumentExpirationInfo(Slice ticks, Slice documentLowerId, string documentId, BackgroundWorkInfoStatus status)
-        : base(ticks, documentLowerId, documentId, status)
+    public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id, BackgroundWorkInfoStatus status)
     {
-    }
-
-    public override string GetIdentifier()
-    {
-        return Id;
-    }
-
-    public override Slice GetTreeKey()
-    {
-        return LowerId;
+        Status = status;
+        Ticks = ticks;
+        LowerId = lowerId;
+        Id = id;
     }
 }

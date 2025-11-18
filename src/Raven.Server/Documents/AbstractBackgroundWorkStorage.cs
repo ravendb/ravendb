@@ -15,7 +15,7 @@ using Voron.Impl;
 namespace Raven.Server.Documents;
 
 public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : AbstractBackgroundWorkStorageBase
-    where TWorkInfo : BackgroundWorkInfo, new()
+    where TWorkInfo : DocumentExpirationInfo, new()
 {
     protected readonly DocumentDatabase Database;
     protected readonly string MetadataPropertyName;
@@ -32,11 +32,14 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
 
     protected abstract void ProcessDocument(DocumentsOperationContext context, Slice treeKey, string identifier, DateTime currentTime);
     protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<TWorkInfo> expiredDocs, ref int totalCount);
-    protected abstract void HandleSkippedItem(TWorkInfo item);
     protected abstract TWorkInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice);
 
     [DoesNotReturn]
-    protected abstract void ThrowWrongDateFormat(Slice treeKey, string expirationDate);
+    protected void ThrowWrongDateFormat(Slice treeKey, string expirationDate)
+    {
+        throw new InvalidOperationException(
+            $"The due date format for document '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
+    }
 
     public void Put(DocumentsOperationContext context, Slice treeKey, string processDateString)
     {
@@ -103,16 +106,11 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
                             switch (item.Status)
                             {
                                 case BackgroundWorkInfoStatus.Process when isFirstInTopology == false:
-                                case BackgroundWorkInfoStatus.Skip when isFirstInTopology == false:
                                 case BackgroundWorkInfoStatus.Conflict when isFirstInTopology == false:
                                     break;
                                 case BackgroundWorkInfoStatus.Process:
                                 case BackgroundWorkInfoStatus.Delete:
                                     toProcess.Enqueue(item);
-                                    totalCount++;
-                                    break;
-                                case BackgroundWorkInfoStatus.Skip:
-                                    HandleSkippedItem(item);
                                     totalCount++;
                                     break;
                                 case BackgroundWorkInfoStatus.Conflict:
@@ -143,14 +141,14 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
         var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         foreach (var info in toProcess)
         {
-            if (info.GetIdentifier() != null)
+            if (info.Id != null)
             {
-                ProcessDocument(context, info.GetTreeKey(), info.GetIdentifier(), currentTime);
+                ProcessDocument(context, info.LowerId, info.Id, currentTime);
                 processedCount++;
             }
 
             dequeueCount++;
-            docsTree.MultiDelete(info.Ticks, info.GetTreeKey());
+            docsTree.MultiDelete(info.Ticks, info.LowerId);
 
             if (context.CanContinueTransaction == false)
                 break;

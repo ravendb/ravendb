@@ -208,7 +208,7 @@ namespace SlowTests.Server.Documents.Attachments
                         if (infos == null)
                             return;
 
-                        key = infos.First().Key.ToString();
+                        key = infos.First().LowerId.ToString();
                     });
 
                     await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
@@ -286,7 +286,7 @@ namespace SlowTests.Server.Documents.Attachments
                         if (infos == null)
                             return;
 
-                        key = infos.First().Key.ToString();
+                        key = infos.First().LowerId.ToString();
                     });
 
                     Assert.Equal("orders/3", key);
@@ -361,7 +361,7 @@ namespace SlowTests.Server.Documents.Attachments
                             if (arr == null || arr.Length == 0)
                                 return;
 
-                            key = arr.First().Key.ToString();
+                            key = arr.First().LowerId.ToString();
                         });
                         Assert.Equal("orders/3", key);
                     }

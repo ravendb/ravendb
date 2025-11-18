@@ -129,7 +129,7 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                if (processing.Add(document.DestinationIdentifier) == false)
+                                if (processing.Add(document.Id) == false)
                                 {
                                     // this document was processed or is currently being processed in this batch, we can skip the upload for it
                                     processed.Enqueue(document);
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents
                                 {
                                     case BackgroundWorkInfoStatus.Delete:
                                         if (Logger.IsDebugEnabled)
-                                            Logger.Debug($"Skipping remote attachment with key: '{document.Key}' because it's identifier '{document.DestinationIdentifier}' IsNullOrEmpty.");
+                                            Logger.Debug($"Skipping document with id: '{document.LowerId}'.");
 
                                         // document or attachment was deleted, need to remove it from remote tree
                                         processed.Enqueue(document);
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents
 
                                         break;
                                     default:
-                                        throw new ArgumentOutOfRangeException(nameof(document.Status), $"Attachment '{document.Key} with identifier '{document.DestinationIdentifier}' had unexpected status '{document.Status}'.");
+                                        throw new ArgumentOutOfRangeException(nameof(document.Status), $"Document '{document.LowerId} had unexpected status '{document.Status}'.");
                                 }
                             }
                         }
@@ -228,11 +228,11 @@ namespace Raven.Server.Documents
 
                         if (_exceptions.Count == 0)
                         {
-                            Logger.Info($"Successfully uploaded {remoteCount:#,#;;0} attachments to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}");
+                            Logger.Info($"Successfully uploaded attachments of {remoteCount:#,#;;0} documents to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}");
                         }
                         else
                         {
-                            Logger.Info($"Partially uploaded {remoteCount:#,#;;0} attachments to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}. Failed to upload {_exceptions.Count:#,#;;0} attachments:{Environment.NewLine}{new AggregateException(_exceptions)}");
+                            Logger.Info($"Partially uploaded attachments of {remoteCount:#,#;;0} documents to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}. Failed to upload {_exceptions.Count:#,#;;0} attachments:{Environment.NewLine}{new AggregateException(_exceptions)}");
                         }
                     }
                 }
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents
             if (res != null)
             {
                 processed.Enqueue(res);
-                _totalUploaded += res.Size;
+                _totalUploaded += res.AttachmentsSize;
             }
         }
 
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (Attachment attachment in _database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, AttachmentType.Document, document.Key))
+                foreach (Attachment attachment in _database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, AttachmentType.Document, document.LowerId))
                 {
                     _token.ThrowIfCancellationRequested();
 
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                document.Size = s;
+                document.AttachmentsSize = s;
                 return document;
             }
         }
@@ -385,7 +385,7 @@ namespace Raven.Server.Documents
             {
                 return new UpdateRemoteAttachmentsCommandDto
                 {
-                    Remote = _remote.Select(x => (Ticks: x.Ticks, AttachmentKey: x.Key, Id: x.DestinationIdentifier, Status: x.Status)).ToArray(),
+                    Remote = _remote.Select(x => (Ticks: x.Ticks, DocumentId: x.LowerId, Id: x.Id, Status: x.Status)).ToArray(),
                     CurrentTime = _currentTime
                 };
             }

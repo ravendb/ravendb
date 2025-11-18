@@ -50,9 +50,4 @@ public sealed class DataArchivalStorage : DocumentBackgroundWorkStorage
     {
         // data archival ignores conflicts
     }
-
-    protected override void HandleSkippedItem(DocumentExpirationInfo item)
-    {
-        // no-op, data archival doesn't skip items
-    }
 }

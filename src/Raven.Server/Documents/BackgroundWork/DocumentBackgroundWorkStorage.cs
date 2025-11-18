@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-using Voron;
+﻿using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.BackgroundWork;
@@ -23,12 +21,5 @@ public abstract class DocumentBackgroundWorkStorage : AbstractBackgroundWorkStor
         }
 
         return new DocumentExpirationInfo(ticksSlice, clonedId, document.Id, BackgroundWorkInfoStatus.Process);
-    }
-
-    [DoesNotReturn]
-    protected override void ThrowWrongDateFormat(Slice treeKey, string expirationDate)
-    {
-        throw new InvalidOperationException(
-            $"The due date format for document '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
     }
 }

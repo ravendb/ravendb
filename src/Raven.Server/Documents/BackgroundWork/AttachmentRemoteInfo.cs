@@ -2,27 +2,15 @@
 
 namespace Raven.Server.Documents.BackgroundWork;
 
-public class AttachmentRemoteInfo : BackgroundWorkInfo
+public class AttachmentRemoteInfo : DocumentExpirationInfo
 {
-    public Slice Key => TreeKey;
-    public string DestinationIdentifier => Identifier;
-    public long Size;
+    public long AttachmentsSize;
+
     public AttachmentRemoteInfo()
     {
-    }
 
-    public AttachmentRemoteInfo(Slice ticks, Slice attachmentKey, string destinationIdentifier, BackgroundWorkInfoStatus status)
-        : base(ticks, attachmentKey, destinationIdentifier, status)
-    {
     }
-
-    public override string GetIdentifier()
+    public AttachmentRemoteInfo(Slice ticksSlice, Slice docId, string id, BackgroundWorkInfoStatus delete) : base (ticksSlice, docId, id, delete)
     {
-        return DestinationIdentifier;
-    }
-
-    public override Slice GetTreeKey()
-    {
-        return Key;
     }
 }

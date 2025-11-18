@@ -3,7 +3,6 @@
 public enum BackgroundWorkInfoStatus
 {
     Process,
-    Skip,
     Delete,
     Conflict
 }
