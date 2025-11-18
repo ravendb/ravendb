@@ -235,7 +235,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             byte* bpx = (byte*)p1;
             byte* bpy = (byte*)p2;
 
-            // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+            // PERF: This allows us to do pointer arithmetic and use relative addressing using the 
             //       hardware instructions without needed an extra register.            
             long offset = bpy - bpx;
             if (size < 8)
@@ -299,7 +299,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
             byte* bpx = (byte*)p1;
 
-            // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+            // PERF: This allows us to do pointer arithmetic and use relative addressing using the 
             //       hardware instructions without needed an extra register.            
             long offset = (byte*)p2 - bpx;
 
@@ -381,7 +381,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         {
             byte* bpx = (byte*)p1;
 
-            // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+            // PERF: This allows us to do pointer arithmetic and use relative addressing using the 
             //       hardware instructions without needed an extra register.            
             long offset = (byte*)p2 - bpx;
 
@@ -462,7 +462,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         {
             byte* bpx = (byte*)p1;
 
-            // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+            // PERF: This allows us to do pointer arithmetic and use relative addressing using the 
             //       hardware instructions without needed an extra register.            
             long offset = (byte*)p2 - bpx;
             if (size < 8)
