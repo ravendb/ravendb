@@ -179,10 +179,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 : new DynamicArray(Enumerable.Empty<object>());
         }
         
-        protected dynamic SchemaValid(dynamic doc)
+        protected dynamic SchemaGetErrorsFor(dynamic doc)
         {
-            var json = EnsureSourceDocumentOrThrow(doc, nameof(SchemaValid));
-            return CurrentIndexingScope.Current.SchemaValid(json);
+            var json = EnsureSourceDocumentOrThrow(doc, "Schema.GetErrorsFor");
+            return CurrentIndexingScope.Current.SchemaGetErrorsFor(json);
         }
 
         private static BlittableJsonReaderObject EnsureSourceDocumentOrThrow(dynamic doc, string funcName)

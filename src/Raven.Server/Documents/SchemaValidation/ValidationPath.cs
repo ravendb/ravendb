@@ -61,6 +61,13 @@ public class ValidationPath :IDisposable
         _path.Trim(toRemove);
     }
 
+    public void Reset()
+    {
+        _toString = null;
+        _sizes.Reset();
+        _path.Reset();
+    }
+    
     public ReadOnlySpan<char> AsSpan() => _path.AsSpan();
     public override string ToString() => _toString ??= _path.ToString();
 

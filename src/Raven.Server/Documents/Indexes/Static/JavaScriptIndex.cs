@@ -64,7 +64,6 @@ function map(name, lambda) {
             engine.SetClrFunc("counterNamesFor", CounterNamesFor);
             engine.SetClrFunc("loadAttachment", LoadAttachment);
             engine.SetClrFunc("loadAttachments", LoadAttachments);
-            engine.SetClrFunc("schemaValidate", SchemaValidate);
             engine.SetClrFunc("id", GetDocumentId);
             
             var schemaValidatorObject = new JsObject(engine);
@@ -207,12 +206,12 @@ function map(name, lambda) {
             return _javaScriptUtils.LoadAttachments(self, args);
         }
         
-        private JsValue SchemaValidate(JsValue self, JsValue[] args)
+        private JsValue GetErrorsFor(JsValue self, JsValue[] args)
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(_javaScriptUtils);
             
-            return _javaScriptUtils.SchemaValidate(self, args);
+            return _javaScriptUtils.GetErrorsFor(self, args);
         }
     }
 

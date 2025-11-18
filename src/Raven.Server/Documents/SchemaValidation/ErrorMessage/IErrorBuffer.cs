@@ -5,6 +5,7 @@ namespace Raven.Server.Documents.SchemaValidation.ErrorMessage;
 
 public interface IErrorBuffer : IDisposable
 {
+    public int Length { get; }
     ReadOnlySpan<char> AsSpan();
     IErrorBuffer Append(string value);
     IErrorBuffer AppendUtf8(ReadOnlySpan<byte> value);

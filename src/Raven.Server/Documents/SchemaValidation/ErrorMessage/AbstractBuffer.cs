@@ -31,6 +31,12 @@ public abstract class AbstractBuffer<T> : IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ReadOnlySpan<T> AsSpan() => BufferAsSpan()[..Length];
 
+    public T this[int index]
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => BufferAsSpan()[index];
+    }
+
     protected abstract Span<T> BufferAsSpan();
 
     public abstract void CheckAndGrow(int minRequired);

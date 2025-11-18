@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.SchemaValidation.ErrorMessage;
 public class ErrorBuffer : IErrorBuffer
 {
     private readonly AbstractBuffer<char> _buffer;
+
+    public int Length => _buffer.Length;
     
     public ErrorBuffer(AbstractBuffer<char> buffer)
     {

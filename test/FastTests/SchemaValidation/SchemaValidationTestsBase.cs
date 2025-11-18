@@ -59,7 +59,7 @@ public static class SchemaValidationTestsHelper
                 return true;
             }
 
-            errors = new string(errorBuilder.GetErrors());
+            errors = new string(errorBuilder.ToString());
             return false;
         }
     }

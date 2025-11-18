@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -279,24 +280,31 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public string SchemaValid(BlittableJsonReaderObject doc)
+        public string[] SchemaGetErrorsFor(BlittableJsonReaderObject doc)
         {
             _schemaValidationErrorBuilder ??= new ErrorBuilder(Current.IndexContext);
             _schemaValidationErrorBuilder.Reset();
             
-            if (ValidateSchema(doc, _schemaValidationErrorBuilder))
-                return DynamicNullObject.Null;
+            var enumerable = ValidateSchema(doc, _schemaValidationErrorBuilder)
+                ? []
+                : _schemaValidationErrorBuilder.GetErrors().ToArray();
             
-            return _schemaValidationErrorBuilder.GetErrors().ToString();
+            return enumerable;
         }
 
-        private static bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
+        private bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
         {
-            var schemaValidator = Current.Index._schemaValidator.Validator;
-            if (schemaValidator == null)
-                throw new InvalidOperationException("Schema validation was not configured for this index.");
-
-            return schemaValidator.Validate(doc, errorBuilder);
+            var collection = CollectionName.GetCollectionName(doc);
+            
+            var validators = Current.Index._schemaValidators;
+            if (validators == null)
+            {
+                var validatorCache = QueryContext.Documents.DocumentDatabase.SchemaValidatorCache;
+                return validatorCache.Validate(collection, doc, errorBuilder);
+            }
+            
+            return validators.TryGet(collection, out var validator) == false
+                   || validator.Validate(doc, errorBuilder);
         }
 
         private Slice GetIdSlice(LazyStringValue id)

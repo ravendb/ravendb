@@ -177,6 +177,32 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
         }
     }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenDefineOnEmptyCollection_ShouldValidateAndFailInNeeded()
+    {
+        var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
+
+        using var context = JsonOperationContext.ShortTermSingleUse();
+        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
+        using var store = GetDocumentStore();
+        var configuration = new SchemaValidationConfiguration
+        {
+            Disabled = false,
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                { Constants.Documents.Collections.EmptyCollection, new SchemaDefinition { Schema = schemaDefinition.ToString() } }
+            }
+        };
+        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new { Prop = "1234" });
+            var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await session.SaveChangesAsync());
+            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        }
+    }
 
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenSingleDocumentPatch_ShouldValidateAndFailInNeeded()
@@ -392,7 +418,6 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         };
         await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
 
-        //TODO To change to shard as well
         var backupPath = NewDataPath();
         await Backup.CreateAndRunBackupAsync(source, RavenDatabaseMode.Single, backupPath);
 

@@ -107,7 +107,7 @@ public class SchemaValidatorCache : IDisposable
             throw new SchemaValidationException(error);
     }
 
-    public bool Validate(JsonOperationContext context, string collection, BlittableJsonReaderObject document, out string error)
+    private bool Validate(JsonOperationContext context, string collection, BlittableJsonReaderObject document, out string error)
     {
         error = null;
         if (_schemaValidatorsPerCollection == null || _disabled)
@@ -124,12 +124,12 @@ public class SchemaValidatorCache : IDisposable
             if (validator.Validate(document, errorBuilder))
                 return true;
 
-            error = errorBuilder.GetErrors().ToString();
+            error = errorBuilder.GetError().ToString();
             return false;
         }
     }
 
-    public bool Validate(JsonOperationContext context, string collection, BlittableJsonReaderObject document, ErrorBuilder errorBuilder)
+    public bool Validate(string collection, BlittableJsonReaderObject document, ErrorBuilder errorBuilder)
     {
         if (_schemaValidatorsPerCollection == null || _disabled)
             return true;

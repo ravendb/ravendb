@@ -87,7 +87,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
-            MaxErrorMessages = maxErrorsMsg,
+            MaxErrorMessages = maxErrorsMsg
             
         }));
         

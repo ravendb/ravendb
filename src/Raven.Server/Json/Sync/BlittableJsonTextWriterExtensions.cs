@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Sparrow.Json;
@@ -34,8 +33,8 @@ namespace Raven.Server.Json.Sync
                 writer.WriteNull();
             writer.WriteComma();
             
-            writer.WritePropertyName(nameof(indexDefinition.SchemaValidation));
-            writer.WriteString(indexDefinition.SchemaValidation);
+            writer.WritePropertyName(nameof(indexDefinition.SchemaDefinitions));
+            writer.WriteIndexSchemaDefinitions(indexDefinition.SchemaDefinitions);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));

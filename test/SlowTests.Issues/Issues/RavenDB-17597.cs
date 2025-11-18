@@ -122,7 +122,7 @@ namespace SlowTests.Issues
                 Configuration = conf,
                 CompoundFields = new List<string[]> { new[] { "Name", "Age" } },
                 ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ExcludeArchived,
-                SchemaValidation = "{'properties':{'Name':{'type':'string'}}}"
+                SchemaDefinitions = new IndexSchemaDefinitions{{"Users", "{ 'type': 'object', 'properties': { 'Name': { 'type': 'string' } } }"}}
             };
         }
 

@@ -2091,7 +2091,7 @@ namespace Raven.Server.ServerWide
             foreach (var item in configurationJson.ValidatorsPerCollection)
             {
                 using var schema = context.Sync.ReadForMemory(item.Value.Schema, "schema-validation");
-                //TO make sure the schema is valid we run Init on an instance of SchemaValidator, but it is not used
+                //To make sure the schema is valid, we run Init on an instance of SchemaValidator, but it is not used
                 var validator = new SchemaValidator();
                 validator.Init(schema);
                 SchemaValidationHelper.ValidateSchemaDefinitionForDocument(schema);
