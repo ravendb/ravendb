@@ -26,6 +26,10 @@ jobs:
       - name: Build Server
         run: |
           dotnet build
+        
+      - name: Clear NuGet Cache
+        run: |
+          dotnet nuget locals all --clear
 
       - name: Setup nodejs
         uses: actions/setup-node@v4
