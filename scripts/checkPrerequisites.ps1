@@ -19,8 +19,8 @@ function CheckPrerequisites () {
     $nodeVersion = node --version
     CheckLastExitCode
 
-    if ($($nodeVersion -match '^v?2(0|2)') -eq $False) {
-        throw "Incompatible Node.js version. Only versions 20 or 22 are supported."
+    if ($($nodeVersion -match '^v?2(0|2|4)') -eq $False) {
+        throw "Incompatible Node.js version. Only versions 20, 22 and 24 are supported."
     }
 
     if ($PSVersionTable.PSVersion.Major -lt 5) {
