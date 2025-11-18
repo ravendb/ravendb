@@ -253,11 +253,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                     validator: () => {
                         const overlapTokens = this.queryingOverlapTokens() ?? 0;
                         const maxTokensPerChunk = this.queryingMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
-                        if (overlapTokens > maxTokensPerChunk) {
-                            return false;
-                        }
-
-                        return true;
+                        return overlapTokens <= maxTokensPerChunk;
                     },
                     message: "Overlap tokens must be less than or equal to max tokens per chunk"
                 }
@@ -287,13 +283,9 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 {
                     onlyIf: () => this.embeddingsSource() === "script" && (this.transformationChunkingMethod() === "PlainTextSplitParagraphs" || this.transformationChunkingMethod() === "MarkDownSplitParagraphs"),
                     validator: () => {
-                        const transformationOverlapTokens = this.transformationOverlapTokens() ?? 0;
-                        const transformationMaxTokensPerChunk = this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
-                        if (transformationOverlapTokens > transformationMaxTokensPerChunk) {
-                            return false;
-                        }
-
-                        return true;
+                        const overlapTokens = this.transformationOverlapTokens() ?? 0;
+                        const maxTokensPerChunk = this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
+                        return overlapTokens <= maxTokensPerChunk;
                     },
                     message: "Overlap tokens must be less than or equal to max tokens per chunk"
                 }
@@ -355,11 +347,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                     validator: () => {
                         const overlapTokens = this.pathConfigurationOverlapTokens() ?? 0;
                         const maxTokensPerChunk = this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
-                        if (overlapTokens > maxTokensPerChunk) {
-                            return false;
-                        }
-
-                        return true;
+                        return overlapTokens <= maxTokensPerChunk;
                     },
                     message: "Overlap tokens must be less than or equal to max tokens per chunk"
                 }
