@@ -93,7 +93,7 @@ export default function RemoteAttachments() {
                     <Col xxl={12}>
                         <Row className="gy-sm">
                             <Col>
-                                <AboutViewHeading title="Remote attachments" icon="remote-attachment" />
+                                <AboutViewHeading title="Remote Attachments" icon="remote-attachment" />
                                 {hasDatabaseAdminAccess && (
                                     <ButtonWithSpinner
                                         type="submit"
@@ -231,7 +231,7 @@ function RemoteAttachmentsSettingsCard() {
                             !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
                         }
                     >
-                        Set custom retire frequency
+                        Set interval between remote attachments worker runs
                     </FormSwitch>
                     <FormInput
                         name="checkFrequencyInSec"
@@ -263,7 +263,7 @@ function RemoteAttachmentsSettingsCard() {
                         name="maxItemsToProcess"
                         control={control}
                         type="number"
-                        placeholder="Enter any number (default is unlimited)"
+                        placeholder="Default (unlimited)"
                         disabled={
                             !hasDatabaseAdminAccess ||
                             formState.isSubmitting ||
@@ -283,7 +283,7 @@ function RemoteAttachmentsSettingsCard() {
                             !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
                         }
                     >
-                        Allow concurrent uploads
+                        Set max number of concurrent uploads
                     </FormSwitch>
                     <FormInput
                         name="concurrentUploads"
