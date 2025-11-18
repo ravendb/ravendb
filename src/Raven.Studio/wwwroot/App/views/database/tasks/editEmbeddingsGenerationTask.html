@@ -189,11 +189,11 @@
                             <label class="control-label">Path Configurations</label>
                             <div class="padding panel-bg-1">
                                 <div class="flex-horizontal gap-1">
-                                    <div class="form-group flex-grow">
+                                    <div class="form-group flex-grow" data-bind="validationElement: pathConfigurationPath">
                                         <label class="control-label">Source Text Path</label>
                                         <input type="text" class="form-control" placeholder="Enter Source Text Path" data-bind="textInput: pathConfigurationPath" />
                                     </div>
-                                    <div class="form-group flex-grow">
+                                    <div class="form-group flex-grow" data-bind="validationElement: pathConfigurationChunkingMethod">
                                         <label class="control-label">Chunking Method</label>
                                         <div class="flex-grow">
                                             <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: pathConfigurationChunkingMethodLabel">
@@ -208,13 +208,13 @@
                                     <div class="form-group flex-grow" data-bind="validationElement: pathConfigurationMaxTokensPerChunk">
                                         <label class="control-label">Max Tokens per Chunk</label>
                                         <div class="flex-grow">
-                                            <input type="number" class="form-control" data-bind="value: pathConfigurationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
+                                            <input type="number" class="form-control" data-bind="numericInput: pathConfigurationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
                                         </div>
                                     </div>
-                                    <div class="form-group flex-grow">
+                                    <div class="form-group flex-grow" data-bind="validationElement: pathConfigurationOverlapTokens">
                                         <label class="control-label">Overlap Tokens</label>
                                         <div class="flex-grow">
-                                            <input type="number" class="form-control" placeholder="Default: 0" data-bind="value: pathConfigurationOverlapTokens, attr: { disabled: !canUseOverlapTokensForPathConfiguration() }"/>
+                                            <input type="number" class="form-control" placeholder="Default: 0" data-bind="numericInput: pathConfigurationOverlapTokens, attr: { disabled: !canUseOverlapTokensForPathConfiguration() }"/>
                                         </div>
                                     </div>
                                 </div>
@@ -224,7 +224,7 @@
 
                                 <div class="d-flex margin-top-xs">
                                     <div class="flex-grow"></div>
-                                    <button class="btn btn-info" data-bind="click: addEmbeddingsPathConfiguration, enable: pathConfigurationPath() && !embeddingPathConfigurations().map(x => x.Path).includes(pathConfigurationPath())">
+                                    <button class="btn btn-info" data-bind="click: addEmbeddingsPathConfiguration">
                                         <i class="icon-plus"></i><span>Add path configuration</span>
                                     </button>
                                 </div>
@@ -289,15 +289,16 @@
                                 <i class="icon-info text-info max-tokens-per-chunk"></i>
                             </label>
                             <div class="flex-grow">
-                                <input type="number" class="form-control" data-bind="value: transformationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
+                                <input type="number" class="form-control" data-bind="numericInput: transformationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
                             </div>
-                        </div><div class="form-group">
+                        </div>
+                        <div class="form-group" data-bind="validationElement: transformationOverlapTokens">
                             <label class="control-label">
                                 Overlap Tokens
                                 <i class="icon-info text-info overlap-tokens"></i>
                             </label>
                             <div class="flex-grow">
-                                <input type="number" class="form-control" placeholder="Default: 0" data-bind="value: transformationOverlapTokens, attr: { disabled: !canUseOverlapTokensForTransformation() }"/>
+                                <input type="number" class="form-control" placeholder="Default: 0" data-bind="numericInput: transformationOverlapTokens, attr: { disabled: !canUseOverlapTokensForTransformation() }" min="0"/>
                             </div>
                         </div>
                     </div>
@@ -344,19 +345,25 @@
                             <div class="form-group">
                                 <label class="control-label">Chunking Method</label>
                                 <div class="flex-grow">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: chunkingMethodLabel">
-                                        <span data-bind="text: chunkingMethodLabel"></span>
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: queryingChunkingMethodLabel">
+                                        <span data-bind="text: queryingChunkingMethodLabel"></span>
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     </button>
                                     <ul class="dropdown-menu" data-bind="foreach: chunkingMethodOptions">
-                                        <li><a href="#" data-bind="click: _.partial($parent.chunkingMethod, value)"><span data-bind="text: label"></span></a></li>
+                                        <li><a href="#" data-bind="click: _.partial($parent.queryingChunkingMethod, value)"><span data-bind="text: label"></span></a></li>
                                     </ul>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="validationElement: maxTokensPerChunk">
+                            <div class="form-group" data-bind="validationElement: queryingMaxTokensPerChunk">
                                 <label class="control-label">Max Tokens per Chunk</label>
                                 <div class="flex-grow">
-                                    <input type="number" class="form-control" data-bind="value: maxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
+                                    <input type="number" class="form-control" data-bind="numericInput: queryingMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: queryingOverlapTokens">
+                                <label class="control-label">Overlap Tokens</label>
+                                <div class="flex-grow">
+                                    <input type="number" class="form-control" placeholder="Default: 0" data-bind="numericInput: queryingOverlapTokens, attr: { disabled: !canUseOverlapTokens() }" min="0"/>
                                 </div>
                             </div>
                             <div class="form-group mb-0">
