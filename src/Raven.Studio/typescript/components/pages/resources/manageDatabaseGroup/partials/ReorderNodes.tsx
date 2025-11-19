@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState } from "react";
+﻿import React, { useState } from "react";
 import Button from "react-bootstrap/Button";
 import {
     NodeInfoReorderComponent,
@@ -14,17 +14,11 @@ import {
     DndContext,
     DndContextProps,
     DragOverlay,
-    KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
 } from "@dnd-kit/core";
-import {
-    horizontalListSortingStrategy,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    arrayMove,
-} from "@dnd-kit/sortable";
+import { horizontalListSortingStrategy, SortableContext, arrayMove } from "@dnd-kit/sortable";
 
 interface ReorderNodesControlsProps {
     sortableMode: boolean;
