@@ -12,13 +12,13 @@ const destinationsAdapter = createEntityAdapter<RemoteAttachmentsDestinationForm
 
 export interface RemoteAttachmentsState {
     loadStatus: loadStatus;
-    initialDestinations: RemoteAttachmentsDestinationFormData[];
+    initialDestinations: ReturnType<typeof destinationsAdapter.getInitialState>;
     destinations: ReturnType<typeof destinationsAdapter.getInitialState>;
 }
 
 const initialState: RemoteAttachmentsState = {
     loadStatus: "idle",
-    initialDestinations: [],
+    initialDestinations: destinationsAdapter.getInitialState(),
     destinations: destinationsAdapter.getInitialState(),
 };
 
@@ -84,21 +84,25 @@ export const remoteAttachmentsSlice = createSlice({
                 const form = remoteAttachmentsUtils.mapFromDto(payload);
 
                 state.loadStatus = "success";
-                state.initialDestinations = form.destinations;
                 destinationsAdapter.setAll(state.destinations, form.destinations);
+                destinationsAdapter.setAll(state.initialDestinations, form.destinations);
             })
             .addCase(fetchRemoteAttachments.rejected, (state) => {
                 state.loadStatus = "failure";
             })
             .addCase(saveRemoteAttachments.fulfilled, (state, { payload }) => {
                 destinationsAdapter.setAll(state.destinations, payload.destinations);
-                state.initialDestinations = payload.destinations;
+                destinationsAdapter.setAll(state.initialDestinations, payload.destinations);
             });
     },
 });
 
 export const destinationsSelectors = destinationsAdapter.getSelectors(
     (state: RemoteAttachmentsState) => state.destinations
+);
+
+export const initialDestinationsSelectors = destinationsAdapter.getSelectors(
+    (state: RemoteAttachmentsState) => state.initialDestinations
 );
 
 export const remoteAttachmentsActions = {

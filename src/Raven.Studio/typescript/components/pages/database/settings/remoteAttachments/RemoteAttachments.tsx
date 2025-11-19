@@ -175,7 +175,6 @@ function DestinationsList() {
                 right={
                     hasDatabaseAdminAccess && (
                         <Button
-                            disabled={!formValues.isRemoteAttachmentsEnabled}
                             size="sm"
                             onClick={() => handleOpenSheet()}
                             variant="info"

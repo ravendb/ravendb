@@ -42,6 +42,12 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
     if (!dto) {
         return {
             isRemoteAttachmentsEnabled: false,
+            isCheckFrequencyInSecEnabled: false,
+            checkFrequencyInSec: null,
+            concurrentUploads: null,
+            isMaxItemsToProcessEnabled: false,
+            maxItemsToProcess: null,
+            isConcurrentUploadsEnabled: false,
             destinations: [],
         };
     }
@@ -103,6 +109,8 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
         checkFrequencyInSec: dto.CheckFrequencyInSec,
         isMaxItemsToProcessEnabled: dto.MaxItemsToProcess != null,
         maxItemsToProcess: dto.MaxItemsToProcess,
+        isConcurrentUploadsEnabled: dto.ConcurrentUploads != null,
+        concurrentUploads: dto.ConcurrentUploads,
         destinations,
     };
 }
