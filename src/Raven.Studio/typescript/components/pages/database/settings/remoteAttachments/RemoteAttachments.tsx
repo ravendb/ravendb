@@ -216,7 +216,7 @@ function RemoteAttachmentsSettingsCard() {
                             !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
                         }
                     >
-                        Set interval between remote attachments worker runs
+                        Set interval between remote attachments task runs
                     </FormSwitch>
                     <FormInput
                         name="checkFrequencyInSec"
