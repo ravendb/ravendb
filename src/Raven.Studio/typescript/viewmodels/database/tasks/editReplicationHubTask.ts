@@ -568,7 +568,7 @@ class editReplicationHubTask extends shardViewModelBase {
             const pfx = forge.util.binary.base64.decode(certificate.certificate());
             const fileName = "replicationCertificate" + certificate.thumbprint().substr(0, 8) + ".pfx";
             
-            fileDownloader.downloadAsTxt(pfx, fileName);
+            fileDownloader.downloadAsTxt(pfx as BlobPart, fileName);
             
             this.editedReplicationAccessItem().certificateWasDownloaded(true);
         }

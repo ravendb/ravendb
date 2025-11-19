@@ -49,12 +49,14 @@ export function useClusterWideAsync<T>(perNodeProvider: (nodeTag: string) => Pro
 
 function initReducer<T>(nodeTags: string[]): ClusterWideReducerState<T> {
     return {
-        result: nodeTags.map((tag) => ({
-            nodeTag: tag,
-            data: undefined,
-            status: "loading",
-            error: undefined,
-        })),
+        result: nodeTags.map(
+            (tag): nodeAwareLoadableData<T> => ({
+                nodeTag: tag,
+                data: undefined,
+                status: "loading",
+                error: undefined,
+            })
+        ),
     };
 }
 

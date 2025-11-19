@@ -1814,13 +1814,13 @@ class normalCrudActions implements editDocumentCrudActions {
             }
 
             return $.when({
-                items: counters.map(x => {
+                items: counters.map((x): counterItem => {
                     return {
                         documentId: doc.getId(),
                         counterName: x.name,
                         totalCounterValue: x.value,
                         counterValuesPerNode: []
-                    };
+                    }
                 }),
                 totalResultCount: counters.length
             });
