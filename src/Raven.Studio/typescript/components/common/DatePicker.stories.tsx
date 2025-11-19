@@ -54,6 +54,6 @@ export const Primary: StoryObj<ComponentProps<typeof DatePicker>> = {
         showYearDropdown: false,
         showYearPicker: false,
         showIcon: false,
-        invalid: false,
+        isInvalid: false,
     },
 };

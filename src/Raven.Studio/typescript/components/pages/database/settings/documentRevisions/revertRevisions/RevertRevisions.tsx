@@ -110,10 +110,9 @@ export default function RevertRevisions() {
                     </div>
                     <Card className="mt-3">
                         <Card.Body className="gap-4">
-                            <FormGroup>
-                                <FormLabel htmlFor="pointInTime">Point in Time</FormLabel>
+                            <FormGroup className="mb-3">
+                                <FormLabel>Point in Time</FormLabel>
                                 <FormDatePicker
-                                    id="pointInTime"
                                     name="pointInTime"
                                     control={control}
                                     showTimeSelect
@@ -127,12 +126,11 @@ export default function RevertRevisions() {
                                 />
                             </FormGroup>
                             <FormGroup>
-                                <FormLabel htmlFor="timeWindow">Time Window</FormLabel>
+                                <FormLabel>Time Window</FormLabel>
                                 <InputGroup>
                                     <FormInput
                                         type="number"
                                         control={control}
-                                        id="timeWindow"
                                         name="timeWindow"
                                         placeholder={`default (${defaultWindowValue})`}
                                         addon={
