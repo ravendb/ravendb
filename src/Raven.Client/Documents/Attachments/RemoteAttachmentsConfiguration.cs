@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Attachments
@@ -10,7 +10,10 @@ namespace Raven.Client.Documents.Attachments
     public sealed class RemoteAttachmentsConfiguration : IDynamicJson
     {
         internal static readonly StringComparer KeyComparer = StringComparer.OrdinalIgnoreCase;
+
+        [JsonDeserializationStringDictionary(StringComparison.OrdinalIgnoreCase)]
         public Dictionary<string, RemoteAttachmentsDestinationConfiguration> Destinations { get; set; } = new(KeyComparer);
+
         public long? CheckFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
         public int? ConcurrentUploads { get; set; }
@@ -91,8 +94,7 @@ namespace Raven.Client.Documents.Attachments
             if (Destinations == null || Destinations.Count == 0)
                 return false;
 
-            return Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
-                                         || BackupConfiguration.CanBackupUsing(x.Value.AzureSettings));
+            return Destinations.Any(x => x.Value.HasUploader());
         }
 
         public DynamicJsonValue ToJson()
@@ -124,17 +126,16 @@ namespace Raven.Client.Documents.Attachments
                 return;
             }
 
+            var keys = new HashSet<string>(KeyComparer);
             foreach (var kvp in Destinations)
             {
+                if (keys.Add(kvp.Key) == false)
+                    throw new InvalidOperationException($"Destination key '{kvp.Key}' is duplicate. Duplicate keys are not allowed in remote attachments configuration{databaseNameStr}.");
+
                 if (kvp.Value == null)
                     throw new InvalidOperationException($"Destination configuration for key {kvp.Key} is null{databaseNameStr}.");
 
                 kvp.Value.AssertConfiguration(kvp.Key, databaseName);
-
-                if (BackupConfiguration.CanBackupUsing(kvp.Value.S3Settings) == false && BackupConfiguration.CanBackupUsing(kvp.Value.AzureSettings) == false)
-                    throw new InvalidOperationException($"Exactly one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} must be configured.");
-                if (BackupConfiguration.CanBackupUsing(kvp.Value.S3Settings) && BackupConfiguration.CanBackupUsing(kvp.Value.AzureSettings))
-                    throw new InvalidOperationException($"Only one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} can be configured.");
             }
         }
     }

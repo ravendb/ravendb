@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
@@ -844,7 +845,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
 
                     // I create new settings for destination database, so each db upload to different folder
-                    var settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{store2.Database}-{Guid.NewGuid()}");
+                    var settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{store2.Database}-{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
                     GetStorageAttachmentsMetadataFromAllAttachments(database2, settings);
 
                     Assert.Equal(attachmentsCount, Attachments.Count);
@@ -1250,7 +1251,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
 
                     // I create new settings for destination database, so each db upload to different folder
-                    var settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{store2.Database}-{Guid.NewGuid()}");
+                    var settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{store2.Database}-{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
                     GetStorageAttachmentsMetadataFromAllAttachments(database2, settings);
 
                     Assert.Equal(attachmentsCount, Attachments.Count);

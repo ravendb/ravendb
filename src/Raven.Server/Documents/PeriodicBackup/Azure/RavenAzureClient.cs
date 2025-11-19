@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public Size MaxSingleBlockSize { get; set; } = new Size(256, SizeUnit.Megabytes);
 
-        private RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        private RavenAzureClient(IAzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (azureSettings == null)
                 throw new ArgumentNullException(nameof(azureSettings));
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public static IRavenAzureClient Create(AzureSettings settings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        public static IRavenAzureClient Create(IAzureSettings settings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (configuration.AzureLegacy)
                 return new LegacyRavenAzureClient(settings, progress, cancellationToken: cancellationToken);

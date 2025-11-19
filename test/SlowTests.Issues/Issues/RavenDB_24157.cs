@@ -44,12 +44,11 @@ namespace SlowTests.Issues
                         {
                             id, new RemoteAttachmentsDestinationConfiguration()
                             {
-                                S3Settings = new S3Settings
+                                S3Settings = new RemoteAttachmentsS3Settings
                                 {
                                     BucketName = "test-bucket-does-not-exist", AwsRegionName = "us-west-2", AwsAccessKey = "AKIAFAKEKEY", AwsSecretKey = "FAKESECRET"
                                 },
                                 Disabled = true,
-                                Identifier = id
                             }
                         }
                     },

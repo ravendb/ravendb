@@ -1,5 +1,7 @@
 using System;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 
@@ -48,8 +50,11 @@ public sealed class UploaderSettings
         };
     }
 
-    public static UploaderSettings GenerateDirectUploaderSettingsForAttachments(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings)
+    public static UploaderSettings GenerateDirectUploaderSettingsForAttachments(DocumentDatabase database, string taskName, RemoteAttachmentsS3Settings remoteS3Settings, RemoteAttachmentsAzureSettings remoteAzureSettings)
     {
+        var s3Settings = remoteS3Settings?.ToS3Settings();
+        var azureSettings = remoteAzureSettings?.ToAzureSettings();
+
         return new UploaderSettings(database.Configuration.Backup)
         {
             S3Settings = BackupTask.GetBackupConfigurationFromScript(s3Settings, x => JsonDeserializationServer.S3Settings(x),

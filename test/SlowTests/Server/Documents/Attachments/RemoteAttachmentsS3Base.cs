@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Remote;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -20,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments;
 
-public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settings>
+public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<RemoteAttachmentsS3Settings>
 {
     protected RemoteAttachmentsS3Base RemoteAttachments;
     protected RemoteAttachmentsS3Base(ITestOutputHelper output) : base(output)
@@ -30,7 +30,7 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
 
     public override IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null)
     {
-        Settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{caller}-{Guid.NewGuid()}");
+        Settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{caller}-{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
         Assert.NotNull(Settings);
 
         return new AsyncDisposableAction(async () =>
@@ -39,7 +39,7 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
         });
     }
 
-    public override async Task<string> PutRemoteAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null, string id = null)
+    public override async Task<string> PutRemoteAttachmentsConfiguration(IDocumentStore store, RemoteAttachmentsS3Settings settings, List<string> collections = null, string database = null, string id = null)
     {
         if (string.IsNullOrEmpty(database))
             database = store.Database;
@@ -54,7 +54,6 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
                     {
                         S3Settings = settings,
                         Disabled = false,
-                        Identifier = id
                     }
                 }
             },
@@ -67,9 +66,9 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
         return id;
     }
 
-    public override S3Settings GetCloudSetting(string remoteFolderName, string caller = null)
+    public override RemoteAttachmentsS3Settings GetCloudSetting(string remoteFolderName, string caller = null)
     {
-        var settings = Etl.GetS3Settings(remoteFolderName, caller);
+        var settings = Etl.GetS3Settings(remoteFolderName, caller).ToRemoteAttachmentsS3Settings();
         return settings;
     }
 
@@ -78,7 +77,7 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
         Assert.Contains("The specified key does not exist", e.Message);
     }
 
-    protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(S3Settings settings, int expected, int timeout = 120_000)
+    protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(RemoteAttachmentsS3Settings settings, int expected, int timeout = 120_000)
     {
         List<S3FileInfoDetails> cloudObjects = null;
         var val3 = await WaitForValueAsync(async () =>
@@ -105,7 +104,7 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
         }).ToList();
     }
 
-    protected override async Task OverwriteBlobInCloudWithDummyStream(S3Settings settings, FileInfoDetails file)
+    protected override async Task OverwriteBlobInCloudWithDummyStream(RemoteAttachmentsS3Settings settings, FileInfoDetails file)
     {
         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("EGOR")))
         using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
@@ -118,7 +117,7 @@ public abstract class RemoteAttachmentsS3Base : RemoteAttachmentsHolder<S3Settin
         }
     }
 
-    public override async Task DeleteObjects(S3Settings settings)
+    public override async Task DeleteObjects(RemoteAttachmentsS3Settings settings)
     {
         if (settings == null)
             return;

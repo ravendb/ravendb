@@ -869,7 +869,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             await DeleteObjects(azureSettings, prefix: $"{azureSettings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        internal static async Task DeleteObjects(AzureSettings azureSettings, string prefix, string delimiter, bool listFolder = false)
+        internal static async Task DeleteObjects(IAzureSettings azureSettings, string prefix, string delimiter, bool listFolder = false)
         {
             if (azureSettings == null)
                 return;

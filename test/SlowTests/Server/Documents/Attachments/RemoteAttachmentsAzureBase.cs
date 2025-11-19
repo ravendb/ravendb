@@ -11,6 +11,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -20,7 +21,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments;
 
-public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<AzureSettings>
+public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<RemoteAttachmentsAzureSettings>
 {
     protected RemoteAttachmentsAzureBase RemoteAttachments;
 
@@ -31,7 +32,7 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
 
     public override IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null)
     {
-        Settings = Etl.GetAzureSettings(nameof(RemoteAttachments), $"{caller}-{Guid.NewGuid()}");
+        Settings = Etl.GetAzureSettings(nameof(RemoteAttachments), $"{caller}-{Guid.NewGuid()}").ToRemoteAttachmentsAzureSettings();
         Assert.NotNull(Settings);
 
         return new AsyncDisposableAction(async () =>
@@ -40,7 +41,7 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
         });
     }
 
-    public override async Task<string> PutRemoteAttachmentsConfiguration(IDocumentStore store, AzureSettings settings, List<string> collections = null, string database = null, string id = null)
+    public override async Task<string> PutRemoteAttachmentsConfiguration(IDocumentStore store, RemoteAttachmentsAzureSettings settings, List<string> collections = null, string database = null, string id = null)
     {
         if (collections == null)
             collections = new List<string> { "Orders" };
@@ -57,7 +58,6 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
                     {
                         AzureSettings = settings,
                         Disabled = false,
-                        Identifier = id
                     }
                 }
             },
@@ -69,7 +69,7 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
         return id;
     }
 
-    protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(AzureSettings settings, int expected, int timeout = 120_000)
+    protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(RemoteAttachmentsAzureSettings settings, int expected, int timeout = 120_000)
     {
         List<RavenStorageClient.BlobProperties> cloudObjects = null;
         var val3 = await WaitForValueAsync(async () =>
@@ -96,7 +96,7 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
         }).ToList();
     }
 
-    protected override Task OverwriteBlobInCloudWithDummyStream(AzureSettings settings, FileInfoDetails file)
+    protected override Task OverwriteBlobInCloudWithDummyStream(RemoteAttachmentsAzureSettings settings, FileInfoDetails file)
     {
         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("EGOR")))
         using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
@@ -110,7 +110,7 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
         return Task.CompletedTask;
     }
 
-    public override async Task DeleteObjects(AzureSettings settings)
+    public override async Task DeleteObjects(RemoteAttachmentsAzureSettings settings)
     {
         if (settings == null)
             return;
@@ -118,9 +118,9 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Azure
         await AzureTests.DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}", delimiter: string.Empty);
     }
 
-    public override AzureSettings GetCloudSetting(string remoteFolderName, string caller = null)
+    public override RemoteAttachmentsAzureSettings GetCloudSetting(string remoteFolderName, string caller = null)
     {
-        var settings = Etl.GetAzureSettings(remoteFolderName, caller);
+        var settings = Etl.GetAzureSettings(remoteFolderName, caller).ToRemoteAttachmentsAzureSettings();
         return settings;
     }
 

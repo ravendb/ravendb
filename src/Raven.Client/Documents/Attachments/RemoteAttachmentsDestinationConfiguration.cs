@@ -1,45 +1,22 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Attachments;
 
 public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
 {
-    public string Identifier { get; set; }
     public bool Disabled { get; set; }
-    public S3Settings S3Settings { get; set; }
-    public AzureSettings AzureSettings { get; set; }
+    public RemoteAttachmentsS3Settings S3Settings { get; set; }
+    public RemoteAttachmentsAzureSettings AzureSettings { get; set; }
 
     public override int GetHashCode()
     {
         var hashCode = new HashCode();
-        hashCode.Add(Identifier == null ? 0 : RemoteAttachmentsConfiguration.KeyComparer.GetHashCode(Identifier));
         hashCode.Add(Disabled);
-        if (S3Settings != null)
-        {
-            // Do NOT include fields ignored by S3Settings.Equals().
-            hashCode.Add(S3Settings.Disabled);
-            hashCode.Add(S3Settings.AwsRegionName);
-            hashCode.Add(S3Settings.BucketName);
-            hashCode.Add(S3Settings.RemoteFolderName);
-            hashCode.Add(S3Settings.CustomServerUrl);
-            hashCode.Add(S3Settings.ForcePathStyle);
-            hashCode.Add(S3Settings.StorageClass);
-        }
-        else
-        {
-            hashCode.Add(0);
-        }
-        if (AzureSettings != null)
-        {
-            hashCode.Add(AzureSettings.Disabled);
-            hashCode.Add(AzureSettings.RemoteFolderName);
-        }
-        else
-        {
-            hashCode.Add(0);
-        }
+
+        hashCode.Add(S3Settings != null ? S3Settings.GetHashCode() : 0);
+        hashCode.Add(AzureSettings != null ? AzureSettings.GetHashCode() : 0);
 
         return hashCode.ToHashCode();
     }
@@ -57,8 +34,6 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
 
     private bool Equals(RemoteAttachmentsDestinationConfiguration other)
     {
-        if (string.Equals(Identifier, other.Identifier, StringComparison.OrdinalIgnoreCase) == false)
-            return false;
         if (Disabled != other.Disabled)
             return false;
 
@@ -93,7 +68,6 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
     {
         return new DynamicJsonValue
         {
-            [nameof(Identifier)] = Identifier,
             [nameof(Disabled)] = Disabled,
             [nameof(S3Settings)] = S3Settings?.ToJson(),
             [nameof(AzureSettings)] = AzureSettings?.ToJson(),
@@ -102,17 +76,16 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
 
     internal bool HasUploader()
     {
-        return BackupConfiguration.CanBackupUsing(S3Settings) || BackupConfiguration.CanBackupUsing(AzureSettings);
+        return S3Settings.IsConfigured() || AzureSettings.IsConfigured();
     }
 
     internal void AssertConfiguration(string key, string databaseName = null)
     {
         var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";
 
-        if (string.IsNullOrEmpty(Identifier))
-            throw new InvalidOperationException($"Identifier{databaseNameStr} must have a value.");
-
-        if (string.Equals(key, Identifier, StringComparison.OrdinalIgnoreCase) == false)
-            throw new InvalidOperationException($"Identifier '{Identifier}' does not match the key '{key}'{databaseNameStr}.");
+        if (S3Settings.IsConfigured() == false && AzureSettings.IsConfigured() == false)
+            throw new InvalidOperationException($"Exactly one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} must be configured.");
+        if (S3Settings.IsConfigured() && AzureSettings.IsConfigured())
+            throw new InvalidOperationException($"Only one uploader for {nameof(RemoteAttachmentsConfiguration)}{databaseNameStr} can be configured.");
     }
 }

@@ -29,7 +29,7 @@ public class RemoteAttachmentParameters : IDynamicJson
     /// Initializes a new instance of the <see cref="RemoteAttachmentParameters"/> class with the specified destination identifier and scheduled remote upload time.
     /// </summary>
     /// <param name="identifier">
-    /// Unique identifier (<see cref="RemoteAttachmentsDestinationConfiguration.Identifier"/>) of the attachment to be uploaded remotely. Must be non-null and contain non-whitespace characters.
+    /// Unique identifier of the attachment to be uploaded remotely. Must be non-null and contain non-whitespace characters.
     /// </param>
     /// <param name="at">
     /// The (usually UTC) date and time at which the remote upload should be executed. Must not be the default <see cref="DateTime"/> value.
@@ -52,7 +52,7 @@ public class RemoteAttachmentParameters : IDynamicJson
     public DateTime At { get; set; }
 
     /// <summary>
-    /// Gets or sets the unique identifier (<see cref="RemoteAttachmentsDestinationConfiguration.Identifier"/>) of the attachment that is targeted for remote upload.
+    /// Gets or sets the unique identifier of the attachment that is targeted for remote upload.
     /// </summary>
     public string Identifier { get; set; }
 

@@ -33,7 +33,7 @@ using Xunit.Abstractions;
 namespace SlowTests.Server.Documents.Attachments;
 
 public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHolderBase
-    where TSettings : ICloudBackupSettings
+    where TSettings : IRemoteAttachmentsSettings
 {
     public TSettings Settings;
 
@@ -132,7 +132,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
     }
 
     // add attachments storage key, RemoteKey, and hash to holder
-    public void GetStorageAttachmentsMetadataFromAllAttachments(DocumentDatabase database, ICloudBackupSettings settings = null)
+    public void GetStorageAttachmentsMetadataFromAllAttachments(DocumentDatabase database, IRemoteAttachmentsSettings settings = null)
     {
         settings ??= Settings;
 

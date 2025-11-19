@@ -9,6 +9,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Remote;
+using Raven.Client.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
         public async Task Index_ShouldInclude_RemoteFlag_And_RemoteAt_ForRemoteAttachments()
         {
             string remoteFolderName = "RavenDB_24489" + Guid.NewGuid();
-            var s3Settings = Etl.GetS3Settings(remoteFolderName);
+            var s3Settings = Etl.GetS3Settings(remoteFolderName).ToRemoteAttachmentsS3Settings();
 
             try
             {
@@ -40,7 +41,6 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                             {
                                 Disabled = false, 
                                 S3Settings = s3Settings, 
-                                Identifier = "conf-identifier",
                             }
                         }
                     },
@@ -147,7 +147,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
         public async Task Index_ShouldInclude_RemoteFlag_And_RemoteAt_ForRemoteAttachments_LoadAttachments()
         {
             string remoteFolderName = "RavenDB_24489" + Guid.NewGuid();
-            var s3Settings = Etl.GetS3Settings(remoteFolderName);
+            var s3Settings = Etl.GetS3Settings(remoteFolderName).ToRemoteAttachmentsS3Settings();
 
             try
             {
@@ -162,7 +162,6 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                             {
                                 Disabled = false,
                                 S3Settings = s3Settings,
-                                Identifier = "conf-identifier",
                             }
                         }
                     },

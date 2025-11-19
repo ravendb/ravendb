@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -49,7 +50,7 @@ namespace InterversionTests
         {
             var version = Server62Version;
 
-            var settings = Etl.GetS3Settings(nameof(AttachmentsTests), $"{Guid.NewGuid()}");
+            var settings = Etl.GetS3Settings(nameof(AttachmentsTests), $"{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
 
             await using (DeleteObjects(settings))
             using (var oldStore = await GetDocumentStoreAsync(version, ops))
@@ -85,7 +86,7 @@ namespace InterversionTests
         {
             var version = Server62Version;
 
-            var settings = Etl.GetS3Settings(nameof(AttachmentsTests), $"{Guid.NewGuid()}");
+            var settings = Etl.GetS3Settings(nameof(AttachmentsTests), $"{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
 
             await using (DeleteObjects(settings))
             using (var oldStore = await GetDocumentStoreAsync(version))
@@ -659,7 +660,7 @@ namespace InterversionTests
                 }
             }
         }
-        private async Task CannotRemoteAttachmentsToOldInternal(S3Settings settings, DocumentStore store)
+        private async Task CannotRemoteAttachmentsToOldInternal(RemoteAttachmentsS3Settings settings, DocumentStore store)
         {
             string identifier = await CreateRemoteAttachmentsConfigurationAndGetIdentifier(settings, store);
 
@@ -696,7 +697,7 @@ namespace InterversionTests
             }
         }
 
-        private IAsyncDisposable DeleteObjects(S3Settings settings)
+        private IAsyncDisposable DeleteObjects(IS3Settings settings)
         {
             return new AsyncDisposableAction(async () =>
             {
@@ -708,7 +709,7 @@ namespace InterversionTests
             });
         }
 
-        private static async Task<string> CreateRemoteAttachmentsConfigurationAndGetIdentifier(S3Settings settings, DocumentStore store)
+        private static async Task<string> CreateRemoteAttachmentsConfigurationAndGetIdentifier(RemoteAttachmentsS3Settings settings, DocumentStore store)
         {
             var identifier = "conf-identifier-s3";
             var config = new RemoteAttachmentsConfiguration()
@@ -720,7 +721,6 @@ namespace InterversionTests
                         {
                             S3Settings = settings,
                             Disabled = false,
-                            Identifier = identifier
                         }
                     }
                 },
@@ -731,7 +731,7 @@ namespace InterversionTests
             return identifier;
         }
 
-        private async Task RemoteAndAssertCount(DocumentStore store, S3Settings settings, int expected)
+        private async Task RemoteAndAssertCount(DocumentStore store, IS3Settings settings, int expected)
         {
             var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);

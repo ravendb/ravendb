@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,14 +29,13 @@ namespace SlowTests.Server.Documents.Attachments
             using (var store = GetDocumentStore())
             {
                 var identifier2 = "Conf-identifier-s3-2";
-                var settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{Guid.NewGuid()}");
+                var settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
                 ModifyRemoteAttachmentsConfig = config =>
                 {
                     config.Destinations.Add(identifier2, new RemoteAttachmentsDestinationConfiguration
                     {
                         S3Settings = settings,
                         Disabled = false,
-                        Identifier = identifier2
                     });
                 };
 
@@ -261,16 +261,15 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                S3Settings settings = null;
+                RemoteAttachmentsS3Settings settings = null;
                 // Create second configuration with different identifier
-                settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{Guid.NewGuid()}");
+                settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
                 ModifyRemoteAttachmentsConfig = config =>
                 {
                     config.Destinations.Add(newIdentifier, new RemoteAttachmentsDestinationConfiguration
                     {
                         S3Settings = settings,
                         Disabled = false,
-                        Identifier = newIdentifier
                     });
                 };
 
@@ -394,16 +393,15 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                S3Settings settings = null;
+                RemoteAttachmentsS3Settings settings = null;
                 // Create second configuration with different identifier
-                settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{Guid.NewGuid()}");
+                settings = Etl.GetS3Settings(nameof(RemoteAttachments), $"{Guid.NewGuid()}").ToRemoteAttachmentsS3Settings();
                 ModifyRemoteAttachmentsConfig = config =>
                 {
                     config.Destinations.Add(newIdentifier, new RemoteAttachmentsDestinationConfiguration
                     {
                         S3Settings = settings,
                         Disabled = false,
-                        Identifier = newIdentifier
                     });
                 };
 

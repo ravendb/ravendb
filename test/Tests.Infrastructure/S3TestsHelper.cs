@@ -14,7 +14,7 @@ public class S3TestsHelper
 {
     internal const string CollectionName = "Orders";
 
-    internal static async Task DeleteObjects(S3Settings s3Settings, string additionalTable = null)
+    internal static async Task DeleteObjects(IS3Settings s3Settings, string additionalTable = null)
     {
         if (s3Settings == null)
             return;
@@ -27,7 +27,7 @@ public class S3TestsHelper
         await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
     }
 
-    internal static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
+    internal static async Task DeleteObjects(IS3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
     {
         if (s3Settings == null)
             return;

@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Extensions;
 using Raven.Server.Exceptions.Attachments;
 using Tests.Infrastructure;
 using Xunit;
@@ -27,7 +28,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
         public async Task ShouldThrowWhenTryingToReceiveRemoteAttachmentAsStringOrAsStream()
         {
             string remoteFolderName = "RavenDB_24488" + Guid.NewGuid();
-            var s3Settings = Etl.GetS3Settings(remoteFolderName);
+            var s3Settings = Etl.GetS3Settings(remoteFolderName).ToRemoteAttachmentsS3Settings();
             try
             {
                 using var store = GetDocumentStore();
@@ -41,7 +42,6 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                             {
                                 Disabled = false, 
                                 S3Settings = s3Settings, 
-                                Identifier = "conf-identifier",
                             }
                         }
                     },

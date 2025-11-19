@@ -10,7 +10,6 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public readonly string Region;
         private readonly Amazon.S3.S3StorageClass _storageClass;
 
-        public RavenAwsS3Client(S3Settings s3Settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAwsS3Client(IS3Settings s3Settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (s3Settings == null)
                 throw new ArgumentNullException(nameof(s3Settings));

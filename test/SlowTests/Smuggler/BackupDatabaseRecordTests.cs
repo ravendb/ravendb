@@ -260,14 +260,13 @@ namespace SlowTests.Smuggler
                             {
                                 "dummy-identifier", new RemoteAttachmentsDestinationConfiguration()
                                 {
-                                    S3Settings = new S3Settings()
+                                    S3Settings = new RemoteAttachmentsS3Settings()
                                     {
                                         AwsAccessKey = "DummyAccessKey",
                                         RemoteFolderName = "remote-attachments",
                                         BucketName = "dummy-bucket",
                                     },
                                     Disabled = false,
-                                    Identifier = "dummy-identifier"
                                 }
                             }
                         },
@@ -1342,14 +1341,13 @@ namespace SlowTests.Smuggler
                         {
                             "dummy-identifier", new RemoteAttachmentsDestinationConfiguration()
                             {
-                                S3Settings = new S3Settings()
+                                S3Settings = new RemoteAttachmentsS3Settings()
                                 {
                                     AwsAccessKey = "DummyAccessKey",
                                     RemoteFolderName = "remote-attachments",
                                     BucketName = "dummy-bucket",
                                 },
                                 Disabled = false,
-                                Identifier = "dummy-identifier"
                             }
                         }
                     },

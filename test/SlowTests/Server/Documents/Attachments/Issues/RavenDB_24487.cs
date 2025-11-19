@@ -141,7 +141,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             return baseline;
         }
 
-        private static async Task<string> SetupRemoteAttachmentsConfiguration(S3Settings s3Settings, DocumentStore store)
+        private static async Task<string> SetupRemoteAttachmentsConfiguration(RemoteAttachmentsS3Settings s3Settings, DocumentStore store)
         {
             var id = "conf-identifier-s3";
             var conf = new RemoteAttachmentsConfiguration
@@ -153,7 +153,6 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                         {
                             Disabled = false,
                             S3Settings = s3Settings,
-                            Identifier = id
                         }
                     }
                 }
