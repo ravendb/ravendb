@@ -9,14 +9,14 @@ const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Form.
     }
 );
 
-export default function DatePicker(props: ComponentProps<typeof ReactDatePicker> & { invalid?: boolean }) {
+export default function DatePicker(props: ComponentProps<typeof ReactDatePicker> & { isInvalid?: boolean }) {
     const dateFormat = props.dateFormat ?? (props.showTimeSelect ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");
     const timeFormat = props.timeFormat ?? "HH:mm";
 
     return (
         <ReactDatePicker
             {...props}
-            customInput={<DatePickerInput invalid={props.invalid} />}
+            customInput={<DatePickerInput isInvalid={props.isInvalid} />}
             dateFormat={dateFormat}
             timeFormat={timeFormat}
         />
