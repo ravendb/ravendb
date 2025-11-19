@@ -128,12 +128,10 @@ export default function RemoteAttachments() {
 
 function DestinationsList() {
     const confirm = useConfirm();
-    const { getValues } = useFormContext<RemoteAttachmentsFormData>();
     const dispatch = useAppDispatch();
     const destinations = useAppSelector(remoteAttachmentsSelectors.destinations);
     const destinationsTotal = useAppSelector(remoteAttachmentsSelectors.destinationsTotal);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const formValues = getValues();
 
     const deleteDestination = async (id: string) => {
         const confirmed = await confirm({
@@ -174,12 +172,7 @@ function DestinationsList() {
             <HrHeader
                 right={
                     hasDatabaseAdminAccess && (
-                        <Button
-                            size="sm"
-                            onClick={() => handleOpenSheet()}
-                            variant="info"
-                            className="rounded-pill"
-                        >
+                        <Button size="sm" onClick={() => handleOpenSheet()} variant="info" className="rounded-pill">
                             <Icon icon="plus" size="sm" />
                             Add new
                         </Button>

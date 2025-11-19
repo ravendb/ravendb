@@ -41,7 +41,11 @@ export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
         license.with_LicenseLimited({
             Type: args.licenseType,
         });
-        databasesService.withRemoteAttachmentsConfiguration(args.hasRemoteAttachments ? DatabasesStubs.remoteAttachmentsConfiguration() : DatabasesStubs.emptyRemoteAttachmentsConfiguration());
+        databasesService.withRemoteAttachmentsConfiguration(
+            args.hasRemoteAttachments
+                ? DatabasesStubs.remoteAttachmentsConfiguration()
+                : DatabasesStubs.emptyRemoteAttachmentsConfiguration()
+        );
 
         accessManager.with_databaseAccess({
             [db.name]: args.databaseAccess,

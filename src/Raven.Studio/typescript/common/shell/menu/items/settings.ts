@@ -235,14 +235,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                         name: "Enable Remote Attachments",
                         alternativeNames: ["Turn on Remote Attachments", "Activate Remote Attachments"]
                     },
-                    { name: "Set custom remote attachments frequency" },
                     {
-                        name: "Add New Destination",
-                        alternativeNames: ["Create Destination", "Add Remote Destination", "New Attachment Destination"]
+                        name: "Add New destination",
+                        alternativeNames: ["Create destination", "Add Remote destination", "New Attachment destination"]
                     },
                     {
                         name: "Delete destination",
-                        alternativeNames: ["Remove destination", "Delete remote attachment"]
+                        alternativeNames: ["Remove destination", "Remote remote destination", "Delete remote attachment"]
                     },
                 ],
             },

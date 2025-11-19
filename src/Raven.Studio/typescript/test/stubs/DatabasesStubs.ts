@@ -1143,7 +1143,7 @@ return docs[0];`,
             Disabled: true,
             MaxItemsToProcess: null,
             CheckFrequencyInSec: null,
-            Destinations: {}
+            Destinations: {},
         };
     }
 }

@@ -3,7 +3,10 @@ import { destinationsSelectors, initialDestinationsSelectors } from "./remoteAtt
 
 const loadStatus = (s: RootState) => s.remoteAttachments.loadStatus;
 const isAnyModified = (s: RootState) =>
-    !_.isEqual(destinationsSelectors.selectAll(s.remoteAttachments), initialDestinationsSelectors.selectAll(s.remoteAttachments));
+    !_.isEqual(
+        destinationsSelectors.selectAll(s.remoteAttachments),
+        initialDestinationsSelectors.selectAll(s.remoteAttachments)
+    );
 
 const selectDestinations = (s: RootState) => destinationsSelectors.selectAll(s.remoteAttachments);
 const selectDestinationsTotal = (s: RootState) => destinationsSelectors.selectTotal(s.remoteAttachments);
