@@ -272,7 +272,6 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                         icon: "revisions",
                         text: result,
                         onSelected: (e) => goToDocument(result, e),
-                        subText: null,
                     }))
                 );
             },
