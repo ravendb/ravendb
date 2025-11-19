@@ -158,7 +158,7 @@
         "toastr": "^2.1.4",
         "util": "^0.12.5",
         "webcola": "^3.4.0",
-        "yup": "^1.4.0"
+        "yup": "^1.7.1"
     },
     "overrides": {
         "eonasdan-bootstrap-datetimepicker": {
