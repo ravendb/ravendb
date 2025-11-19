@@ -7,12 +7,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.TimeSeries;
@@ -986,12 +986,28 @@ namespace Raven.Client.Documents.BulkInsert
 
             public void Store(string name, Stream stream, string contentType = null)
             {
-                _operation._attachmentsOperation.Store(_id, name, stream, contentType);
+                Store(new StoreAttachmentParameters(name, stream)
+                {
+                    ContentType = contentType
+                });
             }
 
             public Task StoreAsync(string name, Stream stream, string contentType = null, CancellationToken token = default)
             {
-                return _operation._attachmentsOperation.StoreAsync(_id, name, stream, contentType, token);
+                return StoreAsync(new StoreAttachmentParameters(name, stream)
+                {
+                    ContentType = contentType
+                }, token);
+            }
+
+            public void Store(StoreAttachmentParameters parameters)
+            {
+                _operation._attachmentsOperation.Store(_id, parameters);
+            }
+
+            public Task StoreAsync(StoreAttachmentParameters parameters, CancellationToken token = default)
+            {
+                return _operation._attachmentsOperation.StoreAsync(_id, parameters, token);
             }
         }
 
@@ -1006,14 +1022,14 @@ namespace Raven.Client.Documents.BulkInsert
                 _token = _operation._token;
             }
 
-            public void Store(string id, string name, Stream stream, string contentType = null)
+            public void Store(string id, StoreAttachmentParameters parameters)
             {
-                AsyncHelpers.RunSync(() => StoreAsync(id, name, stream, contentType, token: default));
+                AsyncHelpers.RunSync(() => StoreAsync(id, parameters, token: default));
             }
 
-            public async Task StoreAsync(string id, string name, Stream stream, string contentType = null, CancellationToken token = default)
+            public async Task StoreAsync(string id, StoreAttachmentParameters parameters, CancellationToken token = default)
             {
-                PutAttachmentCommandHelper.TryValidateStream(stream, parameters: null);
+                PutAttachmentCommandHelper.TryValidateStream(parameters.Stream, parameters: null);
 
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (await _operation.ConcurrencyCheckAsync().ConfigureAwait(false))
@@ -1030,22 +1046,32 @@ namespace Raven.Client.Documents.BulkInsert
                         _operation._writer.Write("{\"Id\":\"");
                         _operation.WriteString(id);
                         _operation._writer.Write("\",\"Type\":\"AttachmentPUT\",\"Name\":\"");
-                        _operation.WriteString(name);
+                        _operation.WriteString(parameters.Name);
 
-                        if (contentType != null)
+                        if (parameters.ContentType != null)
                         {
                             _operation._writer.Write("\",\"ContentType\":\"");
-                            _operation.WriteString(contentType);
+                            _operation.WriteString(parameters.ContentType);
                         }
 
                         _operation._writer.Write("\",\"ContentLength\":");
-                        _operation._writer.Write(stream.Length);
+                        _operation._writer.Write(parameters.Stream.Length);
+
+                        if (parameters.RemoteParameters != null)
+                        {
+                            _operation._writer.Write(",\"RemoteParameters\":");
+                            await _operation._writer.FlushAsync().ConfigureAwait(false);
+                            using (var json = _operation._conventions.Serialization.DefaultConverter.ToBlittable(parameters.RemoteParameters, _operation._context, _operation._defaultSerializer))
+                                await json.WriteJsonToAsync(_operation._writer.StreamWriter.BaseStream, _token).ConfigureAwait(false);
+
+                        }
+
                         _operation._writer.Write('}');
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
 
-                        PutAttachmentCommandHelper.PrepareStream(stream);
+                        PutAttachmentCommandHelper.PrepareStream(parameters.Stream);
                         // pass the default value for bufferSize to make it compile on netstandard2.0
-                        await stream.CopyToAsync(_operation._writer.StreamWriter.BaseStream, bufferSize: 16 * 1024, cancellationToken: linkedCts.Token).ConfigureAwait(false);
+                        await parameters.Stream.CopyToAsync(_operation._writer.StreamWriter.BaseStream, bufferSize: 16 * 1024, cancellationToken: linkedCts.Token).ConfigureAwait(false);
 
                         await _operation.FlushIfNeeded().ConfigureAwait(false);
                     }

@@ -26,6 +26,7 @@ using SlowTests.Client.Attachments;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -1775,6 +1776,119 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(3, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice).Count);
                 }
             }
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(1, 32 * 1024, true)]
+        [InlineData(32, 32 * 1024, true)]
+        [InlineData(32, 32 * 1024, false)]
+        public async Task StoreManyRemoteAttachmentsUsingBulkInsert(int count, int size, bool allRandom)
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+                const string userId = "user/1";
+                var streams = new Dictionary<string, MemoryStream>();
+                try
+                {
+                    var hashset = new HashSet<string>();
+                    byte[] defArr = null;
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        var user1 = new User { Name = "EGR" };
+                        bulkInsert.Store(user1, userId);
+                        var attachmentsBulkInsert = bulkInsert.AttachmentsFor(userId);
+                        for (int i = 0; i < count; i++)
+                        {
+                            byte[] bArr;
+                            if (allRandom)
+                            {
+                                bArr = GetActuallyRandomBArr(size, hashset);
+                            }
+                            else
+                            {
+                                if (i == 0)
+                                {
+                                    bArr = GetActuallyRandomBArr(size, hashset);
+                                    defArr = bArr;
+                                }
+                                else
+                                {
+                                    bArr = defArr;
+                                }
+                            }
+
+                            var name = i.ToString();
+                            var stream = new MemoryStream(bArr);
+                            await attachmentsBulkInsert.StoreAsync(new StoreAttachmentParameters(name, stream)
+                            {
+                                RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
+                            });
+
+                            stream.Position = 0;
+                            streams[name] = stream;
+                        }
+                    }
+
+                    // Remote the attachment
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+
+                    if (allRandom)
+                    {
+                        // Verify attachment is Remote
+                        await GetBlobsFromCloudAndAssertForCount(Settings, count, 15_000);
+                    }
+                    else
+                    {
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                    }
+
+
+
+                    var attachmentsNames = streams.Select(x => new AttachmentRequest(userId, x.Key));
+
+                    var tester = store.ForSessionTesting();
+
+                    await tester.AssertAllAsync((_, session) =>
+                    {
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+
+                        while (attachmentsEnumerator.MoveNext())
+                        {
+                            Assert.NotNull(attachmentsEnumerator.Current != null);
+                            Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[attachmentsEnumerator.Current.Details.Name]));
+                        }
+                    });
+                }
+                finally
+                {
+                    foreach (var stream in streams.Values)
+                    {
+                        await stream.DisposeAsync();
+                    }
+                }
+            }
+        }
+
+        private static byte[] GetActuallyRandomBArr(int size, HashSet<string> hashset)
+        {
+            var rnd = new Random(DateTime.Now.Millisecond);
+            var bArr = new byte[size];
+            rnd.NextBytes(bArr);
+
+            var hash = Convert.ToBase64String(bArr);
+            while (hashset.Add(hash) == false)
+            {
+                rnd = new Random(DateTime.Now.Millisecond);
+                rnd.NextBytes(bArr);
+                hash = Convert.ToBase64String(bArr);
+            }
+
+            return bArr;
         }
     }
 }
