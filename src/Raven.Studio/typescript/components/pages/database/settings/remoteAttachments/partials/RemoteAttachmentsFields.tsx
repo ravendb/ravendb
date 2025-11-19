@@ -20,13 +20,13 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
 
     return (
         <div className="vstack mt-3">
-            <FormSwitch control={control} name="s3.isUseCustomHost" className="w-100 mb-3">
+            <FormSwitch control={control} name="s3.isUseCustomHost" className="w-100">
                 Use a custom S3 host
             </FormSwitch>
 
             <Collapse in={s3Values?.isUseCustomHost} mountOnEnter unmountOnExit>
                 <div>
-                    <FormSwitch control={control} name="s3.forcePathStyle" className="w-100 mb-3">
+                    <FormSwitch control={control} name="s3.forcePathStyle" className="w-100 mt-1 mb-2">
                         <span className="d-flex gap-1 align-items-center">
                             Force path style
                             <PopoverWithHoverWrapper
@@ -45,7 +45,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                         </span>
                     </FormSwitch>
 
-                    <FormGroup>
+                    <FormGroup marginClass="mb-1">
                         <FormLabel>Custom server URL</FormLabel>
                         <FormInput
                             control={control}
@@ -58,7 +58,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                 </div>
             </Collapse>
 
-            <FormGroup>
+            <FormGroup marginClass="mt-2 mb-3">
                 <FormLabel>Destination identifier</FormLabel>
                 <FormInput type="text" name="identifier" placeholder="Destination identifier" control={control} />
             </FormGroup>
@@ -173,7 +173,7 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
     const { control } = useFormContext<RemoteAttachmentsDestinationFormData>();
 
     return (
-        <div className="vstack gap-3 mt-3">
+        <div className="mt-3">
             <FormGroup>
                 <FormLabel>Destination identifier</FormLabel>
                 <FormInput type="text" name="identifier" placeholder="Destination identifier" control={control} />

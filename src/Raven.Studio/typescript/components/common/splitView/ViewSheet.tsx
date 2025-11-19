@@ -25,7 +25,7 @@ interface SheetHeaderProps extends Required<PropsWithChildren>, ClassNameProps {
 }
 
 function SheetHeader(props: SheetHeaderProps) {
-    const hasDefaultButtons = !props.isPinHidden && !props.isCloseHidden;
+    const hasDefaultButtons = !props.isPinHidden || !props.isCloseHidden;
 
     return (
         <div

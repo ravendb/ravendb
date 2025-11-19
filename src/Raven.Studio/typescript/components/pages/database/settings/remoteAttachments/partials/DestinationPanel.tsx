@@ -206,18 +206,17 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
     return (
         <FormProvider {...form}>
             <form className="h-100 d-flex flex-column" onSubmit={handleSubmit(handleSaveDestination)}>
-                <ViewSheet.Header className="panel-bg-2 align-items-center">
+                <ViewSheet.Header className="panel-bg-2 align-items-center" isPinHidden>
                     <h3 className="m-0">
-                        <Icon icon="global" addon="settings" color="primary" />
-                        <span>{editingDestinationId ? "Edit Destination" : "Create new Destination"}</span>
+                        <Icon icon="global" addon="settings" color="primary" margin="me-2" />
+                        <span>{editingDestinationId ? "Edit Destination" : "Create New Destination"}</span>
                     </h3>
                 </ViewSheet.Header>
                 <ViewSheet.Body className="w-100 flex-grow-1 vstack p-4 overflow-auto">
-                    <FormGroup>
+                    <FormGroup marginClass="mb-0">
                         <FormLabel>Provider</FormLabel>
                         <FormSelect name="provider" control={control} options={providerOptions} />
                     </FormGroup>
-
                     {formValues.provider === "s3" && <RemoteAttachmentsS3Fields asyncTest={asyncTest} />}
                     {formValues.provider === "azure" && <RemoteAttachmentsAzureFields asyncTest={asyncTest} />}
                 </ViewSheet.Body>

@@ -106,13 +106,7 @@ export default function RemoteAttachments() {
                                         Save
                                     </ButtonWithSpinner>
                                 )}
-                                <div className="my-4">
-                                    <HrHeader>
-                                        <Icon icon="config" />
-                                        Configuration
-                                    </HrHeader>
-                                    <RemoteAttachmentsSettingsCard />
-                                </div>
+                                <RemoteAttachmentsSettingsCard />
                                 <DestinationsList />
                             </Col>
                             <Col sm={12} lg={4}>
@@ -207,8 +201,8 @@ function RemoteAttachmentsSettingsCard() {
                 <FormSwitch
                     name="isRemoteAttachmentsEnabled"
                     control={control}
-                    className="mb-3"
                     color="primary"
+                    className="mb-2"
                     disabled={!hasDatabaseAdminAccess || formState.isSubmitting}
                 >
                     Enable Remote Attachments
@@ -217,7 +211,6 @@ function RemoteAttachmentsSettingsCard() {
                     <FormSwitch
                         name="isCheckFrequencyInSecEnabled"
                         control={control}
-                        className="mb-3"
                         color="primary"
                         disabled={
                             !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
@@ -244,7 +237,6 @@ function RemoteAttachmentsSettingsCard() {
                         name="isMaxItemsToProcessEnabled"
                         control={control}
                         color="primary"
-                        className="mb-3"
                         disabled={
                             !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
                         }
@@ -270,7 +262,6 @@ function RemoteAttachmentsSettingsCard() {
                         name="isConcurrentUploadsEnabled"
                         control={control}
                         color="primary"
-                        className="mb-3"
                         disabled={
                             !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
                         }
