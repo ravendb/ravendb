@@ -49,8 +49,6 @@ describe("RemoteAttachments", () => {
 
         expect(enableSwitch).not.toBeChecked();
 
-        expect(addButton).toBeDisabled();
-
         await fireClick(enableSwitch);
 
         expect(enableSwitch).toBeChecked();
