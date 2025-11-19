@@ -143,6 +143,7 @@ namespace Raven.Server.Commercial
             ServerStore serverStore,
             CancellationToken token)
         {
+            var zipOnly = setupInfo.ZipOnly;
             var progress = new SetupProgressAndResult(tuple =>
             {
                 if (Logger is { IsInfoEnabled: true })
@@ -182,6 +183,7 @@ namespace Raven.Server.Commercial
                     {
                         CompleteClusterConfigurationResult = completeClusterConfigurationResult,
                         Progress = progress,
+                        ZipOnly = zipOnly,
                         OnProgress = onProgress,
                         OnSettingsPath = () => serverStore.Configuration.ConfigPath,
                         SetupInfo = setupInfo,
