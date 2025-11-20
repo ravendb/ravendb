@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
@@ -22,8 +23,8 @@ public class RavenDB_19148 : ClusterTestBase
     {
         var suffix = Guid.NewGuid().ToString().Split('-')[0];
         var caCommonNameValue = $"auth-{suffix}";
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caKey, out var caName);
-        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey($"admin-{suffix}", caName, caKey, true, false,
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caName);
+        CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey($"admin-{suffix}", caName, (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()), true, false,
             DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
         CertificateUtils.RemoveOldTestCertificatesFromOsStore(caCommonNameValue);
 
