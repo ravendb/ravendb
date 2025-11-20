@@ -1,12 +1,18 @@
 import { RootState } from "components/store";
 import { destinationsSelectors, initialDestinationsSelectors } from "./remoteAttachmentsSlice";
+import { isEqual, omit } from "lodash";
 
 const loadStatus = (s: RootState) => s.remoteAttachments.loadStatus;
-const isAnyModified = (s: RootState) =>
-    !_.isEqual(
-        destinationsSelectors.selectAll(s.remoteAttachments),
-        initialDestinationsSelectors.selectAll(s.remoteAttachments)
-    );
+
+const areDestinationsDifferent = <T extends object>(current: T, initial: T) =>
+    !isEqual(omit(current, ["s3.isEnabled", "azure.isEnabled"]), omit(initial, ["s3.isEnabled", "azure.isEnabled"]));
+
+const isAnyModified = (s: RootState) => {
+    const current = destinationsSelectors.selectAll(s.remoteAttachments);
+    const initial = initialDestinationsSelectors.selectAll(s.remoteAttachments);
+
+    return areDestinationsDifferent(current, initial);
+};
 
 const selectDestinations = (s: RootState) => destinationsSelectors.selectAll(s.remoteAttachments);
 const selectDestinationsTotal = (s: RootState) => destinationsSelectors.selectTotal(s.remoteAttachments);
@@ -14,7 +20,8 @@ const selectDestinationsTotal = (s: RootState) => destinationsSelectors.selectTo
 const selectIsDestinationModified = (id: string) => (s: RootState) => {
     const current = destinationsSelectors.selectById(s.remoteAttachments, id);
     const initial = initialDestinationsSelectors.selectById(s.remoteAttachments, id);
-    return !_.isEqual(current, initial);
+
+    return areDestinationsDifferent(current, initial);
 };
 
 export const remoteAttachmentsSelectors = {

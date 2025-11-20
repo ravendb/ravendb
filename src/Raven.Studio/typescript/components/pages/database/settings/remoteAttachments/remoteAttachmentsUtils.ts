@@ -55,7 +55,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
     const destinations: RemoteAttachmentsDestinationFormData[] = [];
 
     if (dto.Destinations) {
-        for (const [_key, destinationConfig] of Object.entries(dto.Destinations)) {
+        for (const [destinationIdentifier, destinationConfig] of Object.entries(dto.Destinations)) {
             if (destinationConfig.S3Settings) {
                 const {
                     AwsAccessKey,
@@ -69,7 +69,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
                 } = destinationConfig.S3Settings;
                 destinations.push({
                     provider: "s3",
-                    identifier: destinationConfig.Identifier,
+                    identifier: destinationIdentifier,
                     disabled: !!destinationConfig.Disabled,
                     s3: {
                         ...defaultS3FormData,
@@ -88,7 +88,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
                 const { AccountName, AccountKey, StorageContainer, RemoteFolderName } = destinationConfig.AzureSettings;
                 destinations.push({
                     provider: "azure",
-                    identifier: destinationConfig.Identifier,
+                    identifier: destinationIdentifier,
                     disabled: !!destinationConfig.Disabled,
                     azure: {
                         ...defaultAzureFormData,

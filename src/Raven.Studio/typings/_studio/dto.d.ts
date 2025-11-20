@@ -127,7 +127,7 @@ interface attachmentItem {
     name: string;
     contentType: string;
     size: number;
-    remoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
+    remoteParameters?: RemoteAttachmentParameters;
 }
 
 interface timeSeriesItem {
@@ -157,12 +157,18 @@ interface filterTimeSeriesDates<T> {
     endDate: T;
 }
 
+type RemoteAttachmentFlags = "Remote" | "None";
+
+interface RemoteAttachmentParameters extends Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters {
+    Flags: RemoteAttachmentFlags;
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;
     Name: string;
     Size: number;
-    RemoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters
+    RemoteParameters?: RemoteAttachmentParameters;
 }
 
 interface connectedDocument {

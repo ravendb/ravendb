@@ -1096,11 +1096,10 @@ return docs[0];`,
 
         for (let i = 0; i < count; i++) {
             const id = this.generateIdentifier();
-            const name = `Destination_${i + 1}`;
+            const name = `Destination_${i + 1}` + id;
 
             destinations[name] = {
                 Disabled: false,
-                Identifier: id,
                 S3Settings: {
                     BucketName: "test",
                     StorageClass: "GlacierInstantRetrieval",
@@ -1111,8 +1110,6 @@ return docs[0];`,
                     CustomServerUrl: "",
                     ForcePathStyle: false,
                     RemoteFolderName: "",
-                    Disabled: false,
-                    GetBackupConfigurationScript: undefined,
                 },
                 AzureSettings: {
                     AccountKey: "",
@@ -1120,8 +1117,6 @@ return docs[0];`,
                     RemoteFolderName: "",
                     SasToken: "",
                     StorageContainer: "",
-                    Disabled: false,
-                    GetBackupConfigurationScript: undefined,
                 },
             };
         }

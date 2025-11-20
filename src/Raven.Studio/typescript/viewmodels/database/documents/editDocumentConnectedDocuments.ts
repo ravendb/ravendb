@@ -21,7 +21,6 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import genUtils = require("common/generalUtils");
 import _ = require("lodash")
-import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -163,7 +162,7 @@ class connectedDocuments {
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
-                transformValue: (x: Raven.Client.Documents.Attachments.RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
+                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
             }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.crudActionsProvider().deleteAttachment(x),
@@ -185,7 +184,7 @@ class connectedDocuments {
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
-                transformValue: (x: Raven.Client.Documents.Attachments.RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
+                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
             }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
         ];
@@ -292,7 +291,7 @@ class connectedDocuments {
                             break;
                         }
                         case "Remote flags": {
-                            const flag = value as Raven.Client.Documents.Attachments.RemoteAttachmentFlags;
+                            const flag = value as RemoteAttachmentFlags;
                             onValue(flag === "Remote" ? "Remote attachment" : "Local attachment");
                             break;
                         }
