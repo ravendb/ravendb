@@ -66,6 +66,10 @@
 @ai-etl-color-dark: darken(@ai-etl-color, 5%);
 @ai-etl-color-light: lighten(@ai-etl-color, 5%);
 
+@genai-color: @color-4;
+@genai-color-dark: darken(@genai-color, 5%);
+@genai-color-light: lighten(@genai-color, 5%);
+
 .bigbtn-variant(@color, @color-dark) {
     background-color: fadeout(@color-dark,90%);
     color: @color;
@@ -174,8 +178,13 @@
     .amazon-sqs-etl {
         .bigbtn-variant (@amazon-sqs-etl-color, @amazon-sqs-etl-color-dark);
     }
+    
     .ai-etl {
         .bigbtn-variant (@ai-etl-color, @ai-etl-color-dark);
+    }
+
+    .genai {
+        .bigbtn-variant (@genai-color, @genai-color-dark);
     }
 
     .kafka-sink {
@@ -362,8 +371,13 @@
         .amazon-sqs-etl {
             color: @amazon-sqs-etl-color;
         }
+
         .ai-etl {
             color: @ai-etl-color;
+        }
+
+        .genai {
+            color: @genai-color;
         }
 
         .task-azure-queue-storage-etl {
@@ -376,6 +390,10 @@
 
         .task-ai-etl {
             background-color: @ai-etl-color;
+        }
+
+        .task-genai {
+            background-color: @genai-color;
         }
 
         .kafka-sink {
