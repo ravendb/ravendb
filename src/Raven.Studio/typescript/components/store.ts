@@ -22,7 +22,6 @@ import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/edi
 import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
 import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
 import { remoteAttachmentsSlice } from "./pages/database/settings/remoteAttachments/store/remoteAttachmentsSlice";
-import { splitViewSlice } from "./common/splitView/store/splitViewSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -48,7 +47,6 @@ export function createStoreConfiguration() {
             editAiAgent: editAiAgentSlice.reducer,
             chatAiAgent: chatAiAgentSlice.reducer,
             remoteAttachments: remoteAttachmentsSlice.reducer,
-            splitView: splitViewSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
