@@ -190,8 +190,7 @@ namespace Raven.Server.Commercial
                         OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                         OnGetCertificatePath = certificateFileName =>
                         {
-                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ??
-                                   Path.Combine(AppContext.BaseDirectory, certificateFileName);
+                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? certificateFileName;
                         },
                         OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
                         {
@@ -726,8 +725,7 @@ namespace Raven.Server.Commercial
                         OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                         OnGetCertificatePath = certificateFileName =>
                         {
-                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ??
-                                   Path.Combine(AppContext.BaseDirectory, certificateFileName);
+                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? certificateFileName;
                         },
                         OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
                         {
