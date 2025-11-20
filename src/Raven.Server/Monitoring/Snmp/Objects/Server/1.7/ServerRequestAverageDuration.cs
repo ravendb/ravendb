@@ -14,7 +14,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             _metrics = metrics;
         }
 
-        private int Value => (int)_metrics.Requests.AverageDuration.GetRate();
+        private int Value => (int)_metrics.Requests.AverageDuration;
         
         protected override Gauge32 GetData()
         {

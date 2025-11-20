@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         private static int GetCount(DocumentDatabase database)
         {
-            return (int)database.Metrics.Requests.AverageDuration.GetRate();
+            return (int)database.Metrics.Requests.AverageDuration;
         }
     }
 }

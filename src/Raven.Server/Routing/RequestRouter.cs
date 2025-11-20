@@ -19,6 +19,7 @@ using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web;
+using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -273,8 +274,9 @@ namespace Raven.Server.Routing
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
             var handler = tuple.Item1 ?? await tuple.Item2;
 
-            reqCtx.DatabaseMetrics?.Requests.RequestsPerSec.Mark();
-            _serverMetrics.Requests.RequestsPerSec.Mark();
+            // We defer all throughput accounting until the request actually completes so the
+            // reported rates track true throughput rather than arrival pressure.
+            var requestStartNs = Clock.Nanoseconds;
 
             Interlocked.Increment(ref _serverMetrics.Requests.ConcurrentRequestsCount);
 
@@ -424,6 +426,16 @@ namespace Raven.Server.Routing
             finally
             {
                 Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
+
+                var elapsedNs = Clock.Nanoseconds - requestStartNs;
+                if (elapsedNs < 0)
+                    elapsedNs = 0;
+
+                var elapsedMilliseconds = elapsedNs / (double)Clock.NanosecondsInMillisecond;
+
+                var duration = reqCtx.HttpContext.WebSockets.IsWebSocketRequest ? 0L : (long)elapsedMilliseconds;
+                _serverMetrics.Requests.RecordRequest(duration);
+                reqCtx.DatabaseMetrics?.Requests.RecordRequest(duration);
             }
         }
 

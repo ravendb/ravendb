@@ -103,7 +103,7 @@ namespace Raven.Server.Dashboard
 
             var rate = (int)RefreshRate.TotalSeconds;
             trafficWatchInfo.TrafficWatch.RequestsPerSecond = (int)Math.Ceiling(serverStore.Server.Metrics.Requests.RequestsPerSec.GetRate(rate));
-            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
+            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration;
 
             using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -125,7 +125,7 @@ namespace Raven.Server.Dashboard
                             {
                                 Database = databaseName,
                                 RequestsPerSecond = database.Metrics.Requests.RequestsPerSec.GetIntRate(rate),
-                                AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
+                                AverageRequestDuration = database.Metrics.Requests.AverageDuration,
                                 DocumentWritesPerSecond = database.Metrics.Docs.PutsPerSec.GetIntRate(rate),
                                 AttachmentWritesPerSecond = database.Metrics.Attachments.PutsPerSec.GetIntRate(rate),
                                 CounterWritesPerSecond = database.Metrics.Counters.PutsPerSec.GetIntRate(rate),
@@ -236,7 +236,7 @@ namespace Raven.Server.Dashboard
                 {
                     Database = database.Name,
                     RequestsPerSecond = database.Metrics.Requests.RequestsPerSec.GetIntRate(rate),
-                    AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
+                    AverageRequestDuration = database.Metrics.Requests.AverageDuration,
                     DocumentWritesPerSecond = database.Metrics.Docs.PutsPerSec.GetIntRate(rate),
                     AttachmentWritesPerSecond = database.Metrics.Attachments.PutsPerSec.GetIntRate(rate),
                     CounterWritesPerSecond = database.Metrics.Counters.PutsPerSec.GetIntRate(rate),
