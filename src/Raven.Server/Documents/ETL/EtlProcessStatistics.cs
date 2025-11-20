@@ -140,11 +140,16 @@ namespace Raven.Server.Documents.ETL
             
             LastLoadErrorTime = now;
 
-            LastLoadErrorsInCurrentBatch.Add(new EtlErrorInfo
+            if (LastLoadErrorsInCurrentBatch.Errors.Count == 0)
             {
-                Date = now,
-                Error = error
-            });
+                // this is a workaround for the case when we forget to register the real error
+                // so we want at least to show something
+                LastLoadErrorsInCurrentBatch.Add(new EtlErrorInfo
+                {
+                    Date = now,
+                    Error = error
+                });
+            }
 
             var message = $"Current ETL batch with '{count}' items was stopped. ";
 
