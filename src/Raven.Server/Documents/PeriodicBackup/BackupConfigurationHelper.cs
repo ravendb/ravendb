@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
@@ -196,6 +197,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             UpdateLocalPathIfNeeded(configuration, serverStore);
             AssertBackupConfiguration(configuration, backupConfiguration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, authConnection?.Status);
 
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
@@ -206,8 +208,56 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             AssertBackupConfigurationInternal(configuration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, authConnection?.Status);
 
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
+        }
+
+        private static void AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(
+            BackupConfiguration configuration,
+            ServerStore serverStore,
+            RavenServer.AuthenticationStatus? authConnectionStatus)
+        {
+            if (authConnectionStatus is null or RavenServer.AuthenticationStatus.ClusterAdmin)
+                return;
+
+            if (serverStore.Configuration.Backup.RestrictOverrideConfigurationViaExternalScriptForNonClusterAdmin == false)
+                return;
+
+            var backupSettings = new List<BackupSettings>
+            {
+                configuration.LocalSettings,
+                configuration.S3Settings,
+                configuration.GlacierSettings,
+                configuration.AzureSettings,
+                configuration.GoogleCloudSettings,
+                configuration.FtpSettings
+            };
+
+            foreach (var backupSetting in backupSettings)
+            {
+                if (backupSetting?.GetBackupConfigurationScript == null || backupSetting.Disabled)
+                    continue;
+
+                if (string.IsNullOrEmpty(backupSetting.GetBackupConfigurationScript.Exec))
+                    continue;
+
+                throw new ArgumentException($"Setting up the configuration for {GetConfigurationName()} via an external script is not allowed for non cluster admins.");
+
+                string GetConfigurationName()
+                {
+                    return backupSetting switch
+                    {
+                        LocalSettings => "Local",
+                        S3Settings => "S3",
+                        GlacierSettings => "Glacier",
+                        AzureSettings => "Azure",
+                        GoogleCloudSettings => "Google Cloud",
+                        FtpSettings => "FTP",
+                        _ => null
+                    };
+                }
+            }
         }
 
         public sealed class ActualPathResult
