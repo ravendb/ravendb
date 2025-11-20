@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
 
             var totalCount = 0;
             var currentTime = _database.Time.GetUtcNow();
-            var directUploaders = new ConcurrentDictionary<string, AttachmentUploader>();
+            var directUploaders = new ConcurrentDictionary<string, Lazy<AttachmentUploader>>();
             var uploadTasks = new Task<AttachmentRemoteInfo>[Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber];
 
             try
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task<AttachmentRemoteInfo> CreateUploadTaskAsync(ConcurrentDictionary<string, AttachmentUploader> uploaders, DateTime currentTime, AttachmentRemoteInfo document)
+        private async Task<AttachmentRemoteInfo> CreateUploadTaskAsync(ConcurrentDictionary<string, Lazy<AttachmentUploader>> uploaders, DateTime currentTime, AttachmentRemoteInfo document)
         {
             var s = 0L;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -280,17 +280,13 @@ namespace Raven.Server.Documents
                             continue;
 
                         var identifier = attachment.RemoteParameters.Identifier;
-
-                        // get the destination configuration for the identifier & create new uploader for the attachment
-                        if (uploaders.TryGetValue(identifier, out var uploader) == false)
+                        var lazyUploader = uploaders.GetOrAdd(identifier, new Lazy<AttachmentUploader>(() =>
                         {
                             // we are sure the destination exist because we got the item with "Process" status
                             var destination = Configuration.Destinations[identifier];
-                            uploader = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
-
-                            uploaders[identifier] = uploader;
-                        }
-
+                            return new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
+                        }));
+                        var uploader = lazyUploader.Value;
                         var hash = attachment.Base64Hash.ToString();
                         var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, attachment.Base64Hash.ToString());
                         Stream attachmentStream;
