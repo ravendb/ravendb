@@ -18,7 +18,7 @@ internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHand
     }
 
     public abstract void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
-    public abstract Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment);
+    public abstract (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, DirectFileDownloader downloader, Attachment attachment);
     public abstract DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs);
 
     public void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)

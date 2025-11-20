@@ -58,7 +58,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         else
                         {
                             strategy = new RegularBulkPostAttachmentStrategyProcessor(RequestHandler);
-                            canDisposeReadTransaction = false;
                         }
 
                         strategy.CheckAttachmentFlagAndThrowIfNeeded(context, attachment, id, name);
@@ -67,8 +66,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             writer.WriteComma();
                         first = false;
 
-                        var attachmentStream = strategy.GetAttachmentStream(downloader, attachment);
+                        (var attachmentStream, var isLocal) = strategy.GetAttachmentStream(context, downloader, attachment);
                         tasks.Add(attachmentStream);
+                        if (isLocal)
+                        {
+                            canDisposeReadTransaction = false;
+                        }
 
                         strategy.WriteAttachmentDetails(writer, attachment, id);
 

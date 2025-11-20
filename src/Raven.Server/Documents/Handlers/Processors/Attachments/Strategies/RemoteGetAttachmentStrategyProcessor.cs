@@ -17,16 +17,20 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, nameof(GetAttachmentOperation));
         }
 
-        public override void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
+        public override async Task WriteResponseStream(DocumentsOperationContext context, DocumentsTransaction tx, Attachment attachment, OperationCancelToken tcs)
         {
-            tx.Dispose();
-        }
+            var stream = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
+            if (stream == null)
+            {
+                tx.Dispose(); // we are reading from remote, we can dispose the transaction
+                using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.GetDownloader(attachment, tcs);
+                stream = await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment.Base64Hash.ToString());
+            }
 
-        public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken tcs)
-        {
-            using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.GetDownloader(attachment, tcs);
-            await using var stream = await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment.Base64Hash.ToString());
-            await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
+            await using (stream)
+            {
+                await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
+            }
         }
     }
 }

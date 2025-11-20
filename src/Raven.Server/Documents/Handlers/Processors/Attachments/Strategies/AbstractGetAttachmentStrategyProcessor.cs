@@ -14,7 +14,6 @@ internal abstract class AbstractGetAttachmentStrategyProcessor<TRequestHandler, 
     {
     }
 
-    public abstract void DisposeReadTransactionIfNeeded(DocumentsTransaction tx);
     public abstract void CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
-    public abstract Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken token);
+    public abstract Task WriteResponseStream(DocumentsOperationContext context, DocumentsTransaction tx, Attachment attachment, OperationCancelToken token);
 }

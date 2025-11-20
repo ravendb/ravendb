@@ -7,7 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Extensions;
 using Tests.Infrastructure;
 using Xunit;
@@ -903,6 +903,151 @@ namespace SlowTests.Server.Documents.Attachments
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var attachments = await session.Advanced.Attachments.GetAsync(new List<AttachmentRequest> { new AttachmentRequest(id, "test.png") });
+                    Assert.NotNull(attachments);
+                    Assert.True(attachments.MoveNext());
+                    var attachment = attachments.Current;
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.Remote, attachment.Details.RemoteParameters.Flags);
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanGetRemoteAttachmentByEntityAndNameFromLocalAsync()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRemoteAttachmentsConfiguration(store, Settings, collections: null);
+                var id = "Orders/4";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/4", Company = $"Companies/4" });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                var id2 = "Order/44";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = id2, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/4", Company = $"Companies/4" });
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id2, new StoreAttachmentParameters("testtesttest.png", profileStream));
+                    await session.SaveChangesAsync();
+                }
+
+                // I put dummy config for the old identifier so the attachment will be read from local storage
+                var config = new RemoteAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            identifier, new RemoteAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new RemoteAttachmentsS3Settings()
+                                {
+                                    BucketName = "EGOR"
+                                },
+                                Disabled = false,
+                            }
+                        }
+                    },
+                    CheckFrequencyInSec = 1000
+                };
+
+                ModifyRemoteAttachmentsConfig?.Invoke(config);
+                await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(config));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(id);
+                    var attachment = await session.Advanced.Attachments.GetAsync(order, "test.png");
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.Remote, attachment.Details.RemoteParameters.Flags);
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanGetEnumeratorOfRemoteAttachmentsFromLocalAsync()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier = await PutRemoteAttachmentsConfiguration(store, Settings, collections: null);
+                var id = "Orders/4";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/4", Company = $"Companies/4" });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                var id2 = "Order/44";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order { Id = id2, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/4", Company = $"Companies/4" });
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id2, new StoreAttachmentParameters("testtesttest.png", profileStream));
+                    await session.SaveChangesAsync();
+                }
+
+                // I put dummy config for the old identifier so the attachment will be read from local storage
+                var config = new RemoteAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            identifier, new RemoteAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new RemoteAttachmentsS3Settings()
+                                {
+                                    BucketName = "EGOR"
+                                },
+                                Disabled = false,
+                            }
+                        }
+                    },
+                    CheckFrequencyInSec = 1000
+                };
+
+                ModifyRemoteAttachmentsConfig?.Invoke(config);
+                await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(config));
+
 
                 using (var session = store.OpenAsyncSession())
                 {

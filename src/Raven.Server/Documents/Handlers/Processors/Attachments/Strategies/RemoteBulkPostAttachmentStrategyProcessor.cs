@@ -19,10 +19,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, nameof(GetAttachmentsOperation));
         }
 
-        public override Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment)
+        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, DirectFileDownloader downloader, Attachment attachment)
         {
-            return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
-                attachment.Base64Hash.ToString());
+            var stream = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
+            if (stream != null)
+            {
+                return (Task.FromResult(stream), true);
+            }
+
+            return (RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
+                attachment.Base64Hash.ToString()), false);
         }
 
         public override DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs)

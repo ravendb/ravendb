@@ -13,17 +13,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         {
         }
 
-        public override void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
-        {
-            // noop
-        }
-
         public override void CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
             // noop
         }
 
-        public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken tcs)
+        public override async Task WriteResponseStream(DocumentsOperationContext context, DocumentsTransaction tx, Attachment attachment, OperationCancelToken tcs)
         {
             var (sendBody, start, bytesRemaining) = RangeHelper.SetRangeHeaders(HttpContext, attachment.Size);
             if (!sendBody)

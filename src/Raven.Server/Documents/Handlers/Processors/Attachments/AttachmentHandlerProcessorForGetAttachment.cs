@@ -78,9 +78,7 @@ internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttac
                 HttpContext.Response.Headers[Constants.Headers.AttachmentRemoteParametersFlags] = attachment.RemoteParameters.Flags.ToString();
             }
 
-            strategy.DisposeReadTransactionIfNeeded(tx);
-
-            await strategy.WriteResponseStream(context, attachment, tcs);
+            await strategy.WriteResponseStream(context, tx, attachment, tcs);
         }
     }
 }
