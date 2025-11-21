@@ -68,7 +68,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 // the id is the same, but the size does not match
                                 // delete it and re-read the result
                                 Delete(id);
-                                 _parent.TryRead(_nestedValueKey, out reader);
+                                if (_parent.TryRead(_nestedValueKey, out reader) == false)
+                                {
+                                    // Nothing read, clear the reader.
+                                    reader = default;
+                                }
                                 break;
                             }
                             
@@ -84,8 +88,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
 
                     // No entry found
-                    Memory.Copy(tmpPtr, reader.Base, reader.Length);
-                    dataPosInTempPage = reader.Length;
+                    if (reader.Length > 0)
+                    {
+                        Memory.Copy(tmpPtr, reader.Base, reader.Length);
+                        dataPosInTempPage = reader.Length;    
+                    }
                 }
 
                 Debug.Assert(dataPosInTempPage + sizeof(ResultHeader) + result.Size <= tmp.Length);
