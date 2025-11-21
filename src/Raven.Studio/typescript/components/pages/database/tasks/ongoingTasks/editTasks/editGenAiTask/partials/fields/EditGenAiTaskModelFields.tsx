@@ -95,7 +95,7 @@ function PromptSyntaxHelp() {
     return (
         <div>
             <div>Sample prompt</div>
-            <Code code={samplePrompt} elementToCopy={samplePrompt} language="plaintext" whiteSpace="normal" />
+            <Code code={samplePrompt} language="plaintext" whiteSpace="normal" />
         </div>
     );
 }
@@ -109,7 +109,7 @@ function SampleObjectSyntaxHelp() {
     return (
         <div>
             <div>Sample response object</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 }
@@ -140,7 +140,7 @@ function JsonSchemaSyntaxHelp() {
     return (
         <div>
             <div>Sample JSON schema</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 }

@@ -5,6 +5,10 @@ import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
 import Button from "react-bootstrap/Button";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import queryCriteria from "models/database/query/queryCriteria";
+import savedQueriesStorage from "common/storage/savedQueriesStorage";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -27,6 +31,7 @@ export const supportedCodeLanguages = [
     "csharp",
     "json",
     "sql",
+    "rql",
 ] as const;
 
 export type CodeLanguage = (typeof supportedCodeLanguages)[number];
@@ -35,30 +40,67 @@ interface CodeProps {
     code: string;
     language: CodeLanguage;
     className?: string;
-    elementToCopy?: string;
     codeClassName?: string;
     whiteSpace?: "pre" | "normal";
+    isActionsHidden?: boolean;
 }
 
-export default function Code({ code, language, className, elementToCopy, codeClassName, whiteSpace }: CodeProps) {
-    const html = useMemo(() => Prism.highlight(code, Prism.languages[language], language), [code, language]);
+export default function Code(props: CodeProps) {
+    const { code, className, codeClassName, whiteSpace, isActionsHidden } = props;
+
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const languageTitle = getLanguageTitle(props.language);
+    const languageToHighlight = getLanguageToHighlight(props.language);
+
+    const html = useMemo(
+        () => Prism.highlight(code, Prism.languages[languageToHighlight], languageToHighlight),
+        [code, languageToHighlight]
+    );
+
+    const handleRunQuery = () => {
+        const query = queryCriteria.empty();
+
+        query.queryText(code);
+        query.recentQuery(true);
+        const queryDto = query.toStorageDto();
+        savedQueriesStorage.saveAndNavigate(databaseName, queryDto, {
+            newWindow: false,
+        });
+    };
 
     return (
-        <div className={classNames("code d-flex flex-grow-1 position-relative", className)}>
-            {elementToCopy && (
-                <Button
-                    variant="secondary"
-                    className="rounded-pill position-absolute end-gutter-xs top-gutter-xs"
-                    size="xs"
-                    title="Copy to clipboard"
-                    onClick={() => copyToClipboard.copy(`${elementToCopy}`, `Copied to clipboard`)}
-                >
-                    <Icon icon="copy" margin="m-0" />
-                </Button>
+        <div className={classNames("code", className)}>
+            {!isActionsHidden && (
+                <div className="code-actions">
+                    {languageTitle && <div className="fs-6">{languageTitle}</div>}
+                    <div className="hstack gap-1">
+                        <Button
+                            variant="link"
+                            className="text-emphasis fs-6"
+                            title="Copy to clipboard"
+                            onClick={() => copyToClipboard.copy(`${code}`, `Copied to clipboard`)}
+                        >
+                            <Icon icon="copy" />
+                            Copy
+                        </Button>
+                        {props.language === "rql" && (
+                            <Button
+                                variant="link"
+                                className="text-emphasis fs-6"
+                                title="Copy to clipboard"
+                                onClick={handleRunQuery}
+                            >
+                                <Icon icon="rocket" />
+                                Run query
+                            </Button>
+                        )}
+                    </div>
+                </div>
             )}
             <pre className="code-classes d-flex flex-grow-1 m-0">
                 <code
-                    className={classNames(`language-${language}`, codeClassName)}
+                    className={classNames(`language-${languageToHighlight}`, codeClassName)}
                     style={{ whiteSpace: whiteSpace ?? "pre" }}
                 >
                     <div dangerouslySetInnerHTML={{ __html: html }} />
@@ -66,4 +108,52 @@ export default function Code({ code, language, className, elementToCopy, codeCla
             </pre>
         </div>
     );
+}
+
+function getLanguageToHighlight(language: CodeLanguage): CodeLanguage {
+    switch (language) {
+        case "rql":
+            return "sql";
+        default:
+            return language;
+    }
+}
+
+function getLanguageTitle(language: CodeLanguage): string {
+    switch (language) {
+        case "plaintext":
+            return "Plaintext";
+        case "markup":
+            return "Markup";
+        case "html":
+            return "HTML";
+        case "mathml":
+            return "MathML";
+        case "svg":
+            return "SVG";
+        case "xml":
+            return "XML";
+        case "ssml":
+            return "SSML";
+        case "atom":
+            return "Atom";
+        case "rss":
+            return "RSS";
+        case "css":
+            return "CSS";
+        case "clike":
+            return "C-like";
+        case "javascript":
+            return "JavaScript";
+        case "csharp":
+            return "C#";
+        case "json":
+            return "JSON";
+        case "sql":
+            return "SQL";
+        case "rql":
+            return "RQL";
+        default:
+            return null;
+    }
 }

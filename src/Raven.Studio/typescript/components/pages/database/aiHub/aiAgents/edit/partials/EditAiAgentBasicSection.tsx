@@ -286,7 +286,7 @@ const SampleObjectSyntaxHelp = () => {
     return (
         <div>
             <div>Example of a sample object that defines the expected response structure:</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 };
@@ -323,7 +323,7 @@ const JsonSchemaSyntaxHelp = () => {
     return (
         <div>
             <div>Example of a JSON schema that defines the expected response structure:</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 };
