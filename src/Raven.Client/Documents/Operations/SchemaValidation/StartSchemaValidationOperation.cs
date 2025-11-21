@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.SchemaValidation;
 /// Optional limits (if omitted server defaults are used): MaxErrorMessages=1024, MaxDocumentsToValidate=unlimited.
 /// You may also provide a starting Etag to continue validation from a point in the collection; by default validation starts from the first document.
 /// </summary>
-public sealed class ValidateSchemaOperation : IMaintenanceOperation<OperationIdResult<StartValidateSchemaOperationResult>>
+public sealed class StartSchemaValidationOperation : IMaintenanceOperation<OperationIdResult<StartValidateSchemaOperationResult>>
 {
     private readonly Parameters _parameters;
 
@@ -42,7 +42,7 @@ public sealed class ValidateSchemaOperation : IMaintenanceOperation<OperationIdR
     /// <summary>
     /// Create the operation.
     /// </summary>
-    public ValidateSchemaOperation(Parameters parameters)
+    public StartSchemaValidationOperation(Parameters parameters)
     {
         _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
 
@@ -59,16 +59,16 @@ public sealed class ValidateSchemaOperation : IMaintenanceOperation<OperationIdR
 
     public RavenCommand<OperationIdResult<StartValidateSchemaOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
     {
-        return new ValidateSchemaCommand(conventions, _parameters);
+        return new StartSchemaValidationCommand(conventions, _parameters);
     }
 
-    internal class ValidateSchemaCommand : RavenCommand<OperationIdResult<StartValidateSchemaOperationResult>>, IRaftCommand
+    internal class StartSchemaValidationCommand : RavenCommand<OperationIdResult<StartValidateSchemaOperationResult>>, IRaftCommand
     {
         private readonly DocumentConventions _conventions;
         private readonly Parameters _parameters;
         private readonly long? _operationId;
 
-        public ValidateSchemaCommand(DocumentConventions conventions, Parameters parameters, long? operationId = null)
+        public StartSchemaValidationCommand(DocumentConventions conventions, Parameters parameters, long? operationId = null)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));

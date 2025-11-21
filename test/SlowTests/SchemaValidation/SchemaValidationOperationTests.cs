@@ -43,7 +43,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             await session.SaveChangesAsync();
         }
         
-        var operation = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
+        var operation = await store.Maintenance.SendAsync(new StartSchemaValidationOperation(new StartSchemaValidationOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs"
@@ -83,7 +83,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             }
         }
         
-        var operation = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
+        var operation = await store.Maintenance.SendAsync(new StartSchemaValidationOperation(new StartSchemaValidationOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
@@ -133,7 +133,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
             await session.StoreAsync(new TestObj { Prop = "0123456789ab"}, id2);
         }
 
-        var operation1 = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
+        var operation1 = await store.Maintenance.SendAsync(new StartSchemaValidationOperation(new StartSchemaValidationOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
@@ -144,7 +144,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
         Assert.Equal(id1, result1.Errors.First().Key);
         Assert.StartsWith("The length of the value '0123456789a' at 'Prop' should not exceed 10, but its actual length is 11.", result1.Errors.First().Value);
 
-        var operation2 = await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
+        var operation2 = await store.Maintenance.SendAsync(new StartSchemaValidationOperation(new StartSchemaValidationOperation.Parameters
         {
             SchemaDefinition = schemaDefinition,
             Collection = "TestObjs",
@@ -175,7 +175,7 @@ public class SchemaValidationOperationTests : ReplicationTestBase
         
         var e = await Assert.ThrowsAnyAsync<BadRequestException>(async () =>
         {
-            await store.Maintenance.SendAsync(new ValidateSchemaOperation(new ValidateSchemaOperation.Parameters
+            await store.Maintenance.SendAsync(new StartSchemaValidationOperation(new StartSchemaValidationOperation.Parameters
             {
                 SchemaDefinition = schemaDefinition,
                 Collection = "TestObjs",

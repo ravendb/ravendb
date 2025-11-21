@@ -13,7 +13,7 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected ValidateSchemaOperation.Parameters Parameters;
+    protected StartSchemaValidationOperation.Parameters Parameters;
 
     protected AbstractSchemaValidationHandlerProcessorForValidate([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
