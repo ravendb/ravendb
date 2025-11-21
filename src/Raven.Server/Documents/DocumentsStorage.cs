@@ -454,10 +454,11 @@ namespace Raven.Server.Documents
         {
             var tx = context.Transaction.InnerTransaction;
             var tree = tx.ReadTree(GlobalTreeSlice);
-            if (tree.TryRead(GlobalFullChangeVectorSlice, out var reader))
+            if (tree.TryRead(GlobalFullChangeVectorSlice, out var reader) == false)
             {
                 return GetDatabaseChangeVector(context);
             }
+
             return Encodings.Utf8.GetString(reader.Base, reader.Length);
 
         }
