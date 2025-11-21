@@ -2,6 +2,7 @@ using Sparrow.Binary;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Voron.Util
@@ -89,7 +90,10 @@ namespace Voron.Util
         {
             var end = (_head + _count);
             for (var i = _head; i < end; i++)
+            {
+                Debug.Assert(_values[i] is not null);
                 yield return _values[i];
+            }
         }
 
         /// <summary>
@@ -105,6 +109,7 @@ namespace Voron.Util
         /// </summary>
         public ImmutableAppendOnlyList<T> Append(T item)
         {
+            Debug.Assert(item is not null);
             var newCount = _count + 1;
             var tail = _head + _count;
             if (tail == _values.Length)

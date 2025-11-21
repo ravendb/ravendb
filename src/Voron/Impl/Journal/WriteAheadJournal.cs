@@ -1563,7 +1563,7 @@ namespace Voron.Impl.Journal
                     }
 
                     var journalFile = _waj._files.First(x => x.Number == j.Number);
-
+                    Debug.Assert(journalFile is not null);
                     unusedJournalFiles.Add(journalFile);
                 }
                 return unusedJournalFiles;
