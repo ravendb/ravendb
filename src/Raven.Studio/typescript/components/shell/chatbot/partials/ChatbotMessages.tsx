@@ -1,5 +1,10 @@
 import { Icon } from "components/common/Icon";
-import { chatbotActions, ChatbotAssistantMessage, ChatbotUserMessage } from "../store/chatbotSlice";
+import {
+    chatbotActions,
+    ChatbotAssistantMessage,
+    ChatbotUserActionState,
+    ChatbotUserMessage,
+} from "../store/chatbotSlice";
 import { LazyLoad } from "components/common/LazyLoad";
 import moment from "moment";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -28,7 +33,7 @@ import { SelectOption } from "components/common/select/Select";
 import DatabaseOptionItem from "components/shell/studioSearchWithDatabaseSelector/databaseSwitcher/bits/DatabaseOptionItem";
 import DatabaseSingleValue from "components/shell/studioSearchWithDatabaseSelector/databaseSwitcher/bits/DatabaseSingleValue";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
-import { useForm } from "react-hook-form";
+import { SubmitHandler, useForm } from "react-hook-form";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormGroup, FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
 import Form from "react-bootstrap/Form";
@@ -36,6 +41,12 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ChatbotAskAiAttachedContext from "./askAi/ChatbotAskAiAttachedContext";
+import Dropdown from "react-bootstrap/Dropdown";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { CustomDropdownToggle } from "components/common/Dropdown";
+import { useAsyncCallback } from "react-async-hook";
+import messagePublisher from "common/messagePublisher";
+import Badge from "react-bootstrap/Badge";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -53,7 +64,7 @@ export default function ChatbotMessages() {
         let top = current.scrollHeight - current.clientHeight;
 
         if (oneBeforeLastMessageRole === "user") {
-            top -= 54; // height to see last line of user message
+            top -= 50; // height to see last line of user message
         }
 
         current.scrollTo({ top, behavior: "smooth" });
@@ -163,11 +174,17 @@ function AgentMessageBody({ message }: AgentMessageProps) {
     }
 
     if (Object.keys(message.additionalContext).length > 0) {
-        return <AdditionalContext additionalContext={message.additionalContext} />;
+        return (
+            <AdditionalContext
+                id={message.id}
+                additionalContext={message.additionalContext}
+                userActionState={message.userActionState}
+            />
+        );
     }
 
     if (Object.keys(message.endpoints).length > 0) {
-        return <Endpoints endpoints={message.endpoints} />;
+        return <Endpoints id={message.id} endpoints={message.endpoints} userActionState={message.userActionState} />;
     }
 
     return (
@@ -190,11 +207,13 @@ function AgentMessageBody({ message }: AgentMessageProps) {
     );
 }
 
-function AdditionalContext({
-    additionalContext,
-}: {
+interface AdditionalContextProps {
+    id: string;
     additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
-}) {
+    userActionState: ChatbotUserActionState;
+}
+
+function AdditionalContext({ id, additionalContext, userActionState }: AdditionalContextProps) {
     const dispatch = useAppDispatch();
     const allAdditionalContextOptions = Object.values(additionalContext).map((option) => option.Option);
 
@@ -240,8 +259,8 @@ function AdditionalContext({
         resolver: yupResolver(actionContextSchema),
     });
 
-    const onSubmit = (data: any) => {
-        tryHandleSubmit(async () => {
+    const handleSend: SubmitHandler<ActionContextFormData> = (data) => {
+        return tryHandleSubmit(async () => {
             const actionResponses: Record<string, any> = {};
 
             if (isOption("DatabaseName")) {
@@ -257,55 +276,103 @@ function AdditionalContext({
                 actionResponses[getToolCallId("IndexName")] = data.indexName;
             }
 
-            await dispatch(chatbotActions.runChat({ actionResponses }));
+            dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "allowed" } }));
+            dispatch(chatbotActions.runChat({ actionResponses }));
         });
     };
 
+    const handleSkip = () => {
+        const actionResponses: Record<string, any> = {};
+
+        for (const option of allAdditionalContextOptions) {
+            actionResponses[getToolCallId(option)] = "Skipped";
+        }
+
+        dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "skipped" } }));
+        dispatch(chatbotActions.runChat({ actionResponses }));
+    };
+
     return (
-        <Form onSubmit={handleSubmit(onSubmit)} className="border border-secondary rounded-2 p-2">
-            <div className="small-label text-center fs-6 mb-2">Additional context</div>
-            {isOption("DatabaseName") && (
-                <div>
-                    <FormGroup>
-                        <FormLabel>Database</FormLabel>
-                        <FormSelect
-                            control={control}
-                            name="databaseName"
-                            placeholder={<NoDatabasePlaceholder />}
-                            options={databaseOptions}
-                            components={{ Option: DatabaseOptionItem, SingleValue: DatabaseSingleValue }}
-                        />
-                    </FormGroup>
+        <Form className="well border border-secondary rounded-2" onSubmit={handleSubmit(handleSend)}>
+            <div className="fs-6 py-1 px-2 border-bottom border-secondary">
+                <Icon icon="about" />
+                Additional context
+            </div>
+            <div className="p-2">
+                {isOption("DatabaseName") && (
+                    <div>
+                        <FormGroup>
+                            <FormLabel>Database</FormLabel>
+                            <FormSelect
+                                control={control}
+                                name="databaseName"
+                                placeholder={<NoDatabasePlaceholder />}
+                                options={databaseOptions}
+                                components={{ Option: DatabaseOptionItem, SingleValue: DatabaseSingleValue }}
+                                isRoundedPill
+                            />
+                        </FormGroup>
+                    </div>
+                )}
+                {isOption("CollectionName") && (
+                    <div>
+                        <FormGroup>
+                            <FormLabel>Collection</FormLabel>
+                            <FormSelectAutocomplete
+                                control={control}
+                                name="collectionName"
+                                options={collectionOptions}
+                                isRoundedPill
+                            />
+                        </FormGroup>
+                    </div>
+                )}
+                {isOption("DocumentId") && (
+                    <div>
+                        <FormGroup>
+                            <FormLabel>Document ID</FormLabel>
+                            <FormInput type="text" control={control} name="documentId" className="rounded-pill" />
+                        </FormGroup>
+                    </div>
+                )}
+                {isOption("IndexName") && (
+                    <div>
+                        <FormGroup>
+                            <FormLabel>Index name</FormLabel>
+                            <FormInput type="text" control={control} name="indexName" className="rounded-pill" />
+                        </FormGroup>
+                    </div>
+                )}
+                <div className="hstack justify-content-end mt-2">
+                    {userActionState === "waiting" && (
+                        <div className="hstack gap-1">
+                            <Button variant="link" className="text-emphasis" size="xs" onClick={handleSkip}>
+                                Skip
+                            </Button>
+                            <ButtonWithSpinner
+                                variant="primary"
+                                type="submit"
+                                isSpinning={formState.isSubmitting}
+                                className="rounded-pill"
+                                size="sm"
+                            >
+                                Send
+                            </ButtonWithSpinner>
+                        </div>
+                    )}
+                    {userActionState === "skipped" && (
+                        <Badge bg="secondary" className="rounded-pill">
+                            <Icon icon="skip" />
+                            Skipped
+                        </Badge>
+                    )}
+                    {userActionState === "allowed" && (
+                        <Badge bg="success" className="rounded-pill">
+                            <Icon icon="check" />
+                            Success
+                        </Badge>
+                    )}
                 </div>
-            )}
-            {isOption("CollectionName") && (
-                <div>
-                    <FormGroup>
-                        <FormLabel>Collection</FormLabel>
-                        <FormSelectAutocomplete control={control} name="collectionName" options={collectionOptions} />
-                    </FormGroup>
-                </div>
-            )}
-            {isOption("DocumentId") && (
-                <div>
-                    <FormGroup>
-                        <FormLabel>Document ID</FormLabel>
-                        <FormInput type="text" control={control} name="documentId" />
-                    </FormGroup>
-                </div>
-            )}
-            {isOption("IndexName") && (
-                <div>
-                    <FormGroup>
-                        <FormLabel>Index name</FormLabel>
-                        <FormInput type="text" control={control} name="indexName" />
-                    </FormGroup>
-                </div>
-            )}
-            <div className="d-flex justify-content-end">
-                <ButtonWithSpinner variant="primary" type="submit" isSpinning={formState.isSubmitting} icon="arrow-up">
-                    Send
-                </ButtonWithSpinner>
             </div>
         </Form>
     );
@@ -320,47 +387,171 @@ const actionContextSchema = yup.object({
 
 type ActionContextFormData = yup.InferType<typeof actionContextSchema>;
 
-function Endpoints({ endpoints }: { endpoints: RunChatbotAiAssistantResultDto["Endpoints"] }) {
+interface EndpointsProps {
+    id: string;
+    endpoints: RunChatbotAiAssistantResultDto["Endpoints"];
+    userActionState: ChatbotUserActionState;
+}
+
+function Endpoints({ id, endpoints, userActionState }: EndpointsProps) {
     const dispatch = useAppDispatch();
 
-    const handleGetDataFromEndpoints = async () => {
+    const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
+    const alwaysAllowedEndpoints = useAppSelector(chatbotSelectors.alwaysAllowedEndpoints);
+
+    const endpointsArray = Object.values(endpoints).flatMap((x) => x);
+
+    const hasOnlyDeniedEndpoints = endpointsArray.every((endpoint) => deniedEndpoints.includes(endpoint));
+    const hasOnlyAllowedEndpoints = endpointsArray.every((endpoint) => alwaysAllowedEndpoints.includes(endpoint));
+
+    const asyncHandleAllow = useAsyncCallback(
+        async () => {
+            const actionResponses: Record<string, any> = {};
+
+            for (const toolId of Object.keys(endpoints)) {
+                for (const endpoint of endpoints[toolId]) {
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+
+                    actionResponses[toolId] = {
+                        [endpoint]: data,
+                    };
+
+                    dispatch(
+                        chatbotActions.attachedContextAdded({
+                            id: `endpoint-${_.uniqueId()}`,
+                            type: "Endpoints Responses",
+                            label: endpoint,
+                            value: JSON.stringify(data),
+                            state: "included",
+                        })
+                    );
+                }
+            }
+
+            dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "allowed" } }));
+            dispatch(chatbotActions.runChat({ actionResponses }));
+        },
+        {
+            onError: () => {
+                messagePublisher.reportError("Failed to retrieve endpoints");
+            },
+        }
+    );
+
+    const handleAlwaysAllow = async () => {
+        dispatch(chatbotActions.alwaysAllowedEndpointsAdded(endpointsArray));
+        asyncHandleAllow.execute();
+    };
+
+    const handleSkip = () => {
         const actionResponses: Record<string, any> = {};
 
         for (const toolId of Object.keys(endpoints)) {
             for (const endpoint of endpoints[toolId]) {
-                const response = await fetch(endpoint);
-                const data = await response.json();
-
                 actionResponses[toolId] = {
-                    [endpoint]: data,
+                    [endpoint]: "Skipped",
                 };
             }
         }
 
-        await dispatch(chatbotActions.runChat({ actionResponses }));
+        dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "skipped" } }));
+        dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
+    const handleDeny = () => {
+        dispatch(chatbotActions.deniedEndpointsAdded(endpointsArray));
+        handleSkip();
+    };
+
+    useEffect(() => {
+        if (hasOnlyAllowedEndpoints) {
+            asyncHandleAllow.execute();
+        }
+    }, []);
+
+    useEffect(() => {
+        if (hasOnlyDeniedEndpoints) {
+            handleSkip();
+        }
+    }, []);
+
     return (
-        <div className="border border-secondary rounded-2 p-2">
-            <div className="small-label text-center fs-6 mb-2">Get data from endpoints</div>
-            <ul>
-                {Object.values(endpoints)
-                    .flatMap((x) => x)
-                    .map((endpoint) => (
+        <div className="well border border-secondary rounded-2">
+            <div className="fs-6 py-1 px-2 border-bottom border-secondary">
+                <Icon icon="endpoint" />
+                Retrieve endpoints
+            </div>
+            <div className="p-2">
+                <ul className="vstack gap-1 ps-3">
+                    {endpointsArray.map((endpoint) => (
                         <li key={endpoint} className="text-break">
-                            {endpoint}
+                            GET {endpoint}
                         </li>
                     ))}
-            </ul>
-            <div className="hstack gap-2 mt-2">
-                <Button variant="primary" onClick={handleGetDataFromEndpoints}>
-                    <Icon icon="check" />
-                    Yes
-                </Button>
-                <Button variant="secondary" onClick={() => {}}>
-                    <Icon icon="cancel" />
-                    No (TODO)
-                </Button>
+                </ul>
+                {userActionState === "waiting" ? (
+                    <div className="hstack justify-content-between mt-2">
+                        <Button
+                            variant="secondary"
+                            className="rounded-pill"
+                            size="sm"
+                            onClick={handleDeny}
+                            disabled={asyncHandleAllow.loading}
+                        >
+                            Deny
+                        </Button>
+                        <div className="hstack gap-1">
+                            <Button
+                                variant="link"
+                                className="text-emphasis"
+                                size="xs"
+                                onClick={handleSkip}
+                                disabled={asyncHandleAllow.loading}
+                            >
+                                Skip
+                            </Button>
+                            <Dropdown className="button-dropdown-pill" as={ButtonGroup}>
+                                <ButtonWithSpinner
+                                    variant="primary"
+                                    className="button-dropdown-btn"
+                                    size="sm"
+                                    onClick={asyncHandleAllow.execute}
+                                    isSpinning={asyncHandleAllow.loading}
+                                >
+                                    Allow
+                                </ButtonWithSpinner>
+                                <Dropdown.Toggle
+                                    variant="primary"
+                                    className="dropdown-toggle button-dropdown-toggle"
+                                    as={CustomDropdownToggle}
+                                    size="sm"
+                                    disabled={asyncHandleAllow.loading}
+                                />
+                                <Dropdown.Menu>
+                                    <Dropdown.Item onClick={handleAlwaysAllow} className="fs-5">
+                                        Always allow
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="hstack justify-content-end mt-2">
+                        {userActionState === "skipped" && (
+                            <Badge bg="secondary" className="rounded-pill">
+                                <Icon icon="skip" />
+                                Skipped
+                            </Badge>
+                        )}
+                        {userActionState === "allowed" && (
+                            <Badge bg="success" className="rounded-pill">
+                                <Icon icon="check" />
+                                Success
+                            </Badge>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -404,7 +595,6 @@ const markdownComponents: Components = {
 
         const code = childrenData.code ?? "";
         const language = getCodeLanguage(childrenData.language ?? languageFromNode);
-        // TODO if rql add run
 
         return <Code code={code} language={language} className="mb-2" />;
     },
@@ -467,8 +657,6 @@ function getCodeLanguage(language: string): CodeLanguage {
     }
 
     switch (language) {
-        case "rql":
-            return "sql";
         case "js":
             return "javascript";
         case "cs":

@@ -10,32 +10,34 @@ import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotA
 import { aiAssistantActions } from "components/common/shell/aiAssistantSlice";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
+import { StringWithAutocomplete } from "components/utils/common";
 import { processStreamingResponse } from "components/utils/streamingUtils";
 import router from "plugins/router";
-import IconName from "typings/server/icons";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
+export type ChatbotUserActionState = "waiting" | "skipped" | "allowed";
 
 type ChatbotRunChatData = {
     message?: string;
     actionResponses?: Record<string, any>;
 };
 
-export type ChatbotMessage = ChatbotUserMessage | ChatbotAssistantMessage;
+export type ChatbotAttachedContextId = StringWithAutocomplete<
+    "currentView" | "currentDatabaseName" | "currentIndexDefinition" | "currentDocument"
+>;
+
 export type ChatbotAttachedContext = {
-    name:
+    id: ChatbotAttachedContextId;
+    type:
         | "Current View"
         | "Current Database Name"
         | "Current Index Definition"
         | "Current Document"
         | "Endpoints Responses";
-    iconName: IconName;
     value: string;
     label: string;
-    isVisible: boolean;
-    isIncluded: boolean;
-    canDiscard: boolean;
+    state: "included" | "excluded";
 };
 
 interface ChatbotMessageBase {
@@ -59,7 +61,10 @@ export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     followUpQuestions: string[];
     endpoints: RunChatbotAiAssistantResultDto["Endpoints"];
     additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
+    userActionState: ChatbotUserActionState;
 }
+
+export type ChatbotMessage = ChatbotUserMessage | ChatbotAssistantMessage;
 
 interface ChatbotState {
     isOpen: boolean;
@@ -69,9 +74,9 @@ interface ChatbotState {
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
     lastRunData: ChatbotRunChatData;
-    isNotificationsVisibleAndPinned: boolean;
-    currentIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
-    attachedContexts: EntityState<ChatbotAttachedContext, ChatbotAttachedContext["name"]>;
+    attachedContexts: EntityState<ChatbotAttachedContext, string>;
+    deniedEndpoints: string[];
+    alwaysAllowedEndpoints: string[];
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -80,8 +85,8 @@ const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
 
 const chatbotMessagesSelectors = chatbotMessagesAdapter.getSelectors();
 
-const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, any>({
-    selectId: (context) => context.name,
+const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, string>({
+    selectId: (context) => context.id,
 });
 
 const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelectors();
@@ -94,44 +99,36 @@ const initialState: ChatbotState = {
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
     lastRunData: null,
-    isNotificationsVisibleAndPinned: false,
-    currentIndexDefinition: null,
+    deniedEndpoints: [],
+    alwaysAllowedEndpoints: [],
     attachedContexts: chatbotAttachedContextAdapter.getInitialState(undefined, [
         {
-            name: "Current View",
-            iconName: "studio-configuration",
+            id: "currentView",
+            type: "Current View",
             label: null,
             value: null,
-            isVisible: false,
-            isIncluded: false,
-            canDiscard: false,
+            state: "included",
         },
         {
-            name: "Current Database Name",
-            iconName: "database",
+            id: "currentDatabaseName",
+            type: "Current Database Name",
             label: null,
             value: null,
-            isVisible: false,
-            isIncluded: false,
-            canDiscard: false,
+            state: "excluded",
         },
         {
-            name: "Current Index Definition",
-            iconName: "index",
+            id: "currentIndexDefinition",
+            type: "Current Index Definition",
             label: null,
             value: null,
-            isVisible: false,
-            isIncluded: false,
-            canDiscard: true,
+            state: "excluded",
         },
         {
-            name: "Current Document",
-            iconName: "document",
+            id: "currentDocument",
+            type: "Current Document",
             label: null,
             value: null,
-            isVisible: false,
-            isIncluded: false,
-            canDiscard: true,
+            state: "excluded",
         },
     ]),
 };
@@ -170,37 +167,48 @@ export const chatbotSlice = createSlice({
         lastRunDataSet: (state, action: PayloadAction<ChatbotRunChatData>) => {
             state.lastRunData = action.payload;
         },
-        isNotificationsVisibleAndPinnedSet: (state, action: PayloadAction<boolean>) => {
-            state.isNotificationsVisibleAndPinned = action.payload;
+        attachedContextRemoved: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
+            chatbotAttachedContextAdapter.removeOne(state.attachedContexts, action.payload);
         },
-        currentIndexDefinitionSet: (state, action: PayloadAction<Raven.Client.Documents.Indexes.IndexDefinition>) => {
-            state.currentIndexDefinition = action.payload;
+        attachedContextAdded: (state, action: PayloadAction<ChatbotAttachedContext>) => {
+            chatbotAttachedContextAdapter.addOne(state.attachedContexts, action.payload);
         },
         attachedContextSet: (
             state,
-            action: PayloadAction<{ name: ChatbotAttachedContext["name"]; label: string; value: string }>
+            action: PayloadAction<{ id: ChatbotAttachedContextId; label: string; value: string }>
         ) => {
             chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
-                id: action.payload.name,
+                id: action.payload.id,
                 changes: {
                     value: action.payload.value,
                     label: action.payload.label,
-                    isVisible: true,
-                    isIncluded: true,
+                    state: "included",
                 },
             });
         },
-        attachedContextDiscarded: (state, action: PayloadAction<ChatbotAttachedContext["name"]>) => {
+        attachedContextExcluded: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
             chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
                 id: action.payload,
-                changes: { isIncluded: false },
+                changes: { state: "excluded" },
             });
         },
-        attachedContextIncluded: (state, action: PayloadAction<ChatbotAttachedContext["name"]>) => {
+        attachedContextIncluded: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
             chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
                 id: action.payload,
-                changes: { isIncluded: true },
+                changes: { state: "included" },
             });
+        },
+        attachedContextReset: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
+            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
+                id: action.payload,
+                changes: { label: null, value: null, state: "excluded" },
+            });
+        },
+        deniedEndpointsAdded: (state, action: PayloadAction<string[]>) => {
+            state.deniedEndpoints = [...new Set([...state.deniedEndpoints, ...action.payload])];
+        },
+        alwaysAllowedEndpointsAdded: (state, action: PayloadAction<string[]>) => {
+            state.alwaysAllowedEndpoints = [...new Set([...state.alwaysAllowedEndpoints, ...action.payload])];
         },
     },
     extraReducers: (builder) => {
@@ -226,7 +234,7 @@ const runChat = createAsyncThunk(
 
         const attachedContexts = chatbotAttachedContextSelectors
             .selectAll(chatbot.attachedContexts)
-            .filter((context) => context.isIncluded);
+            .filter((context) => context.state === "included");
 
         const userMessage: ChatbotUserMessage = {
             id: _.uniqueId(),
@@ -257,6 +265,7 @@ const runChat = createAsyncThunk(
             followUpQuestions: [],
             endpoints: {},
             additionalContext: {},
+            userActionState: null,
         };
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
@@ -271,7 +280,7 @@ const runChat = createAsyncThunk(
                     ConversationId: chatbot.conversationId,
                     ActionsResponses: payload.actionResponses,
                     AdditionalAttachedContext: Object.fromEntries(
-                        attachedContexts.map((context) => [context.name, context.value])
+                        attachedContexts.map((context) => [context.type, context.value])
                     ),
                 }),
             streamPropertyPath: "Response.Answer",
@@ -296,18 +305,28 @@ const runChat = createAsyncThunk(
         dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
         dispatch(chatbotActions.conversationIdSet(result.data.ConversationId));
 
+        const data = result.data;
+
         return {
             ...assistantMessage,
-            state: result.data.Status,
-            content: result.data.Response.Answer,
+            state: data.Status,
+            content: data.Response.Answer,
             thinkingTimeInMs: new Date().getTime() - startThinkingTime,
-            relevantLinks: result.data.Response.RelevantLinks,
-            followUpQuestions: result.data.Response.FollowUpQuestions,
-            endpoints: result.data.Endpoints ?? {},
-            additionalContext: result.data.AdditionalContext ?? {},
+            relevantLinks: data.Response.RelevantLinks ?? [],
+            followUpQuestions: data.Response.FollowUpQuestions ?? [],
+            endpoints: data.Endpoints ?? {},
+            additionalContext: data.AdditionalContext ?? {},
+            userActionState: getUserActionState(data),
         };
     }
 );
+
+function getUserActionState(data: RunChatbotAiAssistantResultDto): ChatbotUserActionState {
+    if (!_.isEmpty(data.AdditionalContext) || !_.isEmpty(data.Endpoints)) {
+        return "waiting";
+    }
+    return null;
+}
 
 const retryRunChat = createAsyncThunk(chatbotSlice.name + "/retryRunChat", async (_, { dispatch, getState }) => {
     const { chatbot } = getState() as RootState;
@@ -339,6 +358,7 @@ export const chatbotSelectors = {
         chatbotMessagesSelectors.selectIds(state.chatbot.messages).at(-1) === id,
     conversationId: (state: RootState) => state.chatbot.conversationId,
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
-    isNotificationsVisibleAndPinned: (state: RootState) => state.chatbot.isNotificationsVisibleAndPinned,
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
+    deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
+    alwaysAllowedEndpoints: (state: RootState) => state.chatbot.alwaysAllowedEndpoints,
 };

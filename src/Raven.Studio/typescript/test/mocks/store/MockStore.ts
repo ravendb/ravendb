@@ -5,6 +5,7 @@ import { MockLicenseManager } from "./MockLicenseManager";
 import { MockCollectionsTracker } from "./MockCollectionsTracker";
 import { MockAdminLogs } from "test/mocks/store/MockAdminLogs";
 import { MockAiAssistant } from "./MockAIAssistant";
+import { MockChatbot } from "./MockChatbot";
 
 class MockStoreContainer {
     databases = new MockDatabaseManager();
@@ -14,6 +15,7 @@ class MockStoreContainer {
     collectionsTracker = new MockCollectionsTracker();
     adminLogs = new MockAdminLogs();
     aiAssistant = new MockAiAssistant();
+    chatbot = new MockChatbot();
 }
 
 export const mockStore = new MockStoreContainer();

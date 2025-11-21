@@ -1724,7 +1724,7 @@ class normalCrudActions implements editDocumentCrudActions {
         this.document.subscribe(doc => {
             if (doc) {
                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextSet({
-                    name: "Current Document",
+                    id: "currentDocument",
                     label: doc.getId(),
                     value: JSON.stringify(doc.toDto(true))
                 }));

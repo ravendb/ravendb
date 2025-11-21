@@ -47,9 +47,9 @@ function initRedux() {
     activeDatabaseTracker.default.database.subscribe((db) => {
         const dbName = db?.name ?? null;
         globalDispatch(databaseActions.activeDatabaseChanged(dbName));
-        globalDispatch(
-            chatbotActions.attachedContextSet({ name: "Current Database Name", label: dbName, value: dbName })
-        );
+        globalDispatch(chatbotActions.attachedContextSet({ id: "currentDatabaseName", label: dbName, value: dbName }));
+        globalDispatch(chatbotActions.attachedContextReset("currentIndexDefinition"));
+        globalDispatch(chatbotActions.attachedContextReset("currentDocument"));
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
@@ -142,7 +142,7 @@ function initRedux() {
     router.activeInstruction.subscribe((instruction) => {
         globalDispatch(
             chatbotActions.attachedContextSet({
-                name: "Current View",
+                id: "currentView",
                 label: instruction?.config?.title,
                 value: instruction?.config?.title,
             })

@@ -5,17 +5,13 @@ import ChatbotBody from "./partials/ChatbotBody";
 import ChatbotFooter from "./partials/ChatbotFooter";
 import ChatbotHeader from "./partials/ChatbotHeader";
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
-import { chatbotSelectors } from "./store/chatbotSlice";
 
 export default function Chatbot() {
-    const isNotificationsVisibleAndPinned = useSelector(chatbotSelectors.isNotificationsVisibleAndPinned);
-
     const resizable = useResizableWidth({
         initialWidth: 400,
         minWidth: 400,
         maxWidth: 600,
-        rightOffset: isNotificationsVisibleAndPinned ? 440 : 0,
+        isSkipChatbot: true,
     });
 
     useEffect(() => {

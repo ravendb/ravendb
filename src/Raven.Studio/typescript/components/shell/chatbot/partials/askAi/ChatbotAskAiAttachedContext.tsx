@@ -3,9 +3,9 @@ import { chatbotActions, ChatbotAttachedContext } from "../../store/chatbotSlice
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import useBoolean from "components/hooks/useBoolean";
-import { useMemo } from "react";
 import { ThemeColor } from "components/models/common";
 import IconName from "typings/server/icons";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface ChatbotAskAiAttachedContextProps {
     attachedContexts: ChatbotAttachedContext[];
@@ -18,14 +18,14 @@ export default function ChatbotAskAiAttachedContext({
     isReadOnly = false,
     className,
 }: ChatbotAskAiAttachedContextProps) {
-    if (!attachedContexts.some((item) => item.isVisible)) {
+    if (attachedContexts.every((item) => !item.value)) {
         return null;
     }
 
     return (
         <div className={classNames("hstack flex-wrap", className)} style={{ gap: "4px" }}>
             {attachedContexts.map((item) => (
-                <Item key={item.name} item={item} isReadOnly={isReadOnly} />
+                <Item key={item.id} item={item} isReadOnly={isReadOnly} />
             ))}
         </div>
     );
@@ -39,55 +39,69 @@ interface ContextItemProps {
 function Item({ item, isReadOnly = false }: ContextItemProps) {
     const dispatch = useAppDispatch();
 
-    const canClick = item.canDiscard && !isReadOnly;
+    const canDiscard = item.type !== "Current View" && item.type !== "Current Database Name";
+    const canClick = canDiscard && !isReadOnly;
 
     const { value: isHovering, setValue: setIsHovering } = useBoolean(false);
+
+    if (!item.value) {
+        return null;
+    }
 
     const handleClick = () => {
         if (!canClick) {
             return;
         }
 
-        if (item.isIncluded) {
-            dispatch(chatbotActions.attachedContextDiscarded(item.name));
+        if (item.state === "included") {
+            dispatch(chatbotActions.attachedContextExcluded(item.id));
         } else {
-            dispatch(chatbotActions.attachedContextIncluded(item.name));
+            dispatch(chatbotActions.attachedContextIncluded(item.id));
         }
     };
 
-    const iconColor = useMemo((): ThemeColor => {
+    const getIconColor = (): ThemeColor => {
         if (canClick && isHovering) {
             return "secondary";
         }
 
-        if (item.isIncluded) {
+        if (item.state === "included") {
             return "primary";
         } else {
             return "secondary";
         }
-    }, [item.isIncluded, canClick, isHovering]);
+    };
 
-    const iconName = useMemo((): IconName => {
-        if (canClick && item.isIncluded && isHovering) {
+    const getIconName = (): IconName => {
+        if (canClick && item.state === "included" && isHovering) {
             return "cancel";
         }
 
-        if (item.isIncluded) {
-            return item.iconName;
-        } else {
+        if (item.state === "excluded") {
             return "plus";
         }
-    }, [item.isIncluded, canClick, isHovering]);
 
-    if (!item.isVisible) {
-        return null;
-    }
+        switch (item.type) {
+            case "Current View":
+                return "studio-configuration";
+            case "Current Database Name":
+                return "database";
+            case "Current Index Definition":
+                return "index";
+            case "Current Document":
+                return "document";
+            case "Endpoints Responses":
+                return "endpoint";
+            default:
+                assertUnreachable(item.type);
+        }
+    };
 
     return (
         <div
             className={classNames(
                 "hstack rounded-2 border border-secondary text-truncate",
-                { "opacity-50": !item.isIncluded },
+                { "opacity-50": item.state === "excluded" },
                 { "cursor-pointer hover-filter": canClick }
             )}
             onMouseEnter={() => setIsHovering(true)}
@@ -98,7 +112,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             }}
             onClick={handleClick}
         >
-            <Icon icon={iconName} color={iconColor} />
+            <Icon icon={getIconName()} color={getIconColor()} />
             <span className="text-truncate">{item.label}</span>
         </div>
     );

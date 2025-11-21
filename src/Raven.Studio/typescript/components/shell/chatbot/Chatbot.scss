@@ -22,7 +22,7 @@
         flex-direction: column;
         gap: sizes.$gutter-xxs;
         padding: sizes.$gutter-xs;
-        margin: 0px sizes.$gutter-xs;
+        margin: sizes.$gutter-xxs sizes.$gutter-xs 0px sizes.$gutter-xs;
         border-radius: sizes.$border-radius-md;
         border: 1px solid colors.$border-color-light-var;
         background-color: colors.$input-bg-var;
