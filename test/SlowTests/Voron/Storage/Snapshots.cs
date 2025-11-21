@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Storage
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var reader = tree.Read("key/1").Reader;
+                Assert.True(tree.TryRead("key/1", out var reader));
                 Assert.Equal("123", reader.ToStringValue());
                 tx.Commit();
             }

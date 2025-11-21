@@ -63,8 +63,8 @@ namespace SlowTests.Voron.Issues
 
                 for (int i = 0; i < 100; i++)
                 {
-                    var valueReader = tree.Read("items/" + i).Reader;
-                    Assert.Equal(buffer, valueReader.ReadBytes(valueReader.Length).ToArray());
+                    Assert.True(tree.TryRead("items/" + i, out var reader));
+                    Assert.Equal(buffer, reader.ReadBytes(reader.Length).ToArray());
                 }
 
                 tx.Commit();

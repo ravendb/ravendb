@@ -63,7 +63,7 @@ namespace SlowTests.Voron.Bugs
 
                 Env.FlushLogToDataFile();
 
-                Assert.NotNull(txr.CreateTree( "foo").Read("bars/1"));
+                Assert.True(txr.CreateTree( "foo").TryRead("bars/1", out _));
             }
         } 
 
@@ -126,7 +126,7 @@ namespace SlowTests.Voron.Bugs
 
                 Env.FlushLogToDataFile();
 
-                Assert.NotNull(txr.CreateTree( "foo").Read("bars/5"));
+                Assert.True(txr.CreateTree("foo").TryRead("bars/5", out _));
             }
         }
     }

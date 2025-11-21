@@ -327,10 +327,9 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var readResult = GetStatsFor(tx, bucket);
-                Assert.NotNull(readResult);
+                var reader = GetStatsFor(tx, bucket);
 
-                var size = *(int*)readResult.Reader.Base;
+                var size = *(int*)reader.Base;
                 Assert.Equal(41, size);
             }
 
@@ -345,10 +344,9 @@ namespace FastTests.Voron.Tables
 
             using (var tx = Env.ReadTransaction())
             {
-                var readResult = GetStatsFor(tx, bucket);
-                Assert.NotNull(readResult);
-
-                var size = *(int*)readResult.Reader.Base;
+                var reader = GetStatsFor(tx, bucket);
+                
+                var size = *(int*)reader.Base;
                 Assert.Equal(43, size);
             }
 
@@ -371,7 +369,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        private ReadResult GetStatsFor(Transaction tx, int bucket)
+        private ValueReader GetStatsFor(Transaction tx, int bucket)
         {
             var statsTree = tx.ReadTree(StatsTree);
             Assert.NotNull(statsTree);
@@ -380,7 +378,9 @@ namespace FastTests.Voron.Tables
             {
                 *(int*)keyBuffer.Ptr = bucket;
                 var keySlice = new Slice(keyBuffer);
-                return statsTree.Read(keySlice);
+
+                Assert.True(statsTree.TryRead(keySlice, out var reader));
+                return reader;
             }
         }
 
@@ -430,13 +430,9 @@ namespace FastTests.Voron.Tables
             {
                 *(int*)keyBuffer.Ptr = bucket;
                 var keySlice = new Slice(keyBuffer);
-                var readResult = tree.Read(keySlice);
                 long size = 0;
-                if (readResult != null)
-                {
-                    var reader = readResult.Reader;
+                if (tree.TryRead(keySlice, out var reader))
                     size = *(long*)reader.Base;
-                }
 
                 size += newValue.Size - oldValue.Size;
 

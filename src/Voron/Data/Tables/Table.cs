@@ -78,8 +78,7 @@ namespace Voron.Data.Tables
         {
             get
             {
-                return _currentCompressionDictionaryId ??=
-                    _tableTree.ReadInt32(TableSchema.CurrentCompressionDictionaryIdSlice) ?? 0;
+                return _currentCompressionDictionaryId ??= _tableTree.ReadInt32OrDefault(TableSchema.CurrentCompressionDictionaryIdSlice, 0);
             }
             set
             {
@@ -94,11 +93,10 @@ namespace Voron.Data.Tables
             {
                 if (_activeDataSmallSection == null)
                 {
-                    var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
-                    if (readResult == null)
+                    if (_tableTree.TryRead(TableSchema.ActiveSectionSlice, out var reader) == false)
                         throw new VoronErrorException($"Could not find active sections for {Name}");
 
-                    long pageNumber = readResult.Reader.ReadLittleEndianInt64();
+                    long pageNumber = reader.ReadLittleEndianInt64();
 
                     _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, pageNumber);
                     _activeDataSmallSection.DataMoved += OnDataMoved;
@@ -206,19 +204,17 @@ namespace Voron.Data.Tables
         public bool VerifyKeyExists(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree?.Read(key);
-            return readResult != null;
+            return pkTree.TryRead(key, out _);
         }
 
         private bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
             id = -1;
             var pkTree = GetTree(_schema.Key);
-            var readResult = pkTree?.Read(key);
-            if (readResult == null)
+            if (pkTree == null || pkTree.TryRead(key, out var reader) == false)
                 return false;
 
-            id = readResult.Reader.ReadLittleEndianInt64();
+            id = reader.ReadLittleEndianInt64();
             return true;
         }
 
@@ -855,8 +851,7 @@ namespace Voron.Data.Tables
                 var dictionariesTree = tx.ReadTree(TableSchema.CompressionDictionariesSlice);
                 var rev = Bits.SwapBytes(id);
                 using var _ = Slice.From(tx.Allocator, (byte*)&rev, sizeof(int), out var slice);
-                var readResult = dictionariesTree?.Read(slice);
-                if (readResult == null)
+                if (dictionariesTree == null || dictionariesTree.TryRead(slice, out var reader) == false)
                 {
                     // we may be checking an empty section, so let's return an empty
                     // dictionary there
@@ -868,10 +863,10 @@ namespace Voron.Data.Tables
                     throw new InvalidOperationException("Trying to read dictionary: " + id + " but it was not found!");
                 }
 
-                var info = (CompressionDictionaryInfo*)readResult.Reader.Base;
+                var info = (CompressionDictionaryInfo*)reader.Base;
                 var dic = new ZstdLib.CompressionDictionary(id,
-                    readResult.Reader.Base + sizeof(CompressionDictionaryInfo),
-                    readResult.Reader.Length - sizeof(CompressionDictionaryInfo), 3)
+                    reader.Base + sizeof(CompressionDictionaryInfo),
+                    reader.Length - sizeof(CompressionDictionaryInfo), 3)
                 {
                     ExpectedCompressionRatio = info->ExpectedCompressionRatio
                 };
@@ -1272,12 +1267,11 @@ namespace Voron.Data.Tables
 
             var pkTree = GetTree(_schema.Key);
 
-            var readResult = pkTree.Read(key);
-            if (readResult == null)
+            if (pkTree.TryRead(key, out var reader) == false)
                 return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
-            var id = readResult.Reader.ReadLittleEndianInt64();
+            var id = reader.ReadLittleEndianInt64();
 
             // And delete the element accordingly.
             Delete(id);

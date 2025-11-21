@@ -21,8 +21,7 @@ namespace FastTests.Voron.Trees
 
             using (var tx = Env.ReadTransaction())
             {
-                var stream = tx.ReadTree("test").Read("test");
-                Assert.NotNull(stream);
+                Assert.True(tx.ReadTree("test").TryRead("test", out _));
 
                 tx.Commit();
             }
@@ -50,9 +49,7 @@ namespace FastTests.Voron.Trees
 
             using (var tx = Env.ReadTransaction())
             {
-                var stream = tx.CreateTree("test").Read("test2");
-                Assert.NotNull(stream);
-
+                Assert.True(tx.CreateTree("test").TryRead("test2", out _));
                 tx.Commit();
             }
         }

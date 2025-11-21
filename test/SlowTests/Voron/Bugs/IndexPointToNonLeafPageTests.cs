@@ -48,11 +48,8 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 foreach (var item in sequentialLargeIds)
                 {
-                    var readResult = tree.Read(item.Key.ToString("0000000000000000"));
-
-                    Assert.NotNull(readResult);
-
-                    Assert.Equal(item.Value.Length, readResult.Reader.Length);
+                    Assert.True(tree.TryRead(item.Key.ToString("0000000000000000"), out var reader));
+                    Assert.Equal(item.Value.Length, reader.Length);
                 }
             }
         }

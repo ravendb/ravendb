@@ -222,21 +222,22 @@ namespace Voron.Impl
                 return set;
 
             var clonedName = name.Clone(Allocator);
-            
-            var existing = LowLevelTransaction.RootObjects.Read(name);
-            if (existing == null)
+
+            Tree root = LowLevelTransaction.RootObjects;
+            if (root.TryRead(name, out var reader) == false)
             {
                 var state = new PostingListState();
                 PostingList.Create(this.LowLevelTransaction, ref state);
-                using (LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(PostingListState), out var p))
+                using (root.DirectAdd(name, sizeof(PostingListState), out var p))
                 {
                     Unsafe.Copy(p, ref state);
                 }
-                existing = LowLevelTransaction.RootObjects.Read(name);
+
+                root.TryRead(name, out reader);
             }
  
             set = new PostingList(LowLevelTransaction, clonedName,
-                MemoryMarshal.AsRef<PostingListState>(existing.Reader.AsSpan())
+                MemoryMarshal.AsRef<PostingListState>(reader.AsSpan())
             );
             _postingLists[clonedName] = set;
             return set;
@@ -663,7 +664,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal) // must not delete global indexes
                     continue;
 
-                if (tableTree.Read(indexDef.Name) == null)
+                if (tableTree.TryRead(indexDef.Name, out _) == false)
                     continue;
 
                 var indexTree = table.GetTree(indexDef);
@@ -678,7 +679,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal)  // must not delete global indexes
                     continue;
 
-                if (tableTree.Read(indexDef.Name) == null)
+                if (tableTree.TryRead(indexDef.Name, out _) == false)
                     continue;
 
                 var index = table.GetFixedSizeTree(indexDef);
@@ -692,7 +693,7 @@ namespace Voron.Impl
 
             table.ActiveDataSmallSection.FreeRawDataSectionPages();
 
-            if (tableTree.Read(TableSchema.ActiveCandidateSectionSlice) != null)
+            if (tableTree.TryRead(TableSchema.ActiveCandidateSectionSlice, out _) )
             {
                 using (var it = table.ActiveCandidateSection.Iterate())
                 {
@@ -708,7 +709,7 @@ namespace Voron.Impl
                 DeleteFixedTree(table.ActiveCandidateSection, isInRoot: false);
             }
 
-            if (tableTree.Read(TableSchema.InactiveSectionSlice) != null)
+            if (tableTree.TryRead(TableSchema.InactiveSectionSlice, out _) )
                 DeleteFixedTree(table.InactiveSections, isInRoot: false);
 
             DeleteTree(name);

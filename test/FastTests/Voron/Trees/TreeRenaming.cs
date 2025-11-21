@@ -33,14 +33,9 @@ namespace FastTests.Voron.Trees
             {
                 var tree = tx.ReadTree("renamed_tree");
 
-                var readResult = tree.Read("items/1");
-                Assert.NotNull(readResult);
-
-                readResult = tree.Read("items/2");
-                Assert.NotNull(readResult);
-
-                readResult = tree.Read("items/3");
-                Assert.NotNull(readResult);
+                Assert.True(tree.TryRead("items/1", out _));
+                Assert.True(tree.TryRead("items/2", out _));
+                Assert.True(tree.TryRead("items/3", out _));
             }
         }
 

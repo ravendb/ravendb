@@ -703,7 +703,14 @@ namespace Corax.Indexing
 
         private void ReadPersistedVectorRootPages(out long[] persistedVectorRootPages)
         {
-            persistedVectorRootPages = _indexMetadata?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+            if (_indexMetadata != null && _indexMetadata.TryRead(Constants.IndexWriter.VectorFieldsRootPagesSlice, out var reader) != false)
+            {
+                persistedVectorRootPages = reader.ToUnmanagedSpan<long>().ToSpan().ToArray();
+            }
+            else
+            {
+                persistedVectorRootPages = [];
+            }
         }
 
         private void PersistVectorRootPages()

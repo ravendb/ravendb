@@ -129,11 +129,10 @@ namespace Raven.Server.ServerWide
                     if (tree == null)
                         return;
 
-                    var result = tree.Read(nameof(ServerStatistics));
-                    if (result == null)
+                    if (tree.TryRead(nameof(ServerStatistics), out var reader) == false)
                         return;
 
-                    using (var json = context.Sync.ReadForMemory(result.Reader.AsStream(), nameof(ServerStatistics)))
+                    using (var json = context.Sync.ReadForMemory(reader.AsStream(), nameof(ServerStatistics)))
                     {
                         var stats = JsonDeserializationServer.ServerStatistics(json);
 

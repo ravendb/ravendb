@@ -61,10 +61,10 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.ReadTransaction())
             {
-                var result = tx.ReadTree("tree").Read("item");
-                Assert.NotNull(result);
+                Assert.True(tx.ReadTree("tree").TryRead("item", out var reader));
+                
                 var buf = new byte[3];
-                var read = result.Reader.Read(buf, 0, 3);
+                var read = reader.Read(buf, 0, 3);
                 Assert.Equal(3, read);
                 Assert.True(buf.SequenceEqual(new byte[] { 1, 2, 3 }), "buf.SequenceEqual(new byte[] { 1, 2, 3 })");
             }
@@ -105,10 +105,10 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.ReadTransaction())
             {
-                var result = tx.ReadTree("tree").Read("item");
-                Assert.NotNull(result);
+                Assert.True(tx.ReadTree("tree").TryRead("item", out var reader));
+                
                 var buf = new byte[3];
-                var read = result.Reader.Read(buf, 0, 3);
+                var read = reader.Read(buf, 0, 3);
                 Assert.Equal(3, read);
                 Assert.True(buf.SequenceEqual(new byte[] { 4, 5, 6 }), "buf.SequenceEqual(new byte[] { 4, 5, 6 })");
             }
@@ -136,10 +136,10 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.ReadTransaction())
             {
-                var result = tx.ReadTree("tree").Read("item");
-                Assert.NotNull(result);
+                Assert.True(tx.ReadTree("tree").TryRead("item", out var reader));
+                
                 var buf = new byte[3];
-                var read = result.Reader.Read(buf, 0, 3);
+                var read = reader.Read(buf, 0, 3);
                 Assert.Equal(3, read);
                 Assert.True(buf.SequenceEqual(new byte[] { 7, 8, 9 }), "buf.SequenceEqual(new byte[] { 7, 8, 9 })");
             }

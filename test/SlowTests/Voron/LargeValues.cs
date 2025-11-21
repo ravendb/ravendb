@@ -77,7 +77,7 @@ namespace SlowTests.Voron
                         {
                             keys.Add(iterator.CurrentKey.ToString());
                             Assert.True(ids.Contains(iterator.CurrentKey.ToString()), "Unknown key: " + iterator.CurrentKey);
-                            Assert.NotNull(tree.Read(iterator.CurrentKey));
+                            Assert.True(tree.TryRead(iterator.CurrentKey, out _));
 
                             count++;
                         }
