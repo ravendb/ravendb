@@ -45,7 +45,7 @@ const initialState: InitialState = {
     databaseFilter: "",
     clearanceFilter: [],
     stateFilter: [],
-    sortMode: "Default",
+    sortMode: "By Name - Asc",
     isGenerateModalOpen: false,
     isUploadModalOpen: false,
     certificateToEdit: null,

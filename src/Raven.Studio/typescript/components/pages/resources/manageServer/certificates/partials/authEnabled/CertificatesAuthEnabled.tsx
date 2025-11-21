@@ -98,7 +98,7 @@ export default function CertificatesAuthEnabled() {
         });
 
     return (
-        <div className="vstack gap-2">
+        <div className="vstack gap-2 pb-4">
             <StickyHeader>
                 {!isInitialLoad && (
                     <Dropdown>
@@ -280,7 +280,6 @@ export default function CertificatesAuthEnabled() {
 
 const sortOptions: SelectOptionWithIconAndSeparator<CertificatesSortMode>[] = (
     [
-        { value: "Default", horizontalSeparatorLine: true },
         { value: "By Name - Asc", icon: "arrow-up" },
         { value: "By Name - Desc", icon: "arrow-down", horizontalSeparatorLine: true },
         { value: "By Expiration Date - Asc", icon: "arrow-up" },
