@@ -49,6 +49,8 @@ import shardedDatabase = require("models/resources/shardedDatabase");
 import assertUnreachable = require("components/utils/assertUnreachable");
 import getDocumentRevisionsPhysicalSizeCommand = require("commands/database/documents/getDocumentRevisionPhysicalSizeCommand");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
+import storeCompat = require("components/storeCompat");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
 
 
 class editDocument extends shardViewModelBase {
@@ -1717,6 +1719,16 @@ class normalCrudActions implements editDocumentCrudActions {
             }
 
             return doc.__metadata.counters().length;
+        });
+
+        this.document.subscribe(doc => {
+            if (doc) {
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextSet({
+                    name: "Current Document",
+                    label: doc.getId(),
+                    value: JSON.stringify(doc.toDto(true))
+                }));
+            }
         });
     }
 

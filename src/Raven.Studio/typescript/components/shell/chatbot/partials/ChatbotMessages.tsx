@@ -35,11 +35,13 @@ import Form from "react-bootstrap/Form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import ChatbotAskAiAttachedContext from "./askAi/ChatbotAskAiAttachedContext";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
 
     const messageIds = useAppSelector(chatbotSelectors.messageIds);
+    const oneBeforeLastMessageRole = useAppSelector(chatbotSelectors.oneBeforeLastMessageRole);
 
     // Scroll to the bottom when messages are updated
     useEffect(() => {
@@ -48,7 +50,12 @@ export default function ChatbotMessages() {
             return;
         }
 
-        const top = current.scrollHeight - current.clientHeight - OFFSET_TO_SEE_USER_MESSAGE_IN_PX;
+        let top = current.scrollHeight - current.clientHeight;
+
+        if (oneBeforeLastMessageRole === "user") {
+            top -= 54; // height to see last line of user message
+        }
+
         current.scrollTo({ top, behavior: "smooth" });
     }, [messageIds.length]);
 
@@ -60,8 +67,6 @@ export default function ChatbotMessages() {
         </div>
     );
 }
-
-const OFFSET_TO_SEE_USER_MESSAGE_IN_PX = 60;
 
 interface AiAgentMessageProps {
     id: string;
@@ -92,6 +97,7 @@ function UserMessage({ message }: UserMessageProps) {
                 className="text-emphasis bg-faded-primary p-2 border-radius-xs border border-primary"
                 style={{ maxWidth: "75%" }}
             >
+                <ChatbotAskAiAttachedContext attachedContexts={message.attachedContexts} isReadOnly className="mb-1" />
                 <div className="overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
                     {message.content}
                 </div>
@@ -124,7 +130,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
     if (message.state === "Loading") {
         return (
             <LazyLoad active>
-                <div style={{ height: "100px", width: "100%" }}>Loading...</div>
+                <div style={{ height: "100px", width: "100%" }} />
             </LazyLoad>
         );
     }
@@ -164,13 +170,15 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         return <Endpoints endpoints={message.endpoints} />;
     }
 
-    const formattedThinkingTime = message.thinkingTimeInMs
-        ? `${moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s`
-        : null;
-
     return (
         <div>
-            {formattedThinkingTime && <div className="text-muted">Thought for {formattedThinkingTime}</div>}
+            {message.thinkingTimeInMs != null ? (
+                <div className="text-muted">
+                    Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s
+                </div>
+            ) : (
+                <div className="text-muted">Thinking</div>
+            )}
             <div className="mt-1">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {contentTypewriter}
@@ -319,7 +327,7 @@ function Endpoints({ endpoints }: { endpoints: RunChatbotAiAssistantResultDto["E
         const actionResponses: Record<string, any> = {};
 
         for (const toolId of Object.keys(endpoints)) {
-            for (const endpoint of endpoints[toolId].Endpoints) {
+            for (const endpoint of endpoints[toolId]) {
                 const response = await fetch(endpoint);
                 const data = await response.json();
 
@@ -337,7 +345,7 @@ function Endpoints({ endpoints }: { endpoints: RunChatbotAiAssistantResultDto["E
             <div className="small-label text-center fs-6 mb-2">Get data from endpoints</div>
             <ul>
                 {Object.values(endpoints)
-                    .flatMap((x) => x.Endpoints)
+                    .flatMap((x) => x)
                     .map((endpoint) => (
                         <li key={endpoint} className="text-break">
                             {endpoint}
@@ -396,8 +404,9 @@ const markdownComponents: Components = {
 
         const code = childrenData.code ?? "";
         const language = getCodeLanguage(childrenData.language ?? languageFromNode);
+        // TODO if rql add run
 
-        return <Code code={code} elementToCopy={code} language={language} className="mb-2" />;
+        return <Code code={code} language={language} className="mb-2" />;
     },
 };
 

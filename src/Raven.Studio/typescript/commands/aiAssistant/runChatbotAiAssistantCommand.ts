@@ -9,6 +9,7 @@ interface RunChatbotAssistAiAssistantRequestDto {
     RavenVersion: string;
     ConversationId?: string;
     ActionsResponses?: Record<string, any>;
+    AdditionalAttachedContext?: Record<string, any>;
 }
 
 export type RunChatbotAiAssistantViewData = Omit<
@@ -39,7 +40,7 @@ export interface RunChatbotAiAssistantResultDto {
             Option: AdditionalContextOption;
         }
     >;
-    Endpoints: Record<string, { Endpoints: string[] }>;
+    Endpoints: Record<string, string[]>; // <toolId, endpointUrl[]>
 }
 
 export default class runChatbotAiAssistantCommand extends commandBase {

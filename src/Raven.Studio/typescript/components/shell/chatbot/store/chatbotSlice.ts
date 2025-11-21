@@ -12,6 +12,7 @@ import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 import { processStreamingResponse } from "components/utils/streamingUtils";
 import router from "plugins/router";
+import IconName from "typings/server/icons";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
@@ -19,6 +20,22 @@ type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contac
 type ChatbotRunChatData = {
     message?: string;
     actionResponses?: Record<string, any>;
+};
+
+export type ChatbotMessage = ChatbotUserMessage | ChatbotAssistantMessage;
+export type ChatbotAttachedContext = {
+    name:
+        | "Current View"
+        | "Current Database Name"
+        | "Current Index Definition"
+        | "Current Document"
+        | "Endpoints Responses";
+    iconName: IconName;
+    value: string;
+    label: string;
+    isVisible: boolean;
+    isIncluded: boolean;
+    canDiscard: boolean;
 };
 
 interface ChatbotMessageBase {
@@ -29,6 +46,7 @@ interface ChatbotMessageBase {
 
 export interface ChatbotUserMessage extends ChatbotMessageBase {
     role: "user";
+    attachedContexts?: ChatbotAttachedContext[];
 }
 
 export interface ChatbotAssistantMessage extends ChatbotMessageBase {
@@ -43,8 +61,6 @@ export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
 }
 
-export type ChatbotMessage = ChatbotUserMessage | ChatbotAssistantMessage;
-
 interface ChatbotState {
     isOpen: boolean;
     isPinned: boolean;
@@ -55,6 +71,7 @@ interface ChatbotState {
     lastRunData: ChatbotRunChatData;
     isNotificationsVisibleAndPinned: boolean;
     currentIndexDefinition: Raven.Client.Documents.Indexes.IndexDefinition;
+    attachedContexts: EntityState<ChatbotAttachedContext, ChatbotAttachedContext["name"]>;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -62,6 +79,12 @@ const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
 });
 
 const chatbotMessagesSelectors = chatbotMessagesAdapter.getSelectors();
+
+const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, any>({
+    selectId: (context) => context.name,
+});
+
+const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelectors();
 
 const initialState: ChatbotState = {
     isOpen: false,
@@ -73,6 +96,44 @@ const initialState: ChatbotState = {
     lastRunData: null,
     isNotificationsVisibleAndPinned: false,
     currentIndexDefinition: null,
+    attachedContexts: chatbotAttachedContextAdapter.getInitialState(undefined, [
+        {
+            name: "Current View",
+            iconName: "studio-configuration",
+            label: null,
+            value: null,
+            isVisible: false,
+            isIncluded: false,
+            canDiscard: false,
+        },
+        {
+            name: "Current Database Name",
+            iconName: "database",
+            label: null,
+            value: null,
+            isVisible: false,
+            isIncluded: false,
+            canDiscard: false,
+        },
+        {
+            name: "Current Index Definition",
+            iconName: "index",
+            label: null,
+            value: null,
+            isVisible: false,
+            isIncluded: false,
+            canDiscard: true,
+        },
+        {
+            name: "Current Document",
+            iconName: "document",
+            label: null,
+            value: null,
+            isVisible: false,
+            isIncluded: false,
+            canDiscard: true,
+        },
+    ]),
 };
 
 export const chatbotSlice = createSlice({
@@ -115,6 +176,32 @@ export const chatbotSlice = createSlice({
         currentIndexDefinitionSet: (state, action: PayloadAction<Raven.Client.Documents.Indexes.IndexDefinition>) => {
             state.currentIndexDefinition = action.payload;
         },
+        attachedContextSet: (
+            state,
+            action: PayloadAction<{ name: ChatbotAttachedContext["name"]; label: string; value: string }>
+        ) => {
+            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
+                id: action.payload.name,
+                changes: {
+                    value: action.payload.value,
+                    label: action.payload.label,
+                    isVisible: true,
+                    isIncluded: true,
+                },
+            });
+        },
+        attachedContextDiscarded: (state, action: PayloadAction<ChatbotAttachedContext["name"]>) => {
+            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
+                id: action.payload,
+                changes: { isIncluded: false },
+            });
+        },
+        attachedContextIncluded: (state, action: PayloadAction<ChatbotAttachedContext["name"]>) => {
+            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
+                id: action.payload,
+                changes: { isIncluded: true },
+            });
+        },
     },
     extraReducers: (builder) => {
         builder.addCase(runChat.fulfilled, (state, { payload }) => {
@@ -129,7 +216,7 @@ export const chatbotSlice = createSlice({
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
-        const { aiAssistant, chatbot, databases } = getState() as RootState;
+        const { aiAssistant, chatbot } = getState() as RootState;
 
         dispatch(chatbotActions.lastRunDataSet(payload));
 
@@ -137,10 +224,15 @@ const runChat = createAsyncThunk(
             throw new Error("AI Assistant consent is required");
         }
 
+        const attachedContexts = chatbotAttachedContextSelectors
+            .selectAll(chatbot.attachedContexts)
+            .filter((context) => context.isIncluded);
+
         const userMessage: ChatbotUserMessage = {
             id: _.uniqueId(),
             role: "user",
             content: payload.message,
+            attachedContexts,
         };
 
         if (!payload.actionResponses) {
@@ -159,7 +251,7 @@ const runChat = createAsyncThunk(
             role: "assistant",
             content: "",
             state: "Loading",
-            thinkingTimeInMs: 0,
+            thinkingTimeInMs: null,
             usage: null,
             relevantLinks: [],
             followUpQuestions: [],
@@ -175,13 +267,12 @@ const runChat = createAsyncThunk(
             promiseFn: () =>
                 services.aiAssistantService.runChatbot({
                     Message: payload.message,
-                    View: JSON.stringify({
-                        Title: viewTitle,
-                        DatabaseName: databases.activeDatabaseName,
-                        IndexDefinition: viewTitle === "Edit Index" ? chatbot.currentIndexDefinition : null,
-                    }),
+                    View: viewTitle,
                     ConversationId: chatbot.conversationId,
                     ActionsResponses: payload.actionResponses,
+                    AdditionalAttachedContext: Object.fromEntries(
+                        attachedContexts.map((context) => [context.name, context.value])
+                    ),
                 }),
             streamPropertyPath: "Response.Answer",
             onChunksCombined(text) {
@@ -237,6 +328,11 @@ export const chatbotSelectors = {
     chatbotTab: (state: RootState) => state.chatbot.chatbotTab,
     chatbotResourcesTab: (state: RootState) => state.chatbot.chatbotResourcesTab,
     messageIds: (state: RootState) => chatbotMessagesSelectors.selectIds(state.chatbot.messages),
+    oneBeforeLastMessageRole: (state: RootState) =>
+        chatbotMessagesSelectors.selectById(
+            state.chatbot.messages,
+            chatbotMessagesSelectors.selectIds(state.chatbot.messages).at(-2)
+        )?.role,
     messageById: (state: RootState, id: string) => chatbotMessagesSelectors.selectById(state.chatbot.messages, id),
     messagesCount: (state: RootState) => chatbotMessagesSelectors.selectTotal(state.chatbot.messages),
     isLastMessage: (state: RootState, id: string) =>
@@ -244,4 +340,5 @@ export const chatbotSelectors = {
     conversationId: (state: RootState) => state.chatbot.conversationId,
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
     isNotificationsVisibleAndPinned: (state: RootState) => state.chatbot.isNotificationsVisibleAndPinned,
+    attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
 };

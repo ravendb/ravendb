@@ -17,6 +17,8 @@ import genUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
 import { aiAssistantActions } from "./aiAssistantSlice";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import router from "plugins/router";
 
 let initialized = false;
 
@@ -43,7 +45,11 @@ function initRedux() {
     databasesManager.default.onUpdateCallback = throttledUpdateDatabases;
 
     activeDatabaseTracker.default.database.subscribe((db) => {
-        globalDispatch(databaseActions.activeDatabaseChanged(db?.name ?? null));
+        const dbName = db?.name ?? null;
+        globalDispatch(databaseActions.activeDatabaseChanged(dbName));
+        globalDispatch(
+            chatbotActions.attachedContextSet({ name: "Current Database Name", label: dbName, value: dbName })
+        );
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
@@ -131,6 +137,16 @@ function initRedux() {
 
     accessManager.clientCertificateThumbprint.subscribe(() => {
         globalDispatch(aiAssistantActions.checkConsent());
+    });
+
+    router.activeInstruction.subscribe((instruction) => {
+        globalDispatch(
+            chatbotActions.attachedContextSet({
+                name: "Current View",
+                label: instruction?.config?.title,
+                value: instruction?.config?.title,
+            })
+        );
     });
 }
 

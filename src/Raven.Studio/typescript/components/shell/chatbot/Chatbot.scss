@@ -16,11 +16,35 @@
     background-color: colors.$panel-bg-1-var;
     border-radius: sizes.$gutter-xs;
 
-    .prompt-textarea {
-        border-radius: sizes.$border-radius;
-        field-sizing: content;
-        min-height: 75px !important;
-        max-height: 200px;
-        resize: none;
+    .prompt-wrapper {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: sizes.$gutter-xxs;
+        padding: sizes.$gutter-xs;
+        margin: 0px sizes.$gutter-xs;
+        border-radius: sizes.$border-radius-md;
+        border: 1px solid colors.$border-color-light-var;
+        background-color: colors.$input-bg-var;
+        z-index: 10;
+        box-shadow: 0px -10px 10px var(--bs-body-bg);
+
+        .prompt-textarea {
+            z-index: 11;
+            border-radius: sizes.$border-radius-md;
+            field-sizing: content;
+            min-height: 24px;
+            max-height: 150px;
+            resize: none;
+            border: none !important;
+            box-shadow: none !important;
+            background-image: none !important;
+            padding: 1px;
+
+            &:focus {
+                border: none;
+                box-shadow: none;
+            }
+        }
     }
 }

@@ -6,7 +6,8 @@ import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
 import ChatbotMessages from "./ChatbotMessages";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAssistantConsentStatusChecker";
-import ChatbotCommonActions from "./ChatbotCommonActions";
+import ChatbotAskAiAttachedContext from "./askAi/ChatbotAskAiAttachedContext";
+import ChatbotAskAiCommonActions from "./askAi/ChatbotAskAiCommonActions";
 
 export default function ChatbotPanelAskAi() {
     const dispatch = useAppDispatch();
@@ -15,7 +16,7 @@ export default function ChatbotPanelAskAi() {
 
     const isConsentSuccess = consentStatus.data === "Success";
 
-    const { control, handleSubmit, formState, reset } = useForm({
+    const { control, formState, handleSubmit, reset } = useForm({
         defaultValues: {
             prompt: "",
         },
@@ -26,12 +27,12 @@ export default function ChatbotPanelAskAi() {
     });
 
     const handleSend = async () => {
+        reset();
         await dispatch(
             chatbotActions.runChat({
                 message: formValues.prompt,
             })
         ).unwrap();
-        reset();
     };
 
     const onConsentGiven = () => {
@@ -46,16 +47,17 @@ export default function ChatbotPanelAskAi() {
         <div className="vstack flex-grow py-2 h-100">
             <div className="overflow-y-auto">
                 <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
-                <ChatbotCommonActions />
+                <ChatbotAskAiCommonActions />
             </div>
             <ChatbotMessages />
-            <div className="position-relative flex-shrink-0 px-2 pt-2">
+            <div className="prompt-wrapper">
+                <AttachedContext />
                 <FormInput
                     type="textarea"
                     as="textarea"
                     control={control}
                     name="prompt"
-                    placeholder="Ask the agent anything"
+                    placeholder="Ask anything"
                     className="prompt-textarea"
                     disabled={isPromptDisabled}
                     onKeyDown={(e) => {
@@ -66,16 +68,23 @@ export default function ChatbotPanelAskAi() {
                     }}
                 />
                 {formValues.prompt && (
-                    <ButtonWithSpinner
-                        variant="secondary"
-                        icon="arrow-up"
-                        onClick={handleSubmit(handleSend)}
-                        className="position-absolute rounded-pill"
-                        style={{ right: "20px", bottom: "10px", zIndex: 5 }}
-                        isSpinning={isPromptDisabled}
-                    />
+                    <div className="hstack justify-content-end">
+                        <ButtonWithSpinner
+                            variant="secondary"
+                            icon="arrow-up"
+                            onClick={handleSubmit(handleSend)}
+                            className="rounded-pill p-0"
+                            style={{ width: "30px", height: "30px" }}
+                            isSpinning={isPromptDisabled}
+                        />
+                    </div>
                 )}
             </div>
         </div>
     );
+}
+
+function AttachedContext() {
+    const attachedContexts = useAppSelector(chatbotSelectors.attachedContexts);
+    return <ChatbotAskAiAttachedContext attachedContexts={attachedContexts} isReadOnly={false} />;
 }

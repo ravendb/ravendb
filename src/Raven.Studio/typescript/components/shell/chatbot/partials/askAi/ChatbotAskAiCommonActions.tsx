@@ -1,6 +1,6 @@
 import ClickableCard from "components/common/ClickableCard";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { chatbotActions, chatbotSelectors } from "../store/chatbotSlice";
+import { chatbotActions, chatbotSelectors } from "../../store/chatbotSlice";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 export default function ChatbotCommonActions() {
