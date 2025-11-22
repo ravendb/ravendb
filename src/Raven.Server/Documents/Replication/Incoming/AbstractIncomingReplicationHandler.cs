@@ -79,7 +79,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             _replicationFromAnotherSource = new AsyncManualResetEvent(parent.Token);
 
             _tcpClient = tcpConnectionOptions.TcpClient;
-            _stream = tcpConnectionOptions.Stream;
+            _stream = _parent.ForTestingPurposes?.WrapIncomingReplicationStream?.Invoke(tcpConnectionOptions.Stream)
+                      ?? tcpConnectionOptions.Stream;
             _server = _parent.Server;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(parent.Token);
             _databaseName = _parent.DatabaseName;
@@ -145,13 +146,31 @@ namespace Raven.Server.Documents.Replication.Incoming
                         {
                             AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
 
+                            var configuration = GetConfiguration();
+                            var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
-                                Timeout.Infinite,
+                                readTimeout,
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
+                                // Reset the event immediately upon waking up.
+                                // If we reset at the end of the loop, we risk wiping out a signal
+                                // (e.g., from TxMerger updating the change vector) that occurred during processing.
+                                _replicationFromAnotherSource?.Reset();
+
+                                // Must check for timeout before attempting to write to the stream to avoid hanging on a dead connection.
+                                if (msg.Timeout)
+                                    throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms.");
+
+                                if (msg.Interrupted)
+                                {
+                                    // Loop back to handle the signal (e.g., send updated status) if needed.
+                                    continue;
+                                }
+
                                 if (msg.Document != null)
                                 {
                                     EnsureNotDeleted();
@@ -175,10 +194,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             "Notify");
                                     }
                                 }
-                                // we reset it after every time we send to the remote server
-                                // because that is when we know that it is up to date with our
-                                // status, so no need to send again
-                                _replicationFromAnotherSource?.Reset();
                             }
                         }
                         catch (Exception e)
@@ -199,10 +214,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 else
                                 {
-                                    //if we are disposing, do not notify about failure (not relevant)
+                                    // if we are disposing, do not notify about failure (not relevant)
                                     if (_cts.IsCancellationRequested == false)
-                                        if (Logger.IsInfoEnabled)
-                                            Logger.Info("Received unexpected exception while receiving replication batch.", e);
+                                        Logger.Info("Received unexpected exception while receiving replication batch.", e);
                                 }
                             }
 
@@ -219,7 +233,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             catch (Exception e)
             {
-                //if we are disposing, do not notify about failure (not relevant)
+                // if we are disposing, do not notify about failure (not relevant)
                 if (_cts.IsCancellationRequested == false)
                 {
                     if (Logger.IsInfoEnabled)
