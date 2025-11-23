@@ -137,17 +137,19 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _parent.ForTestingPurposes?.OnIncomingReplicationHandlerStart?.Invoke();
 
                 using (_connectionOptionsDisposable = _tcpConnectionOptions.ConnectionProcessingInProgress("Replication"))
-                using (_stream)
-                using (var interruptibleRead = new InterruptibleRead<TContextPool, TOperationContext>(_contextPool, _stream))
+                using (var trackingStream = new ActivityTrackingStream(_stream))
+                using (var interruptibleRead = new InterruptibleRead<TContextPool, TOperationContext>(_contextPool, trackingStream))
                 {
+                    var configuration = GetConfiguration();
+                    var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+
+                    long lastTotalBytesRead = 0;
+
                     while (_cts.IsCancellationRequested == false)
                     {
                         try
                         {
                             AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
-
-                            var configuration = GetConfiguration();
-                            var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
 
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
@@ -156,26 +158,34 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
-                                // Reset the event immediately upon waking up.
-                                // If we reset at the end of the loop, we risk wiping out a signal
-                                // (e.g., from TxMerger updating the change vector) that occurred during processing.
+                                // Reset event immediately to capture signals arriving during processing
                                 _replicationFromAnotherSource?.Reset();
 
-                                // Must check for timeout before attempting to write to the stream to avoid hanging on a dead connection.
                                 if (msg.Timeout)
-                                    throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms.");
-
-                                if (msg.Interrupted)
                                 {
-                                    // Loop back to handle the signal (e.g., send updated status) if needed.
-                                    continue;
+                                    // Inactivity check
+                                    var currentTotalBytes = trackingStream.TotalBytesRead;
+                                    if (currentTotalBytes > lastTotalBytesRead)
+                                    {
+                                        lastTotalBytesRead = currentTotalBytes;
+                                        if (Logger.IsInfoEnabled)
+                                            Logger.Info($"Incoming replication from `{FromToString}` timed out ({readTimeout}ms) while reading next batch, " +
+                                                        $"but data is flowing (read {currentTotalBytes} bytes total). Extending wait.");
+
+                                        continue;
+                                    }
+
+                                    // No data received within the timeout window. This is likely a zombie connection.
+                                    throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
                                 }
+
+                                lastTotalBytesRead = trackingStream.TotalBytesRead;
 
                                 if (msg.Document != null)
                                 {
                                     EnsureNotDeleted();
 
-                                    using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
+                                    using (var writer = new BlittableJsonTextWriter(msg.Context, trackingStream))
                                     {
                                         HandleSingleReplicationBatch(msg.Context,
                                             msg.Document,
@@ -185,7 +195,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 else // notify peer about new change vector
                                 {
                                     using (_contextPool.AllocateOperationContext(out TOperationContext context))
-                                    using (var writer = new BlittableJsonTextWriter(context, _stream))
+                                    using (var writer = new BlittableJsonTextWriter(context, trackingStream))
                                     {
                                         SendHeartbeatStatusToSource(
                                             context,
