@@ -40,6 +40,380 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryFact]
+        public async Task RemoteAttachmentWithDisabledIdentifierShouldBeSkipped()
+        {
+            int attachmentsCount = 1;
+            int size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    var badIdentifierDisabled = "new-identifier"; // should be skipped
+
+                    ModifyRemoteAttachmentsConfig = config =>
+                    {
+                        config.Destinations.Add(badIdentifierDisabled, new RemoteAttachmentsDestinationConfiguration
+                        {
+                            S3Settings = new RemoteAttachmentsS3Settings()
+                            {
+                                BucketName = "TEST"
+                            },
+                            Disabled = true,
+                        });
+
+                    };
+
+                    var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc);
+
+                    var id = ids.First().Id;
+                    using (var session = store.OpenSession())
+                    {
+                        var profileStream = new MemoryStream([1, 2, 3]);
+                        var remoteParams = new RemoteAttachmentParameters(badIdentifierDisabled, DateTime.UtcNow.AddMinutes(3));
+                        session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("att-bad-identifier.png", profileStream)
+                        {
+                            RemoteParameters = remoteParams,
+                            ContentType = "image/png"
+                        });
+
+                        session.SaveChanges();
+                        using AttachmentResult a = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
+
+                        Attachments.Add(new RemoteAttachment()
+                        {
+                            Name = a.Details.Name,
+                            DocumentId = id,
+                            Stream = profileStream,
+                            ContentType = a.Details.ContentType,
+                            Hash = a.Details.Hash,
+                            RemoteParameters = remoteParams
+                        });
+                    }
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    Assert.Equal(attachmentsCount + 1, Attachments.Count);
+
+                    List<Exception> myExceptions = null;
+                    database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
+                    {
+                        myExceptions = exceptions;
+                    };
+
+                    // move in time & start remote
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                    Assert.Equal(1, cloudObjects.Count);
+
+                    var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfRemoteAttachments);
+                    Assert.Equal(2, stats.CountOfAttachments);
+
+                    Assert.NotNull(myExceptions);
+                    Assert.Equal(0, myExceptions.Count);
+                    using AttachmentResult bad = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
+
+                    Assert.Equal("att-bad-identifier.png", bad.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.None, bad.Details.RemoteParameters.Flags);
+                    Assert.NotNull(bad.Details.RemoteParameters.At);
+
+                    var goodName = Attachments.First(x => x.Name != "att-bad-identifier.png").Name;
+                    using AttachmentResult good = await store.Operations.SendAsync(new GetAttachmentOperation(id, goodName, AttachmentType.Document, null));
+
+                    Assert.Equal(goodName, good.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.Remote, good.Details.RemoteParameters.Flags);
+                    Assert.NotNull(good.Details.RemoteParameters.At);
+
+                }
+            }
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task RemoteAttachmentWithBadIdentifierShouldBeSkippedWithError(bool uploadAdditional)
+        {
+            int attachmentsCount = 1;
+            int size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    var badIdentifierEnabled = "test-identifier"; // should be skipped
+
+                    ModifyRemoteAttachmentsConfig = config =>
+                    {
+                        config.Destinations.Add(badIdentifierEnabled, new RemoteAttachmentsDestinationConfiguration
+                        {
+                            S3Settings = new RemoteAttachmentsS3Settings()
+                            {
+                                BucketName = "TEST2"
+                            },
+                            Disabled = false,
+                        });
+                    };
+
+                    var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc);
+
+                    var id = ids.First().Id;
+                    using (var session = store.OpenSession())
+                    {
+                        var profileStream = new MemoryStream([1, 2, 3]);
+                        var remoteParams = new RemoteAttachmentParameters(badIdentifierEnabled, DateTime.UtcNow.AddMinutes(3));
+                        session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("att-bad-identifier.png", profileStream)
+                        {
+                            RemoteParameters = remoteParams,
+                            ContentType = "image/png"
+                        });
+
+                        session.SaveChanges();
+                        using AttachmentResult a = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
+
+                        Attachments.Add(new RemoteAttachment()
+                        {
+                            Name = a.Details.Name,
+                            DocumentId = id,
+                            Stream = profileStream,
+                            ContentType = a.Details.ContentType,
+                            Hash = a.Details.Hash,
+                            RemoteParameters = remoteParams
+                        });
+                    }
+
+                        var id2 = "Orders/322";
+                    if (uploadAdditional)
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new Query.Order { Id = id2, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/2", Company = $"Companies/2" });
+
+                            await session.SaveChangesAsync();
+
+                            var profileStream = new MemoryStream([3, 2, 2]);
+                            var remoteParams = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3));
+                            session.Advanced.Attachments.Store(id2, new StoreAttachmentParameters("egor.png", profileStream)
+                            {
+                                RemoteParameters = remoteParams,
+                                ContentType = "image/png"
+                            });
+
+                            await session.SaveChangesAsync();
+                            using AttachmentResult a = await store.Operations.SendAsync(new GetAttachmentOperation(id2, "egor.png", AttachmentType.Document, null));
+
+                            Attachments.Add(new RemoteAttachment()
+                            {
+                                Name = a.Details.Name,
+                                DocumentId = id2,
+                                Stream = profileStream,
+                                ContentType = a.Details.ContentType,
+                                Hash = a.Details.Hash,
+                                RemoteParameters = remoteParams
+                            });
+                        }
+                    }
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    if (uploadAdditional)
+                    {
+                        Assert.Equal(attachmentsCount + 2, Attachments.Count);
+                    }
+                    else
+                    {
+                        Assert.Equal(attachmentsCount + 1, Attachments.Count);
+                    }
+
+                    AggregateException myException = null;
+                    database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeAllBatchFailure = exceptions =>
+                    {
+                        myException = exceptions;
+                    };
+
+                    // move in time & start remote
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                    // nothing was uploaded because we had a faulty identifier
+                    if (uploadAdditional)
+                    {
+                        var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+
+                        Assert.Equal(1, cloudObjects.Count);
+
+                    }
+                    else
+                    {
+                        var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+
+                        Assert.Equal(0, cloudObjects.Count);
+
+                    }
+
+                    var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    if (uploadAdditional)
+                    {
+
+                        Assert.Equal(1, stats.CountOfRemoteAttachments);
+                        Assert.Equal(3, stats.CountOfAttachments);
+
+
+                    }
+                    else
+                    {
+                        Assert.Equal(0, stats.CountOfRemoteAttachments);
+                        Assert.Equal(2, stats.CountOfAttachments);
+
+                    }
+
+
+                    Assert.NotNull(myException);
+                    Assert.Equal(1, myException.InnerExceptions.Count);
+                    Assert.Contains("Failed to upload all attachments. Failed keys: Orders/0", myException.Message);
+
+                    using AttachmentResult bad = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
+
+                    Assert.Equal("att-bad-identifier.png", bad.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.None, bad.Details.RemoteParameters.Flags);
+                    Assert.NotNull(bad.Details.RemoteParameters.At);
+
+                    var goodName = Attachments.First(x => x.Name != "att-bad-identifier.png" && x.DocumentId == id).Name;
+                    using AttachmentResult good = await store.Operations.SendAsync(new GetAttachmentOperation(id, goodName, AttachmentType.Document, null));
+
+                    Assert.Equal(goodName, good.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.None, good.Details.RemoteParameters.Flags);
+                    Assert.NotNull(good.Details.RemoteParameters.At);
+
+
+                    if (uploadAdditional)
+                    {
+                        var goodName2 = Attachments.First(x => x.DocumentId == id2).Name;
+                        using AttachmentResult good2 = await store.Operations.SendAsync(new GetAttachmentOperation(id2, goodName2, AttachmentType.Document, null));
+
+                        Assert.Equal(goodName2, good2.Details.Name);
+                        Assert.Equal(RemoteAttachmentFlags.Remote, good2.Details.RemoteParameters.Flags);
+                        Assert.NotNull(good2.Details.RemoteParameters.At);
+                    }
+
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task RemoteAttachmentWithoutDestinationOnDocumentWithRemoteAttachmentWithDestinationShouldBeSkipped()
+        {
+            int attachmentsCount = 1;
+            int size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    var removedIdentifier = "test-identifier"; // should be skipped
+
+                    ModifyRemoteAttachmentsConfig = config =>
+                    {
+
+                        config.Destinations.Add(removedIdentifier, new RemoteAttachmentsDestinationConfiguration
+                        {
+                            S3Settings = new RemoteAttachmentsS3Settings()
+                            {
+                                BucketName = "TEST2"
+                            },
+                            Disabled = false,
+                        });
+                    };
+
+                    var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc);
+
+                    var id = ids.First().Id;
+                    using (var session = store.OpenSession())
+                    {
+                        var profileStream = new MemoryStream([1, 2, 3]);
+                        var remoteParams = new RemoteAttachmentParameters(removedIdentifier, DateTime.UtcNow.AddMinutes(3));
+                        session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("att-bad-identifier.png", profileStream)
+                        {
+                            RemoteParameters = remoteParams,
+                            ContentType = "image/png"
+                        });
+
+                        session.SaveChanges();
+                        using AttachmentResult a = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
+
+                        Attachments.Add(new RemoteAttachment()
+                        {
+                            Name = a.Details.Name,
+                            DocumentId = id,
+                            Stream = profileStream,
+                            ContentType = a.Details.ContentType,
+                            Hash = a.Details.Hash,
+                            RemoteParameters = remoteParams
+                        });
+                    }
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    Assert.Equal(attachmentsCount + 1, Attachments.Count);
+
+                    ModifyRemoteAttachmentsConfig = null;
+                    identifier = await PutRemoteAttachmentsConfiguration(store, Settings); // rewrite the config without 2nd identifier
+
+                    List<Exception> myExceptions = null;
+                    database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
+                    {
+                        myExceptions = exceptions;
+                    };
+
+                    // move in time & start remote
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                    Assert.Equal(1, cloudObjects.Count);
+
+                    var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfRemoteAttachments);
+                    Assert.Equal(2, stats.CountOfAttachments);
+
+                    Assert.NotNull(myExceptions);
+                    Assert.Equal(0, myExceptions.Count);
+
+                    using AttachmentResult bad = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
+
+                    Assert.Equal("att-bad-identifier.png", bad.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.None, bad.Details.RemoteParameters.Flags);
+                    Assert.NotNull(bad.Details.RemoteParameters.At);
+
+                    var goodName = Attachments.First(x => x.Name != "att-bad-identifier.png").Name;
+                    using AttachmentResult good = await store.Operations.SendAsync(new GetAttachmentOperation(id, goodName, AttachmentType.Document, null));
+
+                    Assert.Equal(goodName, good.Details.Name);
+                    Assert.Equal(RemoteAttachmentFlags.Remote, good.Details.RemoteParameters.Flags);
+                    Assert.NotNull(good.Details.RemoteParameters.At);
+
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
         public async Task RemoteAttachmentWithoutDestinationShouldBeSkipped()
         {
             int attachmentsCount=1;

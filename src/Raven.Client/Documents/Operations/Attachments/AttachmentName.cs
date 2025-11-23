@@ -31,6 +31,14 @@ public class AttachmentName
     /// </summary>
     public long Size;
 
+    /// <summary>
+    /// Scheduling parameters for uploading the attachment to a remote (cloud) destination.
+    /// Optional; null if no remote upload has been requested.
+    /// </summary>
+    /// <remarks>
+    /// Set this to instruct RavenDB to perform a remote upload of the attachment at the specified time,
+    /// as defined by <see cref="RemoteAttachmentParameters.At"/> and identified by <see cref="RemoteAttachmentParameters.Identifier"/>.
+    /// </remarks>
     public RemoteAttachmentParameters RemoteParameters;
 
     internal virtual DynamicJsonValue ToJson()

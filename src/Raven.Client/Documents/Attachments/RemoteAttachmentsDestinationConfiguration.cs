@@ -76,6 +76,9 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
 
     internal bool HasUploader()
     {
+        if (Disabled)
+            return false;
+
         return S3Settings.IsConfigured() || AzureSettings.IsConfigured();
     }
 

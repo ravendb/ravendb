@@ -80,6 +80,7 @@ namespace Raven.Server.Documents
             var currentTime = _database.Time.GetUtcNow();
             var directUploaders = new ConcurrentDictionary<string, Lazy<AttachmentUploader>>();
             var uploadTasks = new Task<AttachmentRemoteInfo>[Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber];
+            var docsStates = new Dictionary<string, Queue<AttachmentRemoteInfo>>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -92,6 +93,7 @@ namespace Raven.Server.Documents
                     Stopwatch duration;
                     _totalUploaded = 0L;
                     _exceptions.Clear();
+                    docsStates.Clear();
                     var processed = new Queue<AttachmentRemoteInfo>();
 
                     using (var tx = context.OpenReadTransaction())
@@ -114,7 +116,6 @@ namespace Raven.Server.Documents
                             return totalCount;
                         }
 
-                        var processing = new HashSet<string>();
                         Array.Fill(uploadTasks, Task.FromResult<AttachmentRemoteInfo>(null));
 
                         try
@@ -129,13 +130,6 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                if (processing.Add(document.Id) == false)
-                                {
-                                    // this document was processed or is currently being processed in this batch, we can skip the upload for it
-                                    processed.Enqueue(document);
-                                    continue;
-                                }
-
                                 switch (document.Status)
                                 {
                                     case BackgroundWorkInfoStatus.Delete:
@@ -146,11 +140,36 @@ namespace Raven.Server.Documents
                                         processed.Enqueue(document);
                                         continue;
                                     case BackgroundWorkInfoStatus.Process:
+                                        if (docsStates.TryGetValue(document.Id, out var states))
+                                        {
+                                            if (states == null)
+                                            {
+                                                if (Logger.IsDebugEnabled)
+                                                    Logger.Debug($"Processing document with id: '{document.LowerId}' without uploading to remote destination, because it is already was processed in this batch.");
+
+                                                // this document was already processed, we add the duplicate to processed queue
+                                                processed.Enqueue(document);
+                                                continue;
+                                            }
+
+                                            // this document is currently being processed, we add it to the duplicates queue
+                                            // we will handle its result in HandleUploadTaskResult when the current processing task finish
+                                            if (Logger.IsDebugEnabled)
+                                                Logger.Debug($"Marking document with id: '{document.LowerId}' as being processed in current batch.");
+
+                                            states.Enqueue(document);
+
+                                            continue;
+                                        }
+
+                                        // add duplicates queue for this document which is being processed now
+                                        docsStates.Add(document.Id, new Queue<AttachmentRemoteInfo>());
+
                                         var index = Task.WaitAny(uploadTasks);
                                         try
                                         {
                                             var res = await uploadTasks[index];
-                                            HandleUploadTaskResult(res, processed);
+                                            HandleUploadTaskResult(res, processed, docsStates);
                                         }
                                         catch (Exception e)
                                         {
@@ -186,7 +205,7 @@ namespace Raven.Server.Documents
                                 try
                                 {
                                     var res = await t;
-                                    HandleUploadTaskResult(res, processed);
+                                    HandleUploadTaskResult(res, processed, docsStates);
                                 }
                                 catch (Exception e)
                                 {
@@ -195,44 +214,46 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        if (toRemote.Count != processed.Count)
-                        {
-                            // we had skipped items
-                            if (Logger.IsDebugEnabled)
-                                Logger.Debug($"Skipping upload attachments of '{toRemote.Count - processed.Count:#,#;;0}' documents, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => processed.Contains(x) == false))}");
-                        }
-
                         if (processed.Count == 0)
                         {
-                            if (Logger.IsDebugEnabled)
-                                Logger.Debug($"Skipping upload attachments of whole batch of '{toRemote.Count:#,#;;0}' documents, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => processed.Contains(x) == false))}");
+                            if (Logger.IsTraceEnabled)
+                                Logger.Debug($"Skipping upload attachments of whole batch of '{toRemote.Count:#,#;;0}' documents, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRemote.Select(x => $"{x.Id}"))}");
+                            else if (Logger.IsDebugEnabled)
+                                Logger.Debug($"Skipping upload attachments of whole batch of '{toRemote.Count:#,#;;0}' documents, Uploaded: {new Size(_totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'.");
 
                             if (_exceptions.Count == 0)
                             {
                                 continue;
                             }
 
+                            var e = new AggregateException($"Failed to upload all attachments. Failed keys: {string.Join(", ", toRemote.Select(x => x.Id).Distinct(StringComparer.OrdinalIgnoreCase).Select(x => $"{x}"))}", _exceptions);
+                            ForTestingPurposes?.BeforeAllBatchFailure?.Invoke(e);
+
                             // we have exceptions and nothing was uploaded to remote storage, we need to throw
-                            throw new AggregateException("Failed to upload all attachments.", _exceptions);
+                            throw e;
                         }
                     }
 
                     var command = new UpdateRemoteAttachmentsCommand(processed, _database, currentTime);
                     await _database.TxMerger.Enqueue(command);
 
+                    ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(_exceptions);
+
                     if (Logger.IsInfoEnabled)
                     {
                         var uploadedSizeText = Client.Util.Size.Humane(_totalUploaded);
-                        var remoteCount = command.RemoteCount;
+                        var docsCount = processed.Select(x => x.Id)
+                            .Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                        var attachmentsCount = command.RemoteCount;
                         var elapsedMs = duration.ElapsedMilliseconds;
 
                         if (_exceptions.Count == 0)
                         {
-                            Logger.Info($"Successfully uploaded attachments of {remoteCount:#,#;;0} documents to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}");
+                            Logger.Info($"Successfully uploaded {attachmentsCount:#,#;;0} attachments of {docsCount:#,#;;0} documents to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}");
                         }
                         else
                         {
-                            Logger.Info($"Partially uploaded attachments of {remoteCount:#,#;;0} documents to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}. Failed to upload {_exceptions.Count:#,#;;0} attachments:{Environment.NewLine}{new AggregateException(_exceptions)}");
+                            Logger.Info($"Partially uploaded {attachmentsCount:#,#;;0} attachments of {docsCount:#,#;;0} documents to remote cloud storage in {elapsedMs:#,#;;0} ms. Total uploaded: {uploadedSizeText}. Failed to upload {_exceptions.Count:#,#;;0} attachments:{Environment.NewLine}{new AggregateException(_exceptions)}");
                         }
                     }
                 }
@@ -250,11 +271,23 @@ namespace Raven.Server.Documents
             return totalCount;
         }
 
-        private void HandleUploadTaskResult(AttachmentRemoteInfo res, Queue<AttachmentRemoteInfo> processed)
+        private void HandleUploadTaskResult(AttachmentRemoteInfo res, Queue<AttachmentRemoteInfo> processed, Dictionary<string, Queue<AttachmentRemoteInfo>> docStates)
         {
             if (res != null)
             {
                 processed.Enqueue(res);
+
+                if (docStates.TryGetValue(res.Id, out var queue))
+                {
+                    while (queue.TryDequeue(out var item))
+                    {
+                        // process the items that were waiting for this document to be processed
+                        processed.Enqueue(item);
+                    }
+                }
+
+                docStates[res.Id] = null; // mark as processed
+
                 _totalUploaded += res.AttachmentsSize;
             }
         }
@@ -280,12 +313,15 @@ namespace Raven.Server.Documents
                             continue;
 
                         var identifier = attachment.RemoteParameters.Identifier;
-                        var lazyUploader = uploaders.GetOrAdd(identifier, new Lazy<AttachmentUploader>(() =>
+
+                        if (Configuration.Destinations.TryGetValue(identifier, out var destination) == false || destination.HasUploader() == false)
                         {
-                            // we are sure the destination exist because we got the item with "Process" status
-                            var destination = Configuration.Destinations[identifier];
-                            return new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
-                        }));
+                            // destination no longer exist or is disabled, skip uploading this attachment
+                            continue;
+                        }
+
+                        var lazyUploader = uploaders.GetOrAdd(identifier, new Lazy<AttachmentUploader>(() => 
+                            new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token)));
                         var uploader = lazyUploader.Value;
                         var hash = attachment.Base64Hash.ToString();
                         var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, attachment.Base64Hash.ToString());
@@ -385,6 +421,24 @@ namespace Raven.Server.Documents
                     CurrentTime = _currentTime
                 };
             }
+        }
+
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal Action<List<Exception>> BeforeEndOfTheBatch;
+
+            internal Action<AggregateException> BeforeAllBatchFailure;
         }
     }
 
