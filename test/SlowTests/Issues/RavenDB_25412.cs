@@ -41,11 +41,16 @@ public class RavenDB_25412 : ReplicationTestBase
 
         // Controls the network simulation (Open = normal, Closed = hang)
         var networkGate = new AsyncGate();
+        int connectionCounter = 0;
 
         var forTesting = sinkDb.ReplicationLoader.ForTestingPurposesOnly();
 
         // Inject the wrapper to simulate network hangs on the socket stream
-        forTesting.WrapIncomingReplicationStream = innerStream => new SmartHangingStreamWrapper(innerStream, networkGate);
+        forTesting.WrapIncomingReplicationStream = innerStream =>
+        {
+            Interlocked.Increment(ref connectionCounter);
+            return new SmartHangingStreamWrapper(innerStream, networkGate);
+        };
 
         await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
         await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
@@ -71,6 +76,7 @@ public class RavenDB_25412 : ReplicationTestBase
 
         // 2. Simulate Network Hang
         // Any subsequent read on the existing stream will now hang indefinitely until we open the gate.
+        var initialConnections = connectionCounter;
         networkGate.Close();
 
         // 3. Write second document to Hub
@@ -97,6 +103,8 @@ public class RavenDB_25412 : ReplicationTestBase
 
         isSecondDocReplicated = WaitForDocument<User>(sinkStore, "Users/2-A", u => u.Name == "Lev", timeout: timeout);
         Assert.True(isSecondDocReplicated, "Should have timed out the hung connection, reconnected, and replicated.");
+
+        Assert.True(connectionCounter > initialConnections, $"Expected reconnection to occur. Initial connections: {initialConnections}, Current connections: {connectionCounter}. If these are equal, the zombie connection was not killed.");
     }
 
     private class AsyncGate
