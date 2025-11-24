@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-
-using Lucene.Net.Index;
+﻿using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
-    public sealed class NonSortingCollector : Collector, IDisposable
+    public sealed class NonSortingCollector : Collector
     {
+        private readonly RavenTopDocs _ravenTopDocs;
         private readonly int _numberOfDocsToCollect;
-        private readonly List<ScoreDoc> _docs;
         private int _totalHits;
         private int _docBase;
 
@@ -19,8 +16,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public NonSortingCollector(int numberOfDocsToCollect)
         {
+            _ravenTopDocs = new RavenTopDocs();
             _numberOfDocsToCollect = numberOfDocsToCollect;
-            _docs = CollectorsPool.Instance.Allocate();            
         }
 
         public override void SetScorer(Scorer scorer)
@@ -30,13 +27,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public override void Collect(int doc, IState state)
         {
-            if (_docs.Count < _numberOfDocsToCollect)
+            if (_ravenTopDocs.Count < _numberOfDocsToCollect)
             {
                 var score = _scorer?.Score(state) ?? 0;
                 if (score > _maxScore)
                     _maxScore = score;
 
-                _docs.Add(new ScoreDoc(doc + _docBase, score));
+                _ravenTopDocs.Add(doc + _docBase, score);
             }
 
             _totalHits++;
@@ -51,13 +48,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public TopDocs ToTopDocs()
         {
-            return new TopDocs(_totalHits, _docs.ToArray(), _maxScore);
-        }
-
-        public void Dispose()
-        {
-            _docs.Clear();
-            CollectorsPool.Instance.Free(_docs);
+            _ravenTopDocs.TotalHits = _totalHits;
+            _ravenTopDocs.MaxScore = _maxScore;
+            return _ravenTopDocs;
         }
     }
 }
