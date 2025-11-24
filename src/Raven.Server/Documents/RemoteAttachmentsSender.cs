@@ -324,7 +324,7 @@ namespace Raven.Server.Documents
                             new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token)));
                         var uploader = lazyUploader.Value;
                         var hash = attachment.Base64Hash.ToString();
-                        var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, attachment.Base64Hash.ToString());
+                        var objectSizeFromMetadata = await uploader.GetObjectSizeAsync(string.Empty, hash);
                         Stream attachmentStream;
                         if (objectSizeFromMetadata.HasValue)
                         {
@@ -440,23 +440,6 @@ namespace Raven.Server.Documents
 
             internal Action<AggregateException> BeforeAllBatchFailure;
         }
-    }
-
-    internal class RemoteAttachmentsStatsScope
-    {
-        public UploadProgress AzureUpload { get; set; }
-
-        public UploadProgress FtpUpload { get; set; }
-
-        public UploadProgress GlacierUpload { get; set; }
-
-        public UploadProgress GoogleCloudUpload { get; set; }
-
-        public UploadProgress S3Upload { get; set; }
-
-        public int NumberOfAttachments { get; set; }
-
-        public string AttachmentName { get; set; }
     }
 
     internal sealed class UpdateRemoteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RemoteAttachmentsSender.UpdateRemoteAttachmentsCommand>

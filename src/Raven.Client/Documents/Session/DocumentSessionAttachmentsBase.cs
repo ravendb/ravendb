@@ -97,6 +97,17 @@ namespace Raven.Client.Documents.Session
             Store(document.Id, name, stream, contentType);
         }
 
+        /// <summary>
+        /// Stores attachment to be sent in the session using the provided parameters
+        /// </summary>
+        /// <param name="documentId">The document identifier</param>
+        /// <param name="parameters">The attachment storage parameters containing name, stream, content type, change vector, and remote upload settings</param>
+        /// <remarks>
+        /// This overload provides a convenient way to store an attachment using a <see cref="StoreAttachmentParameters"/> object,
+        /// which encapsulates all attachment properties including optional settings like <see cref="StoreAttachmentParameters.ContentType"/>,
+        /// <see cref="StoreAttachmentParameters.ChangeVector"/> for concurrency control, and <see cref="StoreAttachmentParameters.RemoteParameters"/>
+        /// for scheduling remote cloud storage uploads. The attachment will be sent to the server when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// </remarks>
         public void Store(string documentId, StoreAttachmentParameters parameters)
         {
             Store(documentId, parameters.Name, parameters.Stream, parameters.ContentType, parameters.RemoteParameters);

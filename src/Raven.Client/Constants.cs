@@ -186,8 +186,36 @@ namespace Raven.Client
             /// </summary>
             public const string AttachmentSize = "Attachment-Size";
 
+            /// <summary>
+            /// HTTP header name for the scheduled remote attachment upload time.
+            /// </summary>
+            /// <remarks>
+            /// This header contains the timestamp (UTC) when an attachment should be uploaded to remote cloud storage.
+            /// Used in conjunction with <see cref="AttachmentRemoteParametersFlags"/> and <see cref="AttachmentRemoteParametersIdentifier"/>
+            /// to configure automatic offloading of attachments to cloud storage providers like Amazon S3 or Azure Blob Storage.
+            /// </remarks>
             public const string AttachmentRemoteParametersAt = "Attachment-RemoteParameters-At";
+
+            /// <summary>
+            /// HTTP header name for remote attachment configuration flags.
+            /// </summary>
+            /// <remarks>
+            /// This header contains flags that control remote attachment behavior, such as whether the attachment
+            /// should be uploaded immediately or at a scheduled time. Used with <see cref="AttachmentRemoteParametersAt"/>
+            /// and <see cref="AttachmentRemoteParametersIdentifier"/> to specify complete remote storage configuration.
+            /// The flags correspond to the <see cref="Client.Documents.Attachments.RemoteAttachmentFlags"/> enum values.
+            /// </remarks>
             public const string AttachmentRemoteParametersFlags = "Attachment-RemoteParameters-Flags";
+
+            /// <summary>
+            /// HTTP header name for remote attachment storage destination identifier.
+            /// </summary>
+            /// <remarks>
+            /// This header contains the unique identifier for the remote storage destination configuration where the attachment
+            /// should be uploaded. This identifier references a configured remote attachment destination (e.g., a specific S3 bucket
+            /// or Azure container) in the database's remote attachments configuration. Used with <see cref="AttachmentRemoteParametersAt"/>
+            /// and <see cref="AttachmentRemoteParametersFlags"/> to specify the complete remote storage parameters.
+            /// </remarks>
             public const string AttachmentRemoteParametersIdentifier = "Attachment-RemoteParameters-Identifier";
 
             internal const string DatabaseMissing = "Database-Missing";

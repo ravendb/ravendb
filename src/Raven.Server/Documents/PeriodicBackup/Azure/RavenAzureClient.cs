@@ -267,11 +267,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return new AzureMultiPartUploader(_client, key, metadata, _progress, _cancellationToken);
         }
 
-        public IDictionary<string, string> GetObjectMetadata(string key)
-        {
-            return AsyncHelpers.RunSync(() => GetObjectMetadataAsync(key));
-        }
-
         public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
         {
             try

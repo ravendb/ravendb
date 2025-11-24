@@ -30,7 +30,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
         MetadataPropertyName = metadataPropertyName;
     }
 
-    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice treeKey, string identifier, DateTime currentTime);
+    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string identifier, DateTime currentTime);
     protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<TWorkInfo> expiredDocs, ref int totalCount);
     protected abstract TWorkInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice);
 
@@ -41,11 +41,11 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
             $"The due date format for document '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
     }
 
-    public void Put(DocumentsOperationContext context, Slice treeKey, string processDateString)
+    public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
     {
         if (DateTime.TryParseExact(processDateString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                 out DateTime processDate) == false)
-            ThrowWrongDateFormat(treeKey, processDateString);
+            ThrowWrongDateFormat(lowerId, processDateString);
 
         // We explicitly enable adding items that have already been expired, we have to, because if the time lag is short, it is possible
         // that we add an item that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
@@ -56,7 +56,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
-            tree.MultiAdd(ticksSlice, treeKey);
+            tree.MultiAdd(ticksSlice, lowerId);
     }
 
     public Queue<TWorkInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)

@@ -10,7 +10,6 @@ using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Server.Utils;
 using Object = Google.Apis.Storage.v1.Data.Object;
@@ -224,11 +223,6 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             {
                 throw new InvalidOperationException($"Bucket {_bucketName} not found", e);
             }
-        }
-
-        public IDictionary<string, string> GetObjectMetadata(string key)
-        {
-            return AsyncHelpers.RunSync(() => GetObjectMetadataAsync(key));
         }
 
         public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)

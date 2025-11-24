@@ -352,12 +352,7 @@ namespace Sparrow.Server
 
         public int IndexOf(byte c)
         {
-            return IndexOf(c, start: 0);
-        }
-
-        public int IndexOf(byte c, int start)
-        {
-            for (int i = start; i < Length; i++)
+            for (int i = 0; i < Length; i++)
             {
                 if (this[i] == c)
                     return i;

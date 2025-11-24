@@ -449,7 +449,8 @@ namespace Raven.Server.Documents
                         DocumentId = documentId,
                         Hash = hash,
                         Size = stream?.Length ?? -1,
-                        CollectionName = collectionName
+                        CollectionName = collectionName,
+                        RemoteParameters = remoteParams
                     };
                 }
             }
@@ -1528,41 +1529,6 @@ namespace Raven.Server.Documents
             return table?.NumberOfEntries ?? 0;
         }
 
-        public static (string DocId, string AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(Slice attachmentTombstoneId)
-        {
-            var p = attachmentTombstoneId.Content.Ptr;
-            var size = attachmentTombstoneId.Size;
-
-            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
-
-            var doc = Encodings.Utf8.GetString(p, sizeOfDocId);
-            var name = Encodings.Utf8.GetString(p + attachmentNameIndex, sizeOfAttachmentName);
-
-            return (doc, name);
-        }
-
-        internal static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out int attachmentHashIndex)
-        {
-            sizeOfDocId = AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(p, size));
-
-            attachmentNameIndex = sizeOfDocId +
-                                  1 + // separator
-                                  1 + // type: d
-                                  1;
-
-            sizeOfAttachmentName = 0;
-
-            for (; sizeOfAttachmentName < size - (sizeOfDocId + 3); sizeOfAttachmentName++)
-            {
-                if (p[attachmentNameIndex + sizeOfAttachmentName] == SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            attachmentHashIndex = attachmentNameIndex
-                                  + sizeOfAttachmentName
-                                  + 1; // sep
-        }
-
         public long GetNumberOfAttachmentsForFlag(DocumentsOperationContext context, RemoteAttachmentFlags flag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -1805,7 +1771,7 @@ namespace Raven.Server.Documents
                 return AttachmentType.Document;
             }
 
-            internal static int FindNextSeparator(ReadOnlySpan<byte> key, int start)
+            private static int FindNextSeparator(ReadOnlySpan<byte> key, int start)
             {
                 for (var i = start; i < key.Length; i++)
                 {

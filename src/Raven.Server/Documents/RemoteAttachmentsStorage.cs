@@ -76,9 +76,9 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         }
     }
 
-    protected override void ProcessDocument(DocumentsOperationContext context, Slice treeKey, string docId, DateTime currentTime)
+    protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string docId, DateTime currentTime)
     {
-        using (var doc = Database.DocumentsStorage.Get(context, treeKey, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
+        using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
         {
             if (doc == null || doc.TryGetMetadata(out var metadata) == false)
                 return;
@@ -88,7 +88,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
 
             foreach (var attachmentInMetadata in EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(attachments, currentTime, ShouldSkipItem))
             {
-                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, attachmentInMetadata, treeKey, docId);
+                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, attachmentInMetadata, lowerId, docId);
             }
 
             Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, docId);

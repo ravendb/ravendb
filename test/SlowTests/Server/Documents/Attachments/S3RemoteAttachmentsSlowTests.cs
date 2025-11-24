@@ -537,12 +537,17 @@ namespace SlowTests.Server.Documents.Attachments
                     using (var profileStream = new MemoryStream(new byte[] { 3, 2, 2 }))
                     {
                         // remote of this attachment should happen in baseline + 40 mins
-                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, new StoreAttachmentParameters("profile.png", profileStream) { RemoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
+                        var remoteParams = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3));
+                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, new StoreAttachmentParameters("profile.png", profileStream) { RemoteParameters = remoteParams, ContentType = "image/png" }));
                         Assert.Equal("profile.png", result.Name);
                         Assert.Equal(data.DocumentId, result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
                         Assert.Equal("bucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=", result.Hash);
                         Assert.Equal(3, result.Size);
+                        Assert.NotNull(result.RemoteParameters);
+                        Assert.Equal(remoteParams.Identifier, result.RemoteParameters.Identifier);
+                        Assert.Equal(remoteParams.At, result.RemoteParameters.At);
+                        Assert.Equal(RemoteAttachmentFlags.None, result.RemoteParameters.Flags);
                     }
 
                     var names = new List<string>() { data.Name, "profile.png" }.OrderBy(x => x).ToList();

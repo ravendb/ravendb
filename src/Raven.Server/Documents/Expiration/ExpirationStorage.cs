@@ -19,11 +19,11 @@ namespace Raven.Server.Documents.Expiration
         {
         }
 
-        protected override void ProcessDocument(DocumentsOperationContext context, Slice documentLowerId, string id, DateTime currentTime)
+        protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
         {
             try
             {
-                using (var doc = Database.DocumentsStorage.Get(context, documentLowerId, DocumentFields.Data, throwOnConflict: true))
+                using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data, throwOnConflict: true))
                 {
                     if (doc == null || doc.TryGetMetadata(out var metadata) == false)
                         return;
@@ -31,13 +31,13 @@ namespace Raven.Server.Documents.Expiration
                     if (HasPassed(metadata, currentTime, MetadataPropertyName) == false)
                         return;
 
-                    Database.DocumentsStorage.Delete(context, documentLowerId, id, expectedChangeVector: null);
+                    Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
                 }
             }
             catch (DocumentConflictException)
             {
-                if (GetConflictedExpiration(context, currentTime, documentLowerId).AllExpired)
-                    Database.DocumentsStorage.Delete(context, documentLowerId, id, expectedChangeVector: null);
+                if (GetConflictedExpiration(context, currentTime, lowerId).AllExpired)
+                    Database.DocumentsStorage.Delete(context, lowerId, id, expectedChangeVector: null);
             }
         }
 

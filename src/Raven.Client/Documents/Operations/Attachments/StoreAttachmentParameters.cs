@@ -23,6 +23,19 @@ public class StoreAttachmentParameters : IStoreAttachmentParameters
     /// <inheritdoc />
     public RemoteAttachmentParameters RemoteParameters { get; set; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StoreAttachmentParameters"/> class.
+    /// </summary>
+    /// <param name="name">The name of the attachment to store. Cannot be null or whitespace.</param>
+    /// <param name="stream">The stream containing the attachment data. Cannot be null.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="name"/> is null or whitespace, or when <paramref name="stream"/> is null.
+    /// </exception>
+    /// <remarks>
+    /// Use this constructor to create parameters for storing an attachment with the specified name and stream.
+    /// Optional properties such as <see cref="ChangeVector"/>, <see cref="ContentType"/>, and <see cref="RemoteParameters"/>
+    /// can be set after construction to provide additional control over the attachment storage behavior.
+    /// </remarks>
     public StoreAttachmentParameters(string name, Stream stream)
     {
         if (string.IsNullOrWhiteSpace(name))

@@ -255,11 +255,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return AsyncHelpers.RunSync(() => ListObjectsAsync(prefix, delimiter, listFolders, includeFolders, take, continuationToken, startAfter));
         }
 
-        public IDictionary<string, string> GetObjectMetadata(string key)
-        {
-            return AsyncHelpers.RunSync(() => GetObjectMetadataAsync(key));
-        }
-
         public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
         {
             try

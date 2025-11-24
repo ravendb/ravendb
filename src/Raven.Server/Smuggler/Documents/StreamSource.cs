@@ -1762,10 +1762,9 @@ namespace Raven.Server.Smuggler.Documents
 
                     var data = builder.CreateReader();
                     builder.Reset();
-                    string collectionName = null;
                     if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                     {
-                        if (metadata.TryGet(Constants.Documents.Metadata.Collection, out  collectionName))
+                        if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionName))
                         {
                             if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collectionName) == false)
                             {
@@ -1814,7 +1813,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    data = GetAttachmentMetadata(metadata, hashBySize, modifier, collectionName, data, context);
+                    data = GetAttachmentMetadata(metadata, hashBySize, modifier, data, context);
 
                     _result.LegacyLastDocumentEtag = modifier.LegacyEtag;
 
@@ -1844,13 +1843,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private BlittableJsonReaderObject GetAttachmentMetadata(BlittableJsonReaderObject metadata, Dictionary<string, long> hashBySize, BlittableMetadataModifier modifier,
-            string collectionName, BlittableJsonReaderObject data, JsonOperationContext context)
+        private BlittableJsonReaderObject GetAttachmentMetadata(BlittableJsonReaderObject metadata, Dictionary<string, long> hashBySize, BlittableMetadataModifier modifier, BlittableJsonReaderObject data, JsonOperationContext context)
         {
             // hashBySize == null means there were no attachment streams in the dump
 
-            //TODO: egor change that according to feature version
-            if (_buildVersionType < BuildVersionType.V7)
+            if (_buildVersionType < BuildVersionType.V72)
             {
                 if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
                 {

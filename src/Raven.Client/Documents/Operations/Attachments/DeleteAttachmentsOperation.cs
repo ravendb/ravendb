@@ -9,10 +9,25 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
+    /// <summary>
+    /// Represents an operation to delete multiple attachments from the database in a single request.
+    /// </summary>
+    /// <remarks>
+    /// This operation can be used to efficiently remove multiple attachments associated with documents
+    /// by sending a bulk delete request to the server.
+    /// </remarks>
     public sealed class DeleteAttachmentsOperation : IOperation
     {
         private readonly IEnumerable<AttachmentRequest> _attachments;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteAttachmentsOperation"/> class.
+        /// </summary>
+        /// <param name="attachments">A collection of attachment requests specifying which attachments to delete.</param>
+        /// <remarks>
+        /// Use this constructor to create an operation that deletes multiple attachments in a single bulk request.
+        /// Each <see cref="AttachmentRequest"/> should specify the document ID and attachment name.
+        /// </remarks>
         public DeleteAttachmentsOperation(IEnumerable<AttachmentRequest> attachments)
         {
             _attachments = attachments;

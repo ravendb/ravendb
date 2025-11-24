@@ -102,6 +102,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 else
                 {
                     writer.WriteComma();
+                    writer.WritePropertyName(nameof(AttachmentDetails.RemoteParameters));
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(RemoteAttachmentParameters.Identifier));
                     writer.WriteString(result.RemoteParameters.Identifier);
