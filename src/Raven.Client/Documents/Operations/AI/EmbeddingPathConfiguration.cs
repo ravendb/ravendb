@@ -16,7 +16,7 @@ public class EmbeddingPathConfiguration : IDynamicJson
         return jsv;
     }
 
-    internal static bool Compare(EmbeddingPathConfiguration left, EmbeddingPathConfiguration right)
+    internal static bool AreEqual(EmbeddingPathConfiguration left, EmbeddingPathConfiguration right)
     {
         if (left == null && right == null)
             return true;
@@ -25,6 +25,6 @@ public class EmbeddingPathConfiguration : IDynamicJson
             return false;
         
         return left.Path == right.Path && 
-               ChunkingOptions.Compare(left.ChunkingOptions, right.ChunkingOptions);
+               ChunkingOptions.AreEqual(left.ChunkingOptions, right.ChunkingOptions);
     }
 }

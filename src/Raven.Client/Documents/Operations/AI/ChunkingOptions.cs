@@ -39,7 +39,7 @@ public class ChunkingOptions : IDynamicJson
             errors.Add($"'{source}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
     }
 
-    internal static bool Compare(ChunkingOptions left, ChunkingOptions right)
+    internal static bool AreEqual(ChunkingOptions left, ChunkingOptions right)
     {
         if (left == null && right == null)
             return true;

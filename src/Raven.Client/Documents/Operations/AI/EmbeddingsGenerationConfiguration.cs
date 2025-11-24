@@ -190,8 +190,8 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             Quantization != other.Quantization ||
             EmbeddingsCacheExpiration != other.EmbeddingsCacheExpiration ||
             EmbeddingsCacheForQueryingExpiration != other.EmbeddingsCacheForQueryingExpiration ||
-            EmbeddingsTransformation.Compare(EmbeddingsTransformation, other.EmbeddingsTransformation) == false ||
-            ChunkingOptions.Compare(ChunkingOptionsForQuerying,other.ChunkingOptionsForQuerying) == false)
+            EmbeddingsTransformation.AreEqual(EmbeddingsTransformation, other.EmbeddingsTransformation) == false ||
+            ChunkingOptions.AreEqual(ChunkingOptionsForQuerying,other.ChunkingOptionsForQuerying) == false)
             differences |= EtlConfigurationCompareDifferences.Other;
         
         differences |= CompareEmbeddingsPathConfigurations(other.EmbeddingsPathConfigurations);
@@ -217,7 +217,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             var otherPathConfiguration = other.SingleOrDefault(x => x.Path == pathConfiguration.Path);
 
             if (otherPathConfiguration == null ||
-                EmbeddingPathConfiguration.Compare(pathConfiguration, otherPathConfiguration) == false)
+                EmbeddingPathConfiguration.AreEqual(pathConfiguration, otherPathConfiguration) == false)
                 return EtlConfigurationCompareDifferences.Other;
         }
 

@@ -28,7 +28,7 @@ public class EmbeddingsTransformation
             errors.Add($"Transformation script must use {GenerateEmbeddingsFunctionName} method.");
     }
 
-    internal static bool Compare(EmbeddingsTransformation left, EmbeddingsTransformation right)
+    internal static bool AreEqual(EmbeddingsTransformation left, EmbeddingsTransformation right)
     {
         if (left == null && right == null)
             return true;
@@ -37,6 +37,6 @@ public class EmbeddingsTransformation
             return false;
         
         return left.Script == right.Script &&
-               ChunkingOptions.Compare(left.ChunkingOptions, right.ChunkingOptions);
+               ChunkingOptions.AreEqual(left.ChunkingOptions, right.ChunkingOptions);
     }
 }
