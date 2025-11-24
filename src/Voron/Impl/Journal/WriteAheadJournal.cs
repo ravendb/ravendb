@@ -1,43 +1,41 @@
-using Sparrow;
-using Sparrow.Binary;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
+using Sparrow.Server.Logging;
+using Sparrow.Server.LowMemory;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Logging;
 using Voron.Util;
+using Voron.Util.PFor;
 using Constants = Voron.Global.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.Threading.Channels;
-using Sparrow.Server.Logging;
-using Sparrow.Server.LowMemory;
-using Sparrow.Server.Platform;
-using Voron.Data.BTrees;
-using Voron.Impl.FreeSpace;
-using Voron.Logging;
-using static Voron.Impl.Paging.Pager;
 
 namespace Voron.Impl.Journal
 {
@@ -332,6 +330,8 @@ namespace Voron.Impl.Journal
             var lastJournal = _env.Options.GetLatestJournalNumber();
             lastJournal ??= journalToStartReadingFrom;
 
+            using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= lastJournal.Value; journalNumber++)
             {
                 addToInitLog?.Invoke(LogLevel.Debug, $"Recovering journal {journalNumber:#,#;;0}...");
@@ -353,7 +353,7 @@ namespace Voron.Impl.Journal
 
                     List<TransactionHeader> transactionHeaders;
                     var journalReader = new JournalReader(_env, journalNumber, journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader,
-                        transactionHeader);
+                        transactionHeader, allocator);
                     try
                     {
                         transactionHeaders = journalReader.RecoverAndValidate(ref dataPagerState, ref recoveryPagerState, ref txState, _env.Options);
@@ -812,6 +812,8 @@ namespace Voron.Impl.Journal
                         if (_applyLogsToDataFileStateFromPreviousFailedAttempt == null)
                             return; // nothing to do
                     }
+                    
+                    _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
 
                     Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt is { Record: not null, Buffers: not null });
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
@@ -923,6 +925,7 @@ namespace Voron.Impl.Journal
                 else if (applied && executedSuccessfully == false)
                     throw new InvalidOperationException($"Journal state was not applied successfully after the flush (waited - {sp.Elapsed}, last flushed tx: id - {record.TransactionId}, written to journal - {record.FlushedToJournal})");
             }
+
 
             private bool WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext,
                 Action<LowLevelTransaction> currentAction, ByteStringContext byteStringContext)
@@ -1157,6 +1160,8 @@ namespace Voron.Impl.Journal
                 internal Action OnUpdateJournalStateUnderWriteTransactionLock;
 
                 internal Action OnApplyLogsToDataFileUnderFlushingLock;
+
+                internal Action OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile;
 
                 internal Action OnWaitForJournalStateToBeUpdated_BeforeAssigning_updateJournalStateAfterFlush;
 
@@ -1486,35 +1491,6 @@ namespace Voron.Impl.Journal
                     _waj._env.DataPager.SetSparseRange(dataPagerState,
                         start * Constants.Storage.PageSize,
                         count * Constants.Storage.PageSize
-                    );
-                }
-            }
-
-            private void MarkSparseRegionsInDataFile(Pager.State dataPagerState, Span<long> sparseRegions)
-            {
-                var count = Sorting.SortAndRemoveDuplicates(sparseRegions);
-                var start = sparseRegions[0];
-                var len = FreeSpaceHandling.NumberOfPagesInSection; 
-                for (int i = 1; i < count; i++)
-                {
-                    if (start + len == sparseRegions[i])
-                    {
-                        len += FreeSpaceHandling.NumberOfPagesInSection;
-                        continue;
-                    }
-                    MarkSparseRegion();
-
-                    start = sparseRegions[i];
-                    len = FreeSpaceHandling.NumberOfPagesInSection;
-                }
-                
-                MarkSparseRegion();
-
-                void MarkSparseRegion()
-                {
-                    _waj._env.DataPager.SetSparseRange(dataPagerState, 
-                        start * Constants.Storage.PageSize,
-                        len *Constants.Storage.PageSize
                     );
                 }
             }
@@ -2084,9 +2060,43 @@ namespace Voron.Impl.Journal
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var overheadInPages = checked((int)(overhead / Constants.Storage.PageSize + (overhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
-            const int transactionHeaderPageOverhead = 1;
-            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
+            int encodedFreePagesSize = 0;
+            int freedPagesOverheadInPages = 0;
+            
+            var freedPages = tx.GetFreedPages();
+            int numberOfFreedPages = 0;
+            
+            using var freePagesEncoder = new FastPForEncoder(tx.Allocator);
+            
+            if (freedPages is { Count: > 0 })
+            {
+                // we need to remove the freed pages that were reused and modified later on during the transaction
+                foreach (var page in txPages)
+                {
+                    for (int i = 0; i < page.NumberOfPages; i++)
+                    {
+                        freedPages.Remove(page.PageNumberInDataFile + i);
+                    }
+                }
 
+                if (freedPages.Count > 0)
+                {
+                    var sortedFreePages = freedPages.ToArray();
+                    sortedFreePages.Sort();
+
+                    numberOfFreedPages = sortedFreePages.Length;
+                    
+                    fixed (long* p = sortedFreePages)
+                    {
+                        encodedFreePagesSize = freePagesEncoder.Encode(p, numberOfFreedPages);
+                        freedPagesOverheadInPages = checked(encodedFreePagesSize / Constants.Storage.PageSize + (encodedFreePagesSize % Constants.Storage.PageSize == 0 ? 0 : 1));
+                    }
+                }
+            }
+            
+            const int transactionHeaderPageOverhead = 1;
+            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages + freedPagesOverheadInPages);
+            
             if (_is32Bit)
             {
                 pagesRequired = AdjustPagesRequiredFor32Bits(pagesRequired);
@@ -2175,6 +2185,15 @@ namespace Voron.Impl.Journal
                     transactionHeaderPageInfo.DiffSize = 0;
                 }
                 ++pageSequentialNumber;
+            }
+
+            if (numberOfFreedPages > 0)
+            {
+                var (count, sizeUsed) = freePagesEncoder.Write(write, encodedFreePagesSize);
+
+                Debug.Assert(count == numberOfFreedPages, $"count == numberOfFreedPages, expected {numberOfFreedPages}, actual {count}");
+                
+                write += sizeUsed;
             }
 
             var totalSizeWritten = write - txPageInfoPtr;
@@ -2267,6 +2286,9 @@ namespace Voron.Impl.Journal
             txHeader.UncompressedSize = totalSizeWritten;
             txHeader.PageCount = numberOfPages;
             txHeader.JournalId = _headerAccessor.JournalId;
+            
+            if (numberOfFreedPages > 0)
+                txHeader.Flags |= TransactionPersistenceModeFlags.HasFreePages;
             
             if (_env.Options.Encryption.IsEnabled == false)
             {

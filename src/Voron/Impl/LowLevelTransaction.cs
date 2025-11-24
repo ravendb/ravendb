@@ -145,6 +145,7 @@ namespace Voron.Impl
 
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
         private bool _hasFreePages;
+        private HashSet<long> _freedPages;
 
         private CommitStats _requestedCommitStats;
 
@@ -929,6 +930,10 @@ namespace Voron.Impl
                 _pageLocator.Reset(pageNumber); // Remove it from the page locator.
 
                 _freeSpaceHandling.FreePage(this, pageNumber);
+
+                _freedPages ??= new HashSet<long>();
+                _freedPages.Add(pageNumber);
+                
                 _hasFreePages = true;
 
                 DiscardScratchModificationOn(pageNumber);
@@ -938,6 +943,11 @@ namespace Voron.Impl
                 _txStatus |= TxStatus.Errored;
                 throw;
             }
+        }
+
+        internal HashSet<long> GetFreedPages()
+        {
+            return _freedPages;
         }
 
         private static readonly ObjectPool<CompactKey> _sharedCompactKeyPool = new(() => new CompactKey());
