@@ -2,7 +2,7 @@
 
 namespace Corax.Querying.Matches.Meta
 {
-    public interface IMemoizationMatchSource : IDisposable
+    public interface IMemoizationMatchSource
     {
         MemoizationMatch Replay();
     }

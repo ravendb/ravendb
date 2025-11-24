@@ -197,6 +197,8 @@ namespace Corax.Querying.Matches
             return _inner.Inspect();
         }
         string DebugView => Inspect().ToString();
+        
+        public void InnerRetriever(out TInner inner) => inner = _inner;
 
         public void Dispose()
         {
