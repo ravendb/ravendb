@@ -137,8 +137,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _parent.ForTestingPurposes?.OnIncomingReplicationHandlerStart?.Invoke();
 
                 using (_connectionOptionsDisposable = _tcpConnectionOptions.ConnectionProcessingInProgress("Replication"))
-                using (var trackingStream = new ActivityTrackingStream(_stream))
-                using (var interruptibleRead = new InterruptibleRead<TContextPool, TOperationContext>(_contextPool, trackingStream))
+                using (_stream)
+                using (var interruptibleRead = new InterruptibleRead<TContextPool, TOperationContext>(_contextPool, _stream))
                 {
                     var configuration = GetConfiguration();
                     var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
@@ -164,13 +164,13 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (msg.Timeout)
                                 {
                                     // Inactivity check
-                                    var currentTotalBytes = trackingStream.TotalBytesRead;
-                                    if (currentTotalBytes > lastTotalBytesRead)
+                                    var currentUsed = _copiedBuffer.Buffer.Used;
+                                    if (currentUsed > lastTotalBytesRead)
                                     {
-                                        lastTotalBytesRead = currentTotalBytes;
+                                        lastTotalBytesRead = currentUsed;
                                         if (Logger.IsInfoEnabled)
                                             Logger.Info($"Incoming replication from `{FromToString}` timed out ({readTimeout}ms) while reading next batch, " +
-                                                        $"but data is flowing (read {currentTotalBytes} bytes total). Extending wait.");
+                                                        $"but data is flowing (buffer used: {currentUsed} bytes). Extending wait.");
 
                                         continue;
                                     }
@@ -179,13 +179,13 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
                                 }
 
-                                lastTotalBytesRead = trackingStream.TotalBytesRead;
+                                lastTotalBytesRead = 0;
 
                                 if (msg.Document != null)
                                 {
                                     EnsureNotDeleted();
 
-                                    using (var writer = new BlittableJsonTextWriter(msg.Context, trackingStream))
+                                    using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
                                     {
                                         HandleSingleReplicationBatch(msg.Context,
                                             msg.Document,
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 else // notify peer about new change vector
                                 {
                                     using (_contextPool.AllocateOperationContext(out TOperationContext context))
-                                    using (var writer = new BlittableJsonTextWriter(context, trackingStream))
+                                    using (var writer = new BlittableJsonTextWriter(context, _stream))
                                     {
                                         SendHeartbeatStatusToSource(
                                             context,
