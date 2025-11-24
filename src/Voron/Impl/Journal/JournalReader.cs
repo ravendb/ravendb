@@ -20,8 +20,11 @@ using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Server.Logging;
+using Sparrow.Threading;
 using Voron.Logging;
+using Voron.Util.PFor;
 using Voron.Util.Settings;
 using static Voron.StorageEnvironmentOptions;
 
@@ -38,6 +41,7 @@ namespace Voron.Impl.Journal
         private readonly HashSet<long> _modifiedPages;
         private readonly JournalInfo _journalInfo;
         private readonly FileHeader _currentFileHeader;
+        private readonly ByteStringContext _allocator;
         private long _readAt4Kb;
         private long _next4Kb;
         private readonly DiffApplier _diffApplier = new();
@@ -53,8 +57,8 @@ namespace Voron.Impl.Journal
         public long Next4Kb => _next4Kb;
 
         public JournalReader(StorageEnvironment environment, long journalNumber, Pager journalPager, Pager.State journalPagerState, Pager dataPager, Pager recoveryPager,
-            TransactionHeader* lastTxHeader, long lastTxId) : this(environment, journalNumber, journalPager, journalPagerState, dataPager, recoveryPager, new HashSet<long>(),
-            new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1}, lastTxHeader)
+            TransactionHeader* lastTxHeader, long lastTxId, ByteStringContext allocator) : this(environment, journalNumber, journalPager, journalPagerState, dataPager, recoveryPager, new HashSet<long>(),
+            new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1}, lastTxHeader, allocator)
         {
             // We create a completely new environment... 
             // The journal id should come from the first
@@ -65,7 +69,7 @@ namespace Voron.Impl.Journal
         }
 
         public JournalReader(StorageEnvironment environment, long journalNumber, Pager journalPager, Pager.State journalPagerState, Pager dataPager, Pager recoveryPager,
-            HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
+            HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous, ByteStringContext allocator)
         {
             RequireHeaderUpdate = false;
             _environment = environment;
@@ -77,6 +81,7 @@ namespace Voron.Impl.Journal
             _modifiedPages = modifiedPages;
             _journalInfo = journalInfo;
             _currentFileHeader = currentFileHeader;
+            _allocator = allocator;
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = _journalPagerState.TotalAllocatedSize / (4 * Constants.Size.Kilobyte);
@@ -188,6 +193,7 @@ namespace Voron.Impl.Journal
                     if (pageSize > bufferSize)
                     {
                         currentBuffer = (byte*)NativeMemory.Realloc(currentBuffer, (nuint)pageSize);
+                        bufferSize = pageSize;
                     }
 
                     if (pageInfoPtr[i].DiffSize == 0)
@@ -237,6 +243,37 @@ namespace Voron.Impl.Journal
                 NativeMemory.Free(currentBuffer);
             }
 
+            if ((current->Flags & TransactionPersistenceModeFlags.HasFreePages) == TransactionPersistenceModeFlags.HasFreePages)
+            {
+                using var reader = new FastPForBufferedReader(_allocator);
+
+                var encodedFreePagesSize = current->UncompressedSize - totalRead;
+                
+                reader.Init(outputPage + totalRead, (int)encodedFreePagesSize);
+
+                var readBatchSize = 256;
+                
+                using var _ = _allocator.Allocate(readBatchSize * sizeof(long), out var buffer);
+                
+                long* freePages = (long*)buffer.Ptr;
+                
+                while (true)
+                {
+                    var readCount = reader.Fill(freePages, readBatchSize);
+                        
+                    if (readCount == 0)
+                        break;
+
+                    for (int i = 0; i < readCount; i++)
+                    {
+                        var freedPage = freePages[i];
+                        _modifiedPages.Remove(freedPage);
+                    }
+                }
+                
+                totalRead += encodedFreePagesSize;
+            }
+            
             LastTransactionHeader = current;
 
             return true;

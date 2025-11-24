@@ -6,7 +6,9 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Sparrow.Server;
 using Sparrow.Server.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
@@ -328,7 +330,9 @@ namespace Voron.Impl.Backup
                     PalHelper.ThrowLastError(rc, errorCode, "Failed to get a file handle to " + txw.DataPager.FileName);
                 using var _ = fileHandle;
                 var journalId = Guid.Empty;
-
+                
+                using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+                
                 foreach (var entry in entries)
                 {
                     switch (Path.GetExtension(entry.Name))
@@ -358,8 +362,8 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize,
                                     env.Options.Encryption.IsEnabled);
                             toDispose.Add(recoveryPager);
-
-                            var reader = new JournalReader(env, journalNumber, journalPager, journalPagerState, txw.DataPager, recoveryPager, lastTxHeader, lastTxId);
+                            
+                            var reader = new JournalReader(env, journalNumber, journalPager, journalPagerState, txw.DataPager, recoveryPager, lastTxHeader, lastTxId, allocator);
                             try
                             {
                                 while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState, fileHandle,

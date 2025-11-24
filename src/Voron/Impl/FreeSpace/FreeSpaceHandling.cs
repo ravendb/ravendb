@@ -18,7 +18,7 @@ namespace Voron.Impl.FreeSpace
         private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
-        private const int NumberOfFreePagesForSparseConsideration = NumberOfPagesInSection/4;
+        internal const int NumberOfFreePagesForSparseConsideration = NumberOfPagesInSection/4;
 
         private readonly Dictionary<long, SectionMetadata> _maxConsecutiveRangePerSection = new();
 
