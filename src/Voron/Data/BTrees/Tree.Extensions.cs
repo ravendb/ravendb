@@ -207,7 +207,7 @@ namespace Voron.Data.BTrees
 
         public long GetLookupRootPage(Slice name)
         {
-            if (!TryRead(name, out var reader))
+            if (TryRead(name, out var reader) == false)
                 return -1;
             
             var header = (LookupState*)reader.Base;
