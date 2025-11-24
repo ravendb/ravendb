@@ -57,7 +57,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.RavenEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddRavenEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-
         }
 
         public override bool Disabled => Configuration.Disabled;
@@ -79,7 +78,6 @@ namespace Raven.Server.ServerWide.Commands.ETL
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddSqlEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-
         }
 
         public override bool Disabled => Configuration.Disabled;

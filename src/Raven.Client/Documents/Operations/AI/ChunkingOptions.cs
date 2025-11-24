@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -39,6 +37,19 @@ public class ChunkingOptions : IDynamicJson
         if (OverlapTokens > 0 &&
             MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
             errors.Add($"'{source}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
+    }
+
+    internal static bool Compare(ChunkingOptions left, ChunkingOptions right)
+    {
+        if (left == null && right == null)
+            return true;
+        
+        if (left == null || right == null)
+            return false;
+        
+        return left.ChunkingMethod == right.ChunkingMethod &&
+               left.MaxTokensPerChunk == right.MaxTokensPerChunk &&
+               left.OverlapTokens == right.OverlapTokens;
     }
 }
 

@@ -27,4 +27,16 @@ public class EmbeddingsTransformation
         if (match.Length == 0)
             errors.Add($"Transformation script must use {GenerateEmbeddingsFunctionName} method.");
     }
+
+    internal static bool Compare(EmbeddingsTransformation left, EmbeddingsTransformation right)
+    {
+        if (left == null && right == null)
+            return true;
+        
+        if (left == null || right == null)
+            return false;
+        
+        return left.Script == right.Script &&
+               ChunkingOptions.Compare(left.ChunkingOptions, right.ChunkingOptions);
+    }
 }

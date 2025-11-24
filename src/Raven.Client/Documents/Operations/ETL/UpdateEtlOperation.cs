@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -18,19 +19,22 @@ namespace Raven.Client.Documents.Operations.ETL
     {
         private readonly long _taskId;
         private readonly EtlConfiguration<T> _configuration;
+        private readonly List<string> _transformationsToReset;
 
         /// <inheritdoc cref="UpdateEtlOperation{T}"/>
         /// <param name="taskId">The identifier of the ETL task to update.</param>
         /// <param name="configuration">The new ETL configuration to apply.</param>
-        public UpdateEtlOperation(long taskId, EtlConfiguration<T> configuration)
+        /// <param name="transformationsToReset">Names of transformations to reset and reprocess all documents.</param>
+        public UpdateEtlOperation(long taskId, EtlConfiguration<T> configuration, List<string> transformationsToReset = null)
         {
             _taskId = taskId;
             _configuration = configuration;
+            _transformationsToReset = transformationsToReset;
         }
 
         public RavenCommand<UpdateEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateEtlCommand(conventions, _taskId, _configuration);
+            return new UpdateEtlCommand(conventions, _taskId, _configuration, _transformationsToReset);
         }
 
         internal class UpdateEtlCommand : RavenCommand<UpdateEtlOperationResult>, IRaftCommand
@@ -38,12 +42,14 @@ namespace Raven.Client.Documents.Operations.ETL
             private readonly DocumentConventions _conventions;
             private readonly long _taskId;
             private readonly EtlConfiguration<T> _configuration;
+            private readonly List<string> _transformationsToReset;
 
-            public UpdateEtlCommand(DocumentConventions conventions, long taskId, EtlConfiguration<T> configuration)
+            public UpdateEtlCommand(DocumentConventions conventions, long taskId, EtlConfiguration<T> configuration, List<string> transformationsToReset)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _taskId = taskId;
                 _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+                _transformationsToReset = transformationsToReset;
             }
 
             public override bool IsReadRequest => false;
@@ -51,6 +57,9 @@ namespace Raven.Client.Documents.Operations.ETL
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/etl?id={_taskId}";
+                
+                if (_transformationsToReset != null)
+                    url += $"&reset={string.Join("&reset=", _transformationsToReset)}";
 
                 var request = new HttpRequestMessage
                 {

@@ -1,4 +1,3 @@
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -15,5 +14,17 @@ public class EmbeddingPathConfiguration : IDynamicJson
         jsv[nameof(Path)] = Path;
         jsv[nameof(ChunkingOptions)] = ChunkingOptions?.ToJson();
         return jsv;
+    }
+
+    internal static bool Compare(EmbeddingPathConfiguration left, EmbeddingPathConfiguration right)
+    {
+        if (left == null && right == null)
+            return true;
+        
+        if (left == null || right == null)
+            return false;
+        
+        return left.Path == right.Path && 
+               ChunkingOptions.Compare(left.ChunkingOptions, right.ChunkingOptions);
     }
 }
