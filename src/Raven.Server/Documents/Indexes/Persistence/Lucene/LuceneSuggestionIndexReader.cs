@@ -165,18 +165,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int maxHits = 10 * pageSize;
 
             //    System.out.println("Q: " + query);
-            ScoreDoc[] hits = _searcher.Search(query, null, maxHits, _state).ScoreDocs;
+            var topDocs = _searcher.Search(query, null, maxHits, _state);
 
             //    System.out.println("HITS: " + hits.length());
             var queue = new SuggestWordQueue(pageSize);
 
             // go thru more than 'maxr' matches in case the distance filter triggers
-            int stop = Math.Min(hits.Length, maxHits);
+            int stop = Math.Min(topDocs.Count, maxHits);
 
             var suggestedWord = new SuggestWord();
             for (int i = 0; i < stop; i++)
             {
-                suggestedWord.Term = _searcher.Doc(hits[i].Doc, _state).Get(FWord, _state); // get orig word
+                suggestedWord.Term = _searcher.Doc(topDocs.GetRawValues(i).Doc, _state).Get(FWord, _state); // get orig word
 
                 // don't suggest a word for itself, that would be silly
                 if (suggestedWord.Term.Equals(word, StringComparison.OrdinalIgnoreCase))

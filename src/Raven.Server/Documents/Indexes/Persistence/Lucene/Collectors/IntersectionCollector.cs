@@ -14,10 +14,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         private IndexReader _currentReader;
         private Scorer _currentScorer;
 
-        public IntersectionCollector(Searchable indexSearcher, IEnumerable<ScoreDoc> scoreDocs, IState state)
+        public IntersectionCollector(Searchable indexSearcher, TopDocs topDocs, IState state)
         {
-            foreach (var scoreDoc in scoreDocs)
+            for (var i = 0; i < topDocs.Count; i++)
             {
+                var scoreDoc = topDocs.GetRawValues(i);
                 var document = indexSearcher.Doc(scoreDoc.Doc, state);
                 var subQueryResult = new SubQueryResult
                 {

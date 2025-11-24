@@ -38,9 +38,7 @@ namespace Raven.Server.Documents.Queries.Results
     {
         public static readonly int LoadedDocumentsCacheSize = 16 * 1024;
 
-        public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
-
-        public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
+        public static readonly (int Doc, float Score) ZeroScore = (-1, 0f);
 
         private readonly ScriptRunnerCache _scriptRunnerCache;
         protected readonly IndexQueryServerSide _query;
@@ -114,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Results
             doc.IndexScore = retrieverInput.Score?.Score ?? retrieverInput.CoraxScore ;
             if ((_query?.Distances != null && retrieverInput.IsLuceneDocument()))
             {
-                doc.Distance = _query.Distances.Get(retrieverInput.Score.Doc);
+                doc.Distance = _query.Distances.Get(retrieverInput.Score.Value.Doc);
             }
             else if (retrieverInput.CoraxDistance != null)
             {
