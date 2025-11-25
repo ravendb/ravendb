@@ -274,10 +274,10 @@ namespace Raven.Server.Documents.Replication.Incoming
             string messageType = null;
             try
             {
-                if (!message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType))
+                if (message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType) == false)
                     throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
 
-                if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag))
+                if (message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag) == false)
                     throw new InvalidOperationException("Expected LastDocumentEtag property in the replication message, " +
                                                         "but didn't find it..");
 
@@ -403,11 +403,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         private void HandleReceivedDocumentsAndAttachmentsBatch(TOperationContext context, BlittableJsonReaderObject message, long lastDocumentEtag, IncomingReplicationStatsScope stats)
         {
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
+            if (message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount) == false)
                 throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, " +
                                                $"but had no numeric field of this value, this is likely a bug");
 
-            if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount))
+            if (message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount) == false)
                 throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, " +
                                                $"but had no numeric field of this value, this is likely a bug");
 

@@ -871,7 +871,7 @@ namespace Raven.Server.Documents
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 
-            if (!_databaseSemaphore.Wait(0))
+            if (_databaseSemaphore.Wait(0) == false)
                 return UnlikelyCreateDatabaseUnderContention(databaseName, config, wakeup, caller);
 
             return CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup, addToInitLog, caller);

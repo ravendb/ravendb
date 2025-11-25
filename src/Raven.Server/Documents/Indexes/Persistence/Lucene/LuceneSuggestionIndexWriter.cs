@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 TextReader reader;
                 var str = fieldable.StringValue(state);
-                if (!string.IsNullOrEmpty(str))
+                if (string.IsNullOrEmpty(str) == false)
                 {
                     reader = new StringReader(str);
                 }

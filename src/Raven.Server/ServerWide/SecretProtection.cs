@@ -548,7 +548,7 @@ namespace Raven.Server.ServerWide
             {
                 var errors = GetStdError();
                 Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
-                if (!string.IsNullOrWhiteSpace(errors))
+                if (string.IsNullOrWhiteSpace(errors) == false)
                     Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
             }
 
@@ -636,7 +636,7 @@ namespace Raven.Server.ServerWide
             {
                 var errors = GetStdError();
                 Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
-                if (!string.IsNullOrWhiteSpace(errors))
+                if (string.IsNullOrWhiteSpace(errors) == false)
                     Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
             }
 

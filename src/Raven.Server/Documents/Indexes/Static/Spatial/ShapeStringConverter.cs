@@ -28,26 +28,23 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
         public string ConvertToWKT(string shape)
         {
-            if (!string.IsNullOrWhiteSpace(shape))
-            {
-                shape = shape.Trim();
-                string result;
-                if (TryParseGeoUri(shape, out result))
-                    return result;
-                if (TryParseBox(shape, out result))
-                    return result;
+            if (string.IsNullOrWhiteSpace(shape)) 
+                return null;
+            
+            shape = shape.Trim();
+            if (TryParseGeoUri(shape, out string result))
+                return result;
+            if (TryParseBox(shape, out result))
+                return result;
 
-                return shape;
-            }
-
-            return default(string);
+            return shape;
         }
 
         private static bool TryParseBox(string value, out string shape)
         {
-            shape = default(string);
+            shape = null;
 
-            if (!value.StartsWith("BOX", StringComparison.OrdinalIgnoreCase))
+            if (value.StartsWith("BOX", StringComparison.OrdinalIgnoreCase) == false) 
                 return false;
             var match = RegexBox.Match(value);
             if (match.Success)
@@ -61,9 +58,9 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
         private bool TryParseGeoUri(string uriString, out string shape)
         {
-            shape = default(string);
+            shape = null;
 
-            if (!uriString.StartsWith("geo:", StringComparison.OrdinalIgnoreCase))
+            if (uriString.StartsWith("geo:", StringComparison.OrdinalIgnoreCase) == false)
                 return false;
 
             var components = uriString.Substring(4, uriString.Length - 4).Split(';').Select(x => x.Trim());
@@ -101,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             if (_options.Type == SpatialFieldType.Geography)
                 coordinate = new[] { coordinate[1], coordinate[0] };
 
-            if (!double.IsNaN(uncertainty) && uncertainty > 0)
+            if (double.IsNaN(uncertainty) == false && uncertainty > 0)
                 shape = MakeCircle(coordinate[0], coordinate[1], uncertainty);
             else
                 shape = MakePoint(coordinate[0], coordinate[1]);

@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (reader.TokenType == JsonToken.None)
                 {
-                    if (!reader.Read())
+                    if (reader.Read() == false)
                         throw new Exception("Error reading from JsonReader.");
                 }
 

@@ -1143,8 +1143,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 // non-static string compare: x => x.CompareTo("Dave") > 0
                 if (methodCall.Object != null)
                 {
-                    if (IsMemberAccessForQuerySource(methodCall.Object) && !(methodCall.Arguments[0] is ConstantExpression)
-                        || !IsMemberAccessForQuerySource(methodCall.Object) && !IsMemberAccessForQuerySource(methodCall.Arguments[0]))
+                    if (IsMemberAccessForQuerySource(methodCall.Object) && !(methodCall.Arguments[0] is ConstantExpression) || 
+                        IsMemberAccessForQuerySource(methodCall.Object) == false && 
+                        IsMemberAccessForQuerySource(methodCall.Arguments[0]) == false)
                     {
                         if (throwOnInvalidExpression)
                             throw new NotSupportedException("String comparisons must be between a field and a constant value. " +

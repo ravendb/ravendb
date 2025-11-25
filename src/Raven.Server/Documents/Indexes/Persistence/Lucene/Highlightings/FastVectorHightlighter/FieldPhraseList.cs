@@ -54,7 +54,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             LinkedList<TermInfo> phraseCandidate = new LinkedList<TermInfo>();
             QueryPhraseMap currMap = null;
             QueryPhraseMap nextMap = null;
-            while (!fieldTermStack.IsEmpty() && (phraseList.Count < phraseLimit) )
+            while (fieldTermStack.IsEmpty() == false && (phraseList.Count < phraseLimit) )
             {
 
                 phraseCandidate.Clear();
