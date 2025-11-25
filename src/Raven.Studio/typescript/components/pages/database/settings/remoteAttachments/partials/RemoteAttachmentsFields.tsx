@@ -32,11 +32,14 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                             <PopoverWithHoverWrapper
                                 message={
                                     <>
-                                        Whether to force path style URLs for S3 objects (e.g.,{" "}
+                                        Whether to force path-style URLs for S3 objects
+                                        <br />
+                                        For example:{" "}
                                         <code>
                                             https://{`{Server-URL}`}/{`{Bucket-Name}`}
-                                        </code>{" "}
-                                        instead of <code>{`https://{Bucket-Name}.{Server-URL}`}</code>
+                                        </code>
+                                        <br />
+                                        instead of: <code>{`https://{Bucket-Name}.{Server-URL}`}</code>
                                     </>
                                 }
                             >

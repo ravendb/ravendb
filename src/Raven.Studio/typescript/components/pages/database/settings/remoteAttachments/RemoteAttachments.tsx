@@ -166,7 +166,13 @@ function DestinationsList() {
             <HrHeader
                 right={
                     hasDatabaseAdminAccess && (
-                        <Button size="sm" onClick={() => handleOpenSheet()} variant="info" className="rounded-pill">
+                        <Button
+                            size="sm"
+                            onClick={() => handleOpenSheet()}
+                            variant="info"
+                            className="rounded-pill"
+                            title="Click to define a new destination"
+                        >
                             <Icon icon="plus" size="sm" />
                             Add new
                         </Button>

@@ -209,7 +209,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
                 <ViewSheet.Header className="panel-bg-2 align-items-center" isPinHidden>
                     <h3 className="m-0">
                         <Icon icon="global" addon="settings" color="primary" margin="me-2" />
-                        <span>{editingDestinationId ? "Edit Destination" : "Create New Destination"}</span>
+                        <span>{editingDestinationId ? "Edit Destination" : "Define New Destination"}</span>
                     </h3>
                 </ViewSheet.Header>
                 <ViewSheet.Body className="w-100 flex-grow-1 vstack p-4 overflow-auto">
