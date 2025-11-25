@@ -5,14 +5,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene;
 
 public class RavenTopDocs : TopDocs
 {
-    private readonly UnmanagedScoreDocArray _unmanagedScoreDocs;
+    private readonly ManagedScoreDocArray _scoreDocArray;
 
     public RavenTopDocs()
     {
-        _unmanagedScoreDocs = new UnmanagedScoreDocArray();
+        _scoreDocArray = new ManagedScoreDocArray();
     }
 
-    public override int Count => _unmanagedScoreDocs.Length;
+    public override int Count => _scoreDocArray.Length;
 
     public override ScoreDoc[] ScoreDocs
     {
@@ -36,18 +36,18 @@ public class RavenTopDocs : TopDocs
 
     public override (int Doc, float Score) GetRawValues(int index)
     {
-        var cds = _unmanagedScoreDocs[index];
+        var cds = _scoreDocArray[index];
         return (cds.Doc, cds.Score);
     }
 
     public void Add(int doc, float score)
     {
-        _unmanagedScoreDocs.Add(doc, score);
+        _scoreDocArray.Add(doc, score);
     }
 
     public override void Dispose()
     {
         base.Dispose();
-        _unmanagedScoreDocs?.Dispose();
+        _scoreDocArray?.Dispose();
     }
 }
