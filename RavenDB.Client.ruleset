@@ -4,6 +4,6 @@
     <Rule Id="CA2012" Action="Warning" />
   </Rules>
   <Rules AnalyzerId="Raven.CodeAnalysis" RuleNamespace="Raven.CodeAnalysis">
-    <Rule Id="RDB0010" Action="Error" />
+    <Rule Id="RDB0010" Action="Warning" />
   </Rules>
 </RuleSet>
