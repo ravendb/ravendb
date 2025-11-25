@@ -88,7 +88,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
         await DeleteObjects(Settings);
     }
 
-    public async Task PopulateDocsWithRandomAttachments(DocumentStore store, string identifier, int size, List<(string Id, string Collection)> ids, int attachmentsPerDoc, int start = 0)
+    public async Task PopulateDocsWithRandomAttachments(DocumentStore store, string identifier, int size, List<(string Id, string Collection)> ids, int attachmentsPerDoc, int start = 0, bool remote = true)
     {
         // put attachments
         foreach (var (id, collection) in ids)
@@ -109,7 +109,12 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
                 var profileStream = new MemoryStream(b);
                 var name = $"test_{i + start}.png";
 
-                var remoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3));
+                RemoteAttachmentParameters remoteParameters = null;
+                if (remote)
+                {
+                    remoteParameters = new RemoteAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3));
+                }
+
                 await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters(name, profileStream)
                 {
                     RemoteParameters = remoteParameters,

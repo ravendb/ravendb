@@ -39,6 +39,103 @@ namespace SlowTests.Server.Documents.Attachments
         {
         }
 
+        [AmazonS3RetryTheory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanPatchRemoteAttachments(bool patchMultiple)
+        {
+            int attachmentsCount = 2;
+            int size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc, remote: false);
+
+                    var id = ids.First().Id;
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    Assert.Equal(attachmentsCount, Attachments.Count);
+                    var att1 = Attachments.First().Name;
+                    var att2 = Attachments.Last().Name;
+                    using (AttachmentResult att = await store.Operations.SendAsync(new GetAttachmentOperation(id, att1, AttachmentType.Document, null)))
+                    {
+                        Assert.Equal(att.Details.Name, att1);
+                        Assert.Null(att.Details.RemoteParameters);
+                    }
+
+                    if (patchMultiple)
+                    {
+                        using (AttachmentResult att = await store.Operations.SendAsync(new GetAttachmentOperation(id, att2, AttachmentType.Document, null)))
+                        {
+                            Assert.Equal(att.Details.Name, att2);
+                            Assert.Null(att.Details.RemoteParameters);
+                        }
+                    }
+
+                    var dt = DateTime.UtcNow.AddMinutes(3);
+
+                    var patch = new PatchRequest
+                    {
+                        Script = "attachments(this, args.name).remote(args.identifier, args.at);",
+                        Values =
+                        {
+                            { "name", att1 },
+                            { "identifier", identifier },
+                            { "at", dt },
+                        }
+                    };
+
+                    var result = await store.Operations.SendAsync(new PatchOperation(id, null, patch));
+                    Assert.Equal(result, PatchStatus.Patched);
+                    if (patchMultiple)
+                    {
+                        patch.Values["name"] = att2;
+                        var result2 = await store.Operations.SendAsync(new PatchOperation(id, null, patch));
+                        Assert.Equal(result2, PatchStatus.Patched);
+                    }
+
+                    using (AttachmentResult att = await store.Operations.SendAsync(new GetAttachmentOperation(id, att1, AttachmentType.Document, null)))
+                    {
+                        Assert.Equal(att.Details.Name, att1);
+                        Assert.NotNull(att.Details.RemoteParameters);
+
+                        Assert.Equal(identifier, att.Details.RemoteParameters.Identifier);
+                        Assert.Equal(dt, att.Details.RemoteParameters.At);
+                    }
+
+                    if (patchMultiple)
+                    {
+                        using (AttachmentResult att = await store.Operations.SendAsync(new GetAttachmentOperation(id, att2, AttachmentType.Document, null)))
+                        {
+                            Assert.Equal(att.Details.Name, att2);
+                            Assert.NotNull(att.Details.RemoteParameters);
+
+                            Assert.Equal(identifier, att.Details.RemoteParameters.Identifier);
+                            Assert.Equal(dt, att.Details.RemoteParameters.At);
+                        }
+                    }
+
+                    // move in time & start remote
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, patchMultiple ? 2 : 1, 15_000);
+                    Assert.Equal(patchMultiple ? 2 : 1, cloudObjects.Count);
+
+                    var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
+                    Assert.Equal(patchMultiple ? 2 : 1, stats.CountOfRemoteAttachments);
+                    Assert.Equal(2, stats.CountOfAttachments);
+                }
+            }
+        }
+
         [AmazonS3RetryFact]
         public async Task RemoteAttachmentWithDisabledIdentifierShouldBeSkipped()
         {

@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Extensions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.BackgroundWork;
@@ -248,17 +250,6 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         return downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
 
-    private static unsafe LazyStringValue GetStringFromIdSlice(DocumentsOperationContext context, Slice identifierSlice)
-    {
-        var lzs = context.GetLazyStringValue(identifierSlice.Content.Ptr, out bool success);
-        if (success == false)
-        {
-            throw new InvalidOperationException($"Failed to get string from id: {identifierSlice}");
-        }
-
-        return lzs;
-    }
-
     public long TryUpdateRemoteAttachment(DocumentsOperationContext context, DateTime? newRemoteAtDt, long currentDt, string newIdentifier, string currentIdentifier, Slice keySlice)
     {
         // Handle case where there's no current upload date
@@ -307,6 +298,38 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
 
         remoteAt = remoteAtDt.Value.Ticks;
         Put(context, keySlice, remoteAtDt.Value.GetDefaultRavenFormat(), identifier);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void PutRemoteAttachmentFromPatch(DocumentsOperationContext context, BlittableJsonReaderObject document, string docId, string attachmentName, string identifier, DateTime at)
+    {
+        if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+            metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+            return;
+
+        var attachmentsStorage = Database.DocumentsStorage.AttachmentsStorage;
+        foreach (BlittableJsonReaderObject attachment in attachments)
+        {
+            if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
+                attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
+                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
+                throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
+
+            if (name == attachmentName)
+            {
+                if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject readerObject) && readerObject != null)
+                {
+                    RemoteAttachmentParameters current = JsonDeserializationClient.RemoteAttachmentParameters(readerObject);
+                    if (current.IsRemoteStorageAttachment())
+                        throw new InvalidOperationException($"Cannot update remote attachment '{name}' in document '{docId}' because it is already marked as remote.");
+                }
+
+                attachmentsStorage.PutAttachment(context, docId, name, contentType, hash, size, new RemoteAttachmentParameters(identifier, at), stream: null,
+                    updateDocument: false); // we will update the document in PatchDocumentCommand
+                break;
+            }
+        }
     }
 
     public RemoteAttachmentsSender UpdateRemoteAttachmentsFromDatabaseRecord(DatabaseRecord dbRecord, RemoteAttachmentsSender remoteAttachmentsSender)

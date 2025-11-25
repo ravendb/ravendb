@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
         public RemoteAttachmentParameters RemoteParameters { get; }
-        public string Hash { get; }
+        internal string Hash { get; }
         internal bool FromEtl { get; }
         internal long? SizeInBytes { get; }
 
