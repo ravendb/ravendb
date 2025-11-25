@@ -8,10 +8,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public class UpdateGenAiOperation(long taskId, GenAiConfiguration configuration, StartingPointChangeVector startingPoint = null, List<string> transformationsToReset = null) : IMaintenanceOperation<UpdateEtlOperationResult>
+public class UpdateGenAiOperation(long taskId, GenAiConfiguration configuration, StartingPointChangeVector startingPoint = null, bool reset = false) : IMaintenanceOperation<UpdateEtlOperationResult>
 {
     public RavenCommand<UpdateEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
+        List<string> transformationsToReset = null;
+
+        if (reset)
+            transformationsToReset = [configuration.TransformationName];
+        
         return new UpdateGenAiCommand(conventions, taskId, configuration, startingPoint, transformationsToReset);
     }
 
@@ -19,7 +24,7 @@ public class UpdateGenAiOperation(long taskId, GenAiConfiguration configuration,
     {
         private readonly StartingPointChangeVector _startingPoint;
 
-        public UpdateGenAiCommand(DocumentConventions conventions, long taskId, GenAiConfiguration configuration, StartingPointChangeVector startingPoint, List<string> transformationsToReset): base(conventions, taskId, configuration, transformationsToReset)
+        public UpdateGenAiCommand(DocumentConventions conventions, long taskId, GenAiConfiguration configuration, StartingPointChangeVector startingPoint, List<string> transformationsToReset) : base(conventions, taskId, configuration, transformationsToReset)
         {
             _startingPoint = startingPoint ?? StartingPointChangeVector.DoNotChange;
         }

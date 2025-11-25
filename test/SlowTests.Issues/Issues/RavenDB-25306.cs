@@ -73,7 +73,7 @@ public class RavenDB_25306 : EmbeddingsGenerationTestBase
                 
                 aiTaskDone.Reset();
                 
-                store.Maintenance.Send(new UpdateEmbeddingsGenerationOperation(addAiIntegrationTaskResult.TaskId, configuration, transformationsToReset: ["embeddings-from-paths"]));
+                store.Maintenance.Send(new UpdateEmbeddingsGenerationOperation(addAiIntegrationTaskResult.TaskId, configuration, reset: true));
                 
                 Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
                 

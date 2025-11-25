@@ -33,6 +33,11 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
 
     public TimeSpan EmbeddingsCacheForQueryingExpiration { get; set; } = TimeSpan.FromDays(14);
 
+    private const string PathsTransformationName = "embeddings-from-paths";
+    private const string ScriptTransformationName = "embeddings-transform-script";
+
+    internal string TransformationName => EmbeddingsTransformation == null ? PathsTransformationName : ScriptTransformationName;
+
     private List<Transformation> _transforms;
 
     [JsonDeserializationIgnore]
@@ -49,7 +54,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
                 {
                     new Transformation
                     {
-                        Name = "embeddings-from-paths",
+                        Name = PathsTransformationName,
                         Collections = [Collection]
                     }
                 };
@@ -58,7 +63,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             [
                 new Transformation
                 {
-                    Name = "embeddings-transform-script",
+                    Name = ScriptTransformationName,
                     Collections = [Collection],
                     Script = EmbeddingsTransformation.Script
                 }
