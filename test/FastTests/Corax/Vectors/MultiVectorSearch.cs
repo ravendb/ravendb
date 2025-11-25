@@ -202,12 +202,12 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
-    public void SortAndMergeDuplicatesShouldWork()
+    public void SortAndMinOnDuplicatesShouldWork()
     {
         Span<long> values = [2, 1, 2, 3];
         Span<float> itemsAssociated = [0.5f, 0.4f, 0.5f, 0.7f];
 
-        var length = Sorting.SortAndMergeDuplicates(values, itemsAssociated);
+        var length = Sorting.SortAndMinOnDuplicates(values, itemsAssociated);
 
         Assert.Equal(3, length);
     
@@ -216,7 +216,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         Assert.Equal(3, values[2]);
 
         Assert.Equal(0.4f, itemsAssociated[0]);
-        Assert.Equal(1.0f, itemsAssociated[1]);
+        Assert.Equal(0.5f, itemsAssociated[1]);
         Assert.Equal(0.7f, itemsAssociated[2]);
     }
     

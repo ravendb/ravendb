@@ -7,9 +7,7 @@ namespace Sparrow.Server.Utils
 {
     internal static class Sorting
     {
-        public static int SortAndMergeDuplicates<T, W>(Span<T> values, Span<W> itemsAssociated)
-            where T : unmanaged, IBinaryNumber<T>
-            where W : unmanaged, IAdditionOperators<W, W, W>
+        public static int SortAndMinOnDuplicates(Span<long> values, Span<float> itemsAssociated)
         {
             if (values.Length <= 1)
                 return values.Length;
@@ -21,7 +19,7 @@ namespace Sparrow.Server.Utils
             {
                 if (values[i] == values[outputIdx])
                 {
-                    itemsAssociated[outputIdx] += itemsAssociated[i];
+                    itemsAssociated[outputIdx] = Math.Min(itemsAssociated[outputIdx], itemsAssociated[i]);
                 }
                 else
                 {
