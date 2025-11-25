@@ -33,7 +33,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
                     builder.Write(PrimaryKey, entry.PrimaryKeyBytes);
                     builder.Write(SecondaryKey, entry.SecondaryKeyBytes);
                     builder.EndWriting();
-                    entriesIds[i] = builder.EntryId;
+                    entriesIds[i] = (long)builder.EntryId;
                 }
             }
 
@@ -53,7 +53,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
                     builder.Write(PrimaryKey, entry.PrimaryKeyBytes);
                     builder.Write(SecondaryKey, entry.SecondaryKeyBytes);
                     builder.EndWriting();
-                    entry.EntryId = builder.EntryId;
+                    entry.EntryId = (long)builder.EntryId;
                 }
             }
 
@@ -136,7 +136,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
                 builder.Write(SecondaryKey, "1"u8);
                 builder.EndWriting();
 
-                doc1Id = builder.EntryId;
+                doc1Id = (long)builder.EntryId;
             }
 
             using (var builder = writer.Update("doc/0"u8))
@@ -145,7 +145,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
                 builder.Write(SecondaryKey, "0"u8);
                 builder.EndWriting();
 
-                doc0Id = builder.EntryId;
+                doc0Id = (long)builder.EntryId;
             }
 
             writer.Commit();
@@ -230,7 +230,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
                     builder.Write(PrimaryKey, newEntry.PrimaryKeyBytes);
                     builder.Write(SecondaryKey, Encodings.Utf8.GetBytes(docId.ToString()));
                     builder.EndWriting();
-                    newEntry.EntryId = builder.EntryId;
+                    newEntry.EntryId = (long)builder.EntryId;
                 }
             }
 

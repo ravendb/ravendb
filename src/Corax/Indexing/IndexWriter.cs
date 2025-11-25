@@ -46,7 +46,7 @@ namespace Corax.Indexing
         // Structures used for document boosting. BoostedDocs is an in-memory cache for all documents that have been boosted during indexing.
         // DocumentBoost is a fixed tree that contains persisted boost values.
         private FixedSizeTree _documentBoost;
-        private List<(long EntryId, float Boost)> _boostedDocs;
+        private List<(DocumentEntryId EntryId, float Boost)> _boostedDocs;
         
         private Tree _indexMetadata;
         private long _numberOfTermModifications;
@@ -310,7 +310,7 @@ namespace Corax.Indexing
 
             _indexedEntries.Add(keySlice); // Register entry by key.
             int index = InsertTermsPerEntry(entryId);
-            _entryBuilder.Init(entryId, index, keySlice);
+            _entryBuilder.Init(new DocumentEntryId(entryId), index, keySlice);
             return _entryBuilder;
         }
 
@@ -337,7 +337,7 @@ namespace Corax.Indexing
                 DisablePaginationBasedOnEntryIdSupport();
 
             int index = InsertTermsPerEntry(entryId);
-            _entryBuilder.Init(entryId, index, keySlice);
+            _entryBuilder.Init(new DocumentEntryId(entryId), index, keySlice);
             return _entryBuilder;
         }
 
@@ -365,7 +365,7 @@ namespace Corax.Indexing
         /// </summary>
         /// <param name="entryId">Document id</param>
         /// <param name="documentBoost">Document boost value</param>
-        private void BoostEntry(long entryId, float documentBoost)
+        private void BoostEntry(DocumentEntryId entryId, float documentBoost)
         {
             if (documentBoost.AlmostEquals(1f))
             {
@@ -386,10 +386,10 @@ namespace Corax.Indexing
 
 
         /// <summary>Remove a document boosting from the tree.</summary>
-        /// <param name="entryId">Container id of entry (without encodings)</param>
-        private void RemoveDocumentBoost(long entryId)
+        /// <param name="entryId">Document entry id</param>
+        private void RemoveDocumentBoost(DocumentEntryId entryId)
         {
-            _documentBoost.Delete(entryId);
+            _documentBoost.Delete((long)entryId);
         }
 
         private IndexedField GetDynamicIndexedField(ByteStringContext context, string currentFieldName)
@@ -561,7 +561,7 @@ namespace Corax.Indexing
                     ThrowUnableToLocateEntry(entryToDelete);
 
                 ContainerEntryId entryTermsId = (ContainerEntryId)entryTermsIdLong;
-                RemoveDocumentBoost(entryToDelete);
+                RemoveDocumentBoost(new DocumentEntryId(entryToDelete));
                 Container.Get(_transaction.LowLevelTransaction, entryTermsId, out var entryTerms);
                 var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
                 RecordTermDeletionsForEntry(entryTerms, _transaction.LowLevelTransaction, _fieldsByRootPage, _nullTermsMarkers, _nonExistingTermsMarkers,
@@ -622,7 +622,7 @@ namespace Corax.Indexing
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
+                term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
                 scope.Dispose();
 
                 if (reader.HasNumeric == false)
@@ -636,7 +636,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -646,7 +646,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, freq: 1, InserterMode.Numerical);
             }
         }
 
@@ -661,7 +661,7 @@ namespace Corax.Indexing
             }
 
             ref var term = ref field.Storage.GetAsRef(termLocation);
-            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
+            term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
         }
 
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
@@ -740,7 +740,7 @@ namespace Corax.Indexing
                     // we'll delete them, but treat this as a _new_ entry, not an update to an existing
                     // one
                     RecordAndPrepareDocumentsIdsForDeletion(containerId, out var setsAreDisjoint, out var isSingleDocument, out var singleDocumentEntryId);
-                    entryId = isSingleDocument ? singleDocumentEntryId : Constants.IndexSearcher.InvalidId;
+                    entryId = isSingleDocument ? (long)singleDocumentEntryId : Constants.IndexSearcher.InvalidId;
 
                     Debug.Assert(isSingleDocument || setsAreDisjoint,
                         $"A single document can be deleted twice (delete + update), however if it's not a single document, the sets are supposed to be disjoint.");
@@ -877,33 +877,36 @@ namespace Corax.Indexing
         /// <param name="idInTree">With frequencies and container type.</param>
         /// <param name="setsAreDisjoint">Intersection between PostingList and _deletedEntries. We may use it as indicator for flushing batch.</param>
         [SkipLocalsInit]
-        private void RecordAndPrepareDocumentsIdsForDeletion(long postingListId, out bool setsAreDisjoint, out bool isSingleDocument, out long singleDocumentEntryId)
+        private void RecordAndPrepareDocumentsIdsForDeletion(long postingListId, out bool setsAreDisjoint, out bool isSingleDocument, out DocumentEntryId singleDocumentEntryId)
         {
             Debug.Assert(_entriesToDelete.Count == 0);
 
             var countOfAlreadyDeletedEntries = _deletedEntries.Count;
             setsAreDisjoint = true;
-            var containerEntryId = (ContainerEntryId)EntryIdEncodings.GetContainerId(postingListId);
 
             if ((postingListId & (long)TermIdMask.EnsureIsSingleMask) == (long)TermIdMask.Single)
             {
-                singleDocumentEntryId = (long)containerEntryId;
-                Debug.Assert(singleDocumentEntryId > 0);
-                var isNewDocument = _deletedEntries.Add((long)containerEntryId);
+                // Encoding duality: TermIdMask.Single stores DocumentEntryId in bits, posting lists store ContainerEntryId.
+                // Use DecodeAndDiscardFrequency for Single, GetContainerId for posting-lists.
+                singleDocumentEntryId = EntryIdEncodings.DecodeAndDiscardFrequency(postingListId);
+                Debug.Assert(singleDocumentEntryId.IsValid);
+                var isNewDocument = _deletedEntries.Add((long)singleDocumentEntryId);
                 if (isNewDocument)
-                    _entriesToDelete.Add(singleDocumentEntryId);
+                    _entriesToDelete.Add((long)singleDocumentEntryId);
                 setsAreDisjoint &= isNewDocument;
                 _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
                 isSingleDocument = true;
                 return;
             }
 
+            // For posting lists, extract the container ID
+            var containerEntryId = EntryIdEncodings.GetContainerId(postingListId);
 
             const int bufferSize = 1024;
             var bufferPtr = stackalloc long[bufferSize];
             var buffer = new Span<long>(bufferPtr, bufferSize);
             isSingleDocument = false;
-            singleDocumentEntryId = Constants.IndexSearcher.InvalidId;
+            singleDocumentEntryId = DocumentEntryId.Invalid;
             if ((postingListId & (long)TermIdMask.PostingList) != 0)
             {
                 var setSpace = Container.GetMutable(_transaction.LowLevelTransaction, containerEntryId);
@@ -1093,7 +1096,7 @@ namespace Corax.Indexing
             _boostedDocs.Sort();
             foreach (var (entryId, documentBoost) in _boostedDocs)
             {
-                using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
+                using var __ = _documentBoost.DirectAdd((long)entryId, out _, out byte* boostPtr);
                 float* floatBoostPtr = (float*)boostPtr;
                 *floatBoostPtr = documentBoost;
             }
@@ -1204,7 +1207,7 @@ namespace Corax.Indexing
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
 
             var llt = _transaction.LowLevelTransaction;
-            Container.GetMutable(llt, new ContainerEntryId(containerId), out var item);
+            Container.GetMutable(llt, containerId, out var item);
 
             Debug.Assert(entries.Removals.ToSpan().ToArray().Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
 
@@ -1241,7 +1244,7 @@ namespace Corax.Indexing
 
             if (_smallPostingListWorkingBuffer.Count == 0)
             {
-                Container.Delete(llt, _postingListContainerId, new ContainerEntryId(containerId));
+                Container.Delete(llt, _postingListContainerId, containerId);
                 termIdInTree = Constants.IndexSearcher.InvalidId;
                 return AddEntriesToTermResult.RemoveTermId;
             }
@@ -1257,13 +1260,13 @@ namespace Corax.Indexing
             {
                 var mutableSpace = item.ToSpan();
                 encoded.CopyTo(mutableSpace);
-
+                
                 // can update in place
                 termIdInTree = Constants.IndexSearcher.InvalidId;
                 return AddEntriesToTermResult.NothingToDo;
             }
 
-            Container.Delete(llt, _postingListContainerId, new ContainerEntryId(containerId));
+            Container.Delete(llt, _postingListContainerId, containerId);
 
             termIdInTree = AllocatedSpaceForSmallSet(encoded, llt, out Span<byte> space);
 
@@ -1274,15 +1277,18 @@ namespace Corax.Indexing
 
         private long AllocatedSpaceForSmallSet(Span<byte> encoded, LowLevelTransaction llt, out Span<byte> space)
         {
-            long termIdInTree = (long)Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
+            // Allocate returns storage-level ContainerEntryId
+            ContainerEntryId termIdInTree = Container.Allocate(llt, _postingListContainerId, encoded.Length, out space);
 
-            return EntryIdEncodings.Encode(termIdInTree, 0, TermIdMask.SmallPostingList);
+            // Encode for storage: cast ContainerEntryId to long
+            return EntryIdEncodings.Encode((long)termIdInTree, 0, TermIdMask.SmallPostingList);
         }
 
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long idInTree, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
 
+            // Decode returns document-layer ID and frequency from encoded storage value
             var (existingEntryId, existingFrequency) = EntryIdEncodings.Decode(idInTree);
 
             // In case when existingEntryId and only addition is the same:
@@ -1297,7 +1303,7 @@ namespace Corax.Indexing
                 {
                     Debug.Assert(entries.Removals.Count == 0 || entries.Removals.ToSpan()[0].EntryId == existingEntryId);
 
-                    var newId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);
+                    var newId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, TermIdMask.Single);
                     if (newId == idInTree)
                     {
                         termId = Constants.IndexSearcher.InvalidId;
@@ -1341,7 +1347,7 @@ namespace Corax.Indexing
                 if (isIncluded == false)
                 {
                     // We are not processing recorded terms for this document because it already exists on the disk. We do not have to know the actual term type.
-                    entries.Addition(_entriesAllocator, existingEntryId, -1, existingFrequency, InserterMode.Ignore); 
+                    entries.Addition(_entriesAllocator, existingEntryId, -1, existingFrequency, InserterMode.Ignore);
                 }
             }
 
@@ -1361,7 +1367,7 @@ namespace Corax.Indexing
         {
             var containerId = EntryIdEncodings.GetContainerId(id);
             var llt = _transaction.LowLevelTransaction;
-            var setSpace = Container.GetMutable(llt, new ContainerEntryId(containerId));
+            var setSpace = Container.GetMutable(llt, containerId);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
 
             entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out var additions, out var removals);
@@ -1378,8 +1384,8 @@ namespace Corax.Indexing
 
                 llt.FreePage(postingListState.RootPage);
 
-                Container.Delete(llt, _postingListContainerId, new ContainerEntryId(containerId));
-                RemovePostingListFromLargePostingListsSet(containerId);
+                Container.Delete(llt, _postingListContainerId, containerId);
+                RemovePostingListFromLargePostingListsSet((long)containerId);
 
                 return AddEntriesToTermResult.RemoveTermId;
             }
@@ -1431,7 +1437,7 @@ namespace Corax.Indexing
             {
                 entries.AssertPreparationIsNotFinished();
                 ref var single = ref entries.Additions.ToSpan()[0];
-                termId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, (long)TermIdMask.Single);
+                termId = EntryIdEncodings.Encode(single.EntryId, single.Frequency, TermIdMask.Single);
                 return;
             }
 

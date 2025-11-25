@@ -29,7 +29,7 @@ public class OptimizedUpdatesOnIndexes : StorageTest
                 entry.Write(0, "cars/1"u8);
                 entry.Write(1, "Lightning"u8);
                 entry.Write(2, "12"u8);
-                oldId = entry.EntryId;
+                oldId = (long)entry.EntryId;
                 entry.EndWriting();
             }
             
@@ -53,7 +53,7 @@ public class OptimizedUpdatesOnIndexes : StorageTest
                 entry.Write(0, "cars/1"u8);
                 entry.Write(1, "Lightning"u8);
                 entry.Write(2, "13"u8);
-                newId = entry.EntryId;
+                newId = (long)entry.EntryId;
                 entry.EndWriting();
             }
             

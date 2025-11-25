@@ -45,7 +45,7 @@ public class RavenDB_19283 : StorageTest
                 writer.Write(0, Encoding.UTF8.GetBytes("users/1"));
                 var tags = Enumerable.Range(0, 10000).Select(x => options[x % options.Length]);
 
-                entryId = writer.EntryId;
+                entryId = (long)writer.EntryId;
                 
                 writer.IncrementList();
                 {

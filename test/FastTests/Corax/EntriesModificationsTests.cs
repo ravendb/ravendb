@@ -19,15 +19,15 @@ public class EntriesModificationsTests : NoDisposalNeeded
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         var entries = new EntriesModifications(0);
         
-        entries.Addition(bsc, 2, -1, 1, InserterMode.ExactInsert);
-        entries.Removal(bsc, 1, -1,1, InserterMode.ExactInsert);
-        entries.Addition(bsc, 3, -1,1, InserterMode.ExactInsert);
-        entries.Removal(bsc, 2, -1,1, InserterMode.ExactInsert);
+        entries.Addition(bsc, new DocumentEntryId(2), -1, 1, InserterMode.ExactInsert);
+        entries.Removal(bsc, new DocumentEntryId(1), -1,1, InserterMode.ExactInsert);
+        entries.Addition(bsc, new DocumentEntryId(3), -1,1, InserterMode.ExactInsert);
+        entries.Removal(bsc, new DocumentEntryId(2), -1,1, InserterMode.ExactInsert);
         entries.Prepare(bsc);
 
         AssertEntriesCase(ref entries);
         Assert.Equal(1, entries.Updates.Count);
-        Assert.Equal(2, entries.Updates.ToSpan()[0].EntryId);
+        Assert.Equal(new DocumentEntryId(2), entries.Updates.ToSpan()[0].EntryId);
     }
     private static void AssertEntriesCase(ref EntriesModifications entries)
     {

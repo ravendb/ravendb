@@ -19,14 +19,14 @@ public partial class IndexWriter
     public sealed class IndexEntryBuilder :  IIndexEntryBuilder, IDisposable
     {
         private readonly IndexWriter _parent;
-        private long _entryId;
+        private DocumentEntryId _entryId;
         private int _termPerEntryIndex;
         public bool Active;
         private int _buildingList;
         private Slice _documentId;
         private bool _mapFinishedSuccessfully = false;
 
-        public long EntryId => _entryId;
+        public DocumentEntryId EntryId => _entryId;
 
         public IndexEntryBuilder(IndexWriter parent)
         {
@@ -38,7 +38,7 @@ public partial class IndexWriter
             _parent.BoostEntry(_entryId, boost);
         }
 
-        public void Init(long entryId, int termsPerEntryIndex, Slice documentId)
+        public void Init(DocumentEntryId entryId, int termsPerEntryIndex, Slice documentId)
         {
             Active = true;
             _mapFinishedSuccessfully = false;
@@ -263,7 +263,7 @@ public partial class IndexWriter
         private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
         {
             field.Spatial ??= new();
-            ref var terms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Spatial, _entryId, out var exists);
+            ref var terms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Spatial, (long)_entryId, out var exists);
             if (exists == false)
             {
                 terms = new IndexedField.SpatialEntry {Locations = new List<(double, double)>(), TermsPerEntryIndex = _termPerEntryIndex};
