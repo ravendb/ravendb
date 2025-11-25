@@ -398,7 +398,7 @@ namespace Voron.Data.Tables
             {
                 if (this._index >= NumberOfPagesInSection)
                 {
-                    this._isDone = !_iterator.MoveNext();
+                    this._isDone = _iterator.MoveNext() == false;
                     if (_isDone)
                         return false;
 

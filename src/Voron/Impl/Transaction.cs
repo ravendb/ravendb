@@ -369,9 +369,10 @@ namespace Voron.Impl
         internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
         {
             var keyToRemove = Tuple.Create(parentTree, key);
-            if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
+            
+            if (_multiValueTrees == null)
                 return false;
-
+            
             return _multiValueTrees.Remove(keyToRemove);
         }
 

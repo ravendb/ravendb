@@ -107,7 +107,7 @@ namespace Voron.Global
 
         public static void Assert(Func<bool> condition, Func<string> reason)
         {
-            if (!condition())
+            if (condition() == false)
                 throw new NotSupportedException($"Critical: A constant assertion has failed. Reason: {reason()}.");
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -751,10 +752,8 @@ namespace Voron.Debugging
         {
             if (page.IsLeaf)
             {
-                if (!histogram.TryGetValue(depth, out int value))
-                    value = 0;
-
-                histogram[depth] = value + 1;
+                ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(histogram, depth, out _);
+                value += 1;
             }
             else
             {

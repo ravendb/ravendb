@@ -1522,7 +1522,7 @@ namespace Voron.Data.Containers
             }
         }
 
-        public static (Lookup<Int64LookupKey> allPages, Lookup<Int64LookupKey> freePages) GetPagesFor(LowLevelTransaction tx, ContainerId containerId)
+        public static (Lookup<Int64LookupKey> AllPages, Lookup<Int64LookupKey> FreePages) GetPagesFor(LowLevelTransaction tx, ContainerId containerId)
         {
             var state = tx.Transaction.GetContainerState(containerId);
             return (state.GetAllPages(tx), state.GetFreePages(tx));

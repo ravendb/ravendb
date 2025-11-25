@@ -662,7 +662,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
     }
     
-    private (long key, long childValue) GetFirstActualKeyAndValue(LookupPageHeader* src)
+    private (long Key, long ChildValue) GetFirstActualKeyAndValue(LookupPageHeader* src)
     {
         Debug.Assert(src->IsBranch,"destination->IsBranch");
 
