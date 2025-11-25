@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -14,6 +15,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Sparrow
 {
+    [SuppressMessage("BooleanMethodNegation", "RDB0010:Avoid negating boolean method conditions")]
     public static unsafe class Memory
     {
 #if NET7_0_OR_GREATER
