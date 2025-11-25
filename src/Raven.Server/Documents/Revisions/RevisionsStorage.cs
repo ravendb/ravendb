@@ -243,14 +243,14 @@ namespace Raven.Server.Documents.Revisions
             if (docConfiguration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
                 return true;
 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler))
+            {
+                // Smuggler is configured to avoid creating new revisions during import
+                return false;
+            }
+
             if (existingDocument == null)
             {
-                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler))
-                {
-                    // Smuggler is configured to avoid creating new revisions during import
-                    return false;
-                }
-
                 // we are not going to create a revision if it's an import from v3
                 // (since this import is going to import revisions as well)
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions))
