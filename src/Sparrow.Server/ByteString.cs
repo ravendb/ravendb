@@ -601,7 +601,7 @@ namespace Sparrow.Server
 
                 if (segment.Size >= size)
                 {
-                    if (!segment.InUse.Raise())
+                    if (segment.InUse.Raise() == false)
                         continue;
 
                     return segment;

@@ -3547,7 +3547,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AssertNameForInclude(string name)
         {
-            if (string.IsNullOrEmpty(name) || !name.All(c => c == '_'))
+            if (string.IsNullOrEmpty(name) || name.All(c => c == '_') == false)
             {
                 throw new InvalidOperationException("The result of an Include can only be assigned to the discard symbol (_)");
             }

@@ -113,12 +113,10 @@ namespace Raven.Client.Documents.Conventions
 
             public string Apply(string word)
             {
-                if (!regex.IsMatch(word))
-                {
-                    return null;
-                }
-
-                return regex.Replace(word, replacement);
+                if (regex.IsMatch(word)) 
+                    return regex.Replace(word, replacement);
+                
+                return null;
             }
         }
 
@@ -179,7 +177,7 @@ namespace Raven.Client.Documents.Conventions
         {
             string result = word;
 
-            if (!Uncountables.Contains(word.ToLower()))
+            if (Uncountables.Contains(word.ToLower()) == false)
             {
                 for (int i = rules.Count - 1; i >= 0; i--)
                 {

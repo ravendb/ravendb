@@ -40,7 +40,7 @@ public sealed class AzureQueueStorageConnectionSettings
         if (EntraId != null) 
             count++;
     
-        if (!string.IsNullOrWhiteSpace(ConnectionString))
+        if (string.IsNullOrWhiteSpace(ConnectionString) == false)
             count++;
 
         if (Passwordless != null) 
