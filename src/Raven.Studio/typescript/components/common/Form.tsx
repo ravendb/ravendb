@@ -482,7 +482,7 @@ export function FormDatePicker<
                     <DatePicker
                         selected={value}
                         onChange={onChange}
-                        invalid={invalid}
+                        isInvalid={invalid}
                         disabled={formState.isSubmitting}
                         {...rest}
                     />

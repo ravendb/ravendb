@@ -425,7 +425,7 @@ namespace Raven.Client.Documents.Linq
                     var expressions = ((NewArrayExpression)expression).Expressions;
                     var values = new object[expressions.Count];
                     value = null;
-                    if (expressions.Where((t, i) => !GetValueFromExpressionWithoutConversion(t, out values[i])).Any())
+                    if (expressions.Where((t, i) => GetValueFromExpressionWithoutConversion(t, out values[i]) == false).Any())
                         return false;
                     value = values;
                     return true;

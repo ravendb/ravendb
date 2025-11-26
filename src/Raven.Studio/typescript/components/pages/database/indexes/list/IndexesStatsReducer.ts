@@ -147,13 +147,15 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
 }
 
 function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] {
-    return locations.map((location) => ({
-        location,
-        status: "idle",
-        details: null,
-        progress: null,
-        createdTimestamp: null,
-    }));
+    return locations.map(
+        (location): IndexNodeInfo => ({
+            location,
+            status: "idle",
+            details: null,
+            progress: null,
+            createdTimestamp: null,
+        })
+    );
 }
 
 function markProgressAsCompleted(progress: Draft<IndexProgressInfo>) {

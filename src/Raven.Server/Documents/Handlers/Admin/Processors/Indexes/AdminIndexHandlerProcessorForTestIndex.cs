@@ -50,6 +50,8 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
             if (maxDocumentsPerIndex > documentsPerIndexUpperLimit || maxDocumentsPerIndex < documentsPerIndexLowerLimit)
                 throw new BadRequestException($"Number of documents to process cannot be bigger than {documentsPerIndexUpperLimit} or less than {documentsPerIndexLowerLimit}.");
 
+            testIndexDefinition.Type = testIndexDefinition.DetectStaticIndexType();
+            
             if (testIndexDefinition.Type.IsJavaScript() == false)
             {
                 // C# index without admin authorization

@@ -3,7 +3,7 @@ import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import { useAsync, useAsyncCallback, UseAsyncReturn } from "react-async-hook";
+import { useAsync, UseAsyncReturn } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -21,6 +21,8 @@ import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import genUtils from "common/generalUtils";
 import studioSettings from "common/settings/studioSettings";
 import { Switch } from "components/common/Checkbox";
+import useBoolean from "hooks/useBoolean";
+import { useIsMounted } from "components/hooks/useIsMounted";
 
 interface DeleteDocumentsModalProps {
     close: () => void;
@@ -59,11 +61,11 @@ export default function DeleteDocumentsModal({
         onDeleteCompleted
     );
 
-    const onConfirm = async () => {
+    const onConfirm = () => {
         if (!isConfirmed) {
             return;
         }
-        await deleteCollection.execute();
+        deleteCollection.execute();
     };
 
     const toggleIsRequireTypedConfirm = async () => {
@@ -144,58 +146,62 @@ function useDeleteCollection(
 ) {
     const { databasesService } = useServices();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { value: isLoading, setValue: setIsLoading } = useBoolean(false);
+    const isMounted = useIsMounted();
 
-    const deleteCollectionAsync = useAsyncCallback(
-        async () => {
-            const collectionNameForApi = currentCollection().isAllDocuments ? "@all_docs" : currentCollection().name;
-            const result = await databasesService.deleteCollection(collectionNameForApi, dbName, excludedIds);
-            return result.OperationId;
-        },
-        {
-            onError: (error) => messagePublisher.reportError("Failed to delete collection", error.message),
-        }
-    );
+    const execute = () => {
+        setIsLoading(true);
+        const collectionNameForApi = currentCollection().isAllDocuments ? "@all_docs" : currentCollection().name;
 
-    const monitorOperationAsync = useAsyncCallback(
-        async (operationId: number) => {
-            notificationCenter.instance.openDetailsForOperationById(dbName, operationId);
-            close();
-            await notificationCenter.instance.databaseOperationsWatch
-                .monitorOperation(operationId)
-                .done(() => {
-                    if (excludedIds.length === 0) {
-                        messagePublisher.reportSuccess(`Deleted collection ${currentCollection().name}`);
-                    } else {
-                        messagePublisher.reportSuccess(
-                            `Deleted ${pluralizeHelpers.pluralize(documentCount, "document", "documents")} from ${currentCollection().name}`
-                        );
-                    }
+        // This is JQueryPromise. Use 'done' to prevent wrong order of execution in event loop
+        databasesService
+            .deleteCollection(collectionNameForApi, dbName, excludedIds)
+            .done((result) => {
+                const operationId = result.OperationId;
 
-                    if (excludedIds.length === 0) {
-                        // if entire collection was deleted then go to 'all documents'
-                        const allDocsCollection = collectionsTracker.default.getAllDocumentsCollection();
-                        if (currentCollection() !== allDocsCollection) {
-                            currentCollection(allDocsCollection);
+                // For slow connection, this operation may fail
+                try {
+                    notificationCenter.instance.openDetailsForOperationById(dbName, operationId);
+                } catch {
+                    onDeleteCompleted();
+                    close();
+                    return;
+                }
+
+                notificationCenter.instance.databaseOperationsWatch
+                    .monitorOperation(operationId)
+                    .done(() => {
+                        if (excludedIds.length === 0) {
+                            messagePublisher.reportSuccess(`Deleted collection ${currentCollection().name}`);
+                        } else {
+                            messagePublisher.reportSuccess(
+                                `Deleted ${pluralizeHelpers.pluralize(documentCount, "document", "documents")} from ${currentCollection().name}`
+                            );
                         }
-                    }
-                })
-                .always(() => onDeleteCompleted());
-        },
-        {
-            onError: (error) => messagePublisher.reportError("Failed to monitor delete operation", error.message),
-        }
-    );
 
-    const execute = async () => {
-        const operationId = await deleteCollectionAsync.execute();
-        if (operationId) {
-            await monitorOperationAsync.execute(operationId);
-        }
+                        if (excludedIds.length === 0) {
+                            // if entire collection was deleted then go to 'all documents'
+                            const allDocsCollection = collectionsTracker.default.getAllDocumentsCollection();
+                            if (currentCollection() !== allDocsCollection) {
+                                currentCollection(allDocsCollection);
+                            }
+                        }
+                    })
+                    .always(() => {
+                        onDeleteCompleted();
+                        close();
+                    });
+            })
+            .always(() => {
+                if (isMounted()) {
+                    setIsLoading(false);
+                }
+            });
     };
 
     return {
         execute,
-        loading: deleteCollectionAsync.loading || monitorOperationAsync.loading,
+        loading: isLoading,
     };
 }
 

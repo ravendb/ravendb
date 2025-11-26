@@ -33,6 +33,11 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
 
     public TimeSpan EmbeddingsCacheForQueryingExpiration { get; set; } = TimeSpan.FromDays(14);
 
+    private const string PathsTransformationName = "embeddings-from-paths";
+    private const string ScriptTransformationName = "embeddings-transform-script";
+
+    internal string TransformationName => EmbeddingsTransformation == null ? PathsTransformationName : ScriptTransformationName;
+
     private List<Transformation> _transforms;
 
     [JsonDeserializationIgnore]
@@ -49,7 +54,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
                 {
                     new Transformation
                     {
-                        Name = "embeddings-from-paths",
+                        Name = PathsTransformationName,
                         Collections = [Collection]
                     }
                 };
@@ -58,7 +63,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             [
                 new Transformation
                 {
-                    Name = "embeddings-transform-script",
+                    Name = ScriptTransformationName,
                     Collections = [Collection],
                     Script = EmbeddingsTransformation.Script
                 }
@@ -178,5 +183,49 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
     internal static string GenerateIdentifier(string input)
     {
        return AiTaskIdentifierHelper.GenerateIdentifier(input);
+    }
+    
+    internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<AiConnectionString> config, Dictionary<string, AiConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+    {
+        var differences = base.Compare(config, connectionStrings, transformationDiffs);
+        if (config is not EmbeddingsGenerationConfiguration other)
+            return differences;
+
+        if (Collection != other.Collection ||
+            Quantization != other.Quantization ||
+            EmbeddingsCacheExpiration != other.EmbeddingsCacheExpiration ||
+            EmbeddingsCacheForQueryingExpiration != other.EmbeddingsCacheForQueryingExpiration ||
+            EmbeddingsTransformation.AreEqual(EmbeddingsTransformation, other.EmbeddingsTransformation) == false ||
+            ChunkingOptions.AreEqual(ChunkingOptionsForQuerying,other.ChunkingOptionsForQuerying) == false)
+            differences |= EtlConfigurationCompareDifferences.Other;
+        
+        differences |= CompareEmbeddingsPathConfigurations(other.EmbeddingsPathConfigurations);
+
+        return differences;
+    }
+
+    private EtlConfigurationCompareDifferences CompareEmbeddingsPathConfigurations(List<EmbeddingPathConfiguration> other)
+    {
+        if (EmbeddingsPathConfigurations == null && 
+            other == null)
+            return EtlConfigurationCompareDifferences.None;
+        
+        if (EmbeddingsPathConfigurations == null ||
+            other == null)
+            return EtlConfigurationCompareDifferences.Other;
+        
+        if (EmbeddingsPathConfigurations.Count != other.Count)
+            return EtlConfigurationCompareDifferences.Other;
+        
+        foreach (var pathConfiguration in EmbeddingsPathConfigurations)
+        {
+            var otherPathConfiguration = other.SingleOrDefault(x => x.Path == pathConfiguration.Path);
+
+            if (otherPathConfiguration == null ||
+                EmbeddingPathConfiguration.AreEqual(pathConfiguration, otherPathConfiguration) == false)
+                return EtlConfigurationCompareDifferences.Other;
+        }
+
+        return EtlConfigurationCompareDifferences.None;
     }
 }

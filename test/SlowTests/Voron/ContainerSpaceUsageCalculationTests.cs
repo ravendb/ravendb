@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
@@ -38,17 +38,17 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
             for (int i = 0; i < elementsUsed; i++)
             {
                 Container.Allocate(llt: wTx.LowLevelTransaction, containerId: currentContainer, size: random.Next(17, 512), out var memory);
-                
+
                 memory.Fill((byte)random.Next(0, byte.MaxValue +1));
             }
-            
+
             wTx.Commit();
         }
 
         using (var rTx = Env.ReadTransaction())
         {
             var currentContainer = rTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
-            var rootPage = rTx.LowLevelTransaction.GetPage(currentContainer);
+            var rootPage = rTx.LowLevelTransaction.GetPage((long)currentContainer);
             var rootContainer = new Container(rootPage);
 
             var spaceUsedFromMethod = rootContainer.SpaceUsedInItems(rootPage.Pointer, out var usedItemsFromMethod);
@@ -74,8 +74,8 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         if (iterations > elementsUsed)
             elementsUsed = iterations;
         
-        long[] containersToRemove = new long[elementsUsed];
-        long rootContainerPage;
+        ContainerEntryId[] containersToRemove = new ContainerEntryId[elementsUsed];
+        ContainerId rootContainerPage;
         using (var wTx = Env.WriteTransaction())
         {
             rootContainerPage = wTx.OpenContainer(nameof(ContainerSpaceUsageCalculationTests));
@@ -118,7 +118,7 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         AssertSpaceUsedInItems(rootContainerPage, iterations);
         using (var rTx = Env.ReadTransaction())
         {
-            var rootPage = rTx.LowLevelTransaction.GetPage(rootContainerPage);
+            var rootPage = rTx.LowLevelTransaction.GetPage((long)rootContainerPage);
             var rootContainer = new Container(rootPage);
 
             var hasEntries = false;
@@ -137,11 +137,11 @@ public class ContainerSpaceUsageCalculationTests(ITestOutputHelper output) : Sto
         }
     }
 
-    private unsafe void AssertSpaceUsedInItems(long rootContainerPage, int iterationIdx)
+    private unsafe void AssertSpaceUsedInItems(ContainerId rootContainerPage, int iterationIdx)
     {
         using (var rTx = Env.WriteTransaction())
         {
-            var rootPage = rTx.LowLevelTransaction.ModifyPage(rootContainerPage);
+            var rootPage = rTx.LowLevelTransaction.ModifyPage((long)rootContainerPage);
             var rootContainer = new Container(rootPage);
             var spaceUsedFromMethod = rootContainer.SpaceUsedInItems(rootPage.Pointer, out var usedItemsFromMethod);
             var sizeUsedOneByOne = SpaceUsedInItems(rootPage, ref rootContainer, out var usedItems);

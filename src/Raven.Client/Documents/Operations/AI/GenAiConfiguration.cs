@@ -42,6 +42,8 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
     private const int DefaultMaxConcurrency = 4;
 
+    internal readonly string TransformationName = "GenAi-transform-script";
+
     [JsonDeserializationIgnore]
     [JsonIgnore]
     [Obsolete($"{nameof(GenAiConfiguration)} doesn't support multiple transformations. Please use {nameof(GenAiTransformation)} property instead.")]
@@ -55,7 +57,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             [
                 new Transformation
                 {
-                    Name = "GenAi-transform-script",
+                    Name = TransformationName,
                     Collections = [Collection],
                     Script = GenAiTransformation?.Script
                 }

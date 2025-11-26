@@ -253,7 +253,7 @@ public unsafe struct EntryTermsReader
         IsNonExisting = _nonExistingTermsMarkers.Contains(TermId);
         IsVectorHash = false;
         
-        Container.Get(_llt, TermId, out var termItem);
+        Container.Get(_llt, new ContainerEntryId(TermId), out var termItem);
         FieldRootPage = termItem.PageLevelMetadata;
         
         if (IsNull == false && IsNonExisting == false)
@@ -311,7 +311,7 @@ public unsafe struct EntryTermsReader
                         FieldRootPage = val;
                         break;
                     case StoredFieldType.Term:
-                        Container.Get(_llt, val, out var termItem);
+                        Container.Get(_llt, new ContainerEntryId(val), out var termItem);
                         TermId = val;
                         FieldRootPage = termItem.PageLevelMetadata;
                         StoredField = termItem.ToUnmanagedSpan();

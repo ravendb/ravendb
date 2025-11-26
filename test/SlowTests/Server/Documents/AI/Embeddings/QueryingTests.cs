@@ -441,7 +441,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public async Task MultiVectorSearchSumsDuplicates(Options options)
+    public async Task MultiVectorSearchMinOnDuplicates(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -469,7 +469,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                     .ToList();
                 
                 Assert.Equal(2, multiVectorTextualQueryResult.Count);
-                Assert.Equal("fruit", multiVectorTextualQueryResult.First().TextualValue);
+                Assert.Equal("pizza", multiVectorTextualQueryResult.First().TextualValue);
             }
         }
     }

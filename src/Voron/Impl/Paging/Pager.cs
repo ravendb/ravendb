@@ -229,7 +229,7 @@ public unsafe partial class Pager : IDisposable
         do
         {
             long pageNumber = pagesToPrefetch.Current;
-            if (!_prefetchState.ShouldPrefetchSegment(pageNumber, out var offset, out long bytes))
+            if (_prefetchState.ShouldPrefetchSegment(pageNumber, out var offset, out long bytes) == false)
                 continue;
 
             prefetcher.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges { VirtualAddress = state.ReadAddress + offset, NumberOfBytes = (nint)bytes }, 0);

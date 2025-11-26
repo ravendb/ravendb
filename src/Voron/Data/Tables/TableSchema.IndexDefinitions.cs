@@ -142,7 +142,7 @@ namespace Voron.Data.Tables
                 if (actual == null)
                     throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
 
-                if (!SliceComparer.Equals(Name, actual.Name))
+                if (SliceComparer.Equals(Name, actual.Name) == false)
                     throw new ArgumentException(
                         $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
                         nameof(actual));
@@ -453,7 +453,7 @@ namespace Voron.Data.Tables
                 if (actual == null)
                     throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
 
-                if (!SliceComparer.Equals(Name, actual.Name))
+                if (SliceComparer.Equals(Name, actual.Name) == false)
                     throw new ArgumentException(
                         $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
                         nameof(actual));
@@ -591,7 +591,7 @@ namespace Voron.Data.Tables
                 if (actual == null)
                     throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
 
-                if (!SliceComparer.Equals(Name, actual.Name))
+                if (SliceComparer.Equals(Name, actual.Name) == false)
                     throw new ArgumentException(
                         $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
                         nameof(actual));

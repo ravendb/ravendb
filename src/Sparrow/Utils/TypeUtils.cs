@@ -43,7 +43,7 @@ namespace Sparrow.Utils
                 return false;
 
             //prevent infinite loops
-            if (!visited.Add(obj))
+            if (visited.Add(obj) == false)
                 return false;
 
             var type = obj.GetType();

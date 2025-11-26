@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var memberAccess = node.Expression as MemberAccessExpressionSyntax;
-            if (memberAccess == null || node.ArgumentList.Arguments.Count < 1 || !AllParentsAreMethods(node))
+            if (memberAccess == null || node.ArgumentList.Arguments.Count < 1 || AllParentsAreMethods(node) == false)
                 return base.VisitInvocationExpression(node);
 
             switch (memberAccess.Name.Identifier.ValueText)

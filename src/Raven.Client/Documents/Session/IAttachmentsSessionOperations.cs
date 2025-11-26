@@ -4,42 +4,42 @@ using Raven.Client.Documents.Operations.Attachments;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    ///     Attachments advanced synchronous session operations
+    /// Advanced synchronous session operations for working with attachments.
     /// </summary>
     public interface IAttachmentsSessionOperations : IAttachmentsSessionOperationsBase
     {
         /// <summary>
-        /// Check if attachment exists
+        /// Checks whether an attachment exists for the specified document ID and attachment name.
         /// </summary>
         bool Exists(string documentId, string name);
 
         /// <summary>
-        /// Returns the attachment by the document id and attachment name.
+        /// Returns the attachment for the specified document ID and attachment name.
         /// </summary>
         AttachmentResult Get(string documentId, string name);
 
         /// <summary>
-        /// Returns the attachment by the document id and attachment name.
+        /// Returns the attachment for the specified entity instance and attachment name.
         /// </summary>
         AttachmentResult Get(object entity, string name);
 
         /// <summary>
-        /// Returns a range of the attachment by the document id and attachment name.
+        /// Returns a range of the attachment stream for the specified document ID and attachment name.
         /// </summary>
         AttachmentResult GetRange(string documentId, string name, long? from, long? to);
 
         /// <summary>
-        /// Returns a range of the attachment by the document id and attachment name.
+        /// Returns a range of the attachment stream for the specified entity instance and attachment name.
         /// </summary>
         AttachmentResult GetRange(object entity, string name, long? from, long? to);
 
         /// <summary>
-        /// Returns Enumerator of KeyValuePairs of attachment name and stream.
+        /// Returns an enumerator over multiple attachments. Each result includes the attachment stream and metadata.
         /// </summary>
         IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<AttachmentRequest> attachments);
 
         /// <summary>
-        /// Returns the revision attachment by the document id and attachment name.
+        /// Returns the attachment from a document revision for the specified document ID, attachment name, and change vector.
         /// </summary>
         AttachmentResult GetRevision(string documentId, string name, string changeVector);
     }

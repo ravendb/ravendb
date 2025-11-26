@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject wrapCmdReader,
             PeepingTomStream peepingTomStream)
         {
-            if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails<DocumentsOperationContext, DocumentsTransaction>.Command), out BlittableJsonReaderObject commandReader))
+            if (wrapCmdReader.TryGet(nameof(RecordingCommandDetails<DocumentsOperationContext, DocumentsTransaction>.Command), out BlittableJsonReaderObject commandReader) == false)
             {
                 throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }

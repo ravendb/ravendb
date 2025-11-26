@@ -8,7 +8,6 @@ export type CertificatesClearance = "Admin" | "Operator" | "User";
 export type CertificatesState = "Valid" | "About to expire" | "Expired";
 
 export type CertificatesSortMode =
-    | "Default"
     | "By Name - Asc"
     | "By Name - Desc"
     | "By Expiration Date - Asc"

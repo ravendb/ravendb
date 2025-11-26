@@ -54,6 +54,7 @@ namespace Corax.Querying.Matches
 
                     if (totalResults == 0)
                     {
+                        match._memoizedOuter?.InnerRetriever(out outer);
                         match._memoizedOuter?.Dispose();
                         match._memoizedOuter = null;
                         return 0;

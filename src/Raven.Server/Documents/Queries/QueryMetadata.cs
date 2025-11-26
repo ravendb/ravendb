@@ -1439,7 +1439,7 @@ function execute(doc, args){
                             }
                             else
                             {
-                                if (!RootAliasPaths.ContainsKey(argumentExpression.FieldValue))
+                                if (RootAliasPaths.ContainsKey(argumentExpression.FieldValue) == false)
                                     ThrowUnknownAlias(argumentExpression.FieldValue, parameters);
                                 return SelectField.CreateMethodCall("id", alias, new[] { SelectField.Create(QueryFieldName.DocumentId, argumentExpression.FieldValue) });
                             }

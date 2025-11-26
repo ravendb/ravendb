@@ -932,7 +932,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             void ExtractAllAttachmentsForCurrentTask(Document document, PutDocumentEmbeddings pde, HashSet<string> attachmentsToRemove)
             {
-                if (!document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails))
+                if (document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails) == false)
                     return;
 
                 BlittableJsonReaderObject.PropertyDetails prop = default;

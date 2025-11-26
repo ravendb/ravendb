@@ -194,7 +194,7 @@ public class RavenDB_24495 : ClusterTestBase
     {
         var cn = $"ca-{Guid.NewGuid():N}";
         var bcCa = BouncyCastleCertificateUtils.CreateCertificateAuthorityCertificate(cn, out _, out _);
-        var dnCa = CertificateUtils.CreateCertificateAuthorityCertificate(cn, out _, out _);
+        var dnCa = CertificateUtils.CreateCertificateAuthorityCertificate(cn, out _);
 
         using (bcCa)
         using (dnCa)

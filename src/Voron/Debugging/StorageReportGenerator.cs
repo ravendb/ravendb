@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data;
@@ -51,7 +52,7 @@ namespace Voron.Debugging
         public List<Tree> Trees;
         public List<FixedSizeTree> FixedSizeTrees;
         public List<Table> Tables;
-        public Dictionary<Slice, long> Containers;
+        public Dictionary<Slice, ContainerId> Containers;
         public List<PostingList> PostingLists;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<Lookup<Int64LookupKey>> NumericLookups;
@@ -112,7 +113,7 @@ namespace Voron.Debugging
                 {
                     var globalContainer = tree.DirectRead(Hnsw.VectorsContainerIdSlice);
                     if (globalContainer != null)
-                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<long>(globalContainer));
+                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<ContainerId>(globalContainer));
                 }
                 
                 TreeFlags treeFlags = tree.ReadHeader().Flags;
@@ -480,7 +481,7 @@ namespace Voron.Debugging
             return treeReport;
         }
 
-        public TreeReport GetContainerReport(string name, long page, bool includeDetails)
+        public TreeReport GetContainerReport(string name, ContainerId page, bool includeDetails)
         {
             name += $" (Container)";
             
@@ -506,11 +507,11 @@ namespace Voron.Debugging
                     }
                 }
             }
-            
+
             var (allPages, freePages) = Container.GetPagesFor(_tx, page);
             
             // cannot use GetPageHeader since we are reading not just from the header
-            var root = new Container(_tx.GetPage(page));
+            var root = new Container(_tx.GetPage((long)page));
             double density = pageDensities?.Average() ?? -1;
             long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
             var treeReport = new TreeReport
@@ -736,10 +737,8 @@ namespace Voron.Debugging
         {
             if (page.IsLeaf)
             {
-                if (!histogram.TryGetValue(depth, out int value))
-                    value = 0;
-
-                histogram[depth] = value + 1;
+                ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(histogram, depth, out _);
+                value += 1;
             }
             else
             {

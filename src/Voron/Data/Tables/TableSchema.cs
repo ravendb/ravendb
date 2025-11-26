@@ -432,7 +432,7 @@ namespace Voron.Data.Tables
 
             foreach (var entry in _commonIndexes)
             {
-                if (!actual._commonIndexes.TryGetValue(entry.Key, out var index))
+                if (actual._commonIndexes.TryGetValue(entry.Key, out var index) == false)
                     throw new ArgumentException(
                         $"Expected schema to have an index named {entry.Key}",
                         nameof(actual));
@@ -447,7 +447,7 @@ namespace Voron.Data.Tables
 
             foreach (var entry in _dynamicKeyIndexes)
             {
-                if (!actual._dynamicKeyIndexes.TryGetValue(entry.Key, out var index))
+                if (actual._dynamicKeyIndexes.TryGetValue(entry.Key, out var index) == false)
                     throw new ArgumentException(
                         $"Expected schema to have an dynamic-key index named {entry.Key}",
                         nameof(actual));
@@ -462,7 +462,7 @@ namespace Voron.Data.Tables
 
             foreach (var entry in _fixedSizeIndexes)
             {
-                if (!actual._fixedSizeIndexes.TryGetValue(entry.Key, out FixedSizeKeyIndexDef index))
+                if (actual._fixedSizeIndexes.TryGetValue(entry.Key, out FixedSizeKeyIndexDef index) == false)
                     throw new ArgumentException(
                         $"Expected schema to have an index named {entry.Key}",
                         nameof(actual));

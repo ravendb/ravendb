@@ -117,7 +117,8 @@ public partial class Hnsw
                 _nextNodeIndex++; // do not attempt to insert the first node, since it is the graph root
                 ref Node startingNode = ref _searchState.Nodes[0];
                 Span<byte> span = startingNode.Encode(ref byteBuffer);
-                entryPointNode = Container.Allocate(_searchState.Llt, _searchState.Options.Container, span.Length, out Span<byte> allocated);
+                var allocatedId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, span.Length, out Span<byte> allocated);
+                entryPointNode = (long)allocatedId;
                 span.CopyTo(allocated);
                 _searchState.RegisterNodeLocation(EntryPointId, entryPointNode);
             }

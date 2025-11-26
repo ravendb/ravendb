@@ -2338,7 +2338,7 @@ more responsive application.
                 if (prop.DeclaringType != type && prop.DeclaringType != null)
                     prop = prop.DeclaringType.GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) ?? property;
 
-                if (!prop.CanWrite() || !prop.CanRead() || prop.GetIndexParameters().Length != 0)
+                if (prop.CanWrite() == false || prop.CanRead() == false || prop.GetIndexParameters().Length != 0)
                     continue;
                 prop.SetValue(ref entity, prop.GetValue(documentInfo.Entity));
             }

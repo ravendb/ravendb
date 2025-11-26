@@ -39,4 +39,7 @@
     <DefineConstants>$(DefineConstants);VALIDATE;VALIDATE_PAGES</DefineConstants>
     <Optimize>true</Optimize>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
+  </ItemGroup>
 </Project>

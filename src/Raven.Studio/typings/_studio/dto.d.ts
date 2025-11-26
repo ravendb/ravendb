@@ -762,6 +762,7 @@ interface confirmationDialogOptions {
     defaultOption?: string;
     html?: boolean;
     wideDialog?: boolean;
+    isCancelHidden?: boolean;
 }
 
 type IndexEntriesFieldType = "Static" | "Dynamic";

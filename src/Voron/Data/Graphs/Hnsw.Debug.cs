@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -51,7 +51,7 @@ public unsafe partial class Hnsw
 
     public static long[] GetEntries(LowLevelTransaction llt,long postingListId)
     {
-        long rawPostingListId = postingListId & Constants.Graphs.VectorId.ContainerType;
+        ContainerEntryId rawPostingListId = new ContainerEntryId(postingListId & Constants.Graphs.VectorId.ContainerType);
         long[] result;
         switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
         {
@@ -59,7 +59,7 @@ public unsafe partial class Hnsw
                 result= [];
                 break;
             case Constants.Graphs.VectorId.Single:
-                result = [rawPostingListId];
+                result = [(long)rawPostingListId];
                 break;
             case Constants.Graphs.VectorId.SmallPostingList:
             {

@@ -15,7 +15,7 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(cacheSize > 0);
             Debug.Assert(cacheSize <= 1024);
 
-            if (!Bits.IsPowerOfTwo(cacheSize))
+            if (Bits.IsPowerOfTwo(cacheSize) == false)
                 cacheSize = Bits.PowerOf2(cacheSize);
 
             int shiftRight = Bits.CeilLog2(cacheSize);
