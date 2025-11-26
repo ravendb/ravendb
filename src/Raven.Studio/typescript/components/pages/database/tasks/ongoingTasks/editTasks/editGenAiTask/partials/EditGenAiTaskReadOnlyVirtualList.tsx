@@ -7,21 +7,26 @@ import classNames from "classnames";
 import { editGenAiTaskActions, editGenAiTaskSelectors } from "../store/editGenAiTaskSlice";
 import ReactAce from "react-ace";
 import { EditGenAiTaskFormData } from "../utils/editGenAiTaskValidation";
-import { FieldPath } from "react-hook-form";
+import { FieldPath, useFormContext } from "react-hook-form";
 import EditGenAiTaskAttachmentsButton from "./EditGenAiTaskAttachmentsButton";
 import EditGenAiTaskReasoning from "./EditGenAiTaskReasoning";
+import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
 
 interface EditGenAiTaskReadOnlyVirtualListProps {
     data: {
         value: string;
         attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[];
         conversationDocument?: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument;
+        isCached?: boolean;
     }[];
     name: Extract<FieldPath<EditGenAiTaskFormData>, "playgroundContexts" | "playgroundModelOutputs">;
 }
 
 export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGenAiTaskReadOnlyVirtualListProps) {
     const listRef = useRef<HTMLDivElement>(null);
+
+    const { setValue } = useFormContext<EditGenAiTaskFormData>();
 
     const virtualizer = useVirtualizer({
         count: data?.length ?? 0,
@@ -55,6 +60,20 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
                                 transition: "unset",
                             }}
                         >
+                            {name === "playgroundModelOutputs" && !entry.value && (
+                                <RichAlert variant="info" className="mb-1">
+                                    Model output is cached. You can{" "}
+                                    <Button
+                                        variant="link"
+                                        className="text-decoration-underline text-emphasis p-0"
+                                        size="sm"
+                                        onClick={() => setValue("isForceSendingCachedObjects", true)}
+                                    >
+                                        enable &quot;Force reprocess&quot;
+                                    </Button>{" "}
+                                    and test again to see the results.
+                                </RichAlert>
+                            )}
                             {entry.conversationDocument && (
                                 <EditGenAiTaskReasoning conversationDocument={entry.conversationDocument} />
                             )}

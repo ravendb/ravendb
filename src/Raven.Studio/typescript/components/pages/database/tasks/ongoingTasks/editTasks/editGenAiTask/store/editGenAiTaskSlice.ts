@@ -151,7 +151,7 @@ export const editGenAiTaskSlice = createSlice({
                 state.modelInputTest = createSuccessState(
                     action.payload.Results.map((x) => ({
                         value: x.ModelOutput ? JSON.stringify(x.ModelOutput.Output, null, 4) : null,
-                        conversationDocument: x.ModelOutput.ConversationDocument,
+                        conversationDocument: x.ModelOutput?.ConversationDocument ?? null,
                     }))
                 );
 
