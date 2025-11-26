@@ -1,3 +1,4 @@
+using System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -26,5 +27,24 @@ public class EmbeddingPathConfiguration : IDynamicJson
         
         return left.Path == right.Path && 
                ChunkingOptions.AreEqual(left.ChunkingOptions, right.ChunkingOptions);
+    }
+
+    private bool Equals(EmbeddingPathConfiguration other)
+    {
+        return Path == other.Path && 
+               ChunkingOptions.AreEqual(ChunkingOptions, other.ChunkingOptions);
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((EmbeddingPathConfiguration)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Path, ChunkingOptions);
     }
 }

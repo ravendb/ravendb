@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -38,5 +39,24 @@ public class EmbeddingsTransformation
         
         return left.Script == right.Script &&
                ChunkingOptions.AreEqual(left.ChunkingOptions, right.ChunkingOptions);
+    }
+
+    private bool Equals(EmbeddingsTransformation other)
+    {
+        return Script == other.Script && 
+               ChunkingOptions.AreEqual(ChunkingOptions, other.ChunkingOptions);
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((EmbeddingsTransformation)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Script, ChunkingOptions);
     }
 }

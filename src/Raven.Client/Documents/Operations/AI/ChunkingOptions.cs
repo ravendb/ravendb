@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
@@ -47,9 +48,27 @@ public class ChunkingOptions : IDynamicJson
         if (left == null || right == null)
             return false;
         
-        return left.ChunkingMethod == right.ChunkingMethod &&
-               left.MaxTokensPerChunk == right.MaxTokensPerChunk &&
-               left.OverlapTokens == right.OverlapTokens;
+        return left.Equals(right);
+    }
+
+    private bool Equals(ChunkingOptions other)
+    {
+        return ChunkingMethod == other.ChunkingMethod && 
+               MaxTokensPerChunk == other.MaxTokensPerChunk && 
+               OverlapTokens == other.OverlapTokens;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((ChunkingOptions)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine((int)ChunkingMethod, MaxTokensPerChunk, OverlapTokens);
     }
 }
 
