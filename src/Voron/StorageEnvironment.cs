@@ -1213,9 +1213,9 @@ namespace Voron
 
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
-                                if (tableTree.TryRead(TableSchema.ActiveSectionSlice, out var activeSectionReader) == false)
+                                if (tableTree.TryRead(TableSchema.ActiveSectionSlice, out var reader) == false)
                                     throw new VoronErrorException($"Could not find active sections for {name}");
-                                long pageNumber = activeSectionReader.ReadLittleEndianInt64();
+                                long pageNumber = reader.ReadLittleEndianInt64();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
                                 // off by one here because of the section header
                                 r.Add(activeDataSmallSection.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");
