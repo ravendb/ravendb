@@ -26,6 +26,7 @@ internal abstract class AbstractRemoteAttachmentHandlerProcessorForAddRemoteConf
 
     protected override void OnBeforeUpdateConfiguration(ref RemoteAttachmentsConfiguration configuration, JsonOperationContext context)
     {
+        RequestHandler.ServerStore.LicenseManager.AssertCanAddRemoteAttachments();
         configuration.AssertConfiguration(RequestHandler.DatabaseName);
     }
 

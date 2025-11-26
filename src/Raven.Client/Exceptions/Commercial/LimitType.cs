@@ -161,6 +161,9 @@ namespace Raven.Client.Exceptions.Commercial
         CustomSorters,
 
         [Description("Custom Analyzers")]
-        CustomAnalyzers
+        CustomAnalyzers,
+
+        [Description("Remote Attachments")]
+        RemoteAttachments,
     }
 }

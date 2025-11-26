@@ -1152,6 +1152,7 @@ namespace Raven.Server.Commercial
             var dynamicNodesDistributionCount = 0;
             var additionalAssembliesFromNuGetCount = 0;
             var revisionCompressionCount = 0;
+            var remoteAttachmentsCount = 0;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -1230,6 +1231,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.AiAgents != null &&
                         databaseRecord.AiAgents.Count > 0)
                         aiAgentCount++;
+
+                    if (databaseRecord.RemoteAttachments != null &&
+                        databaseRecord.RemoteAttachments.HasDestination())
+                        remoteAttachmentsCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1373,6 +1378,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(revisionCompressionCount, "Revision compression");
                 throw GenerateLicenseLimit(LimitType.DocumentsCompression, message);
+            }
+
+            if (remoteAttachmentsCount > 0 && newLicenseStatus.HasRemoteAttachments == false)
+            {
+                var  message = GenerateDetails(remoteAttachmentsCount, "Remote attachments");
+                throw GenerateLicenseLimit(LimitType.RemoteAttachments, message);
             }
         }
 
@@ -1814,6 +1825,18 @@ namespace Raven.Server.Commercial
 
             const string details = "Your current license doesn't include the read-only certificates feature";
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
+        }
+
+        public void AssertCanAddRemoteAttachments()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasRemoteAttachments)
+                return;
+
+            const string details = "Your current license doesn't include the remote attachments feature";
+            throw GenerateLicenseLimit(LimitType.RemoteAttachments, details);
         }
 
         public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool metersRegistered)
