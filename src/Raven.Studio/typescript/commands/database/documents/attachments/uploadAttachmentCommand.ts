@@ -2,11 +2,18 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
+interface uploadAttachmentCommandArgs {
+    id: string;
+    name: string;
+    contentType: string;
+    remoteAt?: string;
+    remoteIdentifier?: string;
+}
 class uploadAttachmentCommand extends commandBase {
 
     private xhr: XMLHttpRequest;
     
-    constructor(private file: File, private documentId: string, private db: database | string, private onProgress?: (event: ProgressEvent) => void) {
+    constructor(private file: File, private documentId: string, private db: database | string, private onProgress?: (event: ProgressEvent) => void, private remoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters) {
         super();
     }
     
@@ -17,11 +24,16 @@ class uploadAttachmentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Attachments.AttachmentDetails> {
-        const args = {
+        const args: uploadAttachmentCommandArgs = {
             id: this.documentId,
             name: this.file.name,
-            contentType: this.file.type
+            contentType: this.file.type,
         };
+
+        if (this.remoteParameters) {
+            args.remoteAt = this.remoteParameters.At;
+            args.remoteIdentifier = this.remoteParameters.Identifier;
+        }
 
         const options: JQueryAjaxSettings = {
             processData: false,

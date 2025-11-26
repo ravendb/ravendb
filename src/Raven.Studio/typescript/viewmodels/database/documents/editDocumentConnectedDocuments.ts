@@ -21,6 +21,7 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import genUtils = require("common/generalUtils");
 import _ = require("lodash")
+import AddAttachmentWithRemoteParametersModal = require("viewmodels/database/documents/AddAttachmentWithRemoteParametersModal");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -82,6 +83,17 @@ class connectedDocuments {
     
     isArtificialDocument: KnockoutComputed<boolean>;
     isHiloDocument: KnockoutComputed<boolean>;  
+
+    isAddAttachmentWithRemoteParametersModalVisible = ko.observable<boolean>(false);
+    remoteAttachmentParametersModalView: ReactInKnockout<typeof AddAttachmentWithRemoteParametersModal.default> = ko.pureComputed(() => ({
+        component: AddAttachmentWithRemoteParametersModal.default,
+        props: {
+            document: this.document,
+            db: this.db,
+            onUploaded: () => this.afterUpload(),
+            onClose: () => this.isAddAttachmentWithRemoteParametersModalVisible(false)
+        }
+    }))
 
     gridController = ko.observable<virtualGridController<connectedItemType>>();
     private columnPreview = new columnPreviewPlugin<connectedItemType>();
@@ -155,16 +167,16 @@ class connectedDocuments {
         this.revisionsColumns = [revisionColumn];
         
         this.attachmentsColumns = [
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
+                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-info"></i>` : `<i class="icon-attachment text-primary"></i>`,
+            }),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
                     extraClass: () => 'btn-link',
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
-                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
-            }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "100px"),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.crudActionsProvider().deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
@@ -177,16 +189,16 @@ class connectedDocuments {
         ];
 
         this.attachmentsInReadOnlyModeColumns = [
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
+                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-info"></i>` : `<i class="icon-attachment text-primary"></i>`,
+            }),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "195px",
                 {
                     extraClass: () => 'btn-link',
                     title: () => "Download attachment"
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
-                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-primary"></i>` : `<i class="icon-attachment"></i>`,
-            }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "50px"),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "100px"),
         ];
 
         this.countersColumns = [

@@ -1,5 +1,5 @@
-type DestinationProvider = "s3" | "azure";
+const destinationProviderList = ["s3", "azure"] as const;
 
-const destinationProviderList: DestinationProvider[] = ["s3", "azure"];
+export type DestinationProvider = (typeof destinationProviderList)[number];
 
 export const remoteAttachmentsConstants = { destinationProviderList };

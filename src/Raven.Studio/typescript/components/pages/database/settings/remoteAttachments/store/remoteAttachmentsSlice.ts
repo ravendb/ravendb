@@ -3,7 +3,6 @@ import { services } from "hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { RemoteAttachmentsDestinationFormData, RemoteAttachmentsFormData } from "../remoteAttachmentsValidation";
 import { remoteAttachmentsUtils } from "../remoteAttachmentsUtils";
-import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 
 const destinationsAdapter = createEntityAdapter<RemoteAttachmentsDestinationFormData, string>({
     selectId: (destination) => destination.identifier,
@@ -23,23 +22,18 @@ const initialState: RemoteAttachmentsState = {
 };
 
 export const fetchRemoteAttachments = createAsyncThunk("remoteAttachments/fetch", async (databaseName: string) => {
-    const dto = await services.databasesService.getRemoteAttachmentsConfiguration(databaseName);
-    return dto as RemoteAttachmentsConfiguration;
+    return services.databasesService.getRemoteAttachmentsConfiguration(databaseName);
 });
 
 type RemoteAttachmentsPayload = RemoteAttachmentsFormData & { destinations: RemoteAttachmentsDestinationFormData[] };
 
 export const saveRemoteAttachments = createAsyncThunk(
     "remoteAttachments/save",
-    async (args: { databaseName: string; data: RemoteAttachmentsPayload }, { rejectWithValue }) => {
-        try {
-            const dto = remoteAttachmentsUtils.mapToDto(args.data);
+    async (args: { databaseName: string; data: RemoteAttachmentsPayload }) => {
+        const dto = remoteAttachmentsUtils.mapToDto(args.data);
 
-            await services.databasesService.saveRemoteAttachmentsConfiguration(args.databaseName, dto);
-            return args.data;
-        } catch (e) {
-            return rejectWithValue(e);
-        }
+        await services.databasesService.saveRemoteAttachmentsConfiguration(args.databaseName, dto);
+        return args.data;
     }
 );
 
@@ -47,25 +41,27 @@ export const remoteAttachmentsSlice = createSlice({
     name: "remoteAttachments",
     initialState,
     reducers: {
-        addDestination: (state, { payload }: PayloadAction<RemoteAttachmentsDestinationFormData>) => {
-            destinationsAdapter.addOne(state.destinations, payload);
+        destinationAdded: (state, { payload }: PayloadAction<RemoteAttachmentsDestinationFormData>) => {
+            destinationsAdapter.addOne(state.destinations, { ...payload, disabled: false });
         },
-        updateDestination: (
+        destinationUpdated: (
             state,
             { payload }: PayloadAction<{ prevId: string; destination: RemoteAttachmentsDestinationFormData }>
         ) => {
             const { prevId, destination } = payload;
             if (prevId !== destination.identifier) {
-                destinationsAdapter.removeOne(state.destinations, prevId);
-                destinationsAdapter.addOne(state.destinations, destination);
+                destinationsAdapter.updateOne(state.destinations, {
+                    id: prevId,
+                    changes: { identifier: destination.identifier },
+                });
             } else {
                 destinationsAdapter.upsertOne(state.destinations, destination);
             }
         },
-        removeDestination: (state, { payload }: PayloadAction<string>) => {
+        destinationRemoved: (state, { payload }: PayloadAction<string>) => {
             destinationsAdapter.removeOne(state.destinations, payload);
         },
-        toggleDestinationDisabled: (state, { payload }: PayloadAction<string>) => {
+        toggledDestinationDisabled: (state, { payload }: PayloadAction<string>) => {
             const entity = state.destinations.entities[payload];
             if (entity) {
                 destinationsAdapter.updateOne(state.destinations, {

@@ -1,5 +1,6 @@
 import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 import RemoteAttachmentsDestinationConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsDestinationConfiguration;
+import S3StorageClass = Raven.Client.Documents.Operations.Backups.S3StorageClass;
 import {
     RemoteAttachmentsDestinationFormData,
     RemoteAttachmentsFormData,
@@ -8,7 +9,10 @@ import {
     defaultAzureFormData,
     defaultS3FormData,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
-import { mapAzureToDto, mapS3ToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
+import { mapAmazonToDto, mapAzureToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
+import IconName from "../../../../../../typings/server/icons";
+import { DestinationProvider } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
+import { S3Destination } from "components/common/formDestinations/utils/formDestinationsTypes";
 
 type RemoteAttachmentsFormDataWithDestinations = RemoteAttachmentsFormData & {
     destinations: RemoteAttachmentsDestinationFormData[];
@@ -22,11 +26,10 @@ function mapToDto(form: RemoteAttachmentsFormDataWithDestinations): RemoteAttach
         const azureSettings = dest.provider === "azure" ? mapAzureToDto({ ...dest.azure, isEnabled: true }) : undefined;
 
         destinations[dest.identifier] = {
-            Identifier: dest.identifier,
             Disabled: dest.disabled,
             S3Settings: s3Settings,
             AzureSettings: azureSettings,
-        } as RemoteAttachmentsDestinationConfiguration;
+        };
     }
 
     return {
@@ -57,45 +60,37 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
     if (dto.Destinations) {
         for (const [destinationIdentifier, destinationConfig] of Object.entries(dto.Destinations)) {
             if (destinationConfig.S3Settings) {
-                const {
-                    AwsAccessKey,
-                    AwsSecretKey,
-                    AwsRegionName,
-                    AwsSessionToken,
-                    RemoteFolderName,
-                    BucketName,
-                    CustomServerUrl,
-                    ForcePathStyle,
-                } = destinationConfig.S3Settings;
+                const s3Config = destinationConfig.S3Settings;
                 destinations.push({
                     provider: "s3",
                     identifier: destinationIdentifier,
                     disabled: !!destinationConfig.Disabled,
                     s3: {
                         ...defaultS3FormData,
-                        awsAccessKey: AwsAccessKey,
-                        awsSecretKey: AwsSecretKey,
-                        awsRegionName: AwsRegionName,
-                        awsSessionToken: AwsSessionToken,
-                        remoteFolderName: RemoteFolderName,
-                        bucketName: BucketName,
-                        customServerUrl: CustomServerUrl,
-                        forcePathStyle: ForcePathStyle,
+                        awsAccessKey: s3Config.AwsAccessKey,
+                        awsSecretKey: s3Config.AwsSecretKey,
+                        awsRegionName: s3Config.AwsRegionName,
+                        awsSessionToken: s3Config.AwsSessionToken,
+                        remoteFolderName: s3Config.RemoteFolderName,
+                        bucketName: s3Config.BucketName,
+                        customServerUrl: s3Config.CustomServerUrl,
+                        forcePathStyle: s3Config.ForcePathStyle,
+                        storageClass: s3Config.StorageClass,
                     },
                     azure: null,
                 });
             } else if (destinationConfig.AzureSettings) {
-                const { AccountName, AccountKey, StorageContainer, RemoteFolderName } = destinationConfig.AzureSettings;
+                const azureConfig = destinationConfig.AzureSettings;
                 destinations.push({
                     provider: "azure",
                     identifier: destinationIdentifier,
                     disabled: !!destinationConfig.Disabled,
                     azure: {
                         ...defaultAzureFormData,
-                        accountName: AccountName,
-                        accountKey: AccountKey,
-                        storageContainer: StorageContainer,
-                        remoteFolderName: RemoteFolderName,
+                        accountName: azureConfig.AccountName,
+                        accountKey: azureConfig.AccountKey,
+                        storageContainer: azureConfig.StorageContainer,
+                        remoteFolderName: azureConfig.RemoteFolderName,
                     },
                     s3: null,
                 });
@@ -115,7 +110,54 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
     };
 }
 
+const getProviderIcon = (provider: string): IconName => {
+    switch (provider) {
+        case "s3":
+            return "aws";
+        case "azure":
+            return "azure";
+        default:
+            return null;
+    }
+};
+
+const getProviderName = (provider: DestinationProvider) => {
+    switch (provider) {
+        case "s3":
+            return "Amazon S3";
+        case "azure":
+            return "Azure";
+        default:
+            return null;
+    }
+};
+
+interface RemoteAttachmentsS3Destination extends S3Destination {
+    storageClass?: S3StorageClass;
+}
+
+const mapS3ToDto = (
+    destination: RemoteAttachmentsS3Destination
+): Raven.Client.Documents.Attachments.RemoteAttachmentsS3Settings => {
+    const customServerUrl =
+        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.customServerUrl : undefined;
+
+    const forcePathStyle =
+        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
+
+    return {
+        ...mapAmazonToDto(destination),
+        CustomServerUrl: customServerUrl,
+        ForcePathStyle: forcePathStyle,
+        BucketName: destination.bucketName,
+        StorageClass: destination.storageClass,
+    };
+};
+
 export const remoteAttachmentsUtils = {
     mapToDto,
     mapFromDto,
+    getProviderIcon,
+    getProviderName,
+    mapS3ToDto,
 };

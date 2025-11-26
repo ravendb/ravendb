@@ -2,12 +2,12 @@ import { Icon } from "components/common/Icon";
 import React from "react";
 import { RemoteAttachmentsDestinationFormData } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsValidation";
 import { UseAsyncReturn } from "react-async-hook";
-import { useFormContext } from "react-hook-form";
-import { FormGroup, FormInput, FormLabel, FormSelectCreatable, FormSwitch } from "components/common/Form";
+import { useFormContext, useWatch } from "react-hook-form";
+import { FormGroup, FormInput, FormLabel, FormSelect, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import Collapse from "react-bootstrap/Collapse";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Badge from "react-bootstrap/Badge";
-import { availableS3Regions } from "components/utils/common";
+import { availableS3Regions, storageClassOptions } from "components/utils/common";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 
 interface RemoteAttachmentsDestinationFieldsProps {
@@ -15,8 +15,8 @@ interface RemoteAttachmentsDestinationFieldsProps {
 }
 
 export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestinationFieldsProps) {
-    const { control, watch } = useFormContext<RemoteAttachmentsDestinationFormData>();
-    const s3Values = watch("s3");
+    const { control } = useFormContext<RemoteAttachmentsDestinationFormData>();
+    const s3Values = useWatch({ control, name: "s3" });
 
     return (
         <div className="vstack mt-3">
@@ -133,6 +133,11 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                     passwordPreview
                     autoComplete="off"
                 />
+            </FormGroup>
+
+            <FormGroup>
+                <FormLabel>S3 Storage Class</FormLabel>
+                <FormSelect name="s3.storageClass" control={control} options={storageClassOptions} />
             </FormGroup>
 
             {asyncTest.result?.Error && (

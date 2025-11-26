@@ -14,15 +14,6 @@ export default {
             url: "https://www.figma.com/design/HDUBpGrDU7d5Bh8I0HE8Bl/Pages---Remote-attachments?node-id=17-2682&t=whTMznR6tx6dnFHi-0",
         },
     },
-    argTypes: {
-        licenseType: licenseArgType,
-        databaseAccess: databaseAccessArgType,
-    },
-    args: {
-        databaseAccess: "DatabaseAdmin",
-        licenseType: "Enterprise",
-        hasRemoteAttachments: true,
-    },
 } satisfies Meta;
 
 interface RemoteAttachmentsStoryArgs {
@@ -33,6 +24,15 @@ interface RemoteAttachmentsStoryArgs {
 
 export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
     name: "Remote Attachments",
+    argTypes: {
+        licenseType: licenseArgType,
+        databaseAccess: databaseAccessArgType,
+    },
+    args: {
+        databaseAccess: "DatabaseAdmin",
+        licenseType: "Enterprise",
+        hasRemoteAttachments: true,
+    },
     render: (args) => {
         const { accessManager, license, databases } = mockStore;
         const { databasesService } = mockServices;

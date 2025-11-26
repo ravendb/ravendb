@@ -17,14 +17,14 @@ import { Icon } from "components/common/Icon";
 import { useServices } from "hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { remoteAttachmentsSelectors } from "components/pages/database/settings/remoteAttachments/store/remoteAttachmentsSliceSelectors";
-import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
 import {
     defaultAzureFormData,
     defaultS3FormData,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { useAsyncCallback } from "react-async-hook";
-import { mapAzureToDto, mapS3ToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
-import { useEffect } from "react";
+import { mapAzureToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
+import { ReactNode, useEffect } from "react";
 import { remoteAttachmentsActions } from "components/pages/database/settings/remoteAttachments/store/remoteAttachmentsSlice";
 import { FormGroup, FormLabel, FormSelect } from "components/common/Form";
 import {
@@ -35,6 +35,9 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
+import { remoteAttachmentsUtils } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsUtils";
+import { SelectOption } from "components/common/select/Select";
+import { storageClassOptions } from "components/utils/common";
 
 interface DestinationPanelProps extends RemoteAttachmentsDestinationFormData {
     onEdit: (id: string) => void;
@@ -83,8 +86,8 @@ export function DestinationPanel({
                 </RichPanelHeader>
                 <RichPanelDetails>
                     <RichPanelDetailItem size="sm" label="Destination">
-                        <Icon icon={provider === "s3" ? "aws" : "azure"} />
-                        {provider === "s3" ? "Amazon S3" : "Azure"}
+                        <Icon icon={remoteAttachmentsUtils.getProviderIcon(provider)} />
+                        {remoteAttachmentsUtils.getProviderName(provider)}
                     </RichPanelDetailItem>
                 </RichPanelDetails>
             </div>
@@ -113,29 +116,11 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
             destinations,
             currentIdentifier: editingDestinationId ?? undefined,
         },
-        defaultValues: editingDestination
-            ? {
-                  provider: editingDestination.provider,
-                  identifier: editingDestination.identifier,
-                  disabled: editingDestination.disabled,
-                  s3:
-                      editingDestination.provider === "s3"
-                          ? { ...defaultS3FormData, ...editingDestination.s3, isEnabled: true }
-                          : null,
-                  azure:
-                      editingDestination.provider === "azure"
-                          ? { ...defaultAzureFormData, ...editingDestination.azure, isEnabled: true }
-                          : null,
-              }
-            : {
-                  provider: "s3",
-                  s3: { ...defaultS3FormData, isEnabled: true },
-                  azure: defaultAzureFormData,
-              },
+        defaultValues: getDefaultValues(editingDestination),
     });
 
     const { control, watch, handleSubmit, trigger, setValue } = form;
-    const formValues = watch();
+    const formValues = useWatch({ control });
 
     const asyncTest = useAsyncCallback<Raven.Server.Web.System.NodeConnectionTestResult, []>(async () => {
         const isValid = await trigger(formValues.provider);
@@ -147,7 +132,9 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
             case "s3":
                 return manageServerService.testPeriodicBackupCredentials(
                     "S3",
-                    mapS3ToDto({ ...formValues.s3, isEnabled: true })
+                    remoteAttachmentsUtils.mapS3ToDto(
+                        formValues.s3
+                    ) as unknown as Raven.Client.Documents.Operations.Backups.AmazonSettings
                 );
             case "azure":
                 return manageServerService.testPeriodicBackupCredentials(
@@ -174,7 +161,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
                 };
 
                 const activeProvider = values.provider;
-                const providers = remoteAttachmentsConstants.destinationProviderList as DestinationProviderType[];
+                const providers = remoteAttachmentsConstants.destinationProviderList;
 
                 providers.forEach((p) => setProviderState(p, p === activeProvider));
             }
@@ -187,17 +174,17 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
             ...data,
             s3: data.provider === "s3" ? data.s3 : null,
             azure: data.provider === "azure" ? data.azure : null,
-        } as RemoteAttachmentsDestinationFormData;
+        };
 
         if (editingDestinationId) {
             dispatch(
-                remoteAttachmentsActions.updateDestination({
+                remoteAttachmentsActions.destinationUpdated({
                     prevId: editingDestinationId,
                     destination: destinationData,
                 })
             );
         } else {
-            dispatch(remoteAttachmentsActions.addDestination(destinationData));
+            dispatch(remoteAttachmentsActions.destinationAdded(destinationData));
         }
 
         close();
@@ -246,9 +233,38 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
     );
 }
 
+function getDefaultValues(
+    editingDestination?: RemoteAttachmentsDestinationFormData
+): RemoteAttachmentsDestinationFormData {
+    if (editingDestination) {
+        return {
+            provider: editingDestination.provider,
+            identifier: editingDestination.identifier,
+            disabled: editingDestination.disabled,
+            s3:
+                editingDestination.provider === "s3"
+                    ? {
+                          ...defaultS3FormData,
+                          ...editingDestination.s3,
+                          isEnabled: true,
+                      }
+                    : null,
+            azure:
+                editingDestination.provider === "azure"
+                    ? { ...defaultAzureFormData, ...editingDestination.azure, isEnabled: true }
+                    : null,
+        };
+    }
+
+    return {
+        provider: "s3",
+        s3: { ...defaultS3FormData, storageClass: storageClassOptions[0].value, isEnabled: true },
+        azure: defaultAzureFormData,
+    };
+}
 type DestinationProviderType = RemoteAttachmentsDestinationFormData["provider"];
 
-const providerOptions = [
+const providerOptions: SelectOption<string, ReactNode>[] = [
     {
         label: (
             <div>

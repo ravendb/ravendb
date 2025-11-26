@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { FormProvider, SubmitHandler, useForm, useFormContext, UseFormReturn } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm, useFormContext, UseFormReturn, useWatch } from "react-hook-form";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { LoadingView } from "components/common/LoadingView";
@@ -32,6 +32,7 @@ import {
 import useConfirm from "components/common/ConfirmDialog";
 import { RemoteAttachmentsInfoHub } from "components/pages/database/settings/remoteAttachments/partials/RemoteAttachmentsInfoHub";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
+import { EmptySet } from "components/common/EmptySet";
 
 export default function RemoteAttachments() {
     // TODO: Add license restrictions. I cant do that at the moment because the key is missing in `LicenseStatus`
@@ -81,7 +82,10 @@ export default function RemoteAttachments() {
         return (
             <LoadError
                 error="Unable to load remote attachments"
-                refresh={() => dispatch(remoteAttachmentsActions.fetchRemoteAttachments(databaseName))}
+                refresh={async () => {
+                    const dto = await dispatch(remoteAttachmentsActions.fetchRemoteAttachments(databaseName)).unwrap();
+                    form.reset(remoteAttachmentsUtils.mapFromDto(dto));
+                }}
             />
         );
     }
@@ -90,30 +94,28 @@ export default function RemoteAttachments() {
         <div className="content-padding position-relative h-100">
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleSave)}>
-                    <Col xxl={12}>
-                        <Row className="gy-sm">
-                            <Col>
-                                <AboutViewHeading title="Remote Attachments" icon="remote-attachment" />
-                                {hasDatabaseAdminAccess && (
-                                    <ButtonWithSpinner
-                                        type="submit"
-                                        variant="primary"
-                                        className="mb-3"
-                                        disabled={!isAnyModified && !formState.isDirty}
-                                        icon="save"
-                                        isSpinning={formState.isSubmitting}
-                                    >
-                                        Save
-                                    </ButtonWithSpinner>
-                                )}
-                                <RemoteAttachmentsSettingsCard />
-                                <DestinationsList />
-                            </Col>
-                            <Col sm={12} lg={4}>
-                                <RemoteAttachmentsInfoHub />
-                            </Col>
-                        </Row>
-                    </Col>
+                    <Row className="gy-sm">
+                        <Col>
+                            <AboutViewHeading title="Remote Attachments" icon="remote-attachment" />
+                            {hasDatabaseAdminAccess && (
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    variant="primary"
+                                    className="mb-3"
+                                    disabled={!isAnyModified && !formState.isDirty}
+                                    icon="save"
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    Save
+                                </ButtonWithSpinner>
+                            )}
+                            <RemoteAttachmentsSettingsCard />
+                            <DestinationsList />
+                        </Col>
+                        <Col sm={12} lg={4}>
+                            <RemoteAttachmentsInfoHub />
+                        </Col>
+                    </Row>
                 </Form>
             </FormProvider>
         </div>
@@ -137,7 +139,7 @@ function DestinationsList() {
         });
 
         if (confirmed) {
-            dispatch(remoteAttachmentsActions.removeDestination(id));
+            dispatch(remoteAttachmentsActions.destinationRemoved(id));
         }
     };
 
@@ -146,7 +148,7 @@ function DestinationsList() {
     };
 
     const toggleDestination = async (id: string) => {
-        dispatch(remoteAttachmentsActions.toggleDestinationDisabled(id));
+        dispatch(remoteAttachmentsActions.toggledDestinationDisabled(id));
     };
 
     const { open } = useViewSheet();
@@ -177,6 +179,7 @@ function DestinationsList() {
                 <Icon icon="global" />
                 Destinations
             </HrHeader>
+            {destinations.length === 0 && <EmptySet>No destinations have been defined.</EmptySet>}
             {destinations.map((field, index) => (
                 <DestinationPanel
                     {...field}
@@ -191,10 +194,9 @@ function DestinationsList() {
 }
 
 function RemoteAttachmentsSettingsCard() {
-    const { control, formState, watch } = useFormContext<RemoteAttachmentsFormData>();
+    const { control, formState } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const formValues = watch();
-
+    const formValues = useWatch({ control });
     return (
         <Card>
             <Card.Body>
@@ -287,18 +289,13 @@ function RemoteAttachmentsSettingsCard() {
     );
 }
 
-const useRemoteAttachmentsSideEffects = ({
-    watch,
-    setValue,
-    clearErrors,
-}: UseFormReturn<RemoteAttachmentsFormData>) => {
+const useRemoteAttachmentsSideEffects = ({ watch, setValue }: UseFormReturn<RemoteAttachmentsFormData>) => {
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
             if (name === "isRemoteAttachmentsEnabled" && !values.isRemoteAttachmentsEnabled) {
-                setValue("isCheckFrequencyInSecEnabled", false);
-                setValue("isMaxItemsToProcessEnabled", false);
-                setValue("isConcurrentUploadsEnabled", false);
-                clearErrors(["checkFrequencyInSec", "maxItemsToProcess", "concurrentUploads"]);
+                setValue("isCheckFrequencyInSecEnabled", false, { shouldValidate: true });
+                setValue("isMaxItemsToProcessEnabled", false, { shouldValidate: true });
+                setValue("isConcurrentUploadsEnabled", false, { shouldValidate: true });
             }
         });
         return unsubscribe;

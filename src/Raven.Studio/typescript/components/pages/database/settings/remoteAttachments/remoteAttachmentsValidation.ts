@@ -2,44 +2,56 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { azureSchema, s3Schema } from "components/common/formDestinations/utils/formDestinationsValidation";
 import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
+import { storageClassOptions } from "components/utils/common";
+
+interface RemoteAttachmentsDestinationContext {
+    destinations: { identifier: string }[];
+    currentIdentifier?: string;
+}
 
 const destinationBaseSchema = yup.object({
-    identifier: yup
-        .string()
-        .test("unique-identifier", "Identifier must be unique across all destinations", function (value) {
-            const { options } = this;
-
-            if (options.context?.destinations) {
-                const destinations = options.context.destinations as { identifier?: string }[];
-                const currentIdentifierInEdit = options.context.currentIdentifier;
-
-                const matches = destinations.filter((dest) => dest.identifier === value);
-
-                if (!currentIdentifierInEdit) {
-                    return matches.length === 0;
-                }
-
-                if (value === currentIdentifierInEdit) {
-                    return matches.length <= 1;
-                }
-
-                return matches.length === 0;
-            }
-
-            return true;
-        })
-        .required(),
+    identifier: yup.string().test("unique-identifier", "Identifier must be unique", getIsUniqueIdentifier).required(),
     disabled: yup.boolean(),
+});
+
+function getIsUniqueIdentifier(value: string, ctx: yup.TestContext<RemoteAttachmentsDestinationContext>) {
+    const { context } = ctx.options;
+
+    if (context.destinations != null) {
+        const matches = context.destinations.filter((dest) => dest.identifier === value);
+
+        if (!context.currentIdentifier) {
+            return matches.length === 0;
+        }
+
+        if (value === context.currentIdentifier) {
+            return matches.length <= 1;
+        }
+
+        return matches.length === 0;
+    }
+
+    return true;
+}
+
+const s3StorageClassSchema = yup.object({
+    storageClass: yup
+        .string()
+        .oneOf(storageClassOptions.map((x) => x.value))
+        .default("Standard"),
 });
 
 const destinationSchema = yup
     .object({
         provider: yup.string().oneOf(remoteAttachmentsConstants.destinationProviderList).required(),
-        s3: s3Schema.nullable().when("provider", {
-            is: "s3",
-            then: (schema) => schema.required(),
-            otherwise: (schema) => schema.nullable(),
-        }),
+        s3: s3Schema
+            .concat(s3StorageClassSchema)
+            .nullable()
+            .when("provider", {
+                is: "s3",
+                then: (schema) => schema.required(),
+                otherwise: (schema) => schema.nullable(),
+            }),
         azure: azureSchema.nullable().when("provider", {
             is: "azure",
             then: (schema) => schema.required(),

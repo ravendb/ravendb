@@ -1,6 +1,7 @@
 import { RootState } from "components/store";
 import { destinationsSelectors, initialDestinationsSelectors } from "./remoteAttachmentsSlice";
 import { isEqual, omit } from "lodash";
+import { RemoteAttachmentsDestinationFormData } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsValidation";
 
 const loadStatus = (s: RootState) => s.remoteAttachments.loadStatus;
 
@@ -14,7 +15,8 @@ const isAnyModified = (s: RootState) => {
     return areDestinationsDifferent(current, initial);
 };
 
-const selectDestinations = (s: RootState) => destinationsSelectors.selectAll(s.remoteAttachments);
+const selectDestinations = (s: RootState): RemoteAttachmentsDestinationFormData[] =>
+    destinationsSelectors.selectAll(s.remoteAttachments);
 const selectDestinationsTotal = (s: RootState) => destinationsSelectors.selectTotal(s.remoteAttachments);
 
 const selectIsDestinationModified = (id: string) => (s: RootState) => {
