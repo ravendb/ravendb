@@ -128,7 +128,7 @@ interface SystemMessageProps {
 function SystemMessage({ message }: SystemMessageProps) {
     return (
         <div>
-            <div>System Role was set.</div>
+            <div>Role: system</div>
             <div
                 className="mt-1 p-2 rounded-2 border border-secondary bg-body overflow-auto"
                 style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}
@@ -152,7 +152,7 @@ function UserMessage({ message }: UserMessageProps) {
 
     return (
         <div>
-            <div>User Role input.</div>
+            <div>Role: user</div>
             <div
                 className="mt-1 p-2 rounded-2 border border-secondary bg-body overflow-auto"
                 style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}
@@ -176,7 +176,7 @@ function AssistantMessage({ message, toolMessages, parametersFromUser }: Assista
 
     return (
         <div>
-            <div className="mb-1">Based on the user role input Assistant Role was enabled and tool was called.</div>
+            <div className="mb-1">Role: assistant</div>
             {message.tool_calls.map((toolCall) => (
                 <AssistantToolResponse
                     key={toolCall.id}

@@ -77,17 +77,26 @@ export default function EditGenAiTaskModelFields() {
                 jsonSchemaSyntaxHelp={<JsonSchemaSyntaxHelp />}
                 canRegenerateSchemaName="canRegenerateSchema"
             />
-            <div className="hstack mt-3">
-                <h3 className="m-0">
+            <div className="hstack mt-3 mb-1">
+                <h3 className="mb-0">
                     Define query tools
-                    <PopoverWithHoverWrapper message={<>TODO</>}>
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Define queries that the LLM can use to retrieve data from the database.
+                                <br />
+                                <br />
+                                These queries are executed in the background by an agent. The LLM does not access the
+                                database directly.
+                            </>
+                        }
+                    >
                         <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </h3>
                 <FormErrorIcon control={control} paths={["queries"]} onError={() => setIsToolsPanelOpen(true)} />
                 <CollapseButton isExpanded={isToolsPanelOpen} toggle={toggleIsToolsPanelOpen} />
             </div>
-            <div className="mb-1">Tools are a controlled way to pass context to the LLM.</div>
             <Collapse in={isToolsPanelOpen} mountOnEnter unmountOnExit>
                 <div>
                     <div className="panel-bg-1 p-3 rounded-2 border border-secondary mb-2">
@@ -96,12 +105,7 @@ export default function EditGenAiTaskModelFields() {
                                 <div className="tool-icon bg-faded-primary border border-primary">
                                     <Icon icon="query" color="primary" margin="m-0" />
                                 </div>
-                                <div>
-                                    Query tools
-                                    <PopoverWithHoverWrapper message={<>TODO</>}>
-                                        <Icon icon="info-new" />
-                                    </PopoverWithHoverWrapper>
-                                </div>
+                                <div>Query tools</div>
                             </div>
                             <Button variant="primary" className="rounded-pill" onClick={toolsEditor.handleAddQuery}>
                                 <Icon icon="plus" />
@@ -138,8 +142,19 @@ function TracingFields() {
         <>
             <FormGroup marginClass="mb-0 mt-2">
                 <FormSwitch control={control} name="isEnableTracing">
-                    Enable tracing
-                    <PopoverWithHoverWrapper message={<>TODO</>}>
+                    Enable conversation documents
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Toggle on to store the internal interaction between the GenAI Task, the LLM, and the
+                                agent that runs in the background (including query calls and responses) as a
+                                conversation document in the <code>@conversations</code> collection.
+                                <br />
+                                <br />
+                                The document ID will be prefixed with the GenAI Task ID.
+                            </>
+                        }
+                    >
                         <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </FormSwitch>
@@ -147,8 +162,8 @@ function TracingFields() {
             {formValues.isEnableTracing && (
                 <FormGroup marginClass="mt-1">
                     <FormSwitch control={control} name="isSetTracingExpiration">
-                        Set tracing expiration
-                        <PopoverWithHoverWrapper message={<>TODO</>}>
+                        Set conversation documents expiration
+                        <PopoverWithHoverWrapper message="Toggle on to set how long conversation documents are retained.">
                             <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
                     </FormSwitch>

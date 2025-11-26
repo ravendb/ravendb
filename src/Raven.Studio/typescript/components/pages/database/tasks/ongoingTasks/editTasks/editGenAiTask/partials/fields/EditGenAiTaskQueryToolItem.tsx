@@ -128,7 +128,24 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
             </FormGroup>
             <FormGroup>
                 <div className="d-flex mb-1 justify-content-between align-items-end">
-                    <FormLabel className="mb-0">Query</FormLabel>
+                    <FormLabel className="mb-0">
+                        Query
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    Define a query the LLM can use to retrieve data from the database.
+                                    <br />
+                                    <br />
+                                    You can filter the query using parameters exposed as properties in the context
+                                    objects defined in the previous step. If your query uses a parameter that is not
+                                    defined in the context object, you must declare it manually in the &quot;Sample
+                                    parameters object&quot; below.
+                                </>
+                            }
+                        >
+                            <Icon icon="info-new" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     {queryItem.query && (
                         <Button
                             variant="info"
@@ -300,8 +317,9 @@ const queryFieldQueryPlaceholder = `// Enter the query that will run against the
 // Example 1: from "Orders" where ShipTo.Country == $country" and Company == $company"
 // Example 2: from "Products" where vector.search(embedding.text(Name), $searchTerm, $similarityLevel)
 
-// Parameters (i.e. $paramName) that are defined in the "Set agent parameters" section will be replaced with the fixed values you provide.
-// Other parameters (i.e. $paramName) will be filled with the values provided by the LLM when it calls this query tool.`;
+// When using a parameter (e.g., $country), if it's defined as a property in the context object (from the previous step),
+// its value will be taken from the generated context.
+// Otherwise, you must define the parameter manually in the "Sample parameters object" section below.`;
 
 const queryFieldSampleObjectPlaceholder = `{
     // "ParamName": "Instruction to the LLM",
