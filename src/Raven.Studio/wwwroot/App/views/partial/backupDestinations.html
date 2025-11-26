@@ -16,8 +16,10 @@
                     <div class="row margin-bottom">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
-                                <input id="localSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
-                                <label for="localSettingsViaScript">Override configuration via external script</label>
+                                <input id="localSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript, disable: !!$root.overrideViaExternalScriptDisableReason()">
+                                <label for="localSettingsViaScript" data-bind="attr: { 'title': $root.overrideViaExternalScriptDisableReason() }">
+                                    Override configuration via external script
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -102,8 +104,10 @@
                     <div class="row">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
-                                <input id="s3SettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
-                                <label for="s3SettingsViaScript">Override configuration via external script</label>
+                                <input id="s3SettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript, disable: !!$root.overrideViaExternalScriptDisableReason()">
+                                <label for="s3SettingsViaScript" data-bind="attr: { 'title': $root.overrideViaExternalScriptDisableReason() }">
+                                    Override configuration via external script
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -155,8 +159,10 @@
                     <div class="row margin-bottom">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
-                                <input id="azureSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
-                                <label for="azureSettingsViaScript">Override configuration via external script</label>
+                                <input id="azureSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript, disable: !!$root.overrideViaExternalScriptDisableReason()">
+                                <label for="azureSettingsViaScript" data-bind="attr: { 'title': $root.overrideViaExternalScriptDisableReason() }">
+                                    Override configuration via external script
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -198,8 +204,10 @@
                     <div class="row margin-bottom">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
-                                <input id="googleCloudSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
-                                <label for="googleCloudSettingsViaScript">Override configuration via external script</label>
+                                <input id="googleCloudSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript, disable: !!$root.overrideViaExternalScriptDisableReason()">
+                                <label for="googleCloudSettingsViaScript" data-bind="attr: { 'title': $root.overrideViaExternalScriptDisableReason() }">
+                                    Override configuration via external script
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -241,8 +249,10 @@
                     <div class="row margin-bottom">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
-                                <input id="glacierSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
-                                <label for="glacierSettingsViaScript">Override configuration via external script</label>
+                                <input id="glacierSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript, disable: !!$root.overrideViaExternalScriptDisableReason()">
+                                <label for="glacierSettingsViaScript" data-bind="attr: { 'title': $root.overrideViaExternalScriptDisableReason() }">
+                                    Override configuration via external script
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -284,8 +294,10 @@
                     <div class="row margin-bottom">
                         <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
                             <div class="toggle margin-left">
-                                <input id="ftpSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript">
-                                <label for="ftpSettingsViaScript">Override configuration via external script</label>
+                                <input id="ftpSettingsViaScript" type="checkbox" data-bind="checked: hasConfigurationScript, disable: !!$root.overrideViaExternalScriptDisableReason()">
+                                <label for="ftpSettingsViaScript" data-bind="attr: { 'title': $root.overrideViaExternalScriptDisableReason() }">
+                                    Override configuration via external script
+                                </label>
                             </div>
                         </div>
                     </div>

@@ -14,6 +14,7 @@ import periodicBackupConfiguration = require("models/database/tasks/periodicBack
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
 import licenseModel = require("models/auth/licenseModel");
+import accessManager = require("common/shell/accessManager");
 import EditPeriodicBackupTaskInfoHub = require("./EditPeriodicBackupTaskInfoHub");
 import EditManualBackupTaskInfoHub = require("./EditManualBackupTaskInfoHub");
 
@@ -55,12 +56,24 @@ class editPeriodicBackupTask extends shardViewModelBase {
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
+    overrideViaExternalScriptDisableReason: KnockoutComputed<string>;
+
     constructor(db: database) {
         super(db);
         
         this.bindToCurrentInstance("testCredentials", "setState");
         
         this.titleForView = ko.pureComputed(() => this.configuration().getTitleForView(this.isAddingNewBackupTask()));
+
+        this.overrideViaExternalScriptDisableReason = ko.pureComputed(() => {
+            const isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode();
+
+            if (!isClusterAdminOrClusterNode && this.serverConfiguration().RestrictOverrideConfigurationViaExternalScriptForNonClusterAdmin) {
+                return "Setting up the configuration via an external script is not allowed for non cluster admins.";
+            }
+
+            return null;
+        });
 
         this.periodicInfoHubView = ko.pureComputed(() => ({
             component: EditPeriodicBackupTaskInfoHub.EditPeriodicBackupTaskInfoHub
