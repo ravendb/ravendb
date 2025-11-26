@@ -235,7 +235,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
                 innerQuery = match.Groups["inner_query"];
                 queryToMatch = match.Groups["inner_query"].Value;
-            } while (innerQuery.Success && !IsRql(queryToMatch, out rql));
+            } while (innerQuery.Success && IsRql(queryToMatch, out rql) == false);
 
             outMatches = matches;
             return true;

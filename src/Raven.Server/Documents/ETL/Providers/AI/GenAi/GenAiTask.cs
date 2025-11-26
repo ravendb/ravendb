@@ -318,6 +318,15 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             if (Configuration.TestMode)
                 throw new InvalidOperationException("Failed to run test", singleEx);
 
+            var msg =
+                $"Model call failed for context in document '{item.DocumentId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
+                $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
+                $"{singleEx}";
+
+            Statistics.RecordPartialLoadError(msg, item.DocumentId);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn(msg);
+
             switch (singleEx)
             {
                 // this item cannot be processed, because it has too many items, and retrying isn't going to change that
@@ -327,13 +336,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     // in this case, we _intentionally_ want to update the hash so we will _not_ try to update this known bad
                     // item again in the future.
                     item.UpdateHash = true;
-                    var msg =
-                        $"Model call failed for context in document '{item.DocumentId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
-                        $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
-                        $"{singleEx}";
-
-                    Statistics.RecordPartialLoadError(msg, item.DocumentId);
-                    Logger.Warn(msg);
                     return null;
                 default:
                     // something bad happened, but this isn't the fault of this item (run out of rate limit, TCP error, etc.)

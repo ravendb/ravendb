@@ -74,7 +74,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             if (objectType.Namespace == null || objectType == typeof(string) || objectType.IsClass == false)
                 return false;
 
-            if (!_canConvertCache.TryGetValue(objectType, out bool canConvert))
+            if (_canConvertCache.TryGetValue(objectType, out bool canConvert) == false)
             {
                 canConvert = false;
                 foreach (var interfaceType in objectType.GetInterfaces())

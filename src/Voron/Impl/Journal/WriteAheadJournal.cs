@@ -41,6 +41,7 @@ using static Voron.Impl.Paging.Pager;
 
 namespace Voron.Impl.Journal
 {
+    [SuppressMessage("CancellationToken", "RDB0007:CancellationToken must be a last argument")]
     public sealed unsafe class WriteAheadJournal : IDisposable
     {
         private readonly StorageEnvironment _env;
@@ -1798,7 +1799,7 @@ namespace Voron.Impl.Journal
                     {
                         var start = Stopwatch.GetTimestamp();
                         var entry = PrepareToWriteToJournal(tx, ref tempTxState, out numberOfUncompressedPages, out var numberOfUsedCompressionBufferPages);
-                        branchCommit = new TaskCompletionSource();
+                        branchCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                         numberOf4Kbs = entry.NumberOf4Kbs;
                         var pendingJournalStateRecord = new PendingJournalStateRecord(tx, branchCommit, entry);
                         journalStateRecord = pendingJournalStateRecord.JournalStateRecord;

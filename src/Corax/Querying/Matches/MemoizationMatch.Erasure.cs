@@ -38,6 +38,12 @@ namespace Corax.Querying.Matches
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Dispose() => _functionTable.DisposeFunc(ref this);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void InnerRetriever(out IQueryMatch inner) => _functionTable.InnerRetriever(ref this, out inner);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<long> FillAndRetrieve()
         {
 #pragma warning disable CS9084 // Struct member returns 'this' or other instance members by reference
@@ -51,18 +57,24 @@ namespace Corax.Querying.Matches
             public readonly delegate*<ref MemoizationMatch, Span<long>, int, int> AndWithFunc;
             public readonly delegate*<ref MemoizationMatch, long> CountFunc;
             public readonly delegate*<ref MemoizationMatch, Span<long>> FillAndRetrieveFunc;
+            public readonly delegate*<ref MemoizationMatch, void> DisposeFunc;
+            public readonly delegate*<ref MemoizationMatch, out IQueryMatch, void> InnerRetriever;
 
 
             public FunctionTable(
                 delegate*<ref MemoizationMatch, Span<long>, int> fillFunc,
                 delegate*<ref MemoizationMatch, Span<long>, int, int> andWithFunc,
                 delegate*<ref MemoizationMatch, long> countFunc,
-                delegate*<ref MemoizationMatch, Span<long>> fillAndRetrieveFunc)
+                delegate*<ref MemoizationMatch, Span<long>> fillAndRetrieveFunc,
+                delegate*<ref MemoizationMatch, void> disposeFunc,
+                delegate*<ref MemoizationMatch, out IQueryMatch, void> innerRetriever)
             {
                 FillFunc = fillFunc;
                 AndWithFunc = andWithFunc;
                 CountFunc = countFunc;
                 FillAndRetrieveFunc = fillAndRetrieveFunc;
+                DisposeFunc = disposeFunc;
+                InnerRetriever = innerRetriever;
             }
         }
 
@@ -114,8 +126,34 @@ namespace Corax.Querying.Matches
                     }
                     return 0;
                 }
+                
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                static void Dispose(ref MemoizationMatch match)
+                {
+                    if (match._inner is MemoizationMatch<TInner> memoizationMatch)
+                    {
+                        memoizationMatch.Dispose();
+                        return;
+                    }
+                    
+                    throw new InvalidOperationException("Cannot dispose a match that was not created from a memoization query.");
+                }
 
-                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc, &FillAndRetrieveFunc);
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                static void InnerRetriever(ref MemoizationMatch match, out IQueryMatch inner)
+                {
+                    if (match._inner is MemoizationMatch<TInner> memoizationMatch)
+                    {
+                        memoizationMatch.InnerRetriever(out var typedInner);
+                        inner = typedInner;
+                        match._inner = memoizationMatch;
+                        return;
+                    }
+                    
+                    throw new InvalidOperationException("Cannot retrieve a match that was not created from a memoization query.");
+                }
+
+                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc, &FillAndRetrieveFunc, &Dispose, &InnerRetriever);
             }
         }
 

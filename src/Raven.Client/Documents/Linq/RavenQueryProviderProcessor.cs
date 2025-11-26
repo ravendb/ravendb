@@ -1145,8 +1145,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 // non-static string compare: x => x.CompareTo("Dave") > 0
                 if (methodCall.Object != null)
                 {
-                    if (IsMemberAccessForQuerySource(methodCall.Object) && !(methodCall.Arguments[0] is ConstantExpression)
-                        || !IsMemberAccessForQuerySource(methodCall.Object) && !IsMemberAccessForQuerySource(methodCall.Arguments[0]))
+                    if (IsMemberAccessForQuerySource(methodCall.Object) && !(methodCall.Arguments[0] is ConstantExpression) || 
+                        IsMemberAccessForQuerySource(methodCall.Object) == false && 
+                        IsMemberAccessForQuerySource(methodCall.Arguments[0]) == false)
                     {
                         if (throwOnInvalidExpression)
                             throw new NotSupportedException("String comparisons must be between a field and a constant value. " +
@@ -3602,7 +3603,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AssertNameForInclude(string name)
         {
-            if (string.IsNullOrEmpty(name) || !name.All(c => c == '_'))
+            if (string.IsNullOrEmpty(name) || name.All(c => c == '_') == false)
             {
                 throw new InvalidOperationException("The result of an Include can only be assigned to the discard symbol (_)");
             }

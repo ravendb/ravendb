@@ -363,7 +363,6 @@ class documents extends shardViewModelBase {
     private onDeleteCompleted() {
         this.spinners.delete(false);
         this.resetGrid(false);
-        this.refresh()
     }
 
     copySelectedDocs() {

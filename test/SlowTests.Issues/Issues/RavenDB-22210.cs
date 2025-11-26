@@ -117,12 +117,12 @@ public class RavenDB_22210 : RavenTestBase
         GenerateAndRenewWithDifferentIntermediate()
     {
         var suffix = GenerateSuffix();
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"CaName-{suffix}", out var caKp, out _);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"CaName-{suffix}",  out _);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}",
             issuerCN: ca.SubjectName,
-            issuerKeyPair: caKp,
+            issuerKeyPair: (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()),
             isClientCertificate: false,
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
@@ -132,7 +132,7 @@ public class RavenDB_22210 : RavenTestBase
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}-2",
             issuerCN: ca.SubjectName,
-            issuerKeyPair: caKp,
+            issuerKeyPair: (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()),
             isClientCertificate: false,
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
@@ -171,8 +171,8 @@ public class RavenDB_22210 : RavenTestBase
         GenerateAndRenewWithDifferentChain()
     {
         var suffix = GenerateSuffix();
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}", out _, out _);
-        var ca2 = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}-2", out _, out _, generateNewKeyPair: true);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}", out _);
+        var ca2 = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}-2", out _, generateNewKeyPair: true);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}",
@@ -224,12 +224,12 @@ public class RavenDB_22210 : RavenTestBase
     private static (X509Certificate2 ca, X509Certificate2 intermediate, X509Certificate2 client, X509Certificate2 clientRenewed) GenerateAndRenewWithTheSameIntermediate()
     {
         var suffix = GenerateSuffix();
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}", out var caKp, out _);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"{CaName}-{suffix}", out _);
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}",
             issuerCN: ca.SubjectName,
-            issuerKeyPair: caKp,
+            issuerKeyPair: (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()),
             isClientCertificate: false,
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),

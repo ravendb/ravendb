@@ -242,7 +242,7 @@ namespace Voron.Data.BTrees
 
                 for (long i = 0; i < Math.Abs(count); i++)
                 {
-                    if (!moveMethod())
+                    if (moveMethod() == false)
                         break;
                 }
             }

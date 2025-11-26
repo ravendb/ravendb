@@ -1,7 +1,7 @@
 ﻿using Sparrow;
 using System;
 using System.Diagnostics;
-using System.Drawing;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -29,6 +29,7 @@ namespace Voron.Impl.FileHeaders
 
         internal static readonly string[] HeaderFileNames = { "headers.one", "headers.two" };
 
+        [SuppressMessage("BooleanMethodNegation", "RDB0010:Avoid negating boolean method conditions")]
         public bool Initialize()
         {
             _locker.EnterWriteLock();

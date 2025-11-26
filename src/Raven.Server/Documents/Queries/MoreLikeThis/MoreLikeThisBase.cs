@@ -16,6 +16,7 @@
  */
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using Lucene.Net.Search;
@@ -385,6 +386,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </param>
         protected abstract PriorityQueue<object[]> CreateQueue(Dictionary<string, int> words);
 
+        [SuppressMessage("BooleanMethodNegation", "RDB0010:Avoid negating boolean method conditions")]
         protected static bool HasFlagWithBitPacking(BlittableJsonToken token)
         {
             return token.HasFlag(BlittableJsonToken.StartObject) &&

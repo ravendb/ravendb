@@ -90,10 +90,10 @@ public unsafe partial class Pager
                     if (addr.Usages != 0)
                         continue;
 
-                    if (!pager32BitsState.MemoryMapping.TryGetValue(addr.StartPage, out var set))
+                    if (pager32BitsState.MemoryMapping.TryGetValue(addr.StartPage, out var set) == false)
                         continue;
 
-                    if (!set.TryRemove(addr))
+                    if (set.TryRemove(addr) == false)
                         continue;
                     if (set.IsEmpty)
                     {

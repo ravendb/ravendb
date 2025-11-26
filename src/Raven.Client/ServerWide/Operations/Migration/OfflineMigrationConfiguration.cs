@@ -82,7 +82,11 @@ namespace Raven.Client.ServerWide.Operations.Migration
             var voronDataFile = Path.Combine(dataDirectory, VoronDataFile);
             var voronBackupFile = Path.Combine(dataDirectory, VoronBackupFile);
             var esentBackupFile = Path.Combine(dataDirectory, EsentBackupFile);
-            if (!File.Exists(esentDataDbFile) && !File.Exists(esentDataFsFile) && !File.Exists(voronDataFile) && File.Exists(voronBackupFile) == false && File.Exists(esentBackupFile) == false)
+            if (File.Exists(esentDataDbFile) == false && 
+                File.Exists(esentDataFsFile) == false && 
+                File.Exists(voronDataFile) == false && 
+                File.Exists(voronBackupFile) == false && 
+                File.Exists(esentBackupFile) == false)
                 throw new FileNotFoundException($"Data directory should contain file '{EsentDBDataFile}', '{EsentFSDataFile}' or '{VoronDataFile}' or '{VoronBackupFile}' or '{EsentBackupFile}'");
         }
 

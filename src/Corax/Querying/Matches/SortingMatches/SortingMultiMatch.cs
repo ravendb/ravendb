@@ -15,12 +15,12 @@ using Voron.Util;
 namespace Corax.Querying.Matches.SortingMatches;
 
 [DebuggerDisplay("{DebugView,nq}")]
-public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
+public unsafe partial struct SortingMultiMatch<TInner>
     where TInner : IQueryMatch
 {
     private const int NextComparerOffset = 3;
     private readonly IndexSearcher _searcher;
-    private readonly TInner _inner;
+    private TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly IEntryComparer[] _nextComparers;
@@ -123,11 +123,16 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             match._token.ThrowIfCancellationRequested();
             var allMatches = memoizer.FillAndRetrieve();
             match.TotalResults = allMatches.Length;
+            memoizer.InnerRetriever(out IQueryMatch inner);
+            if (inner is TInner typedInner)
+                match._inner = typedInner;
+            
             
             if (match.TotalResults == 0)
                 return 0;
             
             SortResults<TComparer1, TComparer2, TComparer3>(ref match, allMatches);
+            memoizer.Dispose();
         }
 
         var read = match._results.CopyTo(matches, match._alreadyReadIdx);

@@ -1,5 +1,4 @@
-﻿import React from "react";
-import Button from "react-bootstrap/Button";
+﻿import Button from "react-bootstrap/Button";
 import useUniqueId from "components/hooks/useUniqueId";
 import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
 import appUrl from "common/appUrl";

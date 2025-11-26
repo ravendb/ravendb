@@ -414,7 +414,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
     private JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, ref IndexField field, CurrentIndexingScope scope)
     {
         //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-        if (!valueAsObject.HasOwnProperty(JavaScriptFieldName.ValuePropertyName))
+        if (valueAsObject.HasOwnProperty(JavaScriptFieldName.ValuePropertyName) == false)
             return null;
 
         var value = valueAsObject.GetOwnProperty(JavaScriptFieldName.ValuePropertyName).Value;

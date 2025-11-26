@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             {
                 if (_curTermBuffer == null)
                 {
-                    if (!input.IncrementToken())
+                    if (input.IncrementToken() == false)
                     {
                         return false;
                     }

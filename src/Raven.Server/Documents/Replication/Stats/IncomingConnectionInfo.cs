@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Replication.Stats
 
         public static bool operator !=(IncomingConnectionInfo left, IncomingConnectionInfo right)
         {
-            return !Equals(left, right);
+            return Equals(left, right) == false;
         }
 
         public DynamicJsonValue ToJson()

@@ -474,8 +474,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (readTransaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord) is false)
                 throw new InvalidOperationException("Unable to find index ClientState, should not be possible");
-            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) || 
-                !stateRecord.LuceneSuggestionStates.TryGetValue(field, out var state))
+            if (_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) == false || 
+                stateRecord.LuceneSuggestionStates.TryGetValue(field, out var state) == false)
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
             IndexSearcher indexSearcherValue;
             _currentIndexState = new VoronState(readTransaction);

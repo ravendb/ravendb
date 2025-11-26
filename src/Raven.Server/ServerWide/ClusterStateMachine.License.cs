@@ -14,7 +14,6 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Commands.Analyzers;
-using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -63,7 +62,9 @@ public sealed partial class ClusterStateMachine
         nameof(AddElasticSearchEtlCommand),
         nameof(AddQueueSinkCommand),
         nameof(UpdateQueueSinkCommand),
-        nameof(EditDataArchivalCommand)
+        nameof(EditDataArchivalCommand),
+        nameof(AddEmbeddingsGenerationCommand),
+        nameof(UpdateEmbeddingsGenerationCommand)
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
@@ -173,7 +174,7 @@ public sealed partial class ClusterStateMachine
             case nameof(EditDocumentsCompressionCommand):
                 AssertDocumentsCompressionLicenseLimits(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
-            case nameof(PutAiConnectionStringCommand):
+            case nameof(UpdateEmbeddingsGenerationCommand):
             case nameof(AddEmbeddingsGenerationCommand):
                 AssertEmbeddingsGeneration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
@@ -248,9 +249,9 @@ public sealed partial class ClusterStateMachine
             AssertPullReplicationAsSinkLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertAdditionalAssembliesFromNuGetLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertOlapEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
-            AssertDocumentsCompressionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertSnowflakeEtl(databaseRecord, newLicenseLimits, context);
             AssertEmbeddingsGeneration(databaseRecord, newLicenseLimits, context);
+            AssertDocumentsCompressionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertGenAi(databaseRecord, newLicenseLimits, context);
             AssertAiAgent(databaseRecord, newLicenseLimits, context);
         }
@@ -939,7 +940,7 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private void AssertRavenEtlLicenseLimits( DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    private void AssertRavenEtlLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
@@ -1028,7 +1029,7 @@ public sealed partial class ClusterStateMachine
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
-        
+
         if (licenseStatus.HasSnowflakeEtl)
             return;
 
@@ -1042,11 +1043,14 @@ public sealed partial class ClusterStateMachine
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
-        
+
         if (licenseStatus.HasEmbeddingsGeneration)
             return;
 
         if (databaseRecord.AiConnectionStrings.Count == 0 || databaseRecord.EmbeddingsGenerations.Count == 0)
+            return;
+
+        if (databaseRecord.EmbeddingsGenerations.All(x => x.Disabled))
             return;
 
         foreach (var config in databaseRecord.EmbeddingsGenerations)
@@ -1066,7 +1070,7 @@ public sealed partial class ClusterStateMachine
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
-        
+
         if (licenseStatus.HasGenAi)
             return;
 
@@ -1080,7 +1084,7 @@ public sealed partial class ClusterStateMachine
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;
-        
+
         if (licenseStatus.HasAiAgent)
             return;
 
@@ -1090,7 +1094,7 @@ public sealed partial class ClusterStateMachine
         throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
     }
 
-    private void AssertTimeSeriesConfigurationLicenseLimits(DatabaseRecord databaseRecord,  LicenseStatus licenseStatus, ClusterOperationContext context)
+    private void AssertTimeSeriesConfigurationLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;

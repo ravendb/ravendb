@@ -120,7 +120,7 @@ public partial class IndexWriter
         {
             bool termFound = postingListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(termFound || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
-            _writer._entriesToTermsTracker.InsertEntries(entries, key.ToLong());
+            _writer._entriesToTermsTracker.InsertEntries(entries, new ContainerEntryId(key.ToLong()));
             LookupTreeOperationJob result;
             if (entries.HasChanges)
             {

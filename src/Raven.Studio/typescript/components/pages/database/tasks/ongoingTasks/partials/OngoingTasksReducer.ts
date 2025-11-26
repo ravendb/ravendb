@@ -544,20 +544,24 @@ function initNodesInfo(
 ): OngoingTaskNodeInfo[] {
     const sharded = orchestrators.length > 0;
     if (sharded && taskType === "Subscription") {
-        return orchestrators.map((nodeTag) => ({
-            location: {
-                nodeTag,
-            },
-            status: "idle",
-            details: null,
-        }));
+        return orchestrators.map(
+            (nodeTag): OngoingTaskNodeInfo => ({
+                location: {
+                    nodeTag,
+                },
+                status: "idle",
+                details: null,
+            })
+        );
     }
 
-    return locations.map((l) => ({
-        location: l,
-        status: "idle",
-        details: null,
-    }));
+    return locations.map(
+        (l): OngoingTaskNodeInfo => ({
+            location: l,
+            status: "idle",
+            details: null,
+        })
+    );
 }
 
 const mapTask = (
@@ -705,26 +709,28 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     ) as OngoingTaskSubscriptionInfo[];
                 }
 
-                draft.replicationHubs = incomingTasks.PullReplications.map((incomingTask) => {
-                    return {
-                        shared: {
-                            taskId: incomingTask.TaskId,
-                            taskName: incomingTask.Name,
-                            taskState: incomingTask.Disabled ? "Disabled" : "Enabled",
-                            delayReplicationTime: incomingTask.DelayReplicationFor
-                                ? genUtils.timeSpanToSeconds(incomingTask.DelayReplicationFor)
-                                : null,
-                            taskMode: incomingTask.Mode,
-                            hasFiltering: incomingTask.WithFiltering,
-                            serverWide: incomingTask.Name.startsWith(serverWidePrefix),
-                            taskType: "PullReplicationAsHub",
-                            mentorNodeTag: null,
-                            responsibleNodeTag: null,
-                        },
-                        nodesInfo: undefined,
-                        responsibleLocations: [],
-                    };
-                });
+                draft.replicationHubs = incomingTasks.PullReplications.map(
+                    (incomingTask): OngoingTaskHubDefinitionInfo => {
+                        return {
+                            shared: {
+                                taskId: incomingTask.TaskId,
+                                taskName: incomingTask.Name,
+                                taskState: incomingTask.Disabled ? "Disabled" : "Enabled",
+                                delayReplicationTime: incomingTask.DelayReplicationFor
+                                    ? genUtils.timeSpanToSeconds(incomingTask.DelayReplicationFor)
+                                    : null,
+                                taskMode: incomingTask.Mode,
+                                hasFiltering: incomingTask.WithFiltering,
+                                serverWide: incomingTask.Name.startsWith(serverWidePrefix),
+                                taskType: "PullReplicationAsHub",
+                                mentorNodeTag: null,
+                                responsibleNodeTag: null,
+                            },
+                            nodesInfo: undefined,
+                            responsibleLocations: [],
+                        };
+                    }
+                );
             });
         }
         case "TasksLoadError": {
@@ -941,11 +947,13 @@ export const ongoingTasksReducerInitializer = (db: DatabaseSharedInfo): OngoingT
         "Replication",
         locations,
         orchestrators
-    ).map((nodeInfo) => ({
-        ...nodeInfo,
-        progress: [],
-        details: null as never,
-    }));
+    ).map(
+        (nodeInfo): OngoingInternalReplicationNodeInfo => ({
+            ...nodeInfo,
+            progress: [],
+            details: null as never,
+        })
+    );
 
     return {
         tasks: [],

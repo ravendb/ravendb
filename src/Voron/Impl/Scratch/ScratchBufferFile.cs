@@ -120,7 +120,7 @@ namespace Voron.Impl.Scratch
         {
             result = null;
 
-            if (!_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) || list.Count <= 0)
+            if (_freePagesBySize.TryGetValue(size, out LinkedList<PendingPage> list) == false || list.Count <= 0)
                 return false;
 
             var val = list.Last!.Value;
