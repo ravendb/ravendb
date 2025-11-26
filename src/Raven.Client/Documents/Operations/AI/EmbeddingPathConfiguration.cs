@@ -24,9 +24,8 @@ public class EmbeddingPathConfiguration : IDynamicJson
         
         if (left == null || right == null)
             return false;
-        
-        return left.Path == right.Path && 
-               ChunkingOptions.AreEqual(left.ChunkingOptions, right.ChunkingOptions);
+
+        return left.Equals(right);
     }
 
     private bool Equals(EmbeddingPathConfiguration other)

@@ -36,9 +36,8 @@ public class EmbeddingsTransformation
         
         if (left == null || right == null)
             return false;
-        
-        return left.Script == right.Script &&
-               ChunkingOptions.AreEqual(left.ChunkingOptions, right.ChunkingOptions);
+
+        return left.Equals(right);
     }
 
     private bool Equals(EmbeddingsTransformation other)
