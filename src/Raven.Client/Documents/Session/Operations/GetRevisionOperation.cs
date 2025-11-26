@@ -79,7 +79,8 @@ namespace Raven.Client.Documents.Session.Operations
                 ChangeVector = metadata.GetChangeVector(),
                 Document = document,
                 Metadata = metadata,
-                Entity = entity
+                Entity = entity,
+                IgnoreChanges = true
             };
             _session.OnAfterConversionToEntityInvoke(id, document, entity);
 
