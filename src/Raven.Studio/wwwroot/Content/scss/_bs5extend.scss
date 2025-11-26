@@ -80,7 +80,7 @@
 .popover-container-fix {
     position: absolute;
     width: 100%;
-    z-index: $zindex-popover;
+    z-index: $zindex-popover; // TODO check
 }
 
 // Fix caret margin for dropdowns with no text (no support on firefox)

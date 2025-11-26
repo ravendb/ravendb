@@ -6,6 +6,9 @@ import useBoolean from "components/hooks/useBoolean";
 import { ThemeColor } from "components/models/common";
 import IconName from "typings/server/icons";
 import assertUnreachable from "components/utils/assertUnreachable";
+import { useMemo } from "react";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import genUtils from "common/generalUtils";
 
 interface ChatbotAskAiAttachedContextProps {
     attachedContexts: ChatbotAttachedContext[];
@@ -38,6 +41,11 @@ interface ContextItemProps {
 
 function Item({ item, isReadOnly = false }: ContextItemProps) {
     const dispatch = useAppDispatch();
+
+    const sizeInBytes = useMemo(() => {
+        const blob = new Blob([item.value]);
+        return blob.size;
+    }, [item.value]);
 
     const canDiscard = item.type !== "Current View" && item.type !== "Current Database Name";
     const canClick = canDiscard && !isReadOnly;
@@ -98,22 +106,27 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     };
 
     return (
-        <div
-            className={classNames(
-                "hstack rounded-2 border border-secondary text-truncate",
-                { "opacity-50": item.state === "excluded" },
-                { "cursor-pointer hover-filter": canClick }
-            )}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            style={{
-                padding: "1px 6px",
-                fontSize: "12px",
-            }}
-            onClick={handleClick}
-        >
-            <Icon icon={getIconName()} color={getIconColor()} />
-            <span className="text-truncate">{item.label}</span>
-        </div>
+        <PopoverWithHoverWrapper message={`Size: ${genUtils.formatBytesToSize(sizeInBytes)}`}>
+            <div
+                className={classNames(
+                    "hstack rounded-2 border border-secondary text-truncate",
+                    { "opacity-50": item.state === "excluded" },
+                    { "cursor-pointer hover-filter": canClick }
+                )}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+                style={{
+                    padding: "1px 6px",
+                    fontSize: "12px",
+                }}
+                onClick={handleClick}
+            >
+                <Icon icon={getIconName()} color={getIconColor()} />
+                <span className="text-truncate">{item.label}</span>
+                {sizeInBytes > 1024 && item.state === "included" && (
+                    <Icon icon="warning" color="warning" margin="ms-1" />
+                )}
+            </div>
+        </PopoverWithHoverWrapper>
     );
 }

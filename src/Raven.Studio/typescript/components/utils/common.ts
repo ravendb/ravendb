@@ -60,11 +60,33 @@ export function boundCopy<TArgs>(story: StoryFn<TArgs>, args?: TArgs): StoryFn<T
     return copy;
 }
 
-export async function tryHandleSubmit<T>(promise: () => Promise<T>) {
+export async function tryHandleSubmit<T>(promiseFn: () => Promise<T>) {
     try {
-        return await promise();
+        return await promiseFn();
     } catch (e) {
         console.error(e);
+    }
+}
+
+export type TryCatchResult<T> =
+    | {
+          status: "success";
+          data: T;
+      }
+    | {
+          status: "error";
+          error: string;
+      };
+
+export async function tryCatch<T>(promiseFn: () => Promise<T>): Promise<TryCatchResult<T>> {
+    try {
+        const response = await promiseFn();
+        return { status: "success", data: response };
+    } catch (error) {
+        return {
+            status: "error",
+            error: error instanceof Error ? error.message : "Unknown error // TODO first 100 characters",
+        };
     }
 }
 

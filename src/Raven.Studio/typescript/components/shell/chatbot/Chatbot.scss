@@ -28,6 +28,8 @@
         background-color: colors.$input-bg-var;
         z-index: 10;
         box-shadow: 0px -10px 10px var(--bs-body-bg);
+        max-height: 40%;
+        overflow-y: auto;
 
         .prompt-textarea {
             z-index: 11;

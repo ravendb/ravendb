@@ -1,4 +1,9 @@
-import { chatbotActions, ChatbotAttachedContextId, ChatbotMessage } from "components/shell/chatbot/store/chatbotSlice";
+import {
+    chatbotActions,
+    ChatbotAttachedContext,
+    ChatbotAttachedContextId,
+    ChatbotMessage,
+} from "components/shell/chatbot/store/chatbotSlice";
 import { globalDispatch } from "components/storeCompat";
 
 export class MockChatbot {
@@ -12,5 +17,9 @@ export class MockChatbot {
 
     with_attachedContextSet(context: { id: ChatbotAttachedContextId; label: string; value: string }) {
         globalDispatch(chatbotActions.attachedContextSet(context));
+    }
+
+    with_attachedContextAdded(context: ChatbotAttachedContext) {
+        globalDispatch(chatbotActions.attachedContextAdded(context));
     }
 }
