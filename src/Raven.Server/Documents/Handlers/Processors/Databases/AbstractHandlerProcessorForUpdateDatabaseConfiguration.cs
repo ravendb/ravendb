@@ -64,8 +64,6 @@ internal abstract class AbstractHandlerProcessorForUpdateDatabaseConfiguration<T
 
     public override async ValueTask ExecuteAsync()
     {
-        RequestHandler.ServerStore.LicenseManager.AssertCanAddSchemaValidation();
-
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             await AssertCanExecuteAsync();

@@ -14,6 +14,12 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForPost<TRequest
     {
     }
 
+    protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
+    {
+        RequestHandler.ServerStore.LicenseManager.AssertCanAddSchemaValidation();
+        base.OnBeforeUpdateConfiguration(ref configuration, context);
+    }
+
     protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
     {
         return RequestHandler.ServerStore.ModifySchemaValidation(context, RequestHandler.DatabaseName, configuration, raftRequestId);
