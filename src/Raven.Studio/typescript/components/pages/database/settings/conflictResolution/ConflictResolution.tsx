@@ -159,7 +159,7 @@ function mapToDto(
     return {
         ResolveToLatest: isResolveToLatest,
         ResolveByCollection: Object.fromEntries(
-            collectionConfigs.map((config) => [
+            collectionConfigs.map((config): [string, Raven.Client.ServerWide.ScriptResolver] => [
                 config.name,
                 {
                     Script: config.script,

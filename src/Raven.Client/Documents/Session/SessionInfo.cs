@@ -68,6 +68,8 @@ namespace Raven.Client.Documents.Session
             _canUseLoadBalanceBehavior = _canUseLoadBalanceBehavior || _session.Conventions.LoadBalanceBehavior == LoadBalanceBehavior.UseSessionContext;
         }
 
+        public string DatabaseName => _session.DatabaseName;
+
         private void SetContextInternal(string sessionKey)
         {
             if (_sessionIdUsed)

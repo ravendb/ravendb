@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -14,6 +15,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Sparrow
 {
+    [SuppressMessage("BooleanMethodNegation", "RDB0010:Avoid negating boolean method conditions")]
     public static unsafe class Memory
     {
 #if NET7_0_OR_GREATER
@@ -296,9 +298,17 @@ namespace Sparrow
 
             if (size > 0)
             {
+                rbpx = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpx, sizeof(ulong)));
+                rbpy = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpy, sizeof(ulong)));
+
+                // RavenDB-22488: Mask away bytes beyond the caller slice; on 32-bit heaps the extra 8-byte load
+                // can span into neighboring objects whereas 64-bit stays within the padded header. For this
+                // reason the error can be seen on 32-bit processes but not on 64-bit processes and only on managed arrays.
+                ulong mask = ulong.MaxValue << (((sizeof(ulong) - size) & (sizeof(ulong) - 1)) << 3);
+                rbpx &= mask;
+                rbpy &= mask;
+
                 size = sizeof(ulong);
-                rbpx = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpx, size));
-                rbpy = Unsafe.ReadUnaligned<ulong>(ref Unsafe.SubtractByteOffset(ref bpy, size));
             }
 
             DONE:

@@ -827,7 +827,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public virtual void Dispose()
         {
             // There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
-            if (!_disposed.Raise())
+            if (_disposed.Raise() == false)
                 return;
 
             var timeout = _server.Engine.TcpConnectionTimeout;

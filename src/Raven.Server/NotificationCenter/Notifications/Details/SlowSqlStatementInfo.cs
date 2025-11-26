@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
-    public sealed class SlowSqlStatementInfo : IDynamicJsonValueConvertible
+    public sealed class SlowSqlStatementInfo : IDynamicJson
     {
         public long Duration { get; set; }
         public DateTime Date { get; set; }

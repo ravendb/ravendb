@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Replication;
@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public abstract class ExternalReplicationBase : ReplicationNode, IDatabaseTask, IDynamicJsonValueConvertible
+    public abstract class ExternalReplicationBase : ReplicationNode, IDatabaseTask, IDynamicJson
     {
         public long TaskId
         {

@@ -46,9 +46,7 @@ namespace FastTests.Corax.Bugs
 
             var index = new ComplexIndex();
             index.Execute(store);
-            Indexes.WaitForIndexing(store);
-
-            var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+            var indexErrors = Indexes.WaitForIndexingErrors(store, [index.IndexName], errorsShouldExists: true);
             Assert.Equal(1, indexErrors.Length);
             
             Assert.Contains("field is a complex object", indexErrors[0].Errors[0].Error);

@@ -515,10 +515,10 @@ namespace Voron.Impl.Paging
                     if (addr.Usages != 0)
                         continue;
 
-                    if (!_globalMapping.TryGetValue(addr.StartPage, out var set))
+                    if (_globalMapping.TryGetValue(addr.StartPage, out var set) == false)
                         continue;
 
-                    if (!set.TryRemove(addr))
+                    if (set.TryRemove(addr) == false)
                         continue;
 
                     if (LockMemory && addr.Size > 0)

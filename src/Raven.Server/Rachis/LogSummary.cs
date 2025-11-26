@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -6,7 +6,7 @@ using static Raven.Server.Rachis.RachisConsensus;
 
 namespace Raven.Server.Rachis
 {
-    public sealed class LogSummary : IDynamicJsonValueConvertible
+    public sealed class LogSummary : IDynamicJson
     {
         public DateTime? LastCommitedTime { get; set; }
         public DateTime? LastAppendedTime { get; set; }

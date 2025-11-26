@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
             // We are thinking it is possible to have collisions. This may not be true ever!
-            if (_index != index || _store != store || _termVector != termVector || !string.Equals(_name, name))
+            if (_index != index || _store != store || _termVector != termVector || string.Equals(_name, name) == false)
                 return false;
 
             if (_multipleItemsSameField.Length != multipleItemsSameField.Length)
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
         {
             // We are thinking it is possible to have collisions. This may not be true ever!
-            if (_index != index || _store != store || _termVector != termVector || !string.Equals(_name, name))
+            if (_index != index || _store != store || _termVector != termVector || string.Equals(_name, name) == false)
                 return false;
 
             if (_multipleItemsSameField.Length != multipleItemsSameField.Count)

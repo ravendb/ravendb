@@ -82,7 +82,7 @@ namespace Sparrow.Utils
                         // it is too old, we can dispose it, but need to protect from races
                         // if the owner thread will just pick it up
 
-                        if (!item.InUse.Raise())
+                        if (item.InUse.Raise() == false)
                             continue;
 
                         try

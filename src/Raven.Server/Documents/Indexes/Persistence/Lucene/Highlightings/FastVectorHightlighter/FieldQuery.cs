@@ -73,8 +73,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             }
             else if (sourceQuery is PrefixQuery)
             {
-                if (!flatQueries.ContainsKey(sourceQuery))
-                    flatQueries.Add(sourceQuery, sourceQuery);
+                flatQueries.TryAdd(sourceQuery, sourceQuery);
             }
             else if (sourceQuery is DisjunctionMaxQuery dmq)
             {
@@ -85,12 +84,11 @@ namespace Lucene.Net.Search.Vectorhighlight
             }
             else if (sourceQuery is TermQuery)
             {
-                if (!flatQueries.ContainsKey(sourceQuery))
-                    flatQueries.Add(sourceQuery, sourceQuery);
+                flatQueries.TryAdd(sourceQuery, sourceQuery);
             }
             else if (sourceQuery is PhraseQuery pq)
             {
-                if (!flatQueries.ContainsKey(sourceQuery))
+                if (flatQueries.ContainsKey(sourceQuery) == false)
                 {
                     if (pq.GetTerms().Length > 1)
                         flatQueries.Add(pq, pq);
@@ -164,7 +162,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 return;
             Term[] ats = a.GetTerms();
             Term[] bts = b.GetTerms();
-            if (fieldMatch && !ats[0].Field.Equals(bts[0].Field))
+            if (fieldMatch && ats[0].Field.Equals(bts[0].Field) == false)
                 return;
             CheckOverlap(expandQueries, ats, bts, a.Slop, a.Boost);
             CheckOverlap(expandQueries, bts, ats, b.Slop, b.Boost);
@@ -193,7 +191,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 bool overlap = true;
                 for (int j = i; j < src.Length; j++)
                 {
-                    if ((j - i) < dest.Length && !src[j].Text.Equals(dest[j - i].Text))
+                    if ((j - i) < dest.Length && src[j].Text.Equals(dest[j - i].Text) == false)
                     {
                         overlap = false;
                         break;
@@ -210,8 +208,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                     }
                     pq.Slop = slop;
                     pq.Boost = boost;
-                    if (!expandQueries.ContainsKey(pq))
-                        expandQueries.Add(pq, pq);
+                    expandQueries.TryAdd(pq, pq);
                 }
             }
         }

@@ -506,7 +506,7 @@ namespace Sparrow.Logging
 
         private static void CleanupAlreadyCompressedLogFiles(string[] sortedLogFiles, string[] sortedLogGzFiles)
         {
-            if (!sortedLogGzFiles.Any())
+            if (sortedLogGzFiles.Any() == false)
                 return;
 
             foreach (var logFile in sortedLogFiles)

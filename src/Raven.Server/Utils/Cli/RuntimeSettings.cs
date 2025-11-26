@@ -36,9 +36,9 @@ namespace Raven.Server.Utils.Cli
 
             // Fallback (Environment Variable)
             string retainVM = Environment.GetEnvironmentVariable("GCRetainVM");
-            if (!string.IsNullOrEmpty(retainVM))
+            if (string.IsNullOrEmpty(retainVM) == false)
             {
-                if (Boolean.TryParse(retainVM, out bool value))
+                if (bool.TryParse(retainVM, out bool value))
                 {
                     return (true, value);
                 }

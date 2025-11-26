@@ -11,6 +11,7 @@ import Redux = require("react-redux");
 import useDirtyFlag = require("components/hooks/useDirtyFlag");
 import ConfirmDialog = require("components/common/ConfirmDialog");
 import Dialog = require("components/common/Dialog");
+import SplitView = require("components/common/splitView/SplitView");
 
 class extensions {
     static install() {
@@ -240,7 +241,12 @@ class extensions {
                 if (options && options.component) {
                     const root = $(element).data("root");
                     const component = react.createElement(options.component, options.props);
-                    const dirtyFlagWrapper = react.createElement(useDirtyFlag.DirtyFlagProvider, options.dirtyFlag, component);
+
+                    const splitViewProvider = options.isPageView 
+                        ? react.createElement(SplitView.SplitViewProvider, null, component)
+                        : component;
+                    
+                    const dirtyFlagWrapper = react.createElement(useDirtyFlag.DirtyFlagProvider, options.dirtyFlag, splitViewProvider);
                     const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, dirtyFlagWrapper);
                     const confirmDialogProvider = react.createElement(ConfirmDialog.ConfirmDialogProvider, null, reduxWrapper);
                     const dialogProvider = react.createElement(Dialog.DialogProvider, null, confirmDialogProvider);

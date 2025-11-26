@@ -222,7 +222,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             _readAsLazyNumber = true;
             try
             {
-                if (!Read())
+                if (Read() == false)
                 {
                     SetToken(JsonToken.None);
                     return null;
@@ -265,7 +265,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public override string ReadAsString()
         {
-            if (!Read())
+            if (Read() == false)
             {
                 SetToken(JsonToken.None);
                 return null;
@@ -275,7 +275,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public override byte[] ReadAsBytes()
         {
-            if (!Read())
+            if (Read() == false)
             {
                 SetToken(JsonToken.None);
                 return null;
@@ -295,7 +295,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             _readAsLazyNumber = true;
             try
             {
-                if (!Read())
+                if (Read() == false)
                 {
                     SetToken(JsonToken.None);
                     return null;
@@ -325,7 +325,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             _readAsLazyNumber = true;
             try
             {
-                if (!Read())
+                if (Read() == false)
                 {
                     SetToken(JsonToken.None);
                     return null;

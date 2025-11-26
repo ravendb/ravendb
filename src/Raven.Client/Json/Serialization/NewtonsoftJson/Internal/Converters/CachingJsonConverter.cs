@@ -75,7 +75,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         {
             foreach (var converter in _converters)
             {
-                if (!converter.CanConvert(objectType))
+                if (converter.CanConvert(objectType) == false)
                     continue;
                 _cache.Put(objectType, converter);
                 return converter;

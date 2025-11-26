@@ -102,34 +102,34 @@ public unsafe struct TermsReader : IDisposable
         
         _rawTermsContainer.ResetAndEnsureCapacity(ids.Length);
         _rawTermsContainer.Count = ids.Length;
-        Container.GetAll(_llt, _termsLocation.ToSpan(), _rawTermsContainer.RawItems, -1L, _llt.PageLocator);
+        Container.GetAll(_llt, _termsLocation.ToSpan(), _rawTermsContainer.ToSpan(), -1L, _llt.PageLocator);
         termsSet = _rawTermsContainer.ToSpan();
         return maxToProcess;
     }
     
     public bool TryGetRawTermFor(long id, out UnmanagedSpan term)
     {
-        if (_lookup.TryGetValue(id, out var termContainerId) == false)
+        if (_lookup.TryGetValue(id, out var termEntryId) == false)
         {
             term = default;
             return false;
         }
 
-        Container.Get(_llt, termContainerId, out var item);
+        Container.Get(_llt, new ContainerEntryId(termEntryId), out var item);
         term = item.ToUnmanagedSpan();
         return true;
     }
     
     public bool TryGetTermFor(long id, out string term)
     {
-        if (_lookup == null || 
-            _lookup.TryGetValue(id, out var termContainerId) == false)
+        if (_lookup == null ||
+            _lookup.TryGetValue(id, out var termEntryId) == false)
         {
             term = null;
             return false;
         }
 
-        Container.Get(_llt, termContainerId, out var item);
+        Container.Get(_llt, new ContainerEntryId(termEntryId), out var item);
         Set(_xKeyScope.Key, item, _dictionaryId);
         term = _xKeyScope.Key.ToString();
         return true;
@@ -186,7 +186,7 @@ public unsafe struct TermsReader : IDisposable
         UnmanagedSpan term = UnmanagedSpan.Empty;
         if (hasValue)
         {
-            var item = Container.MaybeGetFromSamePage(_llt, ref _lastPage, termId);
+            var item = Container.MaybeGetFromSamePage(_llt, ref _lastPage, new ContainerEntryId(termId));
             term = item.ToUnmanagedSpan();
         }
 

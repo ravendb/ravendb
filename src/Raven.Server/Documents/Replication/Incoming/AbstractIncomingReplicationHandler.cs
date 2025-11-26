@@ -79,7 +79,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             _replicationFromAnotherSource = new AsyncManualResetEvent(parent.Token);
 
             _tcpClient = tcpConnectionOptions.TcpClient;
-            _stream = tcpConnectionOptions.Stream;
+            _stream = _parent.ForTestingPurposes?.WrapIncomingReplicationStream?.Invoke(tcpConnectionOptions.Stream)
+                      ?? tcpConnectionOptions.Stream;
             _server = _parent.Server;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(parent.Token);
             _databaseName = _parent.DatabaseName;
@@ -139,6 +140,11 @@ namespace Raven.Server.Documents.Replication.Incoming
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead<TContextPool, TOperationContext>(_contextPool, _stream))
                 {
+                    var configuration = GetConfiguration();
+                    var readTimeout = (int)configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+
+                    long lastTotalBytesRead = 0;
+
                     while (_cts.IsCancellationRequested == false)
                     {
                         try
@@ -148,10 +154,33 @@ namespace Raven.Server.Documents.Replication.Incoming
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
-                                Timeout.Infinite,
+                                readTimeout,
                                 _copiedBuffer.Buffer,
                                 _cts.Token))
                             {
+                                // Reset event immediately to capture signals arriving during processing
+                                _replicationFromAnotherSource?.Reset();
+
+                                if (msg.Timeout)
+                                {
+                                    // Inactivity check
+                                    var currentUsed = _copiedBuffer.Buffer.Used;
+                                    if (currentUsed > lastTotalBytesRead)
+                                    {
+                                        lastTotalBytesRead = currentUsed;
+                                        if (Logger.IsInfoEnabled)
+                                            Logger.Info($"Incoming replication from `{FromToString}` timed out ({readTimeout}ms) while reading next batch, " +
+                                                        $"but data is flowing (buffer used: {currentUsed} bytes). Extending wait.");
+
+                                        continue;
+                                    }
+
+                                    // No data received within the timeout window. This is likely a zombie connection.
+                                    throw new TimeoutException($"Incoming replication from `{FromToString}` timed out while reading next batch. Read timeout = {readTimeout} ms. No data received in this interval.");
+                                }
+
+                                lastTotalBytesRead = 0;
+
                                 if (msg.Document != null)
                                 {
                                     EnsureNotDeleted();
@@ -175,10 +204,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                                             "Notify");
                                     }
                                 }
-                                // we reset it after every time we send to the remote server
-                                // because that is when we know that it is up to date with our
-                                // status, so no need to send again
-                                _replicationFromAnotherSource?.Reset();
                             }
                         }
                         catch (Exception e)
@@ -199,10 +224,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 else
                                 {
-                                    //if we are disposing, do not notify about failure (not relevant)
+                                    // if we are disposing, do not notify about failure (not relevant)
                                     if (_cts.IsCancellationRequested == false)
-                                        if (Logger.IsInfoEnabled)
-                                            Logger.Info("Received unexpected exception while receiving replication batch.", e);
+                                        Logger.Info("Received unexpected exception while receiving replication batch.", e);
                                 }
                             }
 
@@ -219,7 +243,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             catch (Exception e)
             {
-                //if we are disposing, do not notify about failure (not relevant)
+                // if we are disposing, do not notify about failure (not relevant)
                 if (_cts.IsCancellationRequested == false)
                 {
                     if (Logger.IsInfoEnabled)
@@ -250,10 +274,10 @@ namespace Raven.Server.Documents.Replication.Incoming
             string messageType = null;
             try
             {
-                if (!message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType))
+                if (message.TryGet(nameof(ReplicationMessageHeader.Type), out messageType) == false)
                     throw new InvalidDataException("Expected the message to have a 'Type' field. The property was not found");
 
-                if (!message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag))
+                if (message.TryGet(nameof(ReplicationMessageHeader.LastDocumentEtag), out _lastDocumentEtag) == false)
                     throw new InvalidOperationException("Expected LastDocumentEtag property in the replication message, " +
                                                         "but didn't find it..");
 
@@ -379,11 +403,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         private void HandleReceivedDocumentsAndAttachmentsBatch(TOperationContext context, BlittableJsonReaderObject message, long lastDocumentEtag, IncomingReplicationStatsScope stats)
         {
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
+            if (message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount) == false)
                 throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, " +
                                                $"but had no numeric field of this value, this is likely a bug");
 
-            if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount))
+            if (message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount) == false)
                 throw new InvalidDataException($"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, " +
                                                $"but had no numeric field of this value, this is likely a bug");
 

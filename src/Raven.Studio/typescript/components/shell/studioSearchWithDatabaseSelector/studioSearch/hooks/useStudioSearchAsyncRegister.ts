@@ -138,6 +138,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                 return {
                     OngoingTasks: [],
                     PullReplications: [],
+                    SubscriptionsCount: 0,
                 };
             }
             return tasksService.getOngoingTasks(activeDatabaseName, location);
@@ -225,7 +226,6 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                         icon: "document",
                         text: result,
                         onSelected: (e) => goToDocument(result, e),
-                        subText: null,
                     }))
                 );
             },

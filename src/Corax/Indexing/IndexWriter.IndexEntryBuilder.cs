@@ -416,7 +416,7 @@ public partial class IndexWriter
             ref var entryTerms = ref _parent.GetEntryTerms(_termPerEntryIndex);
 
             _parent.InitializeFieldRootPage(field);
-            var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, field.FieldRootPage);
+            var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, new ContainerEntryId(field.FieldRootPage));
             
             if (entryTerms.TryAdd(recordedTerm) == false)
             {

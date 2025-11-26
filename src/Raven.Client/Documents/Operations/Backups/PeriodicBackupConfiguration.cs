@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.Backups
     /// Defines the configuration for periodic backup tasks.
     /// Supports full and incremental backups with configurable frequencies, retention policies, and mentor node assignments.
     /// </summary>
-    public class PeriodicBackupConfiguration : BackupConfiguration, IDatabaseTask, IDynamicJsonValueConvertible
+    public class PeriodicBackupConfiguration : BackupConfiguration, IDatabaseTask, IDynamicJson
     {
         /// <summary>
         /// The name of the periodic backup task.

@@ -143,6 +143,7 @@ namespace Raven.Server.Commercial
             ServerStore serverStore,
             CancellationToken token)
         {
+            var zipOnly = setupInfo.ZipOnly;
             var progress = new SetupProgressAndResult(tuple =>
             {
                 if (Logger is { IsInfoEnabled: true })
@@ -182,6 +183,7 @@ namespace Raven.Server.Commercial
                     {
                         CompleteClusterConfigurationResult = completeClusterConfigurationResult,
                         Progress = progress,
+                        ZipOnly = zipOnly,
                         OnProgress = onProgress,
                         OnSettingsPath = () => serverStore.Configuration.ConfigPath,
                         SetupInfo = setupInfo,
@@ -190,8 +192,7 @@ namespace Raven.Server.Commercial
                         OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                         OnGetCertificatePath = certificateFileName =>
                         {
-                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ??
-                                   Path.Combine(AppContext.BaseDirectory, certificateFileName);
+                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? certificateFileName;
                         },
                         OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
                         {
@@ -726,8 +727,7 @@ namespace Raven.Server.Commercial
                         OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                         OnGetCertificatePath = certificateFileName =>
                         {
-                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ??
-                                   Path.Combine(AppContext.BaseDirectory, certificateFileName);
+                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? certificateFileName;
                         },
                         OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
                         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -65,7 +65,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         }
     }
 
-    public struct RequestLatencyInfo : IDynamicJsonValueConvertible
+    public struct RequestLatencyInfo : IDynamicJson
     {
         public long Duration;
         public DateTime Date;

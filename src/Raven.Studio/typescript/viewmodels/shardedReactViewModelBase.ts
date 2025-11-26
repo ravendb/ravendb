@@ -42,7 +42,8 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
         return ko.pureComputed(() => ({
             component,
             props,
-            dirtyFlag
+            dirtyFlag,
+            isPageView: true,
         }));
     }
 }

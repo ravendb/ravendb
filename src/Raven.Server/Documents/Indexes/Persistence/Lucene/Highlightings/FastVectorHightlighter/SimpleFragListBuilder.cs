@@ -48,7 +48,7 @@ namespace Lucene.Net.Search.Vectorhighlight
             {
                 if (!taken)
                 {
-                    if (!ite.MoveNext()) break;
+                    if (ite.MoveNext() == false) break;
                     phraseInfo = ite.Current;
                 }
                 taken = false;

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         private readonly ITermAttribute _termAtt;
         public override bool IncrementToken()
         {
-            if (!input.IncrementToken())
+            if (input.IncrementToken() == false)
             {
                 return false;
             }
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
                     {
                         buffer[i] = ToLower(buffer[i]);
                     }
-                    if (!_stopWords.Contains(buffer, 0, bufferLength))
+                    if (_stopWords.Contains(buffer, 0, bufferLength) == false)
                     {
                         return true;
                     }
