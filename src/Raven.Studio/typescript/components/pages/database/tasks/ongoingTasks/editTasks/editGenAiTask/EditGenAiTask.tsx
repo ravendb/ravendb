@@ -8,7 +8,11 @@ import { tryHandleSubmit } from "components/utils/common";
 import { editGenAiTaskActions, editGenAiTaskSelectors } from "./store/editGenAiTaskSlice";
 import { useEffect } from "react";
 import { useEditGenAiTaskSteps } from "./hooks/useEditGenAiTaskSteps";
-import { EditGenAiTaskFormData, editGenAiTaskSchema } from "./utils/editGenAiTaskValidation";
+import {
+    EditGenAiTaskFormData,
+    editGenAiTaskSchema,
+    EditGenAiTaskValidationContext,
+} from "./utils/editGenAiTaskValidation";
 import { editGenAiTaskUtils } from "./utils/editGenAiTaskUtils";
 import EditGenAiTaskTestResults from "./partials/EditGenAiTaskTestResults";
 import EditGenAiTaskSteps from "./partials/EditGenAiTaskSteps";
@@ -62,7 +66,13 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
     const form = useForm<EditGenAiTaskFormData>({
         mode: "all",
         resolver: (data, _, options) =>
-            yupResolver(editGenAiTaskSchema)(data, { allQueryNames: data.queries?.map((x) => x.name) ?? [] }, options),
+            yupResolver(editGenAiTaskSchema)(
+                data,
+                {
+                    allQueryNames: data.queries?.map((x) => x.name) ?? [],
+                } satisfies EditGenAiTaskValidationContext,
+                options
+            ),
         defaultValues: async () => {
             if (taskId) {
                 try {
