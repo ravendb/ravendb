@@ -32,12 +32,10 @@ namespace FastTests.Voron
                 }
 
                 {
-                    ValueReader readResultReader = outer.CreateTree("test").Read("hello").Reader;
-                    var result = readResultReader.ReadString(readResultReader.Length);
-
+                    Assert.True(outer.CreateTree("test").TryRead("hello", out var reader));
+                    var result = reader.ReadString(reader.Length);
                     Assert.Equal("one", result);
                 }
-               
 
                 using (var inner = Env.CloneReadTransaction(outer))
                 {
@@ -51,16 +49,16 @@ namespace FastTests.Voron
 
                     {
                         Tree tree = inner.CreateTree("test");
-                        ValueReader readResultReader = tree.Read("hello").Reader;
-                        var result = readResultReader.ReadString(readResultReader.Length);
+                        Assert.True(tree.TryRead("hello", out var reader));
+                        var result = reader.ReadString(reader.Length);
 
                         Assert.Equal("one", result);
                     }
 
                     using (var finalRead = Env.ReadTransaction())
                     {
-                        ValueReader readResultReader = finalRead.CreateTree("test").Read("hello").Reader;
-                        var result = readResultReader.ReadString(readResultReader.Length);
+                        Assert.True(finalRead.CreateTree("test").TryRead("hello", out var reader));
+                        var result = reader.ReadString(reader.Length);
 
                         Assert.Equal("three", result);
                     }

@@ -229,9 +229,8 @@ namespace Voron.Data.BTrees
             
             long currentValue = 0;
 
-            var read = Read(key);
-            if (read != null)
-                currentValue = *(long*)read.Reader.Base;
+            if (TryRead(key, out var read))
+                currentValue = *(long*)read.Base;
 
             var value = currentValue + delta;
             using (DirectAdd(key, sizeof(long), out byte* ptr))
@@ -245,11 +244,11 @@ namespace Voron.Data.BTrees
         /// </summary>
         public long? ReadInt64(Slice key)
         {
-            var read = Read(key);
-            if (read == null)
+            if (TryRead(key, out var reader) == false)
                 return null;
-            Debug.Assert(read.Reader.Length == sizeof(long));
-            return *(long*)read.Reader.Base;
+            
+            Debug.Assert(reader.Length == sizeof(long));
+            return *(long*)reader.Base;
         }
 
         /// <summary>
@@ -257,12 +256,11 @@ namespace Voron.Data.BTrees
         /// </summary>
         public int? ReadInt32(Slice key)
         {
-            var read = Read(key);
-            if (read == null) 
+            if (TryRead(key, out var reader) == false)
                 return null;
-            Debug.Assert(read.Reader.Length == sizeof(int));
-            return *(int*)read.Reader.Base;
-
+            
+            Debug.Assert(reader.Length == sizeof(int));
+            return *(int*)reader.Base;
         }
         
         /// <summary>
@@ -271,12 +269,11 @@ namespace Voron.Data.BTrees
         public T? ReadStructure<T>(Slice key)
             where T : unmanaged
         {
-            var read = Read(key);
-            if (read == null) 
+            if (TryRead(key, out var reader) == false)
                 return null;
-            Debug.Assert(read.Reader.Length == sizeof(T));
-            return *(T*)read.Reader.Base;
-
+            
+            Debug.Assert(reader.Length == sizeof(T));
+            return *(T*)reader.Base;
         }
 
         public void Add(Slice key, byte value)
@@ -1151,18 +1148,42 @@ namespace Voron.Data.BTrees
             return new TreeIterator(this, _llt, prefetch);
         }
 
-        public ReadResult Read(Slice key)
+        public bool TryRead(Slice key, out ValueReader value)
         {
             AssertNotDisposed();
 
+            Unsafe.SkipInit(out value);
+            
             var p = FindPageFor(key, out TreeNodeHeader* node);
 
             if (p.LastMatch != 0)
-                return null;
+                return false;
 
-            return new ReadResult(GetValueReaderFromHeader(node));
+            value = GetValueReaderFromHeader(node);
+            return true;
         }
 
+        /// <summary>
+        /// This is using little endian.
+        /// </summary>
+        public int ReadInt32OrDefault(Slice key, int defaultValue = 0)
+        {
+            return TryRead(key, out var reader) ? reader.ReadLittleEndianInt32() : defaultValue;
+        }
+        
+        /// <summary>
+        /// This is using little endian.
+        /// </summary>
+        public long ReadInt64OrDefault(Slice key, long defaultValue = 0)
+        {
+            return TryRead(key, out var reader) ? reader.ReadLittleEndianInt64() : defaultValue;
+        }
+        
+        public string ReadStringOrDefault(Slice key, string defaultValue = null)
+        {
+            return TryRead(key, out var reader) ? reader.ToStringValue() : defaultValue;
+        }
+        
         public bool Exists(Slice key)
         {
             AssertNotDisposed();
@@ -1185,7 +1206,7 @@ namespace Voron.Data.BTrees
 
             using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out Slice nodeKey))
             {
-                if (!SliceComparer.EqualsInline(nodeKey, key))
+                if (SliceComparer.EqualsInline(nodeKey, key) == false)
                     return -1;
             }
 

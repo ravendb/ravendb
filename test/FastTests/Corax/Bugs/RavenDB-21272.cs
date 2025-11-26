@@ -3,6 +3,7 @@ using System.Text;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
@@ -36,7 +37,7 @@ public class RavenDB_21272 : StorageTest
                 keys[i].Key.Set(Encoding.UTF8.GetBytes(i.ToString("00000")));
                 keys[i].Key.ChangeDictionary(tree.DictionaryId);
                 keys[i].Key.EncodedWithCurrent(out _);
-                keys[i].ContainerId = -1;
+                keys[i].ContainerId = ContainerEntryId.Invalid;
                 vals[i] = 100000 + i;
             }
 
@@ -61,7 +62,7 @@ public class RavenDB_21272 : StorageTest
                     {
                         for (int j = i; j < num; j++)
                         {
-                            k[j].ContainerId = -1;
+                            k[j].ContainerId = ContainerEntryId.Invalid;
                         }
                         i++;
                         if (separatorIndex == -1)
@@ -91,7 +92,7 @@ public class RavenDB_21272 : StorageTest
             k = keys.Skip(10).Take(separatorIndex-10).Concat(new[]{keys[separatorIndex]}).ToArray();
             for (int i = 0; i < k.Length; i++)
             {
-                k[i].ContainerId = -1;
+                k[i].ContainerId = ContainerEntryId.Invalid;
             }
             v = vals;
             o = offsets;
@@ -117,7 +118,7 @@ public class RavenDB_21272 : StorageTest
                     {
                         for (int j = i; j < num; j++)
                         {
-                            k[j].ContainerId = -1;
+                            k[j].ContainerId = ContainerEntryId.Invalid;
                         }
                         break;
                     }

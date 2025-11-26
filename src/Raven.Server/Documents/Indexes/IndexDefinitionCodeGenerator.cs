@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Indexes
                 AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(ParseEnum(options.TermVector, nameof(options.TermVector)));
             }
-            if (!string.IsNullOrEmpty(options.Analyzer))
+            if (string.IsNullOrEmpty(options.Analyzer) == false)
             {
                 AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(GetLiteral(nameof(options.Analyzer), options.Analyzer));

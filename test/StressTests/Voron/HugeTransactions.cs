@@ -108,7 +108,8 @@ namespace StressTests.Voron
                 for (int i = 0; i < transactionSizeInGb * 2; i++)
                 {
                     var key = "bigTreeKey" + i;
-                    var reader = tree.Read(key).Reader;
+                    
+                    Assert.True(tree.TryRead(key, out var reader));
 
                     VerifyData(singleByte, reader, 0, 11);
                     VerifyData(singleByte, reader, (int)HalfGb - 1, 22);

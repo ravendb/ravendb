@@ -108,7 +108,7 @@ internal class ChatCompletionClient : IDisposable
 
         public void Merge(BlittableJsonReaderObject toolCallChunk)
         {
-            if (!toolCallChunk.TryGet(Constants.ResponseFields.Index, out int index))
+            if (toolCallChunk.TryGet(Constants.ResponseFields.Index, out int index) == false)
                 return;
 
             if (index != _toolCallIndex)
@@ -706,19 +706,30 @@ internal class ChatCompletionClient : IDisposable
                         };
                 }
             default:
-                UnsuccessfulRequestException.Throw(message, response.StatusCode, reqId);
+                if (errBjo.TryGet("code", out string errorCode) && errorCode == "content_filter")
+                {
+                    RefusedToAnswerException.Throw("content_filter", responseContent.ToString(), "content_filter", reqId);
+                }
+
+                UnsuccessfulRequestException.Throw(responseContent.ToString(), response.StatusCode, reqId);
                 break;
         }
     }
 
     internal static string GetRequestId(HttpResponseHeaders headers)
     {
-        if (headers.TryGetValues(Constants.Headers.RequestId, out var values) == false || values.IsNullOrEmpty())
+        if (headers.TryGetValues(Constants.Headers.RequestId, out IEnumerable<string> values))
         {
-            return string.Empty;
+            return values.FirstOrDefault() ?? string.Empty;
         }
 
-        return values.FirstOrDefault();
+        // Azure API Management uses a different header name
+        if (headers.TryGetValues("apim-request-id", out values))
+        {
+            return values.FirstOrDefault() ?? string.Empty;
+        }
+
+        return string.Empty;
     }
 
     private static readonly Regex GoDurationRegex = new(

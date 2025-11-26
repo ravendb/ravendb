@@ -15,7 +15,7 @@ public class SortAndMergeDuplicatesTests(ITestOutputHelper output) : NoDisposalN
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
-    public void MergeDuplicatesAndSortShouldWork(int seed)
+    public void MinOnDuplicatesAndSortShouldWork(int seed)
     {
         var random = new Random(seed);
         var totalElementsNumber = random.Next(1, 1024);
@@ -35,14 +35,14 @@ public class SortAndMergeDuplicatesTests(ITestOutputHelper output) : NoDisposalN
         var valuesCopy = (float[])values.Clone();
         
         // This works in place
-        var uniqueCount = Sorting.SortAndMergeDuplicates(arrayWithRepetitions.AsSpan(), values.AsSpan());
+        var uniqueCount = Sorting.SortAndMinOnDuplicates(arrayWithRepetitions.AsSpan(), values.AsSpan());
         
         // Do the same work using LINQ
         var result = arrayWithRepetitionsCopy.Zip(valuesCopy)
             .GroupBy(x => x.First)
             .Select(group => (
                     Id: group.Key,
-                    Value: group.Sum(x => x.Second)
+                    Value: group.Min(x => x.Second)
                 )
             )
             .ToArray();

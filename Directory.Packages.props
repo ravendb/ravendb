@@ -107,7 +107,7 @@
     <PackageVersion Include="Parquet.Net" Version="5.3.0" />
     <PackageVersion Include="Polly" Version="8.6.4" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
-    <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.12" />
+    <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.13" />
     <PackageVersion Include="SmartComponents.LocalEmbeddings" Version="0.1.0-preview10148" />
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Snowflake.Data" Version="5.1.0" />

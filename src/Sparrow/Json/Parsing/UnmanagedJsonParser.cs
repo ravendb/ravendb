@@ -218,7 +218,7 @@ namespace Sparrow.Json.Parsing
                 }
 
                 bool couldRead;
-                if (!ReadUnlikely(b, ref pos, out couldRead))
+                if (ReadUnlikely(b, ref pos, out couldRead) == false)
                     continue; // We can only continue here, if there is a failure to parse, we will throw inside ReadUnlikely.
 
                 if (couldRead)

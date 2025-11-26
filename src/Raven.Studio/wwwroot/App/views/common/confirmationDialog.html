@@ -2,7 +2,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h5 class="modal-title" data-bind="text: title"></h5>
-            <button type="button" class="close" data-bind="click: close, clickBubble: false" aria-hidden="true">
+            <button type="button" class="close" data-bind="click: close, clickBubble: false, visible: !isCancelHidden" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
         </div>

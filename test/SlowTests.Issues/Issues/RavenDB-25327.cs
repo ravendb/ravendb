@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Util;
@@ -20,10 +21,10 @@ public class RavenDB_25327 : RavenTestBase
     {
         const string firstDomain = "a.test-domain.com";
         var suffix = Guid.NewGuid().ToString().Split('-')[0];
-        CertificateUtils.CreateCertificateAuthorityCertificate($"ca-{suffix}", out var kp, out var caSubjectName);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate($"ca-{suffix}", out var caSubjectName);
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(null,
             caSubjectName,
-            kp,
+            (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()),
             false,
             false,
             DateTime.UtcNow.AddDays(7),

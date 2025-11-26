@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
-            if (!TryParse(out var query, out var message, queryType, recursive))
+            if (TryParse(out var query, out var message, queryType, recursive) == false)
                 ThrowParseException(message);
 
             return query;
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
             }
 
-            if (!TryParseFromClause(out var fromClause, out message))
+            if (TryParseFromClause(out var fromClause, out message) == false)
                 return false;
 
             query.From = fromClause;

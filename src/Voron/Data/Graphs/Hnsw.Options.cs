@@ -1,5 +1,6 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.InteropServices;
+using Voron.Data.Containers;
 using Voron.Impl.Paging;
 
 namespace Voron.Data.Graphs;
@@ -31,10 +32,10 @@ public partial class Hnsw
         public long CountOfVectors;
 
         [FieldOffset(24)]
-        public long Container;
+        public ContainerId Container;
 
         [FieldOffset(32)]
-        public long LastUsedContainerId;
+        public ContainerId LastUsedContainerId;
 
         public int MaxLevel => BitOperations.Log2((ulong)CountOfVectors);
 

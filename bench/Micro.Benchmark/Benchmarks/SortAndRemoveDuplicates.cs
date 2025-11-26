@@ -30,22 +30,6 @@ public class SortAndRemoveDuplicates
         _workingScoreArray = new float[totalElementsNumber];
         _workingArray = new long[totalElementsNumber];
     }
-
-    [Benchmark(Baseline = true)]
-    public int SortAndMergeDuplicatesWithBranch()
-    {
-        _sourceArray.AsSpan().CopyTo(_workingArray);
-        _sourceScoreArray.AsSpan().CopyTo(_workingScoreArray);
-        return Sparrow.Server.Utils.Sorting.SortAndMergeDuplicates(_workingArray.AsSpan(), _workingScoreArray.AsSpan());
-    }
-    
-    [Benchmark]
-    public int SortAndMergeDuplicatesBranchless()
-    {
-        _sourceArray.AsSpan().CopyTo(_workingArray);
-        _sourceScoreArray.AsSpan().CopyTo(_workingScoreArray);
-        return SortAndMergeDuplicatesBranchless(_workingArray.AsSpan(), _workingScoreArray.AsSpan());
-    }
     
     [Benchmark]
     public int SortAndRemoveDuplicatesWithBranch()
@@ -87,43 +71,5 @@ public class SortAndRemoveDuplicates
         }
 
         return outputIdx + 1;
-    }
-    
-    private static int SortAndMergeDuplicatesBranchless(Span<long> valuesToDeduplicate, Span<float> itemsAssociated)
-    {
-        if (valuesToDeduplicate.Length <= 1)
-            return valuesToDeduplicate.Length;
-            
-        valuesToDeduplicate.Sort(itemsAssociated);
-
-        // We need to fill in the gaps left by removing deduplication process.
-        // If there are no duplicated the writes at the architecture level will execute
-        // way faster than if there are.
-
-        int nextI = 0;
-        int outputIdx = 0;
-        while (nextI < valuesToDeduplicate.Length - 1)
-        {
-            int i = nextI;
-            nextI++;
-            var nextItemHasSameId = (valuesToDeduplicate[nextI] == valuesToDeduplicate[i]).ToInt32();
-            var nextItemHasDifferentId = nextItemHasSameId ^ 1;
-                
-            // When elements are equal, add previous element to next
-            itemsAssociated[nextI] += nextItemHasSameId * itemsAssociated[outputIdx];
-            outputIdx += nextItemHasDifferentId;
-                
-            valuesToDeduplicate[outputIdx] = valuesToDeduplicate[nextI];
-            itemsAssociated[outputIdx] = itemsAssociated[nextI];
-        }
-
-        outputIdx++;
-        if (outputIdx != valuesToDeduplicate.Length)
-        {
-            valuesToDeduplicate[outputIdx] = valuesToDeduplicate[^1];
-            itemsAssociated[outputIdx] = itemsAssociated[^1];
-        }
-
-        return outputIdx;
     }
 }

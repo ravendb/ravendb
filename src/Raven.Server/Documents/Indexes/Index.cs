@@ -774,9 +774,8 @@ namespace Raven.Server.Documents.Indexes
                     var configurationTree = tx.ReadTree(IndexStorage.IndexSchema.ConfigurationTree);
                     if (configurationTree != null)
                     {
-                        var result = configurationTree.Read(IndexStorage.IndexSchema.SearchEngineType);
-                        if (result != null)
-                            if (Enum.TryParse(result.Reader.ToStringValue(), out searchEngineTypeFromSchema) == false)
+                        if (configurationTree.TryRead(IndexStorage.IndexSchema.SearchEngineType, out var reader))
+                            if (Enum.TryParse(reader.ToStringValue(), out searchEngineTypeFromSchema) == false)
                                 searchEngineTypeFromSchema = SearchEngineType.None;
                     }
 
@@ -5235,7 +5234,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         for (int i = 0; i < read; i++)
                         {
-                            Container.Get(llt, buffer[i], out var item);
+                            Container.Get(llt, new ContainerEntryId(buffer[i]), out var item);
                             var state = (PostingListState*)item.Address;
                             report.BranchPages += state->BranchPages;
                             report.LeafPages += state->LeafPages;

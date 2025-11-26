@@ -27,7 +27,7 @@ namespace FastTests.Corax.Bugs
                 var rootContainer = wtx.OpenContainer("TestContainer");
                 for (int i = 0; i < 1000; i++)
                 {
-                    var allocatedPage = Container.Allocate(wtx.LowLevelTransaction, rootContainer, 50, out var space);
+                    var allocatedPage = (long)Container.Allocate(wtx.LowLevelTransaction, rootContainer, 50, out var space);
                     space.Fill(1);
                 }
 
@@ -40,14 +40,14 @@ namespace FastTests.Corax.Bugs
                 var rootContainer = wtx.OpenContainer("TestContainer");
                 for (int i = 0; i < 1000; i++)
                 {
-                    var allocatedPage = Container.Allocate(wtx.LowLevelTransaction, rootContainer, 50, out var space);
+                    var allocatedPage = (long)Container.Allocate(wtx.LowLevelTransaction, rootContainer, 50, out var space);
                     space.Fill(1);
                     toDelete.Add(allocatedPage);
                 }
                 foreach (var id in toDelete)
-                    Container.Delete(wtx.LowLevelTransaction, rootContainer, id);
+                    Container.Delete(wtx.LowLevelTransaction, rootContainer, new ContainerEntryId(id));
 
-                var newPage = Container.Allocate(wtx.LowLevelTransaction, rootContainer, 50, out var allocatedSpace);
+                var newPage = (long)Container.Allocate(wtx.LowLevelTransaction, rootContainer, 50, out var allocatedSpace);
                 allocatedSpace.Fill(2);
 
                 wtx.Commit();

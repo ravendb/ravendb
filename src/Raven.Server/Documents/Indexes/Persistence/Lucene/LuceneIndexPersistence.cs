@@ -473,10 +473,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory))
+            if (_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory) == false)
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
-            if (!_suggestionsIndexSearcherHolders.TryGetValue(field, out LuceneIndexSearcherHolder holder))
+            if (_suggestionsIndexSearcherHolders.TryGetValue(field, out LuceneIndexSearcherHolder holder) == false)
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
             return IndexReadOperationFactory.CreateLuceneSuggestionIndexReader(_index, directory, holder, readTransaction);

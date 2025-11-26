@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Field field;
             if (_fieldsCache.TryGetValue(cacheKey, out CachedFieldItem<Field> cached) == false ||
-                !cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount))
+                cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount) == false)
             {
                 LazyStringReader stringReader = null;
                 BlittableObjectReader blittableReader = null;
@@ -712,7 +712,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             NumericField numericField;
             if (_numericFieldsCache.TryGetValue(cacheKey, out CachedFieldItem<NumericField> cached) == false ||
-                !cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount))
+                cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount) == false)
             {
                 AddToNumericFieldsCache(cacheKey, _multipleItemsSameFieldCount.Count > 0, cached, new CachedFieldItem<NumericField>
                 {

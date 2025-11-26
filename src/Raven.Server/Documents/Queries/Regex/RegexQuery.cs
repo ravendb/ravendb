@@ -46,8 +46,8 @@ namespace Lucene.Net.Search
 
         public override string ToString(string field)
         {
-            StringBuilder buffer = new StringBuilder();
-            if (!Term.Field.Equals(field))
+            StringBuilder buffer = new();
+            if (Term.Field.Equals(field) == false)
             {
                 buffer.Append(Term.Field);
                 buffer.Append(":");
@@ -71,7 +71,7 @@ namespace Lucene.Net.Search
             if (this == other)
                 return true;
 
-            if (!base.Equals(other))
+            if (base.Equals(other) == false)
                 return false;
             return Term.Equals(other.Term);
         }

@@ -51,11 +51,10 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("test");
 
-                var readResult = tree.Read("items/3");
+                Assert.True(tree.TryRead("items/3", out var reader));
 
                 var readBytes = new byte[testedOverflowSize];
-
-                readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+                reader.Read(readBytes, 0, testedOverflowSize);
 
                 Assert.Equal(overflowValue, readBytes);
             }
@@ -103,11 +102,10 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("test");
 
-                var readResult = tree.Read("items/3");
+                Assert.True(tree.TryRead("items/3", out var reader));
 
                 var readBytes = new byte[testedOverflowSize];
-
-                readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+                reader.Read(readBytes, 0, testedOverflowSize);
 
                 Assert.Equal(overflowValue, readBytes);
             }
@@ -150,11 +148,10 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("test");
 
-                var readResult = tree.Read("items/3");
+                Assert.True(tree.TryRead("items/3", out var reader));
 
                 var readBytes = new byte[testedOverflowSize];
-
-                readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+                reader.Read(readBytes, 0, testedOverflowSize);
 
                 Assert.Equal(overflowValue, readBytes);
             }
@@ -206,11 +203,11 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("test");
 
-                var readResult = tree.Read("items/3");
+                Assert.True( tree.TryRead("items/3", out var reader));
 
                 var readBytes = new byte[testedOverflowSize];
 
-                readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+                reader.Read(readBytes, 0, testedOverflowSize);
 
                 Assert.Equal(overflowValue, readBytes);
             }
@@ -258,11 +255,10 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("test");
 
-                var readResult = tree.Read("items/3");
+                Assert.True(tree.TryRead("items/3", out var reader));
 
                 var readBytes = new byte[testedOverflowSize];
-
-                readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+                reader.Read(readBytes, 0, testedOverflowSize);
 
                 Assert.Equal(overflowValue, readBytes);
             }

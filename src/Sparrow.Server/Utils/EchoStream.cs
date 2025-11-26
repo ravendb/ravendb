@@ -106,7 +106,7 @@ namespace Sparrow.Server.Utils
                 newBuffer = new byte[count];
                 Buffer.BlockCopy(buffer, offset, newBuffer, 0, count);
             }
-            if (!_buffers.TryAdd(newBuffer, WriteTimeout))
+            if (_buffers.TryAdd(newBuffer, WriteTimeout) == false)
                 throw new TimeoutException("EchoStream Write() Timeout");
 
             _length += count;

@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 _ids = new Dictionary<object, int> { { label, 0 } };
             }
-            else if (!_ids.ContainsKey(label))
+            else if (_ids.ContainsKey(label) == false)
             {
                 _ids.Add(label, _ids.Count);
             }
@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Indexes
                 _ids = new Dictionary<object, int>();
                 _ids.Add(_ids, 0);
             }
-            else if (!_ids.ContainsKey(p))
+            else if (_ids.ContainsKey(p) == false)
             {
                 _ids.Add(p, _ids.Count);
             }
@@ -72,13 +72,13 @@ namespace Raven.Client.Documents.Indexes
 
         private void DumpLabel(LabelTarget target)
         {
-            if (!string.IsNullOrEmpty(target.Name))
+            if (string.IsNullOrEmpty(target.Name))
             {
-                Out(target.Name);
+                Out("UnnamedLabel_" + GetLabelId(target));
             }
             else
             {
-                Out("UnnamedLabel_" + GetLabelId(target));
+                Out(target.Name);
             }
         }
 
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Indexes
                 AddParam(p);
                 return 0;
             }
-            if (!_ids.TryGetValue(p, out count))
+            if (_ids.TryGetValue(p, out count) == false)
             {
                 count = _ids.Count;
                 AddParam(p);
@@ -200,7 +200,7 @@ namespace Raven.Client.Documents.Indexes
 
             for (int i = 1; i < name.Length; i++)
             {
-                if (!char.IsLetterOrDigit(name[i]) && name[i] != '_')
+                if (char.IsLetterOrDigit(name[i]) == false && name[i] != '_')
                     return false;
             }
             return true;
@@ -2154,7 +2154,7 @@ namespace Raven.Client.Documents.Indexes
 
         private void OutputAppropriateArrayType(NewArrayExpression node)
         {
-            if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
+            if (CheckIfAnonymousType(node.Type.GetElementType()) == false && TypeExistsOnServer(node.Type.GetElementType()))
             {
                 Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType(), out _));
             }

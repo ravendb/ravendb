@@ -6,6 +6,8 @@ import { editGenAiTaskUtils } from "../utils/editGenAiTaskUtils";
 import { EditGenAiTaskFormData, GenAiAiAttachment } from "../utils/editGenAiTaskValidation";
 import messagePublisher from "common/messagePublisher";
 
+type GenAiResultItem = Raven.Server.Documents.ETL.Providers.AI.GenAi.GenAiResultItem;
+
 export function useEditGenAiTaskTests() {
     const dispatch = useAppDispatch();
     const { control, trigger, setValue } = useFormContext<EditGenAiTaskFormData>();
@@ -57,21 +59,18 @@ export function useEditGenAiTaskTests() {
             return;
         }
 
-        const input: Raven.Server.Documents.ETL.Providers.AI.GenAi.GenAiResultItem[] =
-            formValues.playgroundContexts.map((x) => {
-                return {
-                    ContextOutput: {
-                        Context: JSON.parse(x.value),
-                        AiHash: formValues.isForceSendingCachedObjects ? null : x.aiHash,
-                        IsCached: formValues.isForceSendingCachedObjects ? false : x.isCached,
-                        Attachments: getAttachments(x.attachments),
-                    },
-                    DebugActions: null,
-                    DebugOutput: [],
-                    ModelOutput: null,
-                    DocumentId: getDocumentId(formValues),
-                };
-            });
+        const input: GenAiResultItem[] = formValues.playgroundContexts.map((x): GenAiResultItem => {
+            return {
+                ContextOutput: {
+                    Context: JSON.parse(x.value),
+                    AiHash: formValues.isForceSendingCachedObjects ? null : x.aiHash,
+                    IsCached: formValues.isForceSendingCachedObjects ? false : x.isCached,
+                    Attachments: getAttachments(x.attachments),
+                },
+                ModelOutput: null,
+                DocumentId: getDocumentId(formValues),
+            };
+        });
 
         const dto: Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.TestGenAiScript = {
             TestStage: "SendToModel",
@@ -99,35 +98,30 @@ export function useEditGenAiTaskTests() {
             return;
         }
 
-        const input: Raven.Server.Documents.ETL.Providers.AI.GenAi.GenAiResultItem[] =
-            formValues.playgroundModelOutputs.map((_, idx) => {
-                return {
-                    ContextOutput: {
-                        Context: JSON.parse(formValues.playgroundContexts[idx].value),
-                        AiHash: formValues.isForceSendingCachedObjects
-                            ? null
-                            : formValues.playgroundContexts[idx].aiHash,
-                        IsCached: formValues.isForceSendingCachedObjects
-                            ? false
-                            : formValues.playgroundContexts[idx].isCached,
-                        Attachments: getAttachments(formValues.playgroundContexts[idx].attachments),
+        const input: GenAiResultItem[] = formValues.playgroundModelOutputs.map((_, idx): GenAiResultItem => {
+            return {
+                ContextOutput: {
+                    Context: JSON.parse(formValues.playgroundContexts[idx].value),
+                    AiHash: formValues.isForceSendingCachedObjects ? null : formValues.playgroundContexts[idx].aiHash,
+                    IsCached: formValues.isForceSendingCachedObjects
+                        ? false
+                        : formValues.playgroundContexts[idx].isCached,
+                    Attachments: getAttachments(formValues.playgroundContexts[idx].attachments),
+                },
+                ModelOutput: {
+                    Output: JSON.parse(formValues.playgroundModelOutputs[idx].value),
+                    Usage: {
+                        CachedTokens: 0,
+                        CompletionTokens: 0,
+                        PromptTokens: 0,
+                        ReasoningTokens: 0,
+                        TotalTokens: 0,
                     },
-                    DebugActions: null,
-                    DebugOutput: [],
-                    ModelOutput: {
-                        Output: JSON.parse(formValues.playgroundModelOutputs[idx].value),
-                        Usage: {
-                            CachedTokens: 0,
-                            CompletionTokens: 0,
-                            PromptTokens: 0,
-                            ReasoningTokens: 0,
-                            TotalTokens: 0,
-                        },
-                        ConversationDocument: undefined,
-                    },
-                    DocumentId: getDocumentId(formValues),
-                };
-            });
+                    ConversationDocument: undefined,
+                },
+                DocumentId: getDocumentId(formValues),
+            };
+        });
 
         const dto: Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.TestGenAiScript = {
             TestStage: "ApplyUpdateScript",

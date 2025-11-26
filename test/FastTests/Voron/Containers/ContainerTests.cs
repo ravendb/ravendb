@@ -18,14 +18,14 @@ namespace FastTests.Voron.Containers
         {
             using var wtx = Env.WriteTransaction();
 
-            var containerId = Container.Create(wtx.LowLevelTransaction);
+            var containerId = (long)Container.Create(wtx.LowLevelTransaction);
 
             Span<byte> expected = Encoding.UTF8.GetBytes("Stav");
 
-            var id = Container.Allocate(wtx.LowLevelTransaction, containerId, expected.Length, out var space);
+            var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), expected.Length, out var space);
             expected.CopyTo(space);
 
-            Container.Get(wtx.LowLevelTransaction, id, out var actual);
+            Container.Get(wtx.LowLevelTransaction, new ContainerEntryId(id), out var actual);
 
             Assert.Equal(expected.ToArray(), actual.ToSpan().ToArray());
         }
@@ -39,17 +39,17 @@ namespace FastTests.Voron.Containers
 
             using (var wtx = Env.WriteTransaction())
             {
-                containerId = Container.Create(wtx.LowLevelTransaction);
+                containerId = (long)Container.Create(wtx.LowLevelTransaction);
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 8, out _);
+                    var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), 8, out _);
                     expected.Add(id);
                 }
 
                 for (int i = 0; i < 16; i++)
                 {
-                    var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 10_000, out _);
+                    var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), 10_000, out _);
                     expected.Add(id);
                 }
 
@@ -60,7 +60,7 @@ namespace FastTests.Voron.Containers
 
             using (var rtx = Env.ReadTransaction())
             {
-                var actual = Container.GetAllIds(rtx.LowLevelTransaction, containerId);
+                var actual = Container.GetAllIds(rtx.LowLevelTransaction, new ContainerId(containerId));
                 actual.Sort();
                 Assert.Equal(expected.Count, actual.Count);
                 Assert.Equal(expected, actual);
@@ -73,38 +73,38 @@ namespace FastTests.Voron.Containers
         {
             using var wtx = Env.WriteTransaction();
 
-            var containerId = Container.Create(wtx.LowLevelTransaction);
+            var containerId = (long)Container.Create(wtx.LowLevelTransaction);
 
             Span<byte> expected = Encoding.UTF8.GetBytes("Stav");
             var ids = new List<long>();
 
             for (int i = 0; i < 16; i++)
             {
-                var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 500, out var s);
+                var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), 500, out var s);
                 expected.CopyTo(s);
                 ids.Add(id);
             }
 
             for (int i = 0; i < 3; i++)
             {
-                Container.Delete(wtx.LowLevelTransaction, containerId, ids[^1]);
+                Container.Delete(wtx.LowLevelTransaction, new ContainerId(containerId), new ContainerEntryId(ids[^1]));
                 ids.RemoveAt(ids.Count - 1);
             }
 
 
             for (int i = 0; i < ids.Count; i++)
             {
-                Container.Delete(wtx.LowLevelTransaction, containerId, ids[i]);
+                Container.Delete(wtx.LowLevelTransaction, new ContainerId(containerId), new ContainerEntryId(ids[i]));
                 ids.RemoveAt(i);
             }
 
 
             // should not throw here
-            Container.Allocate(wtx.LowLevelTransaction, containerId, 750, out var space);
+            Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), 750, out var space);
 
             foreach (var itemId in ids)
             {
-                var data = Container.GetReadOnly(wtx.LowLevelTransaction, itemId);
+                var data = Container.GetReadOnly(wtx.LowLevelTransaction, new ContainerEntryId(itemId));
                 Assert.True(data.Slice(0, 4).SequenceEqual(expected));
             }
         }
@@ -114,24 +114,24 @@ namespace FastTests.Voron.Containers
         {
             using var wtx = Env.WriteTransaction();
 
-            var containerId = Container.Create(wtx.LowLevelTransaction);
+            var containerId = (long)Container.Create(wtx.LowLevelTransaction);
 
             Span<byte> expected = Encoding.UTF8.GetBytes("Stav");
             var ids = new List<long>();
 
             for (int i = 0; i < 16; i++)
             {
-                var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 500, out var s);
+                var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), 500, out var s);
                 expected.CopyTo(s);
                 ids.Add(id);
             }
 
             // should not throw here
-            var newId = Container.Allocate(wtx.LowLevelTransaction, containerId, 750, out var space);
+            var newId = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), 750, out var space);
 
             foreach (var itemId in ids)
             {
-                var data = Container.GetReadOnly(wtx.LowLevelTransaction, itemId);
+                var data = Container.GetReadOnly(wtx.LowLevelTransaction, new ContainerEntryId(itemId));
                 Assert.True(data.Slice(0, 4).SequenceEqual(expected));
             }
         }
@@ -149,20 +149,20 @@ namespace FastTests.Voron.Containers
 
             {
                 using var wtx = Env.WriteTransaction();
-                containerId = Container.Create(wtx.LowLevelTransaction);
-                containerItemId = Container.Allocate(wtx.LowLevelTransaction, containerId, expected.Length, out var s);
+                containerId = (long)Container.Create(wtx.LowLevelTransaction);
+                containerItemId = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), expected.Length, out var s);
                 expected.CopyTo(s);
                 wtx.Commit();
             }
 
             {
                 using var wtx = Env.WriteTransaction();
-                var container = Container.GetMutable(wtx.LowLevelTransaction, containerItemId);
+                var container = Container.GetMutable(wtx.LowLevelTransaction, new ContainerEntryId(containerItemId));
                 (pageId, _) = Math.DivRem(containerItemId, Constants.Storage.PageSize);
                 var page = wtx.LowLevelTransaction.ModifyPage(pageId);
                 Assert.True(page.IsOverflow);
                 overflowPageCount = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                Container.Delete(wtx.LowLevelTransaction, containerId, containerItemId);
+                Container.Delete(wtx.LowLevelTransaction, new ContainerId(containerId), new ContainerEntryId(containerItemId));
                 wtx.Commit();
             }
 

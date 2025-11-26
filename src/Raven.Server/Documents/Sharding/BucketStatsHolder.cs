@@ -88,19 +88,18 @@ namespace Raven.Server.Documents.Sharding
             string mergedCv = null;
             mergedCvSlice = Slices.Empty;
 
-            var readResult = tree.Read(keySlice);
-            if (readResult == null)
+            if (tree.TryRead(keySlice, out var reader) == false)
             {
                 stats = inMemoryStats;
             }
             else
             {
-                stats = *(Documents.BucketStats*)readResult.Reader.Base;
+                stats = *(Documents.BucketStats*)reader.Base;
                 stats.Size += inMemoryStats.Size;
                 stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
                 stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
 
-                mergedCv = Documents.BucketStats.GetMergedChangeVector(readResult.Reader);
+                mergedCv = Documents.BucketStats.GetMergedChangeVector(reader);
             }
 
             if (_mergedChangeVectors.TryGetValue(bucket, out var changeVector))

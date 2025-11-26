@@ -392,8 +392,8 @@ namespace Voron.Impl.Compaction
                                 }
 
                                 // if the entry wasn't recognized as fixed size tree then let's store it as regular value
-
-                                using (var value = existingTree.Read(key).Reader.AsStream())
+                                existingTree.TryRead(key, out var streamReader);
+                                using (var value = streamReader.AsStream())
                                 {
                                     newTree.Add(key, value);
                                     transactionSize += value.Length;
@@ -401,7 +401,8 @@ namespace Voron.Impl.Compaction
                             }
                             else
                             {
-                                using (var value = existingTree.Read(key).Reader.AsStream())
+                                existingTree.TryRead(key, out var streamReader);
+                                using (var value = streamReader.AsStream())
                                 {
                                     newTree.Add(key, value);
                                     transactionSize += value.Length;

@@ -79,7 +79,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                     <ErrorModal key="modal" toggleErrorModal={toggleErrorModal} error={errorToDisplay} />
                 ) : (
                     <ReplicationTaskProgressTooltip
-                        hasError={!!nodeInfo.details?.error ?? false}
+                        hasError={!!nodeInfo.details?.error}
                         toggleErrorModal={toggleErrorModal}
                         target={node}
                         progress={nodeInfo.progress}

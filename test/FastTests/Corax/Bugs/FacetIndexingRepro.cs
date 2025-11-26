@@ -81,7 +81,7 @@ public class FacetIndexingRepro : StorageTest
                         Container.Allocate(wtx.LowLevelTransaction, c, items[i].Item2, out _);
                         break;
                     case '-':
-                        Container.Delete(wtx.LowLevelTransaction, c, items[i].Item2);
+                        Container.Delete(wtx.LowLevelTransaction, c, new ContainerEntryId(items[i].Item2));
                         break;
                 }
             }

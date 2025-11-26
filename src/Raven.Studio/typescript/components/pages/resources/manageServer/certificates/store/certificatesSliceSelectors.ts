@@ -99,8 +99,6 @@ const selectFilteredCertificates = createSelector(
         });
 
         switch (sortMode) {
-            case "Default":
-                return filteredCertificates;
             case "By Name - Asc":
                 return orderBy(filteredCertificates, (cert) => cert.Name, ["asc"]);
             case "By Name - Desc":

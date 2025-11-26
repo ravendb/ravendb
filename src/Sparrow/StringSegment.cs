@@ -267,7 +267,7 @@ namespace Sparrow
         /// <param name="left">The first <see cref="StringSegment"/> to compare, or <code>null</code>.</param>
         /// <param name="right">The second <see cref="StringSegment"/> to compare, or <code>null</code>.</param>
         /// <returns><code>true</code> if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, <code>false</code>.</returns>
-        public static bool operator !=(StringSegment left, StringSegment right) => !left.Equals(right);
+        public static bool operator !=(StringSegment left, StringSegment right) => left.Equals(right) == false;
 
         // PERF: Do NOT add a implicit converter from StringSegment to String. That would negate most of the perf safety.
         /// <summary>
@@ -582,7 +582,7 @@ namespace Sparrow
                 {
                     var c = p[trimmedStart];
 
-                    if (!char.IsWhiteSpace(c))
+                    if (char.IsWhiteSpace(c) == false)
                     {
                         break;
                     }
@@ -609,7 +609,7 @@ namespace Sparrow
                 {
                     var c = p[trimmedEnd];
 
-                    if (!char.IsWhiteSpace(c))
+                    if (char.IsWhiteSpace(c) == false)
                     {
                         break;
                     }

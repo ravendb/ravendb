@@ -34,7 +34,7 @@ namespace Raven.Server.Smuggler
 
         public static bool IsMultipartContentType(string contentType)
         {
-            return !string.IsNullOrEmpty(contentType)
+            return string.IsNullOrEmpty(contentType) == false
                    && contentType.IndexOf("multipart/", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
@@ -52,8 +52,8 @@ namespace Raven.Server.Smuggler
             // Content-Disposition: form-data; name="myfile1"; filename="Misc 002.jpg"
             return contentDisposition != null
                    && contentDisposition.DispositionType.Equals("form-data")
-                   && (!string.IsNullOrEmpty(contentDisposition.FileName.Value)
-                       || !string.IsNullOrEmpty(contentDisposition.FileNameStar.Value));
+                   && (string.IsNullOrEmpty(contentDisposition.FileName.Value) == false
+                       || string.IsNullOrEmpty(contentDisposition.FileNameStar.Value) == false);
         }
 
         public static Encoding GetEncoding(MultipartSection section)

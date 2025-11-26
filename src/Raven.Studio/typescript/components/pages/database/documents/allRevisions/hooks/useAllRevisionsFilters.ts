@@ -71,11 +71,13 @@ export default function useAllRevisionsFilters() {
     );
 
     const [persistedCollectionOptions, setPersistedCollectionOptions] = useState<SelectOptionWithCount[]>(
-        allCollectionNames.map((collectionName) => ({
-            value: collectionName,
-            label: collectionName,
-            count: null,
-        }))
+        allCollectionNames.map(
+            (collectionName): SelectOptionWithCount => ({
+                value: collectionName,
+                label: collectionName,
+                count: null,
+            })
+        )
     );
 
     const asyncGetCollectionOptions = useAsyncDebounce(

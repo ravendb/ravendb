@@ -88,11 +88,11 @@ namespace SlowTests.Issues
                         }
                     }
 
-                    var readResult = mainTree.Read("small");
-                    Assert.Equal(smallValue, readResult.Reader.AsStream().ReadData());
+                    Assert.True(mainTree.TryRead("small", out var smallReader));
+                    Assert.Equal(smallValue, smallReader.AsStream().ReadData());
 
-                    readResult = mainTree.Read("big");
-                    Assert.Equal(bigValue, readResult.Reader.AsStream().ReadData());
+                    Assert.True(mainTree.TryRead("big", out var bigReader));
+                    Assert.Equal(bigValue, bigReader.AsStream().ReadData());
                 }
             }
         }

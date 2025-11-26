@@ -101,7 +101,6 @@ export default class DatabaseUtils {
         } else {
             return db.nodes.map((node) => ({
                 nodeTag: node.tag,
-                shardNumber: undefined,
             }));
         }
     }

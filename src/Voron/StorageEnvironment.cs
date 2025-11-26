@@ -22,6 +22,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
+using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
@@ -319,16 +320,12 @@ namespace Voron
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
                 Debug.Assert(metadataTree != null);
-                // ReSharper disable once PossibleNullReferenceException
-                var dbId = metadataTree.Read("db-id");
-                if (dbId == null)
+                if (metadataTree.TryRead("db-id", out var dbId) == false)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
-                Debug.Assert(dbId != null);
-                // ReSharper disable once PossibleNullReferenceException
-                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                var dbIdBytes = dbId.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
@@ -363,11 +360,10 @@ namespace Voron
                 {
                     var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
 
-                    var schemaVersion = metadataTree.Read("schema-version");
-                    if (schemaVersion == null)
+                    if (metadataTree.TryRead("schema-version", out var schemaVersion) == false)
                         SchemaErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
-                    schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
+                    schemaVersionVal = schemaVersion.ReadLittleEndianInt32();
                     Options.OnVersionReadingTransaction?.Invoke(readTx);
                 }
 
@@ -1218,8 +1214,9 @@ namespace Voron
 
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
-                                var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
-                                long pageNumber = readResult.Reader.ReadLittleEndianInt64();
+                                if (tableTree.TryRead(TableSchema.ActiveSectionSlice, out var reader) == false)
+                                    throw new VoronErrorException($"Could not find active sections for {name}");
+                                long pageNumber = reader.ReadLittleEndianInt64();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
                                 // off by one here because of the section header
                                 r.Add(activeDataSmallSection.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");
@@ -1229,7 +1226,7 @@ namespace Voron
                                 }
                                 break;
                             case RootObjectType.Container:
-                                long container = tx.OpenContainer(currentKey);
+                                var container = tx.OpenContainer(currentKey);
                                 RegisterContainer(container, name);
                                 break;
                             case RootObjectType.Set:
@@ -1298,9 +1295,9 @@ namespace Voron
                 }
             }
 
-            void RegisterContainer(long container, string name)
+            void RegisterContainer(ContainerId container, string name)
             {
-                r.Add(container, name);
+                r.Add((long)container, name);
                 var overflowName = $"{name}/OverflowPage";
                 var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
@@ -1323,7 +1320,7 @@ namespace Voron
             void RegisterLookup(Lookup<Int64LookupKey> numeric, string name)
             {
                 RegisterPages(numeric.AllPages(), name);
-                if (numeric.State.TermsContainerId > 0)
+                if (numeric.State.TermsContainerId.IsValid)
                 {
                     RegisterContainer(numeric.State.TermsContainerId, name + "/TermsContainer");
                 }
@@ -1394,7 +1391,7 @@ namespace Voron
                                 detailedReportInput.Tables.Add(table);
                                 break;
                             case RootObjectType.Container:
-                                long container = tx.OpenContainer(currentKey);
+                                var container = tx.OpenContainer(currentKey);
                                 detailedReportInput.Containers[currentKey] = container;
                                 break;
                             case RootObjectType.Set:

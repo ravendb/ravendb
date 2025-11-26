@@ -121,11 +121,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         using (context.Transaction.InnerTransaction.Allocator.Allocate(sizeof(int), out var keyBuffer))
         {
             *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
-            var readResult = tree.Read(new Slice(keyBuffer));
-            if (readResult == null)
+            if (tree.TryRead(new Slice(keyBuffer), out var reader) == false)
                 return null;
 
-            var reader = readResult.Reader;
             return ValueReaderToBucketStats(bucket, ref reader);
         }
     }
@@ -274,11 +272,10 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         using (context.Transaction.InnerTransaction.Allocator.Allocate(sizeof(int), out var keyBuffer))
         {
             *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
-            var readResult = tree.Read(new Slice(keyBuffer));
-            if (readResult == null)
+            if (tree.TryRead(new Slice(keyBuffer), out var reader) == false)
                 return null;
 
-            var cvStr = Documents.BucketStats.GetMergedChangeVector(readResult.Reader);
+            var cvStr = Documents.BucketStats.GetMergedChangeVector(reader);
             return context.GetChangeVector(cvStr);
         }
     }

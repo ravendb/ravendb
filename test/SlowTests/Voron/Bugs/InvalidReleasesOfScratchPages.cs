@@ -28,7 +28,7 @@ namespace SlowTests.Voron.Bugs
 
                     using (var txr = env.ReadTransaction())
                     {
-                        Assert.NotNull(txr.CreateTree("tree0").Read("key/1"));
+                        Assert.True(txr.CreateTree("tree0").TryRead("key/1", out _));
                     }
                 }
             }

@@ -95,8 +95,7 @@ namespace StressTests.Issues
                         using (var tx = env.ReadTransaction())
                         {
                             var tree = tx.ReadTree("items");
-
-                            tree.Read("items/" + i);
+                            tree.TryRead("items/" + i, out _);
                         }
                     }
                 });

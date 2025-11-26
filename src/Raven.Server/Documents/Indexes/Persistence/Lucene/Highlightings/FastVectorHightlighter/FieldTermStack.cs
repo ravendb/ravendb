@@ -125,7 +125,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                     if (termSet.Any(ts => WildcardMatcher.Matches(ts, term)) == false)
                         continue;
                 }
-                else if (!termSet.Contains(term))
+                else if (termSet.Contains(term) == false)
                     continue;
 
                 int index = tpv.IndexOf(term);

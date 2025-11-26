@@ -399,10 +399,13 @@ namespace Raven.Server.Documents
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag) && fromReplication == false)
-                // If the deletion was issued from the cluster observer to maintain the replication factor we need to make sure
-                // that all the documents were replicated from this node, therefore the deletion will be called from the replication code.
-                return false;
+            if (rawRecord.EntireDatabasePendingDeletion() == false)
+            {
+                if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag) && fromReplication == false)
+                    // If the deletion was issued from the cluster observer to maintain the replication factor we need to make sure
+                    // that all the documents were replicated from this node, therefore the deletion will be called from the replication code.
+                    return false;
+            }
 
             // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
@@ -872,7 +875,7 @@ namespace Raven.Server.Documents
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 
-            if (!_databaseSemaphore.Wait(0))
+            if (_databaseSemaphore.Wait(0) == false)
                 return UnlikelyCreateDatabaseUnderContention(databaseName, config, wakeup, caller);
 
             return CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup, addToInitLog, caller);

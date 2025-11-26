@@ -64,7 +64,7 @@ namespace Raven.Server.Utils
             else if (indexOfPrefixStart != -1)
             {
                 addition = includePath.Subsegment(indexOfPrefixStart + 1);
-                if (!includePath[includePath.Length - 1].Equals(')'))
+                if (includePath[includePath.Length - 1].Equals(')') == false)
                     return;
                 pathSegment = includePath.Subsegment(0, indexOfPrefixStart);
                 valueHandler = HandlePrefixValue;

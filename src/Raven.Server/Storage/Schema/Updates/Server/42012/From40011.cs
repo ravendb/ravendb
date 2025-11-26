@@ -154,10 +154,10 @@ namespace Raven.Server.Storage.Schema.Updates.Server
         public unsafe BlittableJsonReaderObject GetLocalStateByThumbprint(Transaction tx, JsonOperationContext context, string key)
         {
             var localState = tx.ReadTree(LocalNodeStateTreeName);
-            var read = localState.Read(key);
-            if (read == null)
+            if (localState.TryRead(key, out var reader) == false)
                 return null;
-            BlittableJsonReaderObject localStateBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            
+            BlittableJsonReaderObject localStateBlittable = new(reader.Base, reader.Length, context);
 
             Transaction.DebugDisposeReaderAfterTransaction(tx, localStateBlittable);
             return localStateBlittable;

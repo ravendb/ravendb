@@ -12,7 +12,7 @@
     <Rule Id="RDB0003" Action="None" />
     <Rule Id="RDB0004" Action="None" />
     <Rule Id="RDB0005" Action="None" />
-    <Rule Id="RDB0010" Action="None" />
+    <Rule Id="RDB0010" Action="Error" />
   </Rules>
   <Rules AnalyzerId="xunit.analyzers" RuleNamespace="xunit.analyzers">
     <Rule Id="xUnit1000" Action="None" />

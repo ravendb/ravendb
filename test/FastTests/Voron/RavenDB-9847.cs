@@ -28,9 +28,8 @@ namespace FastTests.Voron
                 // set to 2
                 tree.Add("one", Enumerable.Range(0, 1024 * 5).Select(i => (byte)2).ToArray());
 
-                var reader = tree.Read("one");
-                Assert.NotNull(reader);
-                var bytes = reader.Reader.ReadBytes(1024 * 5);
+                Assert.True(tree.TryRead("one", out var reader));
+                var bytes = reader.ReadBytes(1024 * 5);
                 for (int i = 0; i < 1024*5; i++)
                 {
                     Assert.Equal(2, bytes[i]);

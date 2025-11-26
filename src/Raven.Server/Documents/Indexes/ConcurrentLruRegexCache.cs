@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes
 
         public Regex Get(string pattern)
         {
-            if (!_regexCache.TryGetValue(pattern, out var result))
+            if (_regexCache.TryGetValue(pattern, out var result) == false)
                 return GetUnlikely(pattern); // create it
 
             // we don't care about this until the cache is over half full,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data;
@@ -54,7 +55,7 @@ namespace Voron.Debugging
         public List<JournalFile> Journals;
         public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
-        public Dictionary<Slice, long> Containers;
+        public Dictionary<Slice, ContainerId> Containers;
         public List<PostingList> PostingLists;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<Lookup<Int64LookupKey>> NumericLookups;
@@ -117,7 +118,7 @@ namespace Voron.Debugging
                 {
                     var globalContainer = tree.DirectRead(Hnsw.VectorsContainerIdSlice);
                     if (globalContainer != null)
-                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<long>(globalContainer));
+                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<ContainerId>(globalContainer));
                 }
                 
                 if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
@@ -130,9 +131,9 @@ namespace Voron.Debugging
                         {
                             if (SliceComparer.CompareInline(it.CurrentKey, Hnsw.OptionsSlice) == 0 && it.Current->DataSize == Unsafe.SizeOf<Hnsw.Options>())
                                 continue; // Hnsw options, 64 bytes 
-                            
-                            ReadResult readResult = tree.Read(it.CurrentKey);
-                            RootObjectType rootObjectType = (RootObjectType)readResult.Reader.ReadByte();
+
+                            tree.TryRead(it.CurrentKey, out var reader);
+                            RootObjectType rootObjectType = (RootObjectType)reader.ReadByte();
                             switch (rootObjectType)
                             {
                                 case RootObjectType.Lookup:
@@ -158,7 +159,7 @@ namespace Voron.Debugging
                                 case RootObjectType.EmbeddedFixedSizeTree:
                                     continue; // already accounted for
                                 case RootObjectType.FixedSizeTree:
-                                    var header = (FixedSizeTreeHeader.Large*)readResult.Reader.Base;
+                                    var header = (FixedSizeTreeHeader.Large*)reader.Base;
                                     var set = tree.FixedTreeFor(it.CurrentKey, (byte)header->ValueSize);
                                     var nestedSetReport = GetReport(set, input.IncludeDetails);
                                     nestedSetReport.Name = treeReport.Name + "/" + nestedSetReport.Name +", FixedSizeTree";
@@ -510,7 +511,7 @@ namespace Voron.Debugging
             return treeReport;
         }
 
-        public TreeReport GetContainerReport(string name, long page, bool includeDetails)
+        public TreeReport GetContainerReport(string name, ContainerId page, bool includeDetails)
         {
             name += $" (Container)";
             
@@ -536,11 +537,11 @@ namespace Voron.Debugging
                     }
                 }
             }
-            
+
             var (allPages, freePages) = Container.GetPagesFor(_tx, page);
             
             // cannot use GetPageHeader since we are reading not just from the header
-            var root = new Container(_tx.GetPage(page));
+            var root = new Container(_tx.GetPage((long)page));
             double density = pageDensities?.Average() ?? -1;
             long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
             var treeReport = new TreeReport
@@ -766,10 +767,8 @@ namespace Voron.Debugging
         {
             if (page.IsLeaf)
             {
-                if (!histogram.TryGetValue(depth, out int value))
-                    value = 0;
-
-                histogram[depth] = value + 1;
+                ref var value = ref CollectionsMarshal.GetValueRefOrAddDefault(histogram, depth, out _);
+                value += 1;
             }
             else
             {

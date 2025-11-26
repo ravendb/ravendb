@@ -183,10 +183,10 @@ namespace Raven.Server.Documents
 
                 foreach (KeyValuePair<TKey, TValue> kvp in dict1)
                 {
-                    if (!dict2.TryGetValue(kvp.Key, out TValue value2))
+                    if (dict2.TryGetValue(kvp.Key, out TValue value2) == false)
                         return false;
 
-                    if (!comparer.Equals(kvp.Value, value2))
+                    if (comparer.Equals(kvp.Value, value2) == false)
                         return false;
                 }
 

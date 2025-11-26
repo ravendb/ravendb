@@ -6,12 +6,9 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Sparrow;
 using Sparrow.Server;
-using Sparrow.Server.Binary;
-using Sparrow.Server.Platform.Posix;
 using Voron.Data.Lookups;
 using Voron.Exceptions;
 using Voron.Global;
@@ -29,7 +26,60 @@ namespace Voron.Data.Containers
         [FieldOffset(1)]
         public long ContainerId;
     }
-    
+
+    // Represents the root container itself (the header page that owns freelists, lookup trees, etc.).
+    // Historically both container ids and entry ids were plain longs, so ContainerEntryId == 0 meant
+    // "empty entry" while ContainerId == 0 pointed at the storage header. Mixing them up would send
+    // callers to the wrong page or reuse a root as if it were an entry. This wrapper marks "root" level.
+    [StructLayout(LayoutKind.Explicit, Size = sizeof(long))]
+    public readonly struct ContainerId(long id) : IEquatable<ContainerId>
+    {
+        [FieldOffset(0)]
+        private readonly long _id = id;
+
+        public static readonly ContainerId Invalid = new(-1);
+
+        public bool IsValid => _id > 0;
+        public bool IsEmpty => _id == 0;
+
+        public static explicit operator long(ContainerId containerId) => containerId._id;
+        public static explicit operator ContainerId(long id) => new(id);
+
+        public bool Equals(ContainerId other) => _id == other._id;
+        public override bool Equals(object obj) => obj is ContainerId other && Equals(other);
+        public override int GetHashCode() => _id.GetHashCode();
+        public override string ToString() => $"ContainerId({_id})";
+
+        public static bool operator ==(ContainerId left, ContainerId right) => left._id == right._id;
+        public static bool operator !=(ContainerId left, ContainerId right) => left._id != right._id;
+    }
+
+    // Represents an entry allocated inside a container (the payload slot). Value 0 means "no entry" here,
+    // which collided with ContainerId == 0 (root header) when both were longs. Passing the wrong type would
+    // make us delete or read from the root instead of the payload. The dedicated type enforces the boundary.
+    [StructLayout(LayoutKind.Explicit, Size = sizeof(long))]
+    public readonly struct ContainerEntryId(long id) : IEquatable<ContainerEntryId>
+    {
+        [FieldOffset(0)]
+        private readonly long _id = id;
+
+        public static readonly ContainerEntryId Invalid = new(-1);
+
+        public bool IsValid => _id > 0;
+        public bool IsEmpty => _id == 0;
+
+        public static explicit operator long(ContainerEntryId entryId) => entryId._id;
+        public static explicit operator ContainerEntryId(long id) => new(id);
+
+        public bool Equals(ContainerEntryId other) => _id == other._id;
+        public override bool Equals(object obj) => obj is ContainerEntryId other && Equals(other);
+        public override int GetHashCode() => _id.GetHashCode();
+        public override string ToString() => $"ContainerEntryId({_id})";
+
+        public static bool operator ==(ContainerEntryId left, ContainerEntryId right) => left._id == right._id;
+        public static bool operator !=(ContainerEntryId left, ContainerEntryId right) => left._id != right._id;
+    }
+
     public readonly unsafe ref struct Container
     {
         public const int InvalidId = -1;
@@ -47,9 +97,9 @@ namespace Voron.Data.Containers
 
             public Dictionary<long, long> LastFreePageByPageLevelMetadata = new();
 
-            public long ContainerId;
+            public ContainerId ContainerId;
 
-            public TransactionState(long containerId)
+            public TransactionState(ContainerId containerId)
             {
                 ContainerId = containerId;
             }
@@ -61,7 +111,7 @@ namespace Voron.Data.Containers
                 if (_allPages != null)
                     return _allPages;
                 
-                var rootContainer = new Container(llt.GetPage(ContainerId));
+                var rootContainer = new Container(llt.GetPage((long)ContainerId));
                 ref var allPagesState = ref MemoryMarshal.AsRef<LookupState>(rootContainer.GetItem(ContainerPageHeader.AllPagesOffset));
                 _allPages = Lookup<Int64LookupKey>.Open(llt, allPagesState);
                 return _allPages;
@@ -72,7 +122,7 @@ namespace Voron.Data.Containers
                 if (_freePages != null)
                     return _freePages;
                 
-                var rootContainer = new Container(llt.GetPage(ContainerId));
+                var rootContainer = new Container(llt.GetPage((long)ContainerId));
                 ref var allPagesState = ref MemoryMarshal.AsRef<LookupState>(rootContainer.GetItem(ContainerPageHeader.FreeListOffset));
                 _freePages = Lookup<Int64LookupKey>.Open(llt, allPagesState);
                 return _freePages;
@@ -131,7 +181,7 @@ namespace Voron.Data.Containers
                         freePages.TryRemoveExistingValue(ref key, out _);
                 }
                 
-                var rootContainer = new Container(tx.LowLevelTransaction.ModifyPage(ContainerId));
+                var rootContainer = new Container(tx.LowLevelTransaction.ModifyPage((long)ContainerId));
                 
                 ref var allPagesState = ref MemoryMarshal.AsRef<LookupState>(rootContainer.GetItem(ContainerPageHeader.AllPagesOffset));
                 allPagesState = allPages.State;
@@ -609,14 +659,14 @@ namespace Voron.Data.Containers
             Header = ref Unsafe.AsRef<ContainerPageHeader>(page.Pointer);
         }
 
-        public static long Create(LowLevelTransaction llt)
+        public static ContainerId Create(LowLevelTransaction llt)
         {
             var page = AllocateContainerPage(llt);
 
             var root = new Container(page);
             root.Header.NumberOfOverflowPages = 0;
             root.Header.PageLevelMetadata = -1;
-            
+
             root.Allocate(sizeof(LookupState), ContainerPageHeader.FreeListOffset, out var freeListStateBuf);
             root.Allocate(sizeof(LookupState), ContainerPageHeader.AllPagesOffset, out var allPagesStateBuf);
             root.Allocate(sizeof(long), ContainerPageHeader.NumberOfEntriesOffset, out var numberOfEntriesBuffer);
@@ -629,11 +679,11 @@ namespace Voron.Data.Containers
             Lookup<Int64LookupKey>.Create(llt, out freeListState);
             ref var allPagesListState = ref MemoryMarshal.AsRef<LookupState>(allPagesStateBuf);
             Lookup<Int64LookupKey>.Create(llt, out allPagesListState);
-            
+
             var list = Lookup<Int64LookupKey>.Open(llt, allPagesListState);
             list.Add(page.PageNumber, 0);
             allPagesListState = list.State;
-            return page.PageNumber;
+            return (ContainerId)page.PageNumber;
         }
 
         private static Page AllocateContainerPage( LowLevelTransaction llt )
@@ -690,7 +740,7 @@ namespace Voron.Data.Containers
             Memory.Copy(_page.Pointer, tmpPtr, Constants.Storage.PageSize);
         }
 
-        public static long Allocate(LowLevelTransaction llt, long containerId, int size, out Span<byte> allocatedSpace)
+        public static ContainerEntryId Allocate(LowLevelTransaction llt, ContainerId containerId, int size, out Span<byte> allocatedSpace)
         {
             return Allocate(llt, containerId, size, pageLevelMetadata: -1, out allocatedSpace);
         }
@@ -702,9 +752,9 @@ namespace Voron.Data.Containers
         ///
         /// If the current page isn't a match to the pageLevelMetadata value passed, we'll allocate a *new* page for that purpose.
         /// </summary>
-        public static long Allocate(LowLevelTransaction llt, long containerId, int size, long pageLevelMetadata, out Span<byte> allocatedSpace)
+        public static ContainerEntryId Allocate(LowLevelTransaction llt, ContainerId containerId, int size, long pageLevelMetadata, out Span<byte> allocatedSpace)
         {
-            long AllocateOverflowPageUnlikely(Container rootContainer, out Span<byte> allocatedSpace)
+            ContainerEntryId AllocateOverflowPageUnlikely(Container rootContainer, out Span<byte> allocatedSpace)
             {
                 // The space to allocate is big enough to be allocated in a dedicated overflow page.
                 // We will figure out how many pages we will need to store it.
@@ -718,7 +768,7 @@ namespace Voron.Data.Containers
                 AddToAllPagesList(llt, rootContainer, overflowPage.PageNumber);
 
                 allocatedSpace = overflowPage.AsSpan(PageHeader.SizeOf, size);
-                return overflowPage.PageNumber * Constants.Storage.PageSize;
+                return new ContainerEntryId(overflowPage.PageNumber * Constants.Storage.PageSize);
             }
 
             // This method will return the allocated space inside the container and also the entry internal id to 
@@ -727,7 +777,7 @@ namespace Voron.Data.Containers
             if(size <= 0)
                 throw new ArgumentOutOfRangeException(nameof(size));
             
-            var rootContainer = new Container(llt.ModifyPage(containerId));
+            var rootContainer = new Container(llt.ModifyPage((long)containerId));
             rootContainer.UpdateNumberOfEntries(1);
             
             if (size > MaxSizeInsideContainerPage)
@@ -776,7 +826,7 @@ namespace Voron.Data.Containers
             return container.Allocate(size, pos, out allocatedSpace);
         }
 
-        private long Allocate(int size, int pos, out Span<byte> allocatedSpace)
+        private ContainerEntryId Allocate(int size, int pos, out Span<byte> allocatedSpace)
         {
             Debug.Assert(pos < 1024, "pos < 1024");
             var reqSize = ComputeRequiredSize(size);
@@ -795,7 +845,7 @@ namespace Voron.Data.Containers
             allocatedSpace = _page.AsSpan(entryStartOffset, size);
 
             long id = Header.PageNumber * Constants.Storage.PageSize + IndexToOffset(pos);
-            return id;
+            return new ContainerEntryId(id);
         }
 
         private static long IndexToOffset(int pos)
@@ -815,11 +865,11 @@ namespace Voron.Data.Containers
             return (int)offset >> 3;
         }
 
-        private static Container MoveToNextPage(LowLevelTransaction llt, long containerId, long pageLevelMetadata, Container container, int size)
+        private static Container MoveToNextPage(LowLevelTransaction llt, ContainerId containerId, long pageLevelMetadata, Container container, int size)
         {
             Debug.Assert(size <= MaxSizeInsideContainerPage);
 
-            var rootPage = llt.ModifyPage(containerId);
+            var rootPage = llt.ModifyPage((long)containerId);
             var rootContainer = new Container(rootPage);
             // we'll only remove from the free list if the page level metadata matches, since it probably has space otherwise
             if (pageLevelMetadata == container.Header.PageLevelMetadata)
@@ -831,8 +881,8 @@ namespace Voron.Data.Containers
             {
                 AddToFreeList(llt, rootContainer, container._page.PageNumber, container.Header.PageLevelMetadata);
             }
-            
-        
+
+
             var txState = llt.Transaction.GetContainerState(containerId);
             if(txState.LastFreePageByPageLevelMetadata.TryGetValue(pageLevelMetadata, out var lastFreePage))
             {
@@ -976,11 +1026,11 @@ namespace Voron.Data.Containers
             return pageLevelMetadata == maybe.Header.PageLevelMetadata;
         }
 
-        public static List<long> GetAllIds(LowLevelTransaction llt, long containerId)
+        public static List<long> GetAllIds(LowLevelTransaction llt, ContainerId containerId)
         {
             var list = new List<long>();
             Span<long> items = stackalloc long[256];
-            Container rootContainer = new Container(llt.GetPage(containerId));
+            Container rootContainer = new Container(llt.GetPage((long)containerId));
             var txState = llt.Transaction.GetContainerState(containerId);
             var it = txState.GetAllPages(llt).Iterate();
             it.Reset();
@@ -995,7 +1045,7 @@ namespace Voron.Data.Containers
                 int itemsLeftOnCurrentPage = 0;
                 do
                 {
-                    int count = GetEntriesInto(containerId, ref offset, page, items, out itemsLeftOnCurrentPage);
+                    int count = GetEntriesInto((long)containerId, ref offset, page, items, out itemsLeftOnCurrentPage);
                     list.AddRange(items[..count]);
 
                     //need read to the end of page
@@ -1054,7 +1104,7 @@ namespace Voron.Data.Containers
 
         public static void AddToFreeList(LowLevelTransaction llt, in Container rootContainer, long pageNum, long pageLevelMetadata)
         {
-            var txState = llt.Transaction.GetContainerState(rootContainer._page.PageNumber);
+            var txState = llt.Transaction.GetContainerState(new ContainerId(rootContainer._page.PageNumber));
             ref long valRef = ref CollectionsMarshal.GetValueRefOrAddDefault(txState.FreeListAdditions, pageNum, out var exists);
             if (exists)
             {
@@ -1072,7 +1122,7 @@ namespace Voron.Data.Containers
         
         public static void RemoveFromFreeList(LowLevelTransaction llt, in Container rootContainer, long pageNum)
         {
-            var txState = llt.Transaction.GetContainerState(rootContainer._page.PageNumber);
+            var txState = llt.Transaction.GetContainerState(new ContainerId(rootContainer._page.PageNumber));
             txState.FreeListAdditions.Remove(pageNum);
             txState.FreeListRemovals.Add(pageNum);
             
@@ -1081,14 +1131,14 @@ namespace Voron.Data.Containers
         
         public static void AddToAllPagesList(LowLevelTransaction llt, in Container rootContainer, long pageNum)
         {
-            var txState = llt.Transaction.GetContainerState(rootContainer._page.PageNumber);
+            var txState = llt.Transaction.GetContainerState(new ContainerId(rootContainer._page.PageNumber));
             txState.Removals.Remove(pageNum);
             txState.Additions.Add(pageNum);
         }
         
         public static void RemoveFromAllPagesList(LowLevelTransaction llt, in Container rootContainer, long pageNum, long pageLevelMetadata)
         {
-            var txState = llt.Transaction.GetContainerState(rootContainer._page.PageNumber);
+            var txState = llt.Transaction.GetContainerState(new ContainerId(rootContainer._page.PageNumber));
             
             txState.FreeListAdditions.Remove(pageNum);
             txState.FreeListRemovals.Add(pageNum);
@@ -1174,11 +1224,11 @@ namespace Voron.Data.Containers
             return size + 1 + isLarge.ToInt32();
         }
 
-        public static void Delete(LowLevelTransaction llt, long containerId, long id)
+        public static void Delete(LowLevelTransaction llt, ContainerId containerId, ContainerEntryId id)
         {
-            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             var page = llt.ModifyPage(pageNum);
-            Container rootContainer = new Container(llt.ModifyPage(containerId));
+            Container rootContainer = new Container(llt.ModifyPage((long)containerId));
             rootContainer.UpdateNumberOfEntries(-1);
 
             if (page.IsOverflow)
@@ -1215,7 +1265,7 @@ namespace Voron.Data.Containers
 
             if (container.HasEntries() == false) // cannot delete root page
             {
-                Debug.Assert(pageNum != containerId);
+                Debug.Assert(pageNum != (long)containerId);
                 
                 // don't need to consider the root page, the free list & all pages
                 // entries will ensure that we never get here
@@ -1223,7 +1273,7 @@ namespace Voron.Data.Containers
                 {
                     // we delete the current free page, so we'll point to ourselves are resolve
                     // the next allocation via the free list
-                    rootContainer.UpdateNextFreePage(containerId);
+                    rootContainer.UpdateNextFreePage((long)containerId);
                 }
 
                 RemoveFromFreeList(llt, rootContainer, page.PageNumber);
@@ -1281,12 +1331,12 @@ namespace Voron.Data.Containers
             return *(long*)pagePointer;
         }
         
-        public static Span<byte> GetMutable(LowLevelTransaction llt, long id)
+        public static Span<byte> GetMutable(LowLevelTransaction llt, ContainerEntryId id)
         {
-            if (id <= 0)
+            if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             var page = llt.ModifyPage(pageNum);
 
             if (page.IsOverflow)
@@ -1304,12 +1354,12 @@ namespace Voron.Data.Containers
             return new Span<byte>(pagePointer, size);
         }
         
-        public static void GetMutable(LowLevelTransaction llt, long id, out Item item)
+        public static void GetMutable(LowLevelTransaction llt, ContainerEntryId id, out Item item)
         {
-            if (id <= 0)
+            if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             var page = llt.ModifyPage(pageNum);
 
             if (page.IsOverflow)
@@ -1326,12 +1376,12 @@ namespace Voron.Data.Containers
             item = new Item(page, pagePointer, size);
         }
 
-        public static void Get(LowLevelTransaction llt, long id, out Item item)
+        public static void Get(LowLevelTransaction llt, ContainerEntryId id, out Item item)
         {
-            if (id <= 0)
+            if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             var page = llt.GetPage(pageNum);
             if (page.IsOverflow)
             {
@@ -1348,12 +1398,12 @@ namespace Voron.Data.Containers
             item = new Item(page, pagePointer, size);
         }
 
-        public static Span<byte> GetReadOnly(LowLevelTransaction llt, long id)
+        public static Span<byte> GetReadOnly(LowLevelTransaction llt, ContainerEntryId id)
         {
-            if (id <= 0)
+            if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             var page = llt.GetPage(pageNum);
             if (page.IsOverflow)
             {
@@ -1368,19 +1418,13 @@ namespace Voron.Data.Containers
             var size = itemMetadata.Get(ref pagePointer);
             return new Span<byte>(pagePointer, size);
         }
-        
-        public static Item Get(LowLevelTransaction llt, long id)
-        {
-            Get(llt, id, out Item result);
-            return result;
-        }
 
-        public static Item MaybeGetFromSamePage(LowLevelTransaction llt, ref Page page, long id)
+        public static Item MaybeGetFromSamePage(LowLevelTransaction llt, ref Page page, ContainerEntryId id)
         {
-            if (id <= 0)
+            if ((long)id <= 0)
                 throw new InvalidOperationException("Got an invalid container id: " + id);
 
-            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             if(!page.IsValid || pageNum != page.PageNumber)
                 page = llt.GetPage(pageNum);
 
@@ -1477,13 +1521,13 @@ namespace Voron.Data.Containers
             }
         }
 
-        public static (Lookup<Int64LookupKey> allPages, Lookup<Int64LookupKey> freePages) GetPagesFor(LowLevelTransaction tx, long containerId)
+        public static (Lookup<Int64LookupKey> AllPages, Lookup<Int64LookupKey> FreePages) GetPagesFor(LowLevelTransaction tx, ContainerId containerId)
         {
             var state = tx.Transaction.GetContainerState(containerId);
             return (state.GetAllPages(tx), state.GetFreePages(tx));
         }
-        
-        public static Lookup<Int64LookupKey>.ForwardIterator GetAllPagesIterator(LowLevelTransaction tx, long containerId)
+
+        public static Lookup<Int64LookupKey>.ForwardIterator GetAllPagesIterator(LowLevelTransaction tx, ContainerId containerId)
         {
             var state = tx.Transaction.GetContainerState(containerId);
             return state.GetAllPages(tx).Iterate();

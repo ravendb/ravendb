@@ -445,13 +445,13 @@ namespace Raven.Server.Web.System
 
             for (; dispatch > 0; dispatch--)
             {
-                if (!EntriesToCompress.TryDequeue(out var relativeServerFileName))
+                if (EntriesToCompress.TryDequeue(out var relativeServerFileName) == false)
                     break;
 
                 // The cache entry should already be there in the static cache
                 // unless it has been removed by the pruning process, in which
                 // case we just skip it.
-                if (!StaticContentCache.TryGetValue(relativeServerFileName, out var uncompressedCachedStaticFile))
+                if (StaticContentCache.TryGetValue(relativeServerFileName, out var uncompressedCachedStaticFile) == false)
                     continue;
 
                 // The cache may attempt to read compressed contents, so this

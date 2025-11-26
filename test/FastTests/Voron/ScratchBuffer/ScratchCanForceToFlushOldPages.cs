@@ -72,11 +72,8 @@ namespace FastTests.Voron.ScratchBuffer
 
                     Assert.True(allocated2 <= allocated1);
 
-                    var read = txr2.CreateTree("foo").Read("bars/1");
-
-                    Assert.NotNull(read);
-                    Slice v;
-                    read.Reader.AsSlice(txr2.Allocator, out v);
+                    Assert.True(txr2.CreateTree("foo").TryRead("bars/1", out var reader));
+                    reader.AsSlice(txr2.Allocator, out Slice v);
                     Assert.Equal(new string('c', 1000), v.ToString());
                 }
             }

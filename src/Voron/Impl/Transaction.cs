@@ -33,7 +33,7 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private Dictionary<long, Container.TransactionState> _containers;
+        private Dictionary<ContainerId, Container.TransactionState> _containers;
         
         private Dictionary<Slice, PostingList> _postingLists;
         
@@ -167,7 +167,7 @@ namespace Voron.Impl
             _lowLevelTransaction.EndAsyncCommit();
         }
 
-        public long OpenContainer(string name)
+        public ContainerId OpenContainer(string name)
         {
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
             {
@@ -187,12 +187,12 @@ namespace Voron.Impl
             return LowLevelTransaction.RootObjects.LookupFor<TKey>(name);
         }
 
-        public long OpenContainer(Slice name)
+        public ContainerId OpenContainer(Slice name)
         {
             var exists = LowLevelTransaction.RootObjects.DirectRead(name);
             if (exists != null)
             {
-                return ((ContainerRootHeader*)exists)->ContainerId;
+                return new ContainerId(((ContainerRootHeader*)exists)->ContainerId);
             }
             var id = Container.Create(LowLevelTransaction);
 
@@ -200,7 +200,7 @@ namespace Voron.Impl
                 *((ContainerRootHeader*)ptr) = new ContainerRootHeader
                 {
                     RootObjectType = RootObjectType.Container,
-                    ContainerId = id
+                    ContainerId = (long)id
                 };
             
             
@@ -222,21 +222,22 @@ namespace Voron.Impl
                 return set;
 
             var clonedName = name.Clone(Allocator);
-            
-            var existing = LowLevelTransaction.RootObjects.Read(name);
-            if (existing == null)
+
+            Tree root = LowLevelTransaction.RootObjects;
+            if (root.TryRead(name, out var reader) == false)
             {
                 var state = new PostingListState();
                 PostingList.Create(this.LowLevelTransaction, ref state);
-                using (LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(PostingListState), out var p))
+                using (root.DirectAdd(name, sizeof(PostingListState), out var p))
                 {
                     Unsafe.Copy(p, ref state);
                 }
-                existing = LowLevelTransaction.RootObjects.Read(name);
+
+                root.TryRead(name, out reader);
             }
  
             set = new PostingList(LowLevelTransaction, clonedName,
-                MemoryMarshal.AsRef<PostingListState>(existing.Reader.AsSpan())
+                MemoryMarshal.AsRef<PostingListState>(reader.AsSpan())
             );
             _postingLists[clonedName] = set;
             return set;
@@ -320,7 +321,7 @@ namespace Voron.Impl
 
             if (_containers != null)
             {
-                foreach (var (containerId, containerState) in _containers)
+                foreach (var (_, containerState) in _containers)
                 {
                     containerState.PrepareForCommit(this);
                 }
@@ -369,9 +370,10 @@ namespace Voron.Impl
         internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
         {
             var keyToRemove = Tuple.Create(parentTree, key);
-            if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
+            
+            if (_multiValueTrees == null)
                 return false;
-
+            
             return _multiValueTrees.Remove(keyToRemove);
         }
 
@@ -663,7 +665,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal) // must not delete global indexes
                     continue;
 
-                if (tableTree.Read(indexDef.Name) == null)
+                if (tableTree.TryRead(indexDef.Name, out _) == false)
                     continue;
 
                 var indexTree = table.GetTree(indexDef);
@@ -678,7 +680,7 @@ namespace Voron.Impl
                 if (indexDef.IsGlobal)  // must not delete global indexes
                     continue;
 
-                if (tableTree.Read(indexDef.Name) == null)
+                if (tableTree.TryRead(indexDef.Name, out _) == false)
                     continue;
 
                 var index = table.GetFixedSizeTree(indexDef);
@@ -692,7 +694,7 @@ namespace Voron.Impl
 
             table.ActiveDataSmallSection.FreeRawDataSectionPages();
 
-            if (tableTree.Read(TableSchema.ActiveCandidateSectionSlice) != null)
+            if (tableTree.TryRead(TableSchema.ActiveCandidateSectionSlice, out _) )
             {
                 using (var it = table.ActiveCandidateSection.Iterate())
                 {
@@ -708,7 +710,7 @@ namespace Voron.Impl
                 DeleteFixedTree(table.ActiveCandidateSection, isInRoot: false);
             }
 
-            if (tableTree.Read(TableSchema.InactiveSectionSlice) != null)
+            if (tableTree.TryRead(TableSchema.InactiveSectionSlice, out _) )
                 DeleteFixedTree(table.InactiveSections, isInRoot: false);
 
             DeleteTree(name);
@@ -736,9 +738,9 @@ namespace Voron.Impl
             LowLevelTransaction.RootObjects.Forget(name);
         }
 
-        public Container.TransactionState GetContainerState(long containerId)
+        public Container.TransactionState GetContainerState(ContainerId containerId)
         {
-            _containers ??= new Dictionary<long, Container.TransactionState>();
+            _containers ??= new Dictionary<ContainerId, Container.TransactionState>();
             if (_containers.TryGetValue(containerId, out var state))
                 return state;
             state = new Container.TransactionState(containerId);

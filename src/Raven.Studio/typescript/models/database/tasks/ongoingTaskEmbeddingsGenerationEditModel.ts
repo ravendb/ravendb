@@ -16,25 +16,12 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
+    addPathConfigurationValidationGroup: KnockoutValidationGroup;
     enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
 
-    maxTokensPerChunk = ko.observable<number>();
     maxTokensPerChunkDefaultValue: KnockoutObservable<number>;
 
-    // path configuration inputs
-    pathConfigurationMaxTokensPerChunk = ko.observable<number>();
-    pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
-    pathConfigurationChunkingMethodLabel: KnockoutComputed<string>;
-    pathConfigurationPath = ko.observable<string>("");
-    pathConfigurationOverlapTokens = ko.observable<number>(null);
-
-    // querying inputs
-    overlapTokens = ko.observable<number>(null);
-    canUseOverlapTokensForPathConfiguration: KnockoutComputed<boolean>;
-    canUseOverlapTokensForTransformation: KnockoutComputed<boolean>;
-
-    chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     chunkingMethodOptions: valueAndLabelItem<Raven.Client.Documents.Operations.AI.ChunkingMethod, string>[] = [
         { value: "PlainTextSplit", label: "Plain Text: Split" },
         { value: "PlainTextSplitLines", label: "Plain Text: Split Lines" },
@@ -43,12 +30,26 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         { value: "MarkDownSplitParagraphs", label: "Markdown: Split Paragraphs" },
         { value: "HtmlStrip", label: "HTML: Strip" },
     ];
-    chunkingMethodLabel: KnockoutComputed<string>;
 
-    transformationOverlapTokens = ko.observable<number>(null);
+    // path configuration inputs
+    pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
+    pathConfigurationChunkingMethodLabel: KnockoutComputed<string>;
+    pathConfigurationPath = ko.observable<string>("");
+    pathConfigurationMaxTokensPerChunk = ko.observable<number>(null);
+    pathConfigurationOverlapTokens = ko.observable<number>(null);
+
+    // transformation inputs
     transformationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     transformationChunkingMethodLabel: KnockoutComputed<string>;
-    transformationMaxTokensPerChunk = ko.observable<number>();
+    transformationMaxTokensPerChunk = ko.observable<number>(null);
+    transformationOverlapTokens = ko.observable<number>(null);
+
+    // querying inputs
+    queryingChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
+    queryingChunkingMethodLabel: KnockoutComputed<string>;
+    queryingMaxTokensPerChunk = ko.observable<number>(null);
+    queryingOverlapTokens = ko.observable<number>(null);
+    embeddingsCacheForQueryingExpiration = ko.observable<number>(defaultEmbeddingsCacheForQueryingExpiration);
 
     quantizationType = ko.observable<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType>("Single");
     quantizationTypeOptions: valueAndLabelItem<Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType, string>[] = [
@@ -59,7 +60,6 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     quantizationTypeLabel: KnockoutComputed<string>;
 
     embeddingsCacheExpiration = ko.observable<number>(TimeInSeconds.TimeInSeconds.Day * 90);
-    embeddingsCacheForQueryingExpiration = ko.observable<number>(defaultEmbeddingsCacheForQueryingExpiration);
 
     embeddingsSource = ko.observable<EmbeddingsSource>("paths");
     embeddingsSourceLabel: KnockoutComputed<string>;
@@ -80,6 +80,10 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
     isQueryingOpen = ko.observable<boolean>(false);
 
+    canUseOverlapTokens: KnockoutComputed<boolean>;
+    canUseOverlapTokensForPathConfiguration: KnockoutComputed<boolean>;
+    canUseOverlapTokensForTransformation: KnockoutComputed<boolean>;
+
     get studioTaskType(): StudioTaskType {
         return "EmbeddingsGeneration";
     }
@@ -96,9 +100,10 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.initializeObservables();
         this.update(dto);
         this.initializeValidation();
+        this.initializeDirtyFlag();
     }
 
-    private resetOverlapTokensIfNotSupported = (chunkingMethod: Raven.Client.Documents.Operations.AI.ChunkingMethod, type?: "pathConfiguration" | "transformation") => {
+    private resetOverlapTokensIfNotSupported = (chunkingMethod: Raven.Client.Documents.Operations.AI.ChunkingMethod, type: "pathConfiguration" | "transformation" | "querying") => {
         if (chunkingMethod !== "PlainTextSplitParagraphs" && chunkingMethod !== "MarkDownSplitParagraphs") {
             switch (type) {
                 case "transformation":
@@ -107,9 +112,11 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 case "pathConfiguration":
                     this.pathConfigurationOverlapTokens(null);
                     break;
-                default:
-                    this.overlapTokens(null);
+                case "querying":
+                    this.queryingOverlapTokens(null);
                     break;
+                default:
+                    genUtils.assertUnreachable(type);
             }
         }
     }
@@ -119,7 +126,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
 
         this.pathConfigurationChunkingMethod.subscribe((newValue) => this.resetOverlapTokensIfNotSupported(newValue, "pathConfiguration"));
         this.transformationChunkingMethod.subscribe((newValue) => this.resetOverlapTokensIfNotSupported(newValue, "transformation"));
-        this.chunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
+        this.queryingChunkingMethod.subscribe(newValue => this.resetOverlapTokensIfNotSupported(newValue, "querying"));
 
         this.maxTokensPerChunkDefaultValue = ko.pureComputed(() => {
             const connectionString = this.aiConnectionStrings().find(x => x.Name === this.connectionStringName());
@@ -134,8 +141,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             return this.quantizationTypeOptions.find(x => x.value === this.quantizationType())?.label || "Select quantization type";
         });
 
-        this.chunkingMethodLabel = ko.pureComputed(() => {
-            return this.chunkingMethodOptions.find(x => x.value === this.chunkingMethod())?.label || "Select chunking method";
+        this.queryingChunkingMethodLabel = ko.pureComputed(() => {
+            return this.chunkingMethodOptions.find(x => x.value === this.queryingChunkingMethod())?.label || "Select chunking method";
         });
 
         this.transformationChunkingMethodLabel = ko.pureComputed(() => {
@@ -158,6 +165,11 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             return genUtils.assertUnreachable(source);
         });
 
+
+        this.canUseOverlapTokens = ko.pureComputed(() => {
+            return this.queryingChunkingMethod() === "PlainTextSplitParagraphs" || this.queryingChunkingMethod() === "MarkDownSplitParagraphs";
+        })
+
         this.canUseOverlapTokensForPathConfiguration = ko.pureComputed(() => {
             return this.pathConfigurationChunkingMethod() === "PlainTextSplitParagraphs" || this.pathConfigurationChunkingMethod() === "MarkDownSplitParagraphs";
         })
@@ -165,21 +177,23 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.canUseOverlapTokensForTransformation = ko.pureComputed(() => {
             return this.transformationChunkingMethod() === "PlainTextSplitParagraphs" || this.transformationChunkingMethod() === "MarkDownSplitParagraphs";
         })
+    }
 
+    initializeDirtyFlag() {
         this.dirtyFlag = new ko.DirtyFlag([ 
             this.taskName,
             this.identifier,
             this.taskState,
             this.connectionStringName,
+            this.collectionInput,
             this.mentorNode,
             this.pinMentorNode,
             this.manualChooseMentor,
             this.allowEtlOnNonEncryptedChannel,
-            this.chunkingMethod,
-            this.maxTokensPerChunk,
-            this.overlapTokens,
+            this.queryingChunkingMethod,
+            this.queryingMaxTokensPerChunk,
+            this.queryingOverlapTokens,
             this.transformationOverlapTokens,
-            this.pathConfigurationOverlapTokens,
             this.quantizationType,
             this.embeddingsCacheExpiration,
             this.embeddingsCacheForQueryingExpiration,
@@ -187,6 +201,9 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             this.script,
             this.embeddingPathConfigurations,
             this.resetScript,
+            this.pathConfigurationMaxTokensPerChunk,
+            this.pathConfigurationOverlapTokens,
+            this.pathConfigurationPath,
         ]);
     }
     
@@ -210,13 +227,6 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             required: true
         });
 
-        this.script.extend({
-            required: {
-                onlyIf: () => this.embeddingsSource() === "script"
-            },
-            aceValidation: true
-        });
-
         this.embeddingPathConfigurations.extend({
             validation: [
                 {
@@ -231,12 +241,62 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             required: true
         });
 
-        this.maxTokensPerChunk.extend({
+        this.queryingMaxTokensPerChunk.extend({
             min: 1,
         });
 
+        this.queryingOverlapTokens.extend({
+            min: 0,
+            validation: [
+                {
+                    onlyIf: () => this.queryingChunkingMethod() === "PlainTextSplitParagraphs" || this.queryingChunkingMethod() === "MarkDownSplitParagraphs",
+                    validator: () => {
+                        const overlapTokens = this.queryingOverlapTokens() ?? 0;
+                        const maxTokensPerChunk = this.queryingMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
+                        return overlapTokens <= maxTokensPerChunk;
+                    },
+                    message: "Overlap tokens must be less than or equal to max tokens per chunk"
+                }
+            ]
+        });
+
+        this.script.extend({
+            required: {
+                onlyIf: () => this.embeddingsSource() === "script"
+            },
+            aceValidation: true
+        });
+
         this.transformationMaxTokensPerChunk.extend({
-            onlyIf: () => this.embeddingsSource() === "script",
+            min: {
+                params: 1,
+                onlyIf: () => this.embeddingsSource() === "script",
+            },
+        });
+
+        this.transformationOverlapTokens.extend({
+            min: {
+                params: 0,
+                onlyIf: () => this.embeddingsSource() === "script" && (this.transformationChunkingMethod() === "PlainTextSplitParagraphs" || this.transformationChunkingMethod() === "MarkDownSplitParagraphs"),
+            },
+            validation: [
+                {
+                    onlyIf: () => this.embeddingsSource() === "script" && (this.transformationChunkingMethod() === "PlainTextSplitParagraphs" || this.transformationChunkingMethod() === "MarkDownSplitParagraphs"),
+                    validator: () => {
+                        const overlapTokens = this.transformationOverlapTokens() ?? 0;
+                        const maxTokensPerChunk = this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
+                        return overlapTokens <= maxTokensPerChunk;
+                    },
+                    message: "Overlap tokens must be less than or equal to max tokens per chunk"
+                }
+            ]
+        });
+        
+        this.embeddingsCacheExpiration.extend({
+            min: 1,
+        });
+
+        this.embeddingsCacheForQueryingExpiration.extend({
             min: 1,
         });
 
@@ -248,8 +308,56 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             script: this.script,
             embeddingPathConfigurations: this.embeddingPathConfigurations,
             collectionInput: this.collectionInput,
-            maxTokensPerChunk: this.maxTokensPerChunk,
+            queryingMaxTokensPerChunk: this.queryingMaxTokensPerChunk,
+            queryingOverlapTokens: this.queryingOverlapTokens,
             transformationMaxTokensPerChunk: this.transformationMaxTokensPerChunk,
+            transformationOverlapTokens: this.transformationOverlapTokens,
+            embeddingsCacheExpiration: this.embeddingsCacheExpiration,
+            embeddingsCacheForQueryingExpiration: this.embeddingsCacheForQueryingExpiration,
+        });
+
+        this.pathConfigurationPath.extend({
+            required: {
+                onlyIf: () => this.embeddingsSource() === "paths"
+            },
+            validation: [
+                {
+                    onlyIf: () => this.embeddingsSource() === "paths",
+                    validator: () => !this.embeddingPathConfigurations().map(x => x.Path).includes(this.pathConfigurationPath()),
+                    message: "Path already exists"
+                }
+            ]
+        });
+
+        this.pathConfigurationMaxTokensPerChunk.extend({
+            min: {
+                params: 1,
+                onlyIf: () => this.embeddingsSource() === "paths",
+            },
+        });
+
+        this.pathConfigurationOverlapTokens.extend({
+            min: {
+                params: 0,
+                onlyIf: () => this.embeddingsSource() === "paths" && (this.pathConfigurationChunkingMethod() === "PlainTextSplitParagraphs" || this.pathConfigurationChunkingMethod() === "MarkDownSplitParagraphs")
+            },
+            validation: [
+                {
+                    onlyIf: () => this.embeddingsSource() === "paths" && (this.pathConfigurationChunkingMethod() === "PlainTextSplitParagraphs" || this.pathConfigurationChunkingMethod() === "MarkDownSplitParagraphs"),
+                    validator: () => {
+                        const overlapTokens = this.pathConfigurationOverlapTokens() ?? 0;
+                        const maxTokensPerChunk = this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue();
+                        return overlapTokens <= maxTokensPerChunk;
+                    },
+                    message: "Overlap tokens must be less than or equal to max tokens per chunk"
+                }
+            ]
+        });
+
+        this.addPathConfigurationValidationGroup = ko.validatedObservable({
+            pathConfigurationPath: this.pathConfigurationPath,
+            pathConfigurationMaxTokensPerChunk: this.pathConfigurationMaxTokensPerChunk,
+            pathConfigurationOverlapTokens: this.pathConfigurationOverlapTokens,
         });
     }
 
@@ -275,10 +383,15 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     }
 
     addEmbeddingsPathConfiguration(): void {
+        if (!this.addPathConfigurationValidationGroup.isValid()) {
+            this.addPathConfigurationValidationGroup.errors.showAllMessages(true);
+            return;
+        }
+
         this.embeddingPathConfigurations.push({
             Path: this.pathConfigurationPath(),
             ChunkingOptions: {
-                OverlapTokens: this.pathConfigurationOverlapTokens(),
+                OverlapTokens: this.pathConfigurationOverlapTokens() ?? 0,
                 ChunkingMethod: this.pathConfigurationChunkingMethod(),
                 MaxTokensPerChunk: this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue()
             }
@@ -287,6 +400,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.pathConfigurationMaxTokensPerChunk(null);
         this.pathConfigurationChunkingMethod("PlainTextSplitLines");
         this.pathConfigurationOverlapTokens(null);
+
+        this.addPathConfigurationValidationGroup.errors.showAllMessages(false);
     }
 
     removeEmbeddingsPathConfiguration(path: string): void {
@@ -314,9 +429,9 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 this.collectionInput(configuration.Collection);
             }
             if (configuration.ChunkingOptionsForQuerying) {
-                this.chunkingMethod(configuration.ChunkingOptionsForQuerying.ChunkingMethod);
-                this.maxTokensPerChunk(configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk);
-                this.overlapTokens(configuration.ChunkingOptionsForQuerying.OverlapTokens);
+                this.queryingChunkingMethod(configuration.ChunkingOptionsForQuerying.ChunkingMethod);
+                this.queryingMaxTokensPerChunk(configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk);
+                this.queryingOverlapTokens(configuration.ChunkingOptionsForQuerying.OverlapTokens);
             }
             if (configuration.Quantization) {
                 this.quantizationType(configuration.Quantization);
@@ -371,13 +486,13 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             Transforms: null,
             Collection: this.collectionInput(),
             ChunkingOptionsForQuerying: {
-                OverlapTokens: this.overlapTokens(),
-                ChunkingMethod: this.chunkingMethod(),
-                MaxTokensPerChunk: this.maxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
+                OverlapTokens: this.queryingOverlapTokens() ?? 0,
+                ChunkingMethod: this.queryingChunkingMethod(),
+                MaxTokensPerChunk: this.queryingMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
             },
             Quantization: this.quantizationType(),
             EmbeddingsTransformation: this.embeddingsSource() === "script" ? {
-                Script: this.script(), ChunkingOptions: { OverlapTokens: this.transformationOverlapTokens(), MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
+                Script: this.script(), ChunkingOptions: { OverlapTokens: this.transformationOverlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
             } : null,
             EmbeddingsPathConfigurations: this.embeddingsSource() === "paths" ? this.embeddingPathConfigurations() : [],
             EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
