@@ -290,6 +290,7 @@ function ToolCallBody({ name, toolContent, parametersFromUser, parametersFromMod
                     mode="rql"
                     height={aceEditorUtils.getAceEditorHeight(queryWithParameters, { maxLineCount: 8 })}
                     languageService={rqlLanguageService}
+                    isFullScreenLabelHidden
                 />
             </div>
             <div>
@@ -299,6 +300,7 @@ function ToolCallBody({ name, toolContent, parametersFromUser, parametersFromMod
                     readOnly
                     mode={argumentsMode}
                     height={aceEditorUtils.getAceEditorHeight(prettifiedArguments)}
+                    isFullScreenLabelHidden
                 />
             </div>
             <QueryToolResponseContent content={toolContent} />
@@ -355,6 +357,7 @@ function QueryToolResponseContent({ content }: QueryToolResponseContentProps) {
                     mode={contentMode}
                     height="150px"
                     actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+                    isFullScreenLabelHidden
                 />
             )}
         </div>

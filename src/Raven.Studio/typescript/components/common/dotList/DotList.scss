@@ -43,6 +43,7 @@
 
         .dot-list-item-content {
             padding-left: sizes.$gutter-xs;
+            min-width: 0px;
             flex-grow: 1;
         }
     }

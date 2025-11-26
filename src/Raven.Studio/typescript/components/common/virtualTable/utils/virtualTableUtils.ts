@@ -1,6 +1,7 @@
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 
-const { defaultRowHeightInPx, headerHeightInPx, paddingInPx, scrollbarWidthInPx } = virtualTableConstants;
+const { defaultRowHeightInPx, headerHeightInPx, paddingInPx, scrollbarWidthInPx, scrollbarHeightInPx } =
+    virtualTableConstants;
 
 interface TableBodyWidthOptions {
     isWithoutTablePadding?: boolean;
@@ -39,7 +40,10 @@ function getCellSizeProvider(tableWidthInPx = 0) {
 
 function getHeightInPx(rowsCount: number, maxHeightInPx: number): number {
     const calculatedHeightInPx =
-        Math.max(defaultRowHeightInPx, rowsCount * defaultRowHeightInPx) + paddingInPx + headerHeightInPx;
+        Math.max(defaultRowHeightInPx, rowsCount * defaultRowHeightInPx) +
+        paddingInPx +
+        headerHeightInPx +
+        scrollbarHeightInPx;
 
     return Math.min(calculatedHeightInPx, maxHeightInPx);
 }
