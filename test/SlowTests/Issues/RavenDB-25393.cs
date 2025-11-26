@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace StressTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_25393 : ReplicationTestBase
     {
@@ -28,7 +24,7 @@ namespace StressTests.Issues
             public string Name { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RestoreIncrementalBackupCreatesExtraRevision(Options options)
         {
