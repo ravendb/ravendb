@@ -40,7 +40,8 @@ abstract class reactViewModelBase extends viewModelBase {
         return ko.pureComputed(() => ({
             component,
             props,
-            dirtyFlag
+            dirtyFlag,
+            isPageView: true,
         }));
     }
 }

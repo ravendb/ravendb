@@ -10,6 +10,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -517,6 +519,193 @@ namespace RachisTests.DatabaseCluster
                     return record.Topology.PriorityOrder.Contains(removed.NodeTag);
                 }, false);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task CanDeleteRehabRestoreInProgress()
+        {
+            var db = GetDatabaseName();
+            var (_, leader) = await CreateRaftCluster(1, watcherCluster: true);
+            var topology = new DatabaseTopology
+            {
+                Rehabs = new List<string> { "A" },
+                DemotionReasons = new Dictionary<string, string>
+                {
+                    { "A", "Manually In Rehab" }
+                },
+                PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>
+                {
+                    { "A", DatabasePromotionStatus.NotResponding }
+                },
+                Stamp = new LeaderStamp
+                {
+                    Index = 1,
+                    Term = 1,
+                    LeadersTicks = -2
+                },
+                PriorityOrder = [],
+                NodesModifiedAt = DateTime.UtcNow,
+                DatabaseTopologyIdBase64 = "nRZdLNYhrk2izN75386Z6c",
+                ClusterTransactionIdBase64 = "TG/MuQS8UkeY/xznGEcqCa"
+            };
+            var record = new DatabaseRecord(db)
+            {
+                Topology = topology,
+                DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>()
+                {
+                    { "A", DeletionInProgressStatus.HardDelete }
+                },
+                DatabaseState = DatabaseStateStatus.RestoreInProgress
+            };
+            var r = await leader.ServerStore.Engine.PutToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+            {
+                Name = db,
+                Record = record
+            });
+
+            await leader.ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, r.Index);
+            
+            await AssertWaitForTrueAsync(() =>
+            {
+                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var names = leader.ServerStore.Cluster.GetDatabaseNames(context);
+                    return Task.FromResult(names.Contains(db) == false);
+                }
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Cluster, Skip = "very rare case, need to figure out a workaround")]
+        public async Task CanDeleteFromNonExistingNode()
+        {
+            var db = GetDatabaseName();
+            var (_, leader) = await CreateRaftCluster(1, watcherCluster: true);
+            var topology = new DatabaseTopology
+            {
+                Rehabs = new List<string> { "A", "B" },
+                DemotionReasons = new Dictionary<string, string>
+                {
+                    { "A", "Manually In Rehab" },
+                    { "B", "Manually In Rehab" }
+                },
+                PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>
+                {
+                    { "A", DatabasePromotionStatus.NotResponding },
+                    { "B", DatabasePromotionStatus.NotResponding }
+                },
+                Stamp = new LeaderStamp
+                {
+                    Index = 1,
+                    Term = 1,
+                    LeadersTicks = -2
+                },
+                PriorityOrder = [],
+                NodesModifiedAt = DateTime.UtcNow,
+                DatabaseTopologyIdBase64 = "nRZdLNYhrk2izN75386Z6c",
+                ClusterTransactionIdBase64 = "TG/MuQS8UkeY/xznGEcqCa"
+            };
+            var record = new DatabaseRecord(db)
+            {
+                Topology = topology,
+                DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>()
+                {
+                    { "A", DeletionInProgressStatus.HardDelete },
+                    { "B", DeletionInProgressStatus.HardDelete }
+                }
+            };
+            var r = await leader.ServerStore.Engine.PutToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+            {
+                Name = db,
+                Record = record
+            });
+
+            await leader.ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, r.Index);
+
+            using (var store = new DocumentStore
+                   {
+                       Database = db,
+                       Urls = [leader.WebUrl]
+                   }.Initialize())
+            {
+                var getDatabaseRecordOp = new GetDatabaseRecordOperation(db);
+                var currentRecord = await store.Maintenance.Server.SendAsync(getDatabaseRecordOp);
+
+                currentRecord.Topology.RemoveFromTopology("B");
+
+                var op = new ModifyDatabaseTopologyOperation(db, currentRecord.Topology);
+                await store.Maintenance.Server.SendAsync(op);
+            }
+
+            WaitForUserToContinueTheTest(leader.WebUrl, debug: false);
+
+            await AssertWaitForTrueAsync(() =>
+            {
+                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var names = leader.ServerStore.Cluster.GetDatabaseNames(context);
+                    return Task.FromResult(names.Contains(db) == false);
+                }
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task CanDeleteRehabWithoutObserver()
+        {
+            var db = GetDatabaseName();
+            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            leader.ServerStore.Observer.Suspended = true;
+            var topology = new DatabaseTopology
+            {
+                Rehabs = new List<string> { "A", "B" },
+                DemotionReasons = new Dictionary<string, string>
+                {
+                    { "A", "Manually In Rehab" },
+                    { "B", "Manually In Rehab" }
+                },
+                PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>
+                {
+                    { "A", DatabasePromotionStatus.NotResponding },
+                    { "B", DatabasePromotionStatus.NotResponding }
+                },
+                Stamp = new LeaderStamp
+                {
+                    Index = 1,
+                    Term = 1,
+                    LeadersTicks = -2
+                },
+                PriorityOrder = [],
+                NodesModifiedAt = DateTime.UtcNow,
+                DatabaseTopologyIdBase64 = "nRZdLNYhrk2izN75386Z6c",
+                ClusterTransactionIdBase64 = "TG/MuQS8UkeY/xznGEcqCa"
+            };
+            var record = new DatabaseRecord(db)
+            {
+                Topology = topology,
+                DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>()
+                {
+                    { "A", DeletionInProgressStatus.HardDelete },
+                    { "B", DeletionInProgressStatus.HardDelete }
+                }
+            };
+            var r = await leader.ServerStore.Engine.PutToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+            {
+                Name = db,
+                Record = record
+            });
+
+            await leader.ServerStore.Engine.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, r.Index);
+
+            await AssertWaitForTrueAsync(() =>
+            {
+                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var names = leader.ServerStore.Cluster.GetDatabaseNames(context);
+                    return Task.FromResult(names.Contains(db) == false);
+                }
+            });
         }
     }
 }

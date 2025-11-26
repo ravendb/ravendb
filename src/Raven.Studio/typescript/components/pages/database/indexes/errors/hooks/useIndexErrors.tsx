@@ -42,11 +42,13 @@ export const useIndexErrors = () => {
 
     const asyncFetchAllErrorCount = useAsync(async () => {
         const locations = DatabaseUtils.getLocations(db);
-        const models: ErrorInfoItem[] = locations.map((location) => ({
-            location,
-            indexErrorsCountDto: [],
-            totalErrorCount: 0,
-        }));
+        const models: ErrorInfoItem[] = locations.map(
+            (location): ErrorInfoItem => ({
+                location,
+                indexErrorsCountDto: [],
+                totalErrorCount: 0,
+            })
+        );
         setErrorInfoItems(models);
 
         const errorInfoItems = await Promise.all(models.map(fetchErrorCount));

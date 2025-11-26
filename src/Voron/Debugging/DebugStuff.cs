@@ -293,7 +293,7 @@ namespace Voron.Debugging
             where TKey : struct, ILookupKey
         {
             var headerData = $"{tree.State}";
-            if (!string.IsNullOrWhiteSpace(message))
+            if (string.IsNullOrWhiteSpace(message) == false)
                 headerData = $"{message}-{headerData}";
 
             RenderAndShowTCompactTree(tree, steps, tree.State.RootPage, $"<p>{headerData}</p>");

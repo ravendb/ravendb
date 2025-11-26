@@ -671,7 +671,7 @@ namespace Raven.Client.Documents.Indexes
 
                         if (last_type == "TK_END_BLOCK")
                         {
-                            if (!(new[] { "else", "catch", "finally" }).Contains(token_text.ToLower()))
+                            if (new[] { "else", "catch", "finally" }.Contains(token_text.ToLower()) == false)
                             {
                                 prefix = "NEWLINE";
                             }

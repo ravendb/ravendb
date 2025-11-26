@@ -173,7 +173,7 @@ namespace Raven.Server.Documents
         {
             if (_state != State.None)
             {
-                if (!AboutToReadWithStateUnlikely(reader, state))
+                if (AboutToReadWithStateUnlikely(reader, state) == false)
                     return false;
             }
 
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents
         {
             if (_state != State.None)
             {
-                if (!AboutToReadWithStateUnlikely(reader, state))
+                if (AboutToReadWithStateUnlikely(reader, state) == false)
                     return false;
             }
 
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents
         {
             if (_state != State.None)
             {
-                if (!AboutToReadWithStateUnlikely(reader, state))
+                if (AboutToReadWithStateUnlikely(reader, state) == false)
                     return false;
             }
 

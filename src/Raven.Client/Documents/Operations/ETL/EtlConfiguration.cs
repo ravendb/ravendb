@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public abstract class EtlConfiguration<T> : IDynamicJsonValueConvertible, IDatabaseTask where T : ConnectionString
+    public abstract class EtlConfiguration<T> : IDynamicJson, IDatabaseTask where T : ConnectionString
     {
         private bool _initialized;
 

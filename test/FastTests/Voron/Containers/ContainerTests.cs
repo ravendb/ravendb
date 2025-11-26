@@ -35,7 +35,7 @@ namespace FastTests.Voron.Containers
         public void CanScanValues()
         {
             var expected = new List<long>();
-            long containerId;
+            ContainerId containerId;
 
             using (var wtx = Env.WriteTransaction())
             {
@@ -44,13 +44,13 @@ namespace FastTests.Voron.Containers
                 for (int i = 0; i < 1024; i++)
                 {
                     var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 8, out _);
-                    expected.Add(id);
+                    expected.Add((long)id);
                 }
 
                 for (int i = 0; i < 16; i++)
                 {
                     var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 10_000, out _);
-                    expected.Add(id);
+                    expected.Add((long)id);
                 }
 
                 wtx.Commit();
@@ -76,7 +76,7 @@ namespace FastTests.Voron.Containers
             var containerId = Container.Create(wtx.LowLevelTransaction);
 
             Span<byte> expected = Encoding.UTF8.GetBytes("Stav");
-            var ids = new List<long>();
+            var ids = new List<ContainerEntryId>();
 
             for (int i = 0; i < 16; i++)
             {
@@ -117,7 +117,7 @@ namespace FastTests.Voron.Containers
             var containerId = Container.Create(wtx.LowLevelTransaction);
 
             Span<byte> expected = Encoding.UTF8.GetBytes("Stav");
-            var ids = new List<long>();
+            var ids = new List<ContainerEntryId>();
 
             for (int i = 0; i < 16; i++)
             {
@@ -139,8 +139,8 @@ namespace FastTests.Voron.Containers
         [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreDeleteAndRecoverSpaceForOverflowPage()
         {
-            long containerItemId;
-            long containerId;
+            ContainerEntryId containerItemId;
+            ContainerId containerId;
             long pageId;
             int overflowPageCount;
             const string name = "maciej";
@@ -158,7 +158,7 @@ namespace FastTests.Voron.Containers
             {
                 using var wtx = Env.WriteTransaction();
                 var container = Container.GetMutable(wtx.LowLevelTransaction, containerItemId);
-                (pageId, _) = Math.DivRem(containerItemId, Constants.Storage.PageSize);
+                (pageId, _) = Math.DivRem((long)containerItemId, Constants.Storage.PageSize);
                 var page = wtx.LowLevelTransaction.ModifyPage(pageId);
                 Assert.True(page.IsOverflow);
                 overflowPageCount = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);

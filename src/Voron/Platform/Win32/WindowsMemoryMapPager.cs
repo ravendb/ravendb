@@ -52,7 +52,7 @@ namespace Voron.Platform.Win32
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
-            : base(options, !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary), usePageProtection)
+            : base(options, fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary) == false, usePageProtection)
         {
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);

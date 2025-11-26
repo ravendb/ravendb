@@ -251,7 +251,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             int tempPos = pos;
             pos += sizeof(int);
 
-            if (!ConvertToShort(columns.Count, out var columnsCount))
+            if (ConvertToShort(columns.Count, out var columnsCount) == false)
             {
                 throw new InvalidCastException($"Columns list is too long to be contained in the message ({columnsCount}).");
             }
@@ -294,7 +294,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             int tempPos = pos;
             pos += sizeof(int);
 
-            if (!ConvertToShort(parametersDataTypeObjectIds.Count, out var paramCount))
+            if (ConvertToShort(parametersDataTypeObjectIds.Count, out var paramCount) == false)
             {
                 throw new InvalidCastException($"Parameter data type list is too long to be contained " +
                                                $"in the message ({paramCount}).");

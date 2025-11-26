@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using Sparrow.Json;
@@ -61,7 +61,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         }
     }
 
-    public struct HugeDocumentInfo : IDynamicJsonValueConvertible
+    public struct HugeDocumentInfo : IDynamicJson
     {
         public long Size;
         public DateTime Date;

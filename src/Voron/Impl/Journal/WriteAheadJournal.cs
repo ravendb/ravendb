@@ -32,6 +32,7 @@ using Sparrow.Server.LowMemory;
 
 namespace Voron.Impl.Journal
 {
+    [SuppressMessage("CancellationToken", "RDB0007:CancellationToken must be a last argument")]
     public sealed unsafe class WriteAheadJournal : IJournalCompressionBufferCryptoHandler, IDisposable
     {
         private readonly StorageEnvironment _env;

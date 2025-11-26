@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Replication
             }
             else
             {
-                if (!doc.TryGet("Max", out highestMax))
+                if (doc.TryGet("Max", out highestMax) == false)
                     throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name 'Max'");
             }
 

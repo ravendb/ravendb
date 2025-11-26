@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 path += $"/{directory}";
                 using (var client = CreateFtpClient(url, keepAlive: false))
                 {
-                    if (!client.DirectoryExists(path))
+                    if (client.DirectoryExists(path) == false)
                         client.CreateDirectory(path);
                 }
             }

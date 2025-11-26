@@ -178,7 +178,7 @@ namespace Voron.Data.RawData
 
         public bool TryWrite(long id, byte* data, int size, bool compressed)
         {
-            if (!TryWriteDirect(id, size, compressed, out var writePos))
+            if (TryWriteDirect(id, size, compressed, out var writePos) == false)
                 return false;
             Memory.Copy(writePos, data, size);
             return true;

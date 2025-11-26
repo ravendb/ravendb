@@ -1467,7 +1467,7 @@ namespace Raven.Client.Util
                 var method = methodCallExpression?.Method;
 
                 if (method == null || method.Name != "Parse" ||
-                    !ValueTypes.TryGetValue(method.DeclaringType, out var expr))
+                    ValueTypes.TryGetValue(method.DeclaringType, out var expr) == false)
                     return;
 
                 context.PreventDefault();
@@ -2842,7 +2842,7 @@ namespace Raven.Client.Util
                     var meta = metadataProvider.GetMemberMetadata(assignExpr.Member);
                     var memberName = meta?.MemberName;
 
-                    Debug.Assert(!string.IsNullOrEmpty(memberName), "!string.IsNullOrEmpty(memberName)");
+                    Debug.Assert(string.IsNullOrEmpty(memberName) == false, "!string.IsNullOrEmpty(memberName)");
 
                     if (Regex.IsMatch(memberName, @"^\w[\d\w]*$"))
                         writer.Write(memberName);

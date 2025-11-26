@@ -1283,5 +1283,10 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             "yyyy-MM-ddTHH:mm:ss.fffZ",
             "yyyy-MM-ddTHH:mm:ss.fff"
         };
+        
+        public void ClearCache()
+        {
+            _loadedDocuments?.Clear();
+        }
     }
 }

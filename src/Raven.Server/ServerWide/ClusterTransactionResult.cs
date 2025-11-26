@@ -1,8 +1,8 @@
-﻿using Sparrow.Json;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide;
-public class ClusterTransactionResult : IDynamicJsonValueConvertible
+public class ClusterTransactionResult : IDynamicJson
 {
     public DynamicJsonArray GeneratedResult { get; set; }
 

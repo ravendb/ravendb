@@ -295,7 +295,7 @@ namespace Raven.Client.Documents.Indexes
             foreach (var kvp in x)
             {
                 result = (result * 397) ^ kvp.Key.GetHashCode();
-                result = (result * 397) ^ (!Equals(kvp.Value, default(TValue)) ? kvp.Value.GetHashCode() : 0);
+                result = (result * 397) ^ (Equals(kvp.Value, default(TValue)) ? 0 : kvp.Value.GetHashCode());
             }
             return result;
         }

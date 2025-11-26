@@ -4,9 +4,9 @@
     <CentralPackageTransitivePinningEnabled>True</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.1" />
-    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.1.8" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.7.11" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.3.1" />
+    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.2.3" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.11.3" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.26.0" />
@@ -38,7 +38,7 @@
     <PackageVersion Include="Lucene.Net" Version="3.0.60013" />
     <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60013" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.21" />
+    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.22" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
@@ -56,7 +56,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
@@ -80,10 +80,10 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.0" />
-    <PackageVersion Include="Parquet.Net" Version="5.2.0" />
+    <PackageVersion Include="Parquet.Net" Version="5.3.0" />
     <PackageVersion Include="Polly" Version="8.6.4" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.1.2" />
-    <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.11" />
+    <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.13" />
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />

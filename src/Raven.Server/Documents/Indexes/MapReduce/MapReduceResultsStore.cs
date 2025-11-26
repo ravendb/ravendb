@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var options = _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits ? TreeFlags.None : TreeFlags.LeafsCompressed;
             Tree = create ? _tx.CreateTree(treeName, flags: options) : _tx.ReadTree(treeName);
 
-            if (!_alreadyInitializedTrees.Contains(treeName))
+            if (_alreadyInitializedTrees.Contains(treeName) == false)
             {
                 Tree.PageModified += (page, flags) =>
                 {

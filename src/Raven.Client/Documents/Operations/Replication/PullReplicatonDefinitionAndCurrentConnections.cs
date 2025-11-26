@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public sealed class PullReplicationDefinitionAndCurrentConnections : IDynamicJsonValueConvertible
+    public sealed class PullReplicationDefinitionAndCurrentConnections : IDynamicJson
     {
         public PullReplicationDefinition Definition { get; set; }
         public List<OngoingTaskPullReplicationAsHub> OngoingTasks { get; set; }

@@ -166,11 +166,11 @@ public unsafe partial class IndexWriter
 
         private void HandleSpecialTerm(Span<int> termsOffsets, Span<Slice> sortedTerms, int termIndex, Tree tree, ref long totalLengthOfTerm)
         {
-            (long postingListId, long termContainerId) = GetOrCreateSpecialPostingList(tree);
+            (var postingListId, var termContainerId) = GetOrCreateSpecialPostingList(tree);
             ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[termIndex]);
             var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
             var job = ProcessSingleEntry(ref entries, isNullTerm: true,
-                sortedTerms[termIndex], postingListId, termContainerId, termsOffsets[termIndex], out var totalLengthOfTermDelta);
+                sortedTerms[termIndex], (long)postingListId, termContainerId, termsOffsets[termIndex], out var totalLengthOfTermDelta);
             totalLengthOfTerm += totalLengthOfTermDelta;
             ProcessCompactTreeOperation(job, ref nullLookup, _fieldTree.CheckTreeStructureChanges(), pageOffset: -1, sortedTerms[termIndex]);
         }
@@ -214,7 +214,7 @@ public unsafe partial class IndexWriter
             }
         }
         
-        private LookupTreeOperationJob ProcessSingleEntry(ref EntriesModifications entries, bool isNullTerm, Slice term, long postListId, long termContainerId, int storageLocation, out int totalLengthOfTermDelta)
+        private LookupTreeOperationJob ProcessSingleEntry(ref EntriesModifications entries, bool isNullTerm, Slice term, long postListId, ContainerEntryId termContainerId, int storageLocation, out int totalLengthOfTermDelta)
         {
             UpdateEntriesForTerm(ref _entriesForTerm, in entries);
             if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
@@ -277,7 +277,7 @@ public unsafe partial class IndexWriter
             {
                 Debug.Assert(_virtualTermIdToTermContainerId[storageLocation] == Constants.IndexedField.Invalid,
                     "virtualMapping[entries.StorageLocation] == Constants.IndexedField.Invalid, Term was already set! Persisted: {_virtualTermIdToTermContainerId[storageLocation]}, new: {termContainerId}");
-                _virtualTermIdToTermContainerId[storageLocation] = termContainerId;
+                _virtualTermIdToTermContainerId[storageLocation] = (long)termContainerId;
             }
 
             return lookupTreeOperationJob;
@@ -413,7 +413,7 @@ public unsafe partial class IndexWriter
             }
         }
 
-        private void RecordTermsForEntries(in EntriesModifications entries, long termContainerId)
+        private void RecordTermsForEntries(in EntriesModifications entries, ContainerEntryId termContainerId)
         {
             foreach (var entry in _entriesForTerm)
             {
@@ -424,14 +424,14 @@ public unsafe partial class IndexWriter
 
                 ref var recordedTerm = ref recordedTermList.AddByRefUnsafe();
 
-                Debug.Assert((termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
+                Debug.Assert(((long)termContainerId & 0b111) == 0); // ensure that the three bottom bits are cleared
 
                 long recordedTermContainerId = entry.Frequency switch
                 {
-                    > 1 => termContainerId << Constants.IndexWriter.TermFrequencyShift | // note, bottom 3 are cleared, so we have 11 bits to play with
+                    > 1 => (long)termContainerId << Constants.IndexWriter.TermFrequencyShift | // note, bottom 3 are cleared, so we have 11 bits to play with
                            EntryIdEncodings.FrequencyQuantization(entry.Frequency) << 3 |
                            0b100, // marker indicating that we have a term frequency here
-                    _ => termContainerId
+                    _ => (long)termContainerId
                 };
 
                 Debug.Assert(entry.InserterMode is not InserterMode.Ignore);
@@ -477,7 +477,7 @@ public unsafe partial class IndexWriter
                 var term = sortedTerms[i];
 
                 var key = buffers.Keys[i].Key ??= llt.AcquireCompactKey();
-                buffers.Keys[i].ContainerId = Container.InvalidId;
+                buffers.Keys[i].ContainerId = ContainerEntryId.Invalid;
                 key.Set(term.AsSpan());
                 key.ChangeDictionary(fieldTree.DictionaryId);
                 key.EncodedWithCurrent(out _);
@@ -491,7 +491,7 @@ public unsafe partial class IndexWriter
             pageOffsets = new Span<int>(buffers.PageOffsets, 0, max);
         }
 
-        private (long NonExistingTermListId, long NonExistingTermId) GetOrCreateSpecialPostingList(Tree tree)
+        private (ContainerEntryId NonExistingTermListId, ContainerEntryId NonExistingTermId) GetOrCreateSpecialPostingList(Tree tree)
         {
             // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
             // then we'll insert data to it as if it was any other term
@@ -501,29 +501,30 @@ public unsafe partial class IndexWriter
             {
                 Debug.Assert(sizeof(long) * 2 == sizeof((long, long)));
                 Debug.Assert(entry.Reader.Length == sizeof((long, long)));
-                return *((long, long)*)entry.Reader.Base;
+                var tuple = *((long, long)*)entry.Reader.Base;
+                return (new ContainerEntryId(tuple.Item1), new ContainerEntryId(tuple.Item2));
             }
 
-            long setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
+            var setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);
 
             _writer.InitializeFieldRootPage(_indexedField);
 
-            long nullMarkerId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
+            var nullMarkerId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._entriesTermsContainerId,
                 1, _indexedField.FieldRootPage, out var nullBuffer);
             nullBuffer.Clear();
 
             // we need to account for the size of the posting lists, once a term has been switch to a posting list
             // it will always be in this model, so we don't need to do any cleanup
             _writer._largePostingListSet ??= _writer._transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
-            _writer._largePostingListSet.Add(setId);
+            _writer._largePostingListSet.Add((long)setId);
 
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             PostingList.Create(_writer._transaction.LowLevelTransaction, ref postingListState);
-            var encodedPostingListId = EntryIdEncodings.Encode(setId, 0, TermIdMask.PostingList);
+            var encodedPostingListId = new ContainerEntryId(EntryIdEncodings.Encode((long)setId, 0, TermIdMask.PostingList));
 
             using (tree.DirectAdd(_indexedField.Name, sizeof((long, long)), out var p))
             {
-                *((long, long)*)p = (encodedPostingListId, nullMarkerId);
+                *((long, long)*)p = ((long)encodedPostingListId, (long)nullMarkerId);
             }
 
             return (encodedPostingListId, nullMarkerId);
@@ -548,6 +549,8 @@ public unsafe partial class IndexWriter
                 if ((cur & (long)TermIdMask.EnsureIsSingleMask) == 0)
                     continue;
 
+                // Decoding the posting list id yields the container root that stores the posting list. We keep it as
+                // ContainerId so later steps talk to the correct root instead of a payload slot.
                 long containerId = EntryIdEncodings.GetContainerId(cur);
                 postingListPagesProcessingBuffer.Add(containerId / Voron.Global.Constants.Storage.PageSize);
             }
@@ -558,6 +561,7 @@ public unsafe partial class IndexWriter
             postingListPagesProcessingBuffer.Clear();
 
             Debug.Assert(postListIds.Length <= 1024);
+
             //ContainerId has 10 lowest bits in use to encode the metadata. We can use them to store the offset of the item in the original order.
             for (int i = 0; i < postListIds.Length; i++)
             {
