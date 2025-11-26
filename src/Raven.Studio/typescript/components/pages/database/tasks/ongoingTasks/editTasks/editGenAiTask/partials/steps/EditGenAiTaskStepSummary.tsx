@@ -15,6 +15,8 @@ import EditGenAiTaskCancelButton from "../EditGenAiTaskCancelButton";
 import { FormSwitch, FormGroup } from "components/common/Form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { editGenAiTaskUtils } from "../../utils/editGenAiTaskUtils";
+import moment from "moment";
+import genUtils from "common/generalUtils";
 
 export function EditGenAiTaskStepSummary() {
     const dispatch = useAppDispatch();
@@ -107,6 +109,29 @@ export function EditGenAiTaskStepSummary() {
                 )}
                 {formValues.jsonSchema && (
                     <RowWithPreview label="JSON schema" value={formValues.jsonSchema} mode="json" />
+                )}
+                {formValues.queries?.length > 0 && (
+                    <div className="hstack justify-content-between">
+                        <div>Query tools</div>
+                        <div>{formValues.queries.length}</div>
+                    </div>
+                )}
+                <div className="hstack justify-content-between">
+                    <div>Conversation documents</div>
+                    <div className={getBooleanColorClass(formValues.isEnableTracing)}>
+                        {formValues.isEnableTracing ? "Enabled" : "Disabled"}
+                    </div>
+                </div>
+                {formValues.isSetTracingExpiration && (
+                    <div className="hstack justify-content-between">
+                        <div>Conversation documents expiration</div>
+                        <div>
+                            {genUtils.formatDuration(
+                                moment.duration(formValues.tracingExpirationInSeconds, "seconds"),
+                                true
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
             <div className="hstack justify-content-between mt-4">
