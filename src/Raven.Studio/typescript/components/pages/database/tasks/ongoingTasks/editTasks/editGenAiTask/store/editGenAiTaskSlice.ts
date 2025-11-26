@@ -37,6 +37,7 @@ interface EditGenAiTaskState {
     isModelInputInfoVisible: boolean;
     isEditModeWarningVisible: boolean;
     hoverIndex: number;
+    isDocumentExpirationEnabled: boolean;
 }
 
 const initialState: EditGenAiTaskState = {
@@ -59,6 +60,7 @@ const initialState: EditGenAiTaskState = {
     isModelInputInfoVisible: true,
     isEditModeWarningVisible: true,
     hoverIndex: null,
+    isDocumentExpirationEnabled: false,
 };
 
 export const editGenAiTaskSlice = createSlice({
@@ -203,6 +205,9 @@ export const editGenAiTaskSlice = createSlice({
             })
             .addCase(testConnectionString.fulfilled, (state, action) => {
                 state.connectionStringTest = createSuccessState(action.payload);
+            })
+            .addCase(getIsDocumentExpirationEnabled.fulfilled, (state, action) => {
+                state.isDocumentExpirationEnabled = action.payload;
             });
     },
 });
@@ -254,12 +259,25 @@ const testConnectionString = createAsyncThunk(
     }
 );
 
+const getIsDocumentExpirationEnabled = createAsyncThunk(
+    editGenAiTaskSlice.name + "/getIsDocumentExpirationEnabled",
+    async (databaseName: string): Promise<boolean> => {
+        const result = await services.databasesService.getExpirationConfiguration(databaseName);
+        if (!result) {
+            return false;
+        }
+
+        return !result.Disabled;
+    }
+);
+
 export const editGenAiTaskActions = {
     ...editGenAiTaskSlice.actions,
     testContext,
     testModelInput,
     testUpdateScript,
     testConnectionString,
+    getIsDocumentExpirationEnabled,
 };
 
 export const editGenAiTaskSelectors = {
@@ -284,4 +302,5 @@ export const editGenAiTaskSelectors = {
     isModelInputInfoVisible: (state: RootState) => state.editGenAiTask.isModelInputInfoVisible,
     isEditModeWarningVisible: (state: RootState) => state.editGenAiTask.isEditModeWarningVisible,
     hoverIndex: (state: RootState) => state.editGenAiTask.hoverIndex,
+    isDocumentExpirationEnabled: (state: RootState) => state.editGenAiTask.isDocumentExpirationEnabled,
 };

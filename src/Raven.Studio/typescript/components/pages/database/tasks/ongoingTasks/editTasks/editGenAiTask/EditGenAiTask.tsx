@@ -16,6 +16,9 @@ import EditGenAiTaskPlayground from "./partials/EditGenAiTaskPlayground";
 import useEditGenAiCancel from "./hooks/useEditGenAiCancel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import { TimeInSeconds } from "common/constants/timeInSeconds";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 
 interface QueryParams {
     taskId: string;
@@ -25,10 +28,12 @@ interface QueryParams {
 export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
 
-    const { tasksService } = useServices();
+    const { tasksService, databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isTestOpen = useAppSelector(editGenAiTaskSelectors.isTestOpen);
+    const isDocumentExpirationEnabled = useAppSelector(editGenAiTaskSelectors.isDocumentExpirationEnabled);
+    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
     const taskId = queryParams?.taskId ? parseInt(queryParams.taskId) : null;
 
@@ -42,6 +47,8 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
         if (queryParams) {
             dispatch(editGenAiTaskActions.sourceViewSet(queryParams.sourceView));
         }
+
+        dispatch(editGenAiTaskActions.getIsDocumentExpirationEnabled(databaseName));
 
         dispatch(connectionStringsActions.viewContextSet("aiTask"));
 
@@ -76,6 +83,14 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
 
     const handleSave: SubmitHandler<EditGenAiTaskFormData> = (data) => {
         return tryHandleSubmit(async () => {
+            if (!isDocumentExpirationEnabled && data.isSetTracingExpiration) {
+                await databasesService.saveExpirationConfiguration(databaseName, {
+                    Disabled: false,
+                    DeleteFrequencyInSec: isCommunityLicense ? TimeInSeconds.Day * 36 : null,
+                    MaxItemsToProcess: defaultItemsToProcess,
+                });
+            }
+
             const scriptsToReset = data.isResetScript ? [data.scriptToReset] : undefined;
             await tasksService.saveGenAiTask(
                 databaseName,

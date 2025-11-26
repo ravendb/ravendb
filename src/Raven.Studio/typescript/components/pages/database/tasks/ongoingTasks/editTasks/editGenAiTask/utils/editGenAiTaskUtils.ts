@@ -1,4 +1,7 @@
+import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { EditGenAiTaskFormData } from "./editGenAiTaskValidation";
+
+const DEFAULT_TRACING_EXPIRATION_IN_SECONDS = TimeInSeconds.Day * 14;
 
 const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.GenAi): EditGenAiTaskFormData => {
     if (!dto) {
@@ -23,7 +26,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
             queries: [],
             isEnableTracing: false,
             isSetTracingExpiration: false,
-            tracingExpirationInSeconds: null,
+            tracingExpirationInSeconds: DEFAULT_TRACING_EXPIRATION_IN_SECONDS,
             updateScript: "",
             isResetScript: false,
             scriptToReset: null,
@@ -70,7 +73,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
             })) ?? [],
         isEnableTracing: dto.Configuration.EnableTracing,
         isSetTracingExpiration: dto.Configuration.ExpirationInSec != null,
-        tracingExpirationInSeconds: dto.Configuration.ExpirationInSec,
+        tracingExpirationInSeconds: dto.Configuration.ExpirationInSec ?? DEFAULT_TRACING_EXPIRATION_IN_SECONDS,
         updateScript: dto.Configuration.UpdateScript ?? "",
         isResetScript: true,
         scriptToReset: dto.Configuration.Transforms?.[0].Name ?? null,
