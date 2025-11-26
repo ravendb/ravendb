@@ -158,6 +158,9 @@ namespace Raven.Client.Exceptions.Commercial
         CustomSorters,
 
         [Description("Custom Analyzers")]
-        CustomAnalyzers
+        CustomAnalyzers,
+
+        [Description("Schema Validation")]
+        SchemaValidation,
     }
 }

@@ -1152,6 +1152,7 @@ namespace Raven.Server.Commercial
             var dynamicNodesDistributionCount = 0;
             var additionalAssembliesFromNuGetCount = 0;
             var revisionCompressionCount = 0;
+            var schemaValidationCount = 0;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -1230,6 +1231,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.AiAgents != null &&
                         databaseRecord.AiAgents.Count > 0)
                         aiAgentCount++;
+
+                    if (databaseRecord.SchemaValidation != null &&
+                        databaseRecord.SchemaValidation.Disabled == false)
+                        schemaValidationCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1373,6 +1378,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(revisionCompressionCount, "Revision compression");
                 throw GenerateLicenseLimit(LimitType.DocumentsCompression, message);
+            }
+
+            if (schemaValidationCount > 0 && newLicenseStatus.HasSchemaValidation == false)
+            {
+                var message = GenerateDetails(schemaValidationCount, "Schema Validation");
+                throw GenerateLicenseLimit(LimitType.SchemaValidation, message);
             }
         }
 
@@ -1802,6 +1813,18 @@ namespace Raven.Server.Commercial
 
             const string details = "Your current license doesn't include the read-only certificates feature";
             throw GenerateLicenseLimit(LimitType.ReadOnlyCertificates, details);
+        }
+
+        public void AssertCanAddSchemaValidation()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasSchemaValidation)
+                return;
+
+            const string details = "Your current license doesn't include the schema validation feature";
+            throw GenerateLicenseLimit(LimitType.SchemaValidation, details);
         }
 
         public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool metersRegistered)
