@@ -360,8 +360,8 @@ public sealed partial class CompactTree : IPrepareForCommit
     {
         Lookup<CompactKeyLookup> inner;
         var llt = parent.Llt;
-        
-        if (parent.TryRead(name, out ValueReader _) == false)
+        var existing = parent.Read(name);
+        if (existing == null)
         {
             if (llt.Flags != TransactionFlags.ReadWrite)
                 return null;
@@ -408,15 +408,17 @@ public sealed partial class CompactTree : IPrepareForCommit
     public static bool HasDictionary(LowLevelTransaction llt)
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
-        return llt.RootObjects.TryRead(dictionarySlice, out _);
+        var existingDictionary = llt.RootObjects.Read(dictionarySlice);
+        return existingDictionary != null;
     }
     
     public static unsafe long GetDictionaryId(LowLevelTransaction llt)
     {
         using var scoped = Slice.From(llt.Allocator, PersistentDictionary.DictionaryKey, out var dictionarySlice);
-        if (llt.RootObjects.TryRead(dictionarySlice, out var reader))
+        var read = llt.RootObjects.Read(dictionarySlice);
+        if (read != null)
         {
-            return ((PersistentDictionaryRootHeader*)reader.Base)->PageNumber;
+            return ((PersistentDictionaryRootHeader*)read.Reader.Base)->PageNumber;
         }
         return -1;
     }

@@ -65,10 +65,10 @@ namespace SlowTests.Voron.Backups
                     var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 500; i++)
                     {
-                        Assert.True(tree.TryRead("items/" + i, out var reader));
-                        
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
-                        reader.CopyTo(memoryStream);
+                        readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
                     }
                 }
@@ -142,10 +142,10 @@ namespace SlowTests.Voron.Backups
                     var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 1000; i++)
                     {
-                        Assert.True(tree.TryRead("items/" + i, out var reader));
-                        
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
-                        reader.CopyTo(memoryStream);
+                        readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
                     }
                 }
@@ -212,10 +212,10 @@ namespace SlowTests.Voron.Backups
                     var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 10; i++)
                     {
-                        Assert.True(tree.TryRead("items/" + i, out var reader));
-                        
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
-                        reader.CopyTo(memoryStream);
+                        readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
                     }
                 }
@@ -278,10 +278,10 @@ namespace SlowTests.Voron.Backups
                     var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 5; i++)
                     {
-                        Assert.True(tree.TryRead("items/" + i, out var reader));
-                        
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
-                        reader.CopyTo(memoryStream);
+                        readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
                     }
                 }
@@ -339,10 +339,12 @@ namespace SlowTests.Voron.Backups
                 {
                     var tree = tx.ReadTree("test");
 
-                    Assert.True(tree.TryRead("items/3", out var reader));
+                    var readResult = tree.Read("items/3");
 
                     var readBytes = new byte[testedOverflowSize];
-                    reader.Read(readBytes, 0, testedOverflowSize);
+
+                    readResult.Reader.Read(readBytes, 0, testedOverflowSize);
+
                     Assert.Equal(overflowValue, readBytes);
                 }
             }
@@ -403,11 +405,11 @@ namespace SlowTests.Voron.Backups
                 {
                     var tree = tx.ReadTree("test");
 
-                    Assert.True(tree.TryRead("items/3", out var reader));
+                    var readResult = tree.Read("items/3");
 
                     var readBytes = new byte[testedOverflowSize];
 
-                    reader.Read(readBytes, 0, testedOverflowSize);
+                    readResult.Reader.Read(readBytes, 0, testedOverflowSize);
 
                     Assert.Equal(overflowValue, readBytes);
                 }
@@ -468,11 +470,11 @@ namespace SlowTests.Voron.Backups
                 {
                     var tree = tx.ReadTree("test");
 
-                    Assert.True(tree.TryRead("items/3", out var reader));
+                    var readResult = tree.Read("items/3");
 
                     var readBytes = new byte[testedOverflowSize];
 
-                    reader.Read(readBytes, 0, testedOverflowSize);
+                    readResult.Reader.Read(readBytes, 0, testedOverflowSize);
 
                     Assert.Equal(overflowValue, readBytes);
                 }
@@ -524,10 +526,10 @@ namespace SlowTests.Voron.Backups
                     var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 500; i++)
                     {
-                        Assert.True(tree.TryRead("items/" + i, out var reader));
-                        
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
-                        reader.CopyTo(memoryStream);
+                        readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
                     }
                 }

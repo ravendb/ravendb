@@ -393,10 +393,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
     {
         _persistedDynamicTreeAnalyzer ??= _transaction.ReadTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
-        if (_persistedDynamicTreeAnalyzer == null || _persistedDynamicTreeAnalyzer.TryRead(name, out var reader) == false)
+        var readResult = _persistedDynamicTreeAnalyzer?.Read(name);
+        if (readResult == null)
             return FieldIndexingMode.Normal;
 
-        return (FieldIndexingMode)reader.ReadByte();
+        var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
+        return mode;
     }
 
     public FieldMetadata GetFieldMetadata(string fieldName, FieldIndexingMode mode = FieldIndexingMode.Normal)
@@ -609,13 +611,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             LoadSpecialTermMarkers(_nonExistingPostingListsTree, out _nonExistingTermsMarkers);
         }
 
-        if (_vectorFieldsMarkers == null)
-        {
-            if (_metadataTree != null && _metadataTree.TryRead(Constants.IndexWriter.VectorFieldsRootPagesSlice, out var reader))
-                _vectorFieldsMarkers = reader.ToUnmanagedSpan<long>().ToSpan().ToArray();
-            else
-                _vectorFieldsMarkers = Array.Empty<long>();
-        }
+        _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
     }
 
     public bool IsVectorField(string fieldName)
@@ -669,13 +665,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal bool TryGetRootPageByFieldName(Slice fieldName, out long rootPage)
     {
-        if (_fieldsTree == null || _fieldsTree.TryRead(fieldName, out var reader) == false)
+        var result = _fieldsTree?.Read(fieldName);
+        if (result is null)
         {
             rootPage = -1;
             return false;
         }
-         
-        var state = (LookupState*)reader.Base;
+        
+        var state = (LookupState*)result.Reader.Base;
         Debug.Assert(state->RootObjectType is RootObjectType.Lookup, "state->RootObjectType is RootObjectType.Lookup");
         rootPage = state->RootPage;
         return true;

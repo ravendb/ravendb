@@ -59,17 +59,17 @@ namespace FastTests.Voron.Trees
                 tree.Add("b", StreamFor("2"));
                 tree.Add("c", StreamFor("3"));
                 tree.Add("a", StreamFor("1"));
-                
-                Assert.True(tree.TryRead("a", out var reader));
+                var actual = tree.Read("a");
 
                 using (var it = tree.Iterate(false))
                 {
-                    Slice.From(tx.Allocator, "a", out Slice key);
+                    Slice key;
+                    Slice.From(tx.Allocator, "a", out key);
                     Assert.True(it.Seek(key));
                     Assert.Equal("a", it.CurrentKey.ToString());
                 }
 
-                Assert.Equal("1", reader.ToString());
+                Assert.Equal("1", actual.Reader.ToString());
             }
         }
 
@@ -178,7 +178,7 @@ namespace FastTests.Voron.Trees
                     {
                         var key = "test-" + j.ToString("000") + "-" + i.ToString("000");
 
-                        Assert.True(tree.TryRead(key, out _));
+                        Assert.True(tree.Read(key) != null);
                     }
                 }
             }

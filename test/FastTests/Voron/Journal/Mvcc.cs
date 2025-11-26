@@ -54,9 +54,10 @@ namespace FastTests.Voron.Journal
 
                 Env.FlushLogToDataFile(); // should not flush pages of items/1 because there is an active read transaction
 
-                Assert.True(treeR.TryRead("items/1", out var reader));
+                var readResult = treeR.Read("items/1");
 
-                var bytes = reader.ReadBytes(reader.Length);
+
+                var bytes = readResult.Reader.ReadBytes(readResult.Reader.Length);
                 var readData = bytes.Array.Skip(bytes.Offset).Take(bytes.Count).ToArray();
 
                 for (int i = 0; i < 3000; i++)

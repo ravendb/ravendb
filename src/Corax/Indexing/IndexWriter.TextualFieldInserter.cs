@@ -495,12 +495,13 @@ public unsafe partial class IndexWriter
         {
             // In the case where the field does not have any null values, we will create a *large* posting list (an empty one)
             // then we'll insert data to it as if it was any other term
-            if (tree.TryRead(_indexedField.Name, out var entry))
+            var entry = tree.Read(_indexedField.Name);
+
+            if (entry != null)
             {
                 Debug.Assert(sizeof(long) * 2 == sizeof((long, long)));
-                Debug.Assert(entry.Length == sizeof((long, long)));
-                var tuple = *((long, long)*)entry.Base;
-                return (new ContainerEntryId(tuple.Item1), new ContainerEntryId(tuple.Item2));
+                Debug.Assert(entry.Reader.Length == sizeof((long, long)));
+                return *((long, long)*)entry.Reader.Base;
             }
 
             var setId = Container.Allocate(_writer._transaction.LowLevelTransaction, _writer._postingListContainerId, sizeof(PostingListState), out var setSpace);

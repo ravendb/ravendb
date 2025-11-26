@@ -371,7 +371,8 @@ namespace Raven.Server.Rachis
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
-            if (state.TryRead(CurrentTermSlice, out var reader) == false || reader.Length != sizeof(long))
+            var read = state.Read(CurrentTermSlice);
+            if (read == null || read.Reader.Length != sizeof(long))
             {
                 using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
                     *(long*)ptr = 0;
@@ -379,7 +380,7 @@ namespace Raven.Server.Rachis
                 return 0L;
             }
 
-            return reader.ReadLittleEndianInt64();
+            return read.Reader.ReadLittleEndianInt64();
         }
 
         public string ReadNodeTag(ClusterOperationContext context) => RachisConsensus.ReadNodeTag(context);
@@ -388,21 +389,24 @@ namespace Raven.Server.Rachis
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
 
-            return state?.ReadStringOrDefault(TagSlice, InitialTag) ?? InitialTag;
+            var readResult = state?.Read(TagSlice);
+            return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
         }
 
         public static string ReadNodeTag<T>(TransactionOperationContext<T> context) where T : RavenTransaction
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
 
-            return state?.ReadStringOrDefault(TagSlice, InitialTag) ?? InitialTag;
+            var readResult = state?.Read(TagSlice);
+            return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
         }
 
         public string ReadPreviousNodeTag(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 
-            return state.ReadStringOrDefault(PreviousTagSlice, null);
+            var readResult = state.Read(PreviousTagSlice);
+            return readResult?.Reader.ToStringValue();
         }
 
         internal void SwitchToSingleLeader(ClusterOperationContext context)
@@ -1177,7 +1181,8 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            if (state.TryRead(TopologySlice, out var reader) == false)
+            var read = state.Read(TopologySlice);
+            if (read == null)
             {
                 return new ClusterTopology(
                     null,
@@ -1189,7 +1194,7 @@ namespace Raven.Server.Rachis
                 );
             }
 
-            var json = new BlittableJsonReaderObject(reader.Base, reader.Length, context);
+            var json = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
             return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
         }
 
@@ -1197,10 +1202,11 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            if (state.TryRead(TopologySlice, out var reader) == false)
+            var read = state.Read(TopologySlice);
+            if (read == null)
                 return null;
 
-            BlittableJsonReaderObject topologyBlittable = new(reader.Base, reader.Length, context);
+            BlittableJsonReaderObject topologyBlittable = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, topologyBlittable);
 
@@ -1713,13 +1719,14 @@ namespace Raven.Server.Rachis
             where TTransaction : RavenTransaction
         {
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            if (state.TryRead(LastTruncatedSlice, out var reader) == false)
+            var read = state.Read(LastTruncatedSlice);
+            if (read == null)
             {
                 lastTruncatedIndex = 0;
                 lastTruncatedTerm = 0;
                 return;
             }
-
+            var reader = read.Reader;
             lastTruncatedIndex = reader.ReadLittleEndianInt64();
             lastTruncatedTerm = reader.ReadLittleEndianInt64();
         }
@@ -1752,7 +1759,10 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            return state.ReadInt64OrDefault(LastCommitSlice, 0);
+            var read = state.Read(LastCommitSlice);
+            if (read == null)
+                return 0;
+            return read.Reader.ReadLittleEndianInt64();
         }
 
         public void GetLastCommitIndex(ClusterOperationContext context, out long index, out long term)
@@ -1760,12 +1770,14 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            if (state.TryRead(LastCommitSlice, out var reader) == false)
+            var read = state.Read(LastCommitSlice);
+            if (read == null)
             {
                 index = 0;
                 term = 0;
                 return;
             }
+            var reader = read.Reader;
             index = reader.ReadLittleEndianInt64();
             term = reader.ReadLittleEndianInt64();
         }
@@ -1786,9 +1798,10 @@ namespace Raven.Server.Rachis
             Debug.Assert(term != 0);
 
             var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
-            
-            if (state.TryRead(LastCommitSlice, out var reader))
+            var read = state.Read(LastCommitSlice);
+            if (read != null)
             {
+                var reader = read.Reader;
                 var oldIndex = reader.ReadLittleEndianInt64();
                 if (oldIndex > index)
                     throw new InvalidOperationException(
@@ -1999,17 +2012,16 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
-            
-            const long invalidTerm = long.MinValue;
-            var votedTerm = state.ReadInt64OrDefault(CurrentTermSlice, invalidTerm);
+            var read = state.Read(CurrentTermSlice);
 
-            if (votedTerm != term && votedTerm != invalidTerm)
-                return (null, votedTerm);
+            var votedTerm = read?.Reader.ReadLittleEndianInt64();
 
-            if (state.TryRead(VotedForSlice, out var reader))
-                return (reader.ToString(), votedTerm != invalidTerm ? votedTerm : 0);
+            if (votedTerm != term && votedTerm.HasValue)
+                return (null, votedTerm.Value);
 
-            return (null, 0);
+            read = state.Read(VotedForSlice);
+
+            return (read?.Reader.ReadString(read.Reader.Length), votedTerm ?? 0);
         }
 
         public event EventHandler OnDispose;
@@ -2324,11 +2336,12 @@ namespace Raven.Server.Rachis
             where TTransaction : RavenTransaction
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            var reader = state.Read(SnapshotRequestSlice);
 
-            if (state.TryRead(SnapshotRequestSlice, out var reader )== false)
+            if (reader == null)
                 return false;
 
-            return Convert.ToBoolean(reader.ReadByte());
+            return Convert.ToBoolean(reader.Reader.ReadByte());
         }
 
         public void LeaderElectToLeaderChanged()

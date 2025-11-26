@@ -60,10 +60,11 @@ namespace FastTests.Voron.Optimizations
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
+                Assert.Null(tree.Read(new string('0', keySize)));
 
-                Assert.False(tree.TryRead(new string('0', keySize), out _));
-                Assert.True(tree.TryRead(new string('4', 1000), out var reader));
-                Assert.Equal(21, reader.Length);
+                var readResult = tree.Read(new string('4', 1000));
+
+                Assert.Equal(21, readResult.Reader.Length);
             }
         }
     }

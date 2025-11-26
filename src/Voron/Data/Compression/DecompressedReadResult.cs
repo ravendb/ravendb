@@ -2,17 +2,14 @@
 
 namespace Voron.Data.Compression
 {
-    public sealed class DecompressedReadResult : IDisposable
+    public sealed class DecompressedReadResult : ReadResult, IDisposable
     {
         private readonly DecompressedLeafPage _page;
 
-        public DecompressedReadResult(ValueReader reader, DecompressedLeafPage page)
+        public DecompressedReadResult(ValueReader reader, DecompressedLeafPage page) : base(reader)
         {
             _page = page;
-            Reader = reader;
         }
-        
-        public ValueReader Reader { get; private set; }
 
         public void Dispose()
         {

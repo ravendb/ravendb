@@ -62,11 +62,13 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 for (var i = 0; i < 2; i++)
                 {
-                    Assert.True(tree.TryRead("foo/" + i, out var reader));
-                    Assert.Equal(value1.Length, reader.Length);
+                    var readResult = tree.Read("foo/" + i);
 
-                    var memoryStream = new MemoryStream(reader.Length);
-                    reader.CopyTo(memoryStream);
+                    Assert.NotNull(readResult);
+                    Assert.Equal(value1.Length, readResult.Reader.Length);
+
+                    var memoryStream = new MemoryStream(readResult.Reader.Length);
+                    readResult.Reader.CopyTo(memoryStream);
 
                     fixed (byte* b = value1)
                     fixed (byte* c = memoryStream.ToArray())
@@ -114,12 +116,13 @@ namespace SlowTests.Voron.Bugs
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("foo/0");
 
-                Assert.True(tree.TryRead("foo/0", out var reader));
-                Assert.Equal(value1.Length, reader.Length);
+                Assert.NotNull(readResult);
+                Assert.Equal(value1.Length, readResult.Reader.Length);
 
                 var memoryStream = new MemoryStream();
-                reader.CopyTo(memoryStream);
+                readResult.Reader.CopyTo(memoryStream);
             }
 
             using (var tx = Env.ReadTransaction())
@@ -130,12 +133,13 @@ namespace SlowTests.Voron.Bugs
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                Assert.True(tree.TryRead("foo/0", out var reader));
+                var readResult = tree.Read("foo/0");
 
-                Assert.Equal(value1.Length, reader.Length);
+                Assert.NotNull(readResult);
+                Assert.Equal(value1.Length, readResult.Reader.Length);
 
                 var memoryStream = new MemoryStream();
-                reader.CopyTo(memoryStream);
+                readResult.Reader.CopyTo(memoryStream);
             }
         }
 

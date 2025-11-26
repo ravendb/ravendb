@@ -25,9 +25,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _env = env;
             _parent = parent;
             _nestedValueKey = nestedValueKey;
-            if (_parent.TryRead(_nestedValueKey, out var reader))
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult != null)
             {
-                _dataSize = reader.Length;
+                _dataSize = readResult.Reader.Length;
                 IsNew = false;
             }
             else
@@ -55,8 +56,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 tmp.Clear();
                 var tmpPtr = tmp.Ptr;
                 var dataPosInTempPage = 0;
-                if (_parent.TryRead(_nestedValueKey, out var reader))
+                var readResult = _parent.Read(_nestedValueKey);
+                if (readResult != null)
                 {
+                    var reader = readResult.Reader;
                     var entry = (ResultHeader*)reader.Base;
                     var end = reader.Base + reader.Length;
                     while (entry < end)
@@ -65,18 +68,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (entry->Size != result.Size)
                             {
-                                // the id is the same, but the size does not match
-                                // delete it and re-read the result
                                 Delete(id);
-                                if (_parent.TryRead(_nestedValueKey, out reader) == false)
-                                {
-                                    // Nothing read, clear the reader.
-                                    reader = default;
-                                }
+                                readResult = _parent.Read(_nestedValueKey);
                                 break;
                             }
-                            
-                            // the size is the same, update in-situ
                             using (_parent.DirectAdd(_nestedValueKey, reader.Length, out byte* ptr))
                             {
                                 var pos = ptr + ((byte*)entry - reader.Base + sizeof(ResultHeader));
@@ -87,11 +82,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
                     }
 
-                    // No entry found
-                    if (reader.Length > 0)
+                    if (readResult != null)
                     {
-                        Memory.Copy(tmpPtr, reader.Base, reader.Length);
-                        dataPosInTempPage = reader.Length;    
+                        Memory.Copy(tmpPtr, readResult.Reader.Base, readResult.Reader.Length);
+                        dataPosInTempPage = readResult.Reader.Length;
                     }
                 }
 
@@ -110,9 +104,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         }
         public PtrSize Get(long id)
         {
-            if (_parent.TryRead(_nestedValueKey, out var reader) == false)
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult == null)
                 throw new InvalidOperationException($"Could not find a map result wit id '{id}' within a nested values section stored under '{_nestedValueKey}' key");
 
+            var reader = readResult.Reader;
             var entry = (ResultHeader*)reader.Base;
             var end = reader.Base + reader.Length;
             while (entry < end)
@@ -130,9 +126,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void MoveTo(Tree newHome)
         {
-            if (_parent.TryRead(_nestedValueKey, out var reader) == false)
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult == null)
                 return;
 
+            var reader = readResult.Reader;
             var entry = (ResultHeader*)reader.Base;
             var end = reader.Base + reader.Length;
             long currentId;
@@ -151,9 +149,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public int GetResults(JsonOperationContext context, List<BlittableJsonReaderObject> results)
         {
-            if (_parent.TryRead(_nestedValueKey, out var reader) == false)
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult == null)
                 return 0;
 
+            var reader = readResult.Reader;
             var entry = (ResultHeader*)reader.Base;
             var end = reader.Base + reader.Length;
             int entries = 0;
@@ -168,9 +168,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public int GetResultsForDebug(JsonOperationContext context, Dictionary<long, BlittableJsonReaderObject> results)
         {
-            if (_parent.TryRead(_nestedValueKey, out var reader) == false)
+            var readResult = _parent.Read(_nestedValueKey);
+            if (readResult == null)
                 return 0;
 
+            var reader = readResult.Reader;
             var entry = (ResultHeader*)reader.Base;
             var end = reader.Base + reader.Length;
             int entries = 0;
@@ -191,9 +193,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 tmp.Clear();
                 var tmpPtr = tmp.Ptr;
-                if (_parent.TryRead(_nestedValueKey, out var reader) == false) 
+                var readResult = _parent.Read(_nestedValueKey);
+                if (readResult == null)
                     return;
-                
+                var reader = readResult.Reader;
                 var entry = (ResultHeader*)reader.Base;
                 var end = reader.Base + reader.Length;
                 while (entry < end)

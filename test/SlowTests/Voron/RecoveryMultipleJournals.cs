@@ -58,8 +58,11 @@ namespace SlowTests.Voron
             {
                 for (var i = 0; i < 1000; i++)
                 {
-                    Assert.True(tx.CreateTree("tree").TryRead("a" + i, out var reader));
-                    Assert.Equal(100, reader.Length);
+                    var readResult = tx.CreateTree("tree").Read("a" + i);
+                    Assert.NotNull(readResult);
+                    {
+                        Assert.Equal(100, readResult.Reader.Length);
+                    }
                 }
                 tx.Commit();
             }
@@ -175,12 +178,11 @@ namespace SlowTests.Voron
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("tree");
-                
-                Assert.True(tree.TryRead("exists", out _));
-                Assert.False(tree.TryRead("a1", out _));
-                Assert.False(tree.TryRead("a100", out _));
-                Assert.False(tree.TryRead("a500", out _));
-                Assert.False(tree.TryRead("a1000", out _));
+                Assert.NotNull(tree.Read("exists"));
+                Assert.Null(tree.Read("a1"));
+                Assert.Null(tree.Read("a100"));
+                Assert.Null(tree.Read("a500"));
+                Assert.Null(tree.Read("a1000"));
 
                 tx.Commit();
             }
@@ -268,8 +270,9 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.False(tx.CreateTree("tree").TryRead("a1001", out _));
+                Assert.Null(tx.CreateTree("tree").Read("a1001"));
             }
+
         }
 
         [RavenFact(RavenTestCategory.Voron)]

@@ -103,8 +103,13 @@ namespace SlowTests.Voron
                 {
                     for (int j = 0; j < 100; j++)
                     {
-                        Assert.True(tx.ReadTree("tree").TryRead($"a{i}{j}", out _));
-                        Assert.True(tx.ReadTree("tree").TryRead($"b{i}{j}", out _));
+                        var readA = tx.ReadTree("tree").Read("a" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readA);
+
+                        var readB = tx.ReadTree("tree").Read("b" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readB);
                     }
 
                     tx.Commit();
@@ -180,8 +185,13 @@ namespace SlowTests.Voron
                 {
                     for (int j = 0; j < 100; j++)
                     {
-                        Assert.True(tx.ReadTree("tree").TryRead($"a{i}{j}", out _));
-                        Assert.True(tx.ReadTree("tree").TryRead($"b{i}{j}", out _));
+                        var readA = tx.ReadTree("tree").Read("a" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readA);
+
+                        var readB = tx.ReadTree("tree").Read("b" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readB);
                     }
 
                     tx.Commit();
@@ -257,8 +267,13 @@ namespace SlowTests.Voron
                 {
                     for (int j = 0; j < 100; j++)
                     {
-                        Assert.True(tx.ReadTree("tree").TryRead($"a{i}{j}", out _));
-                        Assert.True(tx.ReadTree("tree").TryRead($"b{i}{j}", out _));
+                        var readA = tx.ReadTree("tree").Read("a" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readA);
+
+                        var readB = tx.ReadTree("tree").Read("b" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readB);
                     }
 
                     tx.Commit();
@@ -334,8 +349,13 @@ namespace SlowTests.Voron
                 {
                     for (int j = 0; j < 100; j++)
                     {
-                        Assert.True(tx.ReadTree("tree").TryRead($"a{i}{j}", out _));
-                        Assert.True(tx.ReadTree("tree").TryRead($"b{i}{j}", out _));
+                        var readA = tx.ReadTree("tree").Read("a" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readA);
+
+                        var readB = tx.ReadTree("tree").Read("b" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readB);
                     }
 
                     tx.Commit();
@@ -476,11 +496,15 @@ namespace SlowTests.Voron
                 {
                     for (int j = 0; j < 100; j++)
                     {
-                        Assert.True(tx.ReadTree("tree").TryRead($"a{i}{j}", out _));
+                        var readA = tx.ReadTree("tree").Read("a" + i.ToString() + j.ToString());
+
+                        Assert.NotNull(readA);
 
                         if (i < 2)
                         {
-                            Assert.True(tx.ReadTree("tree").TryRead($"b{i}{j}", out _));
+                            var readB = tx.ReadTree("tree").Read("b" + i.ToString() + j.ToString());
+
+                            Assert.NotNull(readB);
                         }
                     }
 

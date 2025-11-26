@@ -48,8 +48,7 @@ namespace SlowTests.Voron.Storage
 
             using (var snapshot = Env.ReadTransaction())
             {
-                Assert.True(snapshot.ReadTree(TestTreeName).TryRead("key", out var reader));
-                var storedValue = Encoding.UTF8.GetString(reader.AsStream().ReadData());
+                var storedValue = Encoding.UTF8.GetString(snapshot.ReadTree(TestTreeName).Read("key").Reader.AsStream().ReadData());
                 Assert.Equal("value", storedValue);
             }
         }

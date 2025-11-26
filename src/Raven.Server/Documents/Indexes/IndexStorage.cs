@@ -132,16 +132,15 @@ namespace Raven.Server.Documents.Indexes
                 using (Slice.External(context.Allocator, (byte*)&sourceTypeInt, sizeof(int), out Slice tmpSlice))
                     statsTree.Add(IndexSchema.SourceTypeSlice, tmpSlice);
 
-                if (statsTree.TryRead(IndexSchema.CreatedTimestampSlice, out var createdTimestampReader) == false)
+                var createdTimestampResult = statsTree.Read(IndexSchema.CreatedTimestampSlice);
+                if (createdTimestampResult == null)
                 {
                     var binaryDate = CreatedTimestampAsBinary = SystemTime.UtcNow.ToBinary();
                     using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice tmpSlice))
                         statsTree.Add(IndexSchema.CreatedTimestampSlice, tmpSlice);
                 }
                 else
-                {
-                    CreatedTimestampAsBinary = createdTimestampReader.ReadLittleEndianInt64();
-                }
+                    CreatedTimestampAsBinary = createdTimestampResult.Reader.ReadLittleEndianInt64();
 
                 using (Slice.From(context.Allocator, documentDatabase.DbBase64Id, out var dbId))
                     statsTree.Add(IndexSchema.DatabaseIdSlice, dbId);
@@ -173,9 +172,10 @@ namespace Raven.Server.Documents.Indexes
 
                 void AssertAndPersistAnalyzer(Tree configurationTree, string configurationKey, string expectedAnalyzer, string defaultAnalyzer)
                 {
+                    var result = configurationTree.Read(configurationKey);
                     string persistedConfigurationValue = null;
-                    if (configurationTree.TryRead(configurationKey, out var analyzerReader))
-                        persistedConfigurationValue = analyzerReader.ToStringValue();
+                    if (result != null)
+                        persistedConfigurationValue = result.Reader.ToStringValue();
                     else if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.Analyzers)
                         persistedConfigurationValue = defaultAnalyzer;
 
@@ -199,7 +199,15 @@ namespace Raven.Server.Documents.Indexes
 
                     if (defaultEngineType == SearchEngineType.None)
                         throw new InvalidDataException($"Default search engine is {SearchEngineType.None}. Please set {configurationName}.");
-                    if (configurationTree.TryRead(configurationKey, out var existingSearchEngineReader) == false)
+                    var result = configurationTree.Read(configurationKey);
+                    if (result != null)
+                    {
+                        if (Enum.TryParse(result.Reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
+                        {
+                            throw new InvalidDataException($"Invalid search engine for {_index.Name}  was saved previously or it's corrupted. Please reset the index.");
+                        }
+                    }
+                    else
                     {
                         SearchEngineType type;
 
@@ -209,13 +217,6 @@ namespace Raven.Server.Documents.Indexes
                             type = defaultEngineType;
 
                         configurationTree.Add(configurationKey, type.ToString());
-                    }
-                    else
-                    {
-                        if (Enum.TryParse(existingSearchEngineReader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
-                        {
-                            throw new InvalidDataException($"Invalid search engine for {_index.Name}  was saved previously or it's corrupted. Please reset the index.");
-                        }
                     }
                 }
 
@@ -227,7 +228,7 @@ namespace Raven.Server.Documents.Indexes
                         configurationTree.Add(configurationKey, _index.Definition.ArchivedDataProcessingBehavior.ToString());
                     else
                     {
-                        if (configurationTree.TryRead(configurationKey, out _) )
+                        if (configurationTree.Read(configurationKey) != null)
                             return; // do not overwrite default value if it exists already
                         
                         configurationTree.Add(configurationKey, defaultBehavior.ToString());
@@ -243,9 +244,10 @@ namespace Raven.Server.Documents.Indexes
                     if (_index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior)
                         configuredBehavior = _index.Configuration.CoraxStaticIndexComplexFieldIndexingBehavior;
 
-                    if (configurationTree.TryRead(configurationKey, out var configuredBehaviorReader))
+                    var result = configurationTree.Read(configurationKey);
+                    if (result != null)
                     {
-                        var behaviorStringValue = configuredBehaviorReader.ToStringValue();
+                        var behaviorStringValue = result.Reader.ToStringValue();
 
                         if (Enum.TryParse(behaviorStringValue, out IndexingConfiguration.CoraxComplexFieldIndexingBehavior _) == false)
                         {
@@ -267,10 +269,8 @@ namespace Raven.Server.Documents.Indexes
             if (_environment.IsNew == false)
             {
                 var tree = indexContext.Transaction.InnerTransaction.ReadTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
-                if (tree == null || tree.TryRead(key, out var lastEtagReader) == false)
-                    return 0;
-
-                return lastEtagReader.ReadLittleEndianInt64();
+                var result = tree?.Read(key);
+                return result?.Reader.ReadLittleEndianInt64() ?? 0;
             }
 
             using (var queryContext = QueryOperationContext.Allocate(DocumentDatabase, _index))
@@ -318,10 +318,11 @@ namespace Raven.Server.Documents.Indexes
         public IndexState ReadState(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-            if (statsTree.TryRead(IndexSchema.StateSlice, out var stateReader) == false)
+            var state = statsTree.Read(IndexSchema.StateSlice);
+            if (state == null)
                 return IndexState.Normal;
 
-            return (IndexState)stateReader.ReadLittleEndianInt32();
+            return (IndexState)state.Reader.ReadLittleEndianInt32();
         }
 
         public void DeleteErrors()
@@ -403,10 +404,11 @@ namespace Raven.Server.Documents.Indexes
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-            if (statsTree.TryRead(IndexSchema.ElapsedSinceQueriedSlice, out var elapsedReader) == false)
+            var lastQueryTimeSlice = statsTree.Read(IndexSchema.ElapsedSinceQueriedSlice);
+            if (lastQueryTimeSlice == null)
                 return null;
 
-            return new TimeSpan(ticks: elapsedReader.ReadLittleEndianInt64());
+            return new TimeSpan(ticks: lastQueryTimeSlice.Reader.ReadLittleEndianInt64());
         }
 
         public void WriteElapsedSinceQueried(TimeSpan value)
@@ -432,47 +434,33 @@ namespace Raven.Server.Documents.Indexes
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-            if (statsTree.TryRead(IndexSchema.LastIndexingTimeSlice, out var lastIndexingReader) == false)
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+            if (lastIndexingTime == null)
                 return null;
 
-            return DateTime.FromBinary(lastIndexingReader.ReadLittleEndianInt64());
+            return DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
         }
 
         public bool IsIndexInvalid(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-            long mapAttempts = 0;
-            if (statsTree.TryRead(IndexSchema.MapAttemptsSlice, out var mapAttemptsReader))
-                mapAttempts = mapAttemptsReader.ReadLittleEndianInt64();
-
-            long mapErrors = 0;
-            if (statsTree.TryRead(IndexSchema.MapErrorsSlice, out var mapErrorsReader))
-                mapErrors = mapErrorsReader.ReadLittleEndianInt64();
+            var mapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
+            var mapErrors = statsTree.Read(IndexSchema.MapErrorsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
 
             long? reduceAttempts = null, reduceErrors = null;
 
             if (_index.Type.IsMapReduce())
             {
-                if (statsTree.TryRead(IndexSchema.ReduceAttemptsSlice, out var reduceAttemptsReader))
-                    reduceAttempts = reduceAttemptsReader.ReadLittleEndianInt64();
-                else
-                    reduceAttempts = 0;
-
-                if (statsTree.TryRead(IndexSchema.ReduceErrorsSlice, out var reduceErrorsReader))
-                    reduceErrors = reduceErrorsReader.ReadLittleEndianInt64();
-                else
-                    reduceErrors = 0;
+                reduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
+                reduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
             }
 
             long mapReferenceAttempts = 0, mapReferenceErrors = 0;
             if (_index.GetReferencedCollections()?.Count > 0)
             {
-                if (statsTree.TryRead(IndexSchema.MapReferencedAttemptsSlice, out var mapReferenceAttemptsReader))
-                    mapReferenceAttempts = mapReferenceAttemptsReader.ReadLittleEndianInt64();
-
-                if (statsTree.TryRead(IndexSchema.MapReferenceErrorsSlice, out var mapReferenceErrorsReader))
-                    mapReferenceErrors = mapReferenceErrorsReader.ReadLittleEndianInt64();
+                mapReferenceAttempts = statsTree.Read(IndexSchema.MapReferencedAttemptsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
+                mapReferenceErrors = statsTree.Read(IndexSchema.MapReferenceErrorsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
             }
 
             return IndexFailureInformation.CheckIndexInvalid(mapAttempts, mapErrors,
@@ -490,6 +478,8 @@ namespace Raven.Server.Documents.Indexes
                 ErrorsCount = (int)(table?.NumberOfEntries ?? 0)
             };
 
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+
             stats.Collections = new Dictionary<string, IndexStats.CollectionStats>();
             foreach (var collection in _index.Definition.Collections)
             {
@@ -500,14 +490,15 @@ namespace Raven.Server.Documents.Indexes
                 };
             }
 
+            var entriesCountReader = statsTree.Read(IndexSchema.EntriesCount)?.Reader;
             long? entriesCount = null;
-            if (statsTree.TryRead(IndexSchema.EntriesCount, out var entriesCountReader))
+            if (entriesCountReader.HasValue)
             {
-                var entriesCountSize = entriesCountReader.Length;
+                var entriesCountSize = entriesCountReader.Value.Length;
                 //backward compatibility https://github.com/ravendb/ravendb/commit/5c53b01ee2b4fad8f3ef410f3e4976144d72c023
                 entriesCount = entriesCountSize == sizeof(long)
-                    ? entriesCountReader.ReadLittleEndianInt64()
-                    : entriesCountReader.ReadLittleEndianInt32();
+                    ? entriesCountReader.Value.ReadLittleEndianInt64()
+                    : entriesCountReader.Value.ReadLittleEndianInt32();
             }
 
             if (entriesCount != null)
@@ -519,27 +510,28 @@ namespace Raven.Server.Documents.Indexes
                     stats.EntriesCount = reader.EntriesCount();
                 }
             }
-            
-            if (statsTree.TryRead(IndexSchema.LastIndexingTimeSlice, out var lastIndexingTime))
+
+            if (lastIndexingTime != null)
             {
-                stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.ReadLittleEndianInt64());
-                stats.MapAttempts = statsTree.ReadInt32OrDefault(IndexSchema.MapAttemptsSlice);
-                stats.MapErrors = statsTree.ReadInt32OrDefault(IndexSchema.MapErrorsSlice);
-                stats.MapSuccesses = statsTree.ReadInt32OrDefault(IndexSchema.MapSuccessesSlice);
-                stats.MaxNumberOfOutputsPerDocument = statsTree.ReadInt32OrDefault(IndexSchema.MaxNumberOfOutputsPerDocument);
+                stats.LastIndexingTime = DateTime.FromBinary(lastIndexingTime.Reader.ReadLittleEndianInt64());
+                stats.MapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapErrors = statsTree.Read(IndexSchema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
+                stats.MapSuccesses = statsTree.Read(IndexSchema.MapSuccessesSlice).Reader.ReadLittleEndianInt32();
+                stats.MaxNumberOfOutputsPerDocument =
+                    statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument).Reader.ReadLittleEndianInt32();
 
                 if (_index.Type.IsMapReduce())
                 {
-                    stats.ReduceAttempts = statsTree.ReadInt64OrDefault(IndexSchema.ReduceAttemptsSlice);
-                    stats.ReduceSuccesses = statsTree.ReadInt64OrDefault(IndexSchema.ReduceSuccessesSlice);
-                    stats.ReduceErrors = statsTree.ReadInt64OrDefault(IndexSchema.ReduceErrorsSlice);
+                    stats.ReduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
+                    stats.ReduceSuccesses = statsTree.Read(IndexSchema.ReduceSuccessesSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
+                    stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice)?.Reader.ReadLittleEndianInt64() ?? 0;
                 }
 
                 if (_index.GetReferencedCollections()?.Count > 0)
                 {
-                    stats.MapReferenceAttempts = statsTree.ReadInt32OrDefault(IndexSchema.MapReferencedAttemptsSlice);
-                    stats.MapReferenceSuccesses = statsTree.ReadInt32OrDefault(IndexSchema.MapReferenceSuccessesSlice);
-                    stats.MapReferenceErrors = statsTree.ReadInt32OrDefault(IndexSchema.MapReferenceErrorsSlice);
+                    stats.MapReferenceAttempts = statsTree.Read(IndexSchema.MapReferencedAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.MapReferenceSuccesses = statsTree.Read(IndexSchema.MapReferenceSuccessesSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.MapReferenceErrors = statsTree.Read(IndexSchema.MapReferenceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
                 }
             }
 
@@ -550,9 +542,11 @@ namespace Raven.Server.Documents.Indexes
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-            if (statsTree.TryRead(IndexSchema.LastIndexingTimeSlice, out _))
+            var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
+
+            if (lastIndexingTime != null)
             {
-                return statsTree.ReadInt32OrDefault(IndexSchema.MaxNumberOfOutputsPerDocument);
+                return statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument).Reader.ReadLittleEndianInt32();
             }
 
             return 0;
@@ -566,14 +560,15 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
             }
 
-            if (configurationTree.TryRead(IndexSchema.ArchivedDataProcessingBehaviorSlice, out var reader) == false)
+            var result = configurationTree.Read(IndexSchema.ArchivedDataProcessingBehaviorSlice);
+            if (result == null)
             {
                 throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.ArchivedDataProcessingBehaviorSlice)}' tree.");
             }
 
-            if (Enum.TryParse(reader.ToStringValue(), out ArchivedDataProcessingBehavior persistedArchivedDataProcessingBehavior) == false)
+            if (Enum.TryParse(result.Reader.ToStringValue(), out ArchivedDataProcessingBehavior persistedArchivedDataProcessingBehavior) == false)
             {
-                throw new InvalidOperationException($"Index does not contain valid {nameof(ArchivedDataProcessingBehavior)} property. It contains: {reader.ToStringValue()}.");
+                throw new InvalidOperationException($"Index does not contain valid {nameof(ArchivedDataProcessingBehavior)} property. It contains: {result.Reader.ToStringValue()}.");
             }
             
             return persistedArchivedDataProcessingBehavior;
@@ -587,14 +582,15 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
             }
 
-            if (configurationTree.TryRead(IndexSchema.CoraxComplexFieldIndexingBehavior, out var reader) == false)
+            var result = configurationTree.Read(IndexSchema.CoraxComplexFieldIndexingBehavior);
+            if (result == null)
             {
                 throw new InvalidOperationException($"Index does not contain {nameof(IndexSchema.CoraxComplexFieldIndexingBehavior)}' key.");
             }
 
-            if (Enum.TryParse(reader.ToStringValue(), out IndexingConfiguration.CoraxComplexFieldIndexingBehavior persistedCoraxStaticIndexComplexFieldIndexingBehavior) == false)
+            if (Enum.TryParse(result.Reader.ToStringValue(), out IndexingConfiguration.CoraxComplexFieldIndexingBehavior persistedCoraxStaticIndexComplexFieldIndexingBehavior) == false)
             {
-                throw new InvalidDataException($"Invalid indexing complex field behavior in '{_index.Name}' Corax index. It has: {reader.ToStringValue()} defined.");
+                throw new InvalidDataException($"Invalid indexing complex field behavior in '{_index.Name}' Corax index. It has: {result.Reader.ToStringValue()} defined.");
             }
 
             return persistedCoraxStaticIndexComplexFieldIndexingBehavior;
@@ -668,10 +664,11 @@ namespace Raven.Server.Documents.Indexes
 
                 var tree = tx.ReadTree(_referencePrefix + collection);
 
-                if (tree == null || tree.TryRead(referencedCollection.Name, out var reader) == false)
+                var result = tree?.Read(referencedCollection.Name);
+                if (result == null)
                     return 0;
 
-                return reader.ReadLittleEndianInt64();
+                return result.Reader.ReadLittleEndianInt64();
             }
 
             public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
@@ -711,10 +708,11 @@ namespace Raven.Server.Documents.Indexes
 
                 var tree = tx.ReadTree(_referenceTombstonePrefix + collection);
 
-                if (tree == null || tree.TryRead(referencedCollection.Name, out var reader) == false)
+                var result = tree?.Read(referencedCollection.Name);
+                if (result == null)
                     return 0;
 
-                return reader.ReadLittleEndianInt64();
+                return result.Reader.ReadLittleEndianInt64();
             }
 
             public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
@@ -987,7 +985,12 @@ namespace Raven.Server.Documents.Indexes
         internal static long ReadLastEtag(Transaction tx, string tree, Slice collection)
         {
             var statsTree = tx.CreateTree(tree);
-            return statsTree.ReadInt64OrDefault(collection, 0);
+            var readResult = statsTree.Read(collection);
+            long lastEtag = 0;
+            if (readResult != null)
+                lastEtag = readResult.Reader.ReadLittleEndianInt64();
+
+            return lastEtag;
         }
 
         public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, TimeSpan lastQueryElapsed, IndexingRunStats stats)
@@ -1011,12 +1014,12 @@ namespace Raven.Server.Documents.Indexes
                 result.MapSuccesses = statsTree.Increment(IndexSchema.MapSuccessesSlice, stats.MapSuccesses);
                 result.MapErrors = statsTree.Increment(IndexSchema.MapErrorsSlice, stats.MapErrors);
 
-                var currentMaxNumberOfOutputs = statsTree.ReadInt32OrDefault(IndexSchema.MaxNumberOfOutputsPerDocument, int.MinValue);
+                var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
 
                 using (statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int), out byte* ptr))
                 {
                     *(int*)ptr = currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
-                        ? currentMaxNumberOfOutputs
+                        ? currentMaxNumberOfOutputs.Value
                         : stats.MaxNumberOfOutputsPerDocument;
                 }
 
@@ -1090,10 +1093,11 @@ namespace Raven.Server.Documents.Indexes
                 if (statsTree == null)
                     throw new InvalidOperationException($"Index '{name}' does not contain 'Stats' tree.");
 
-                if (statsTree.TryRead(IndexSchema.TypeSlice, out var reader) == false)
+                var result = statsTree.Read(IndexSchema.TypeSlice);
+                if (result == null)
                     throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{name}'.");
 
-                return (IndexType)reader.ReadLittleEndianInt32();
+                return (IndexType)result.Reader.ReadLittleEndianInt32();
             }
         }
 
@@ -1105,8 +1109,11 @@ namespace Raven.Server.Documents.Indexes
                 if (statsTree == null)
                     throw new InvalidOperationException($"Index '{name}' does not contain 'Stats' tree.");
 
-                // null for backward compatibility
-                return statsTree.ReadStringOrDefault(IndexSchema.DatabaseIdSlice, null);
+                var result = statsTree.Read(IndexSchema.DatabaseIdSlice);
+                if (result == null)
+                    return null; // backward compatibility
+
+                return result.Reader.ReadString(result.Reader.Length);
             }
         }
 
@@ -1120,14 +1127,15 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException($"Index '{name}' does not contain {nameof(IndexSchema.ConfigurationTree)}' tree.");
                 }
 
-                if (configurationTree.TryRead(IndexSchema.SearchEngineType, out var reader) == false)
+                var result = configurationTree.Read(IndexSchema.SearchEngineType);
+                if (result == null)
                 {
                     return SearchEngineType.None;
                 }
 
-                if (Enum.TryParse(reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
+                if (Enum.TryParse(result.Reader.ToStringValue(), out SearchEngineType persistedSearchEngineType) == false)
                 {
-                    throw new InvalidOperationException($"Index '{name}' does not contain valid {nameof(SearchEngineType)} property. It contains: {reader.ToStringValue()}.");
+                    throw new InvalidOperationException($"Index '{name}' does not contain valid {nameof(SearchEngineType)} property. It contains: {result.Reader.ToStringValue()}.");
                 }
 
                 return persistedSearchEngineType;
@@ -1142,10 +1150,11 @@ namespace Raven.Server.Documents.Indexes
                 if (statsTree == null)
                     throw new InvalidOperationException($"Index '{name}' does not contain 'Stats' tree.");
 
-                if (statsTree.TryRead(IndexSchema.SourceTypeSlice, out var reader) == false)
+                var result = statsTree.Read(IndexSchema.SourceTypeSlice);
+                if (result == null)
                     return IndexSourceType.Documents; // backward compatibility
 
-                return (IndexSourceType)reader.ReadLittleEndianInt32();
+                return (IndexSourceType)result.Reader.ReadLittleEndianInt32();
             }
         }
 

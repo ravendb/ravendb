@@ -58,7 +58,7 @@ namespace SlowTests.Voron
                 {
                     var key = keys[i];
 
-                    Assert.True(tree.TryRead(key, out _));
+                    Assert.NotNull(tree.Read(key));
                 }
             }
 
@@ -124,7 +124,7 @@ namespace SlowTests.Voron
                 {
                     var key = keys[i];
 
-                    Assert.True(tree.TryRead(key, out _));
+                    Assert.NotNull(tree.Read(key));
                 }
             }
 
@@ -189,7 +189,7 @@ namespace SlowTests.Voron
                 {
                     var key = addedKeys[i];
 
-                    Assert.True(tree.TryRead(key, out _));
+                    Assert.NotNull(tree.Read(key));
                 }
             }
 

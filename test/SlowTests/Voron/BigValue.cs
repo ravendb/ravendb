@@ -40,10 +40,11 @@ namespace SlowTests.Voron
                 var tree = tx.CreateTree("foo");
                 Slice key;
                 Slice.From(tx.Allocator, BitConverter.GetBytes(1203), out key);
-                Assert.True(tree.TryRead(key, out var reader));
+                var readResult = tree.Read(key);
+                Assert.NotNull(readResult);
 
                 var memoryStream = new MemoryStream();
-                reader.CopyTo(memoryStream);
+                readResult.Reader.CopyTo(memoryStream);
                 Assert.Equal(buffer, memoryStream.ToArray());
                 tx.Commit();
             }

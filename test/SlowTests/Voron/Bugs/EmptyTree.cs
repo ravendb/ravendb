@@ -67,8 +67,9 @@ namespace SlowTests.Voron.Bugs
                     using (var tx = env.WriteTransaction())
                     {
                         var tree = tx.CreateTree("events");
-                        Assert.True(tree.TryRead("test", out _));
-                        
+                        var readResult = tree.Read("test");
+                        Assert.NotNull(readResult);
+
                         tx.Commit();
                     }
                 }

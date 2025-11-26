@@ -59,7 +59,7 @@ namespace FastTests.Voron.Trees
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
-                Assert.False(tree.TryRead("a", out _));
+                Assert.Null(tree.Read("a"));
 
                 tx.Commit();
             }

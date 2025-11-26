@@ -131,9 +131,9 @@ namespace Voron.Debugging
                         {
                             if (SliceComparer.CompareInline(it.CurrentKey, Hnsw.OptionsSlice) == 0 && it.Current->DataSize == Unsafe.SizeOf<Hnsw.Options>())
                                 continue; // Hnsw options, 64 bytes 
-
-                            tree.TryRead(it.CurrentKey, out var reader);
-                            RootObjectType rootObjectType = (RootObjectType)reader.ReadByte();
+                            
+                            ReadResult readResult = tree.Read(it.CurrentKey);
+                            RootObjectType rootObjectType = (RootObjectType)readResult.Reader.ReadByte();
                             switch (rootObjectType)
                             {
                                 case RootObjectType.Lookup:
@@ -159,7 +159,7 @@ namespace Voron.Debugging
                                 case RootObjectType.EmbeddedFixedSizeTree:
                                     continue; // already accounted for
                                 case RootObjectType.FixedSizeTree:
-                                    var header = (FixedSizeTreeHeader.Large*)reader.Base;
+                                    var header = (FixedSizeTreeHeader.Large*)readResult.Reader.Base;
                                     var set = tree.FixedTreeFor(it.CurrentKey, (byte)header->ValueSize);
                                     var nestedSetReport = GetReport(set, input.IncludeDetails);
                                     nestedSetReport.Name = treeReport.Name + "/" + nestedSetReport.Name +", FixedSizeTree";

@@ -77,9 +77,10 @@ namespace FastTests.Voron.Backups
                     var tree = tx.CreateTree("foo");
                     for (int i = 0; i < 4; i++)
                     {
-                        Assert.True(tree.TryRead("items/" + i, out var reader));
+                        var readResult = tree.Read("items/" + i);
+                        Assert.NotNull(readResult);
                         var memoryStream = new MemoryStream();
-                        reader.CopyTo(memoryStream);
+                        readResult.Reader.CopyTo(memoryStream);
                         Assert.Equal(memoryStream.ToArray(), buffer);
                     }
                 }

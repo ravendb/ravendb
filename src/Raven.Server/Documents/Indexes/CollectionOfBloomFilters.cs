@@ -119,8 +119,9 @@ namespace Raven.Server.Documents.Indexes
 
         internal static long GetVersion(Tree tree, bool isNew)
         {
-            if (tree.TryRead(VersionSlice, out var reader))
-                return reader.ReadLittleEndianInt64();
+            var read = tree.Read(VersionSlice);
+            if (read != null)
+                return read.Reader.ReadLittleEndianInt64();
 
             return isNew
                 ? BloomFilterVersion.CurrentVersion
@@ -129,13 +130,15 @@ namespace Raven.Server.Documents.Indexes
 
         private static long GetCount(Tree tree, ref Mode mode)
         {
-            if (tree.TryRead(mode == Mode.X64 ? Count64Slice : Count32Slice, out var reader))
-                return reader.ReadLittleEndianInt64();
+            var read = tree.Read(mode == Mode.X64 ? Count64Slice : Count32Slice);
+            if (read != null)
+                return read.Reader.ReadLittleEndianInt64();
 
-            if (tree.TryRead(mode == Mode.X64 ? Count32Slice : Count64Slice, out reader))
+            read = tree.Read(mode == Mode.X64 ? Count32Slice : Count64Slice);
+            if (read != null)
             {
                 mode = mode == Mode.X64 ? Mode.X86 : Mode.X64;
-                return reader.ReadLittleEndianInt64();
+                return read.Reader.ReadLittleEndianInt64();
             }
 
             return 0;
@@ -376,7 +379,11 @@ namespace Raven.Server.Documents.Indexes
 
             private long ReadCount()
             {
-                return _tree.ReadInt64OrDefault(_keySlice, 0);
+                var read = _tree.Read(_keySlice);
+                if (read == null)
+                    return 0;
+
+                return read.Reader.ReadLittleEndianInt64();
             }
 
             internal bool Add(LazyStringValue key)
@@ -480,12 +487,13 @@ namespace Raven.Server.Documents.Indexes
 
                 Slice.From(_allocator, $"{_key:D5}/{number:D4}", out Slice partitionKey);
 
-                if (_tree.TryRead(partitionKey, out var reader))
+                var read = _tree.Read(partitionKey);
+                if (read != null)
                 {
                     return _partitions[number] = new Partition
                     {
                         Writable = false,
-                        Ptr = reader.Base,
+                        Ptr = read.Reader.Base,
                         Key = partitionKey
                     };
                 }

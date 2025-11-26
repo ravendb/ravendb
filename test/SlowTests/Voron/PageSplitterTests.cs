@@ -112,6 +112,7 @@ namespace SlowTests.Voron
                 const int toInsert = 230;
 
                 tree.Add("20", new byte[toInsert]);
+
             }
         }
 
@@ -139,14 +140,9 @@ namespace SlowTests.Voron
             {
                 var tree = tx.ReadTree("foo");
 
-                Assert.True(tree.TryRead("thumbproducts/57337", out var reader));
-                Assert.Equal(1998, reader.Length);
-
-                Assert.True(tree.TryRead("thumbproducts/57338", out reader));
-                Assert.Equal(1993, reader.Length);
-                
-                Assert.True(tree.TryRead("thumbproducts/573370", out reader));
-                Assert.Equal(2016, reader.Length);
+                Assert.Equal(1998, tree.Read("thumbproducts/57337").Reader.Length);
+                Assert.Equal(1993, tree.Read("thumbproducts/57338").Reader.Length);
+                Assert.Equal(2016, tree.Read("thumbproducts/573370").Reader.Length);
             }
         }
     }

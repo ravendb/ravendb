@@ -72,25 +72,28 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void Delete(string key)
         {
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
             {
                 Delete(keySlice);
             }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public bool TryRead(string key, out ValueReader value)
+        public ReadResult Read(string key)
         {
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
             {
-                return TryRead(keySlice, out value);
+                return Read(keySlice);
             }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public bool Exists(string key)
         {
-            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out Slice keySlice))
+            Slice keySlice;
+            using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
             {
                 return Exists(keySlice);
             }
@@ -207,10 +210,10 @@ namespace Voron.Data.BTrees
 
         public long GetLookupRootPage(Slice name)
         {
-            if (TryRead(name, out var reader) == false)
+            var result = Read(name);
+            if (result == null)
                 return -1;
-            
-            var header = (LookupState*)reader.Base;
+            var header = (LookupState*)result.Reader.Base;
             if (header->RootObjectType != RootObjectType.Lookup)
                 return -1;
             return header->RootPage;

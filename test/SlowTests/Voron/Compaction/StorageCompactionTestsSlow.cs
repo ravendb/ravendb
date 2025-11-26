@@ -155,19 +155,21 @@ namespace SlowTests.Voron.Compaction
 
                         for (int i = 0; i < recordCount; i++)
                         {
-                            Assert.True(tree.TryRead($"{treeName}/items/{i}", out var reader));
+                            var readResult = tree.Read(string.Format("{0}/items/{1}", treeName, i));
+
+                            Assert.NotNull(readResult);
 
                             if (i % 2 == 0)
                             {
                                 var readBytes = new byte[value1.Length];
-                                reader.Read(readBytes, 0, readBytes.Length);
+                                readResult.Reader.Read(readBytes, 0, readBytes.Length);
 
                                 Assert.Equal(value1, readBytes);
                             }
                             else
                             {
                                 var readBytes = new byte[value2.Length];
-                                reader.Read(readBytes, 0, readBytes.Length);
+                                readResult.Reader.Read(readBytes, 0, readBytes.Length);
 
                                 Assert.Equal(value2, readBytes);
                             }

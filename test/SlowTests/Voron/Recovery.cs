@@ -64,7 +64,7 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 100; i++)
                     {
-                        Assert.True(tree.TryRead("key" + i, out _));
+                        Assert.NotNull(tree.Read("key" + i));
                     }
                 }
             }
@@ -174,12 +174,12 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 1000; i++)
                     {
-                        Assert.True(aTree.TryRead("key" + i, out _));
+                        Assert.NotNull(aTree.Read("key" + i));
                     }
 
                     for (var i = 0; i < 1; i++)
                     {
-                        Assert.True(bTree.TryRead("key" + i, out _));
+                        Assert.NotNull(bTree.Read("key" + i));
                     }
                 }
             }
@@ -234,12 +234,12 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < 1000; i++)
                     {
-                        Assert.True(aTree.TryRead("key" + i, out _));
+                        Assert.NotNull(aTree.Read("key" + i));
                     }
 
                     for (var i = 0; i < 5; i++)
                     {
-                        Assert.True(bTree.TryRead("key" + i, out _));
+                        Assert.NotNull(bTree.Read("key" + i));
                     }
                 }
             }
@@ -304,8 +304,9 @@ namespace SlowTests.Voron
 
                     for (var i = 0; i < count; i++)
                     {
-                        Assert.True(aTree.TryRead("a" + i, out var reader));
-                        Assert.Equal(expectedString, reader.ToStringValue());
+                        var read = aTree.Read("a" + i);
+                        Assert.NotNull(read);
+                        Assert.Equal(expectedString, read.Reader.ToStringValue());
                     }
 
                     using (var iterator = bTree.MultiRead("a"))

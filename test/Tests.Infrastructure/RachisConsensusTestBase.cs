@@ -518,7 +518,8 @@ namespace Tests.Infrastructure
             public string Read(ClusterOperationContext context, string name)
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree("values");
-                return tree.TryRead(name, out var reader) ? reader.ToStringValue() : null;
+                var read = tree.Read(name);
+                return read?.Reader.ToStringValue();
             }
 
             protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -529,8 +530,6 @@ namespace Tests.Infrastructure
                     leader?.SetStateOf(index, tcs => { tcs.TrySetException(new RachisApplyException("Cannot execute command, wrong format")); });
                     return;
                 }
-                
-                Unsafe.SkipInit(out ValueReader reader);
 
                 switch (type)
                 {
@@ -538,7 +537,7 @@ namespace Tests.Infrastructure
                         Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name0));
                         Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val0));
                         var tree0 = context.Transaction.InnerTransaction.CreateTree("values");
-                        string current0 = tree0.TryRead(name0, out reader) ? reader.ToStringValue() : null;
+                        var current0 = tree0.Read(name0)?.Reader.ToStringValue();
                         tree0.Add(name0, current0 + val0);
                         break;
 
@@ -553,7 +552,7 @@ namespace Tests.Infrastructure
                         Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Name), out string name2));
                         Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Value), out int val2));
                         var tree2 = context.Transaction.InnerTransaction.CreateTree("values");
-                        string current2 = tree2.TryRead(name2, out reader) ? reader.ToStringValue() : null;
+                        var current2 = tree2.Read(name2)?.Reader.ToStringValue();
                         tree2.Add(name2, current2 + val2);
                         break;
                 }

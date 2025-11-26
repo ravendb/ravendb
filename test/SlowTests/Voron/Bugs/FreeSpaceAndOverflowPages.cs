@@ -42,8 +42,9 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < itemsCount; i++)
                 {
-                    Assert.True(tree.TryRead("items/" + i, out var reader));
-                    Assert.Equal(dataSize, reader.Length);
+                    var readResult = tree.Read("items/" + i);
+
+                    Assert.Equal(dataSize, readResult.Reader.Length);
                 }
             }
 
@@ -80,8 +81,9 @@ namespace SlowTests.Voron.Bugs
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < itemsCount; i++)
                 {
-                    Assert.True(tree.TryRead("items/" + i, out var reader));
-                    Assert.Equal(dataSize, reader.Length);
+                    var readResult = tree.Read("items/" + i);
+
+                    Assert.Equal(dataSize, readResult.Reader.Length);
                 }
             }
         }

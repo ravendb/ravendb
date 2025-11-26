@@ -64,10 +64,7 @@ namespace SlowTests.Issues
                     using (var tx = indexStorage.Environment().ReadTransaction())
                     {
                         var statsTree = tx.ReadTree(IndexSchema.StatsTree);
-                        var hasValue = statsTree.TryRead(IndexSchema.EntriesCount, out _);
-                        
-                        // If has value, any object returned will do.
-                        return Task.FromResult(hasValue ? statsTree : null);
+                        return Task.FromResult(statsTree.Read(IndexSchema.EntriesCount));
                     }
                 });
 

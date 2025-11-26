@@ -52,8 +52,7 @@ namespace SlowTests.Voron.Bugs
                     var readTree = readTransaction.ReadTree("tree");
 
                     var read = new byte[overflowSize1];
-                    Assert.True(readTree.TryRead("key", out var reader));
-                    reader.Read(read, 0, overflowSize1);
+                    readTree.Read("key").Reader.Read(read, 0, overflowSize1);
 
                     Assert.Equal(bytes1, read); // bytes2 isn't committed yet
                 }
@@ -101,7 +100,7 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("tree");
                 
-                Assert.True(tree.TryRead("key", out var valueReader));
+                var valueReader = tree.Read("key").Reader;
                 var read = new byte[valueReader.Length];
                 valueReader.Read(read, 0, read.Length);
 

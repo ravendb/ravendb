@@ -389,12 +389,13 @@ namespace Raven.Server.Documents
             if (tx == null)
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(GlobalTreeSlice);
-            if (tree.TryRead(GlobalChangeVectorSlice, out var reader) == false)
+            var val = tree.Read(GlobalChangeVectorSlice);
+            if (val == null)
             {
                 return string.Empty;
             }
 
-            return Encodings.Utf8.GetString(reader.Base, reader.Length);
+            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
         internal HashSet<string> UnusedDatabaseIds;
@@ -454,12 +455,12 @@ namespace Raven.Server.Documents
         {
             var tx = context.Transaction.InnerTransaction;
             var tree = tx.ReadTree(GlobalTreeSlice);
-            if (tree.TryRead(GlobalFullChangeVectorSlice, out var reader) == false)
+            var val = tree.Read(GlobalFullChangeVectorSlice);
+            if (val == null)
             {
                 return GetDatabaseChangeVector(context);
             }
-
-            return Encodings.Utf8.GetString(reader.Base, reader.Length);
+            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
 
         }
 
@@ -599,7 +600,10 @@ namespace Raven.Server.Documents
             }
 
             var tree = tx.CreateTree(EtagsSlice);
-            var lastEtag = tree.ReadInt64OrDefault(LastEtagSlice, 0);
+            var readResult = tree.Read(LastEtagSlice);
+            long lastEtag = 0;
+            if (readResult != null)
+                lastEtag = readResult.Reader.ReadLittleEndianInt64();
 
             var lastDocumentEtag = ReadLastDocumentEtag(tx);
             if (lastDocumentEtag > lastEtag)
@@ -641,8 +645,13 @@ namespace Raven.Server.Documents
             {
                 return 0;
             }
+            var readResult = tree.Read(LastCompletedClusterTransactionIndexSlice);
+            if (readResult == null)
+            {
+                return 0;
+            }
 
-            return tree.ReadInt64OrDefault(LastCompletedClusterTransactionIndexSlice, 0);
+            return readResult.Reader.ReadLittleEndianInt64();
         }
 
         public void SetLastCompletedClusterTransactionIndex(DocumentsOperationContext context, long index)
@@ -657,7 +666,10 @@ namespace Raven.Server.Documents
             if (tx == null)
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
             var tree = tx.ReadTree(GlobalTreeSlice);
-            return tree.ReadStringOrDefault(FixCountersLastKeySlice, null);
+            var val = tree.Read(FixCountersLastKeySlice);
+            if (val == null)
+                return null;
+            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
         public void SetLastFixedCounterKey(DocumentsOperationContext context, string lastKey)
@@ -2583,7 +2595,11 @@ namespace Raven.Server.Documents
         public static long GetLastReplicatedEtagFrom(DocumentsOperationContext context, string dbId)
         {
             var readTree = context.Transaction.InnerTransaction.ReadTree(LastReplicatedEtagsSlice);
-            return readTree.TryRead(dbId, out var reader) ? reader.ReadLittleEndianInt64() : 0;
+            var readResult = readTree.Read(dbId);
+            if (readResult == null)
+                return 0;
+
+            return readResult.Reader.ReadLittleEndianInt64();
         }
 
         public static void SetLastReplicatedEtagFrom(DocumentsOperationContext context, string dbId, long etag)

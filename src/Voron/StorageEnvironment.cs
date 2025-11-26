@@ -320,12 +320,16 @@ namespace Voron
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
                 Debug.Assert(metadataTree != null);
-                if (metadataTree.TryRead("db-id", out var dbId) == false)
+                // ReSharper disable once PossibleNullReferenceException
+                var dbId = metadataTree.Read("db-id");
+                if (dbId == null)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
-                var dbIdBytes = dbId.Read(buffer, 0, 16);
+                Debug.Assert(dbId != null);
+                // ReSharper disable once PossibleNullReferenceException
+                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
@@ -360,10 +364,11 @@ namespace Voron
                 {
                     var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
 
-                    if (metadataTree.TryRead("schema-version", out var schemaVersion) == false)
+                    var schemaVersion = metadataTree.Read("schema-version");
+                    if (schemaVersion == null)
                         SchemaErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
-                    schemaVersionVal = schemaVersion.ReadLittleEndianInt32();
+                    schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
                     Options.OnVersionReadingTransaction?.Invoke(readTx);
                 }
 
@@ -1214,9 +1219,8 @@ namespace Voron
 
                                 RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
                                 RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
-                                if (tableTree.TryRead(TableSchema.ActiveSectionSlice, out var reader) == false)
-                                    throw new VoronErrorException($"Could not find active sections for {name}");
-                                long pageNumber = reader.ReadLittleEndianInt64();
+                                var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
+                                long pageNumber = readResult.Reader.ReadLittleEndianInt64();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
                                 // off by one here because of the section header
                                 r.Add(activeDataSmallSection.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");

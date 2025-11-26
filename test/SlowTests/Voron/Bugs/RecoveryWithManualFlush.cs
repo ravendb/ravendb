@@ -61,12 +61,15 @@ namespace SlowTests.Voron.Bugs
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
+                var readResult = tree.Read("item/1");
 
-                Assert.True(tree.TryRead("item/1", out var reader));
-                Assert.Equal(4000, reader.Length);
+                Assert.NotNull(readResult);
+                Assert.Equal(4000, readResult.Reader.Length);
 
-                Assert.True(tree.TryRead("item/2", out reader));
-                Assert.Equal(3999, reader.Length);
+                readResult = tree.Read("item/2");
+
+                Assert.NotNull(readResult);
+                Assert.Equal(3999, readResult.Reader.Length);
             }
         }
 
@@ -104,12 +107,15 @@ namespace SlowTests.Voron.Bugs
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
-                Assert.True(tree.TryRead("item/1", out var reader));
-                Assert.Equal(4000, reader.Length);
+                var readResult = tree.Read("item/1");
 
-                Assert.True(tree.TryRead("item/2", out reader));
-                Assert.Equal(3999, reader.Length);
+                Assert.NotNull(readResult);
+                Assert.Equal(4000, readResult.Reader.Length);
+
+                readResult = tree.Read("item/2");
+
+                Assert.NotNull(readResult);
+                Assert.Equal(3999, readResult.Reader.Length);
             }
         }
 
@@ -130,9 +136,10 @@ namespace SlowTests.Voron.Bugs
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
-                Assert.True(tree.TryRead("items/1", out var reader));
-                Assert.Equal(3, reader.Length);
+                var readResult = tree.Read("items/1");
+
+                Assert.NotNull(readResult);
+                Assert.Equal(3, readResult.Reader.Length);
             }
         }
     }

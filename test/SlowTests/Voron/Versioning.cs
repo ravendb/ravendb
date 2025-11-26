@@ -46,7 +46,7 @@ namespace SlowTests.Voron
                 for (var i = 0; i < documentCount; i++)
                 {
                     var readTree = snapshot.CreateTree("tree1");
-                    _ = readTree.TryRead("Foo" + i, out _);
+                    var result = readTree.Read("Foo" + i);
                     readTree.Delete("Foo" + i);
                 }
             }

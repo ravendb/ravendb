@@ -119,7 +119,7 @@ namespace Voron.Benchmark.BTree
 
                         foreach (var key in _keysPerThread[currentThreadIndex])
                         {
-                            tree.TryRead(key, out var reader);
+                            var reader = tree.Read(key).Reader;
 
                             while (reader.Read(buffer, 0, buffer.Length) != 0) { }
                         }
@@ -152,7 +152,7 @@ namespace Voron.Benchmark.BTree
 
                         foreach (var key in _sortedKeysPerThread[currentThreadIndex])
                         {
-                            tree.TryRead(key, out var reader);
+                            var reader = tree.Read(key).Reader;
 
                             while (reader.Read(buffer, 0, buffer.Length) != 0) { }
                         }

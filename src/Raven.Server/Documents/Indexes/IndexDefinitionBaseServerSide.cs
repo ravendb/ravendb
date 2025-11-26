@@ -395,16 +395,17 @@ namespace Raven.Server.Documents.Indexes
         protected static Stream GetIndexDefinitionStream(StorageEnvironment environment, Transaction tx)
         {
             var tree = tx.CreateTree("Definition");
-            if (tree.TryRead(DefinitionSlice, out var reader) == false)
+            var result = tree.Read(DefinitionSlice);
+            if (result == null)
                 return null;
 
-            var stream = reader.AsStream();
+            var stream = result.Reader.AsStream();
             if (environment.Options.Encryption.IsEnabled)
             {
                 using (stream)
                 {
                     var ms = new MemoryStream();
-                    reader.AsStream().CopyTo(ms);
+                    result.Reader.AsStream().CopyTo(ms);
                     ms.Position = 0;
                     DecryptStream(environment.Options, ms);
                     return ms;

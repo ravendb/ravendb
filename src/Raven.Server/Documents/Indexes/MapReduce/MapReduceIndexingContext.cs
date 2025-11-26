@@ -83,10 +83,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public unsafe void Initialize(Tree mapEntriesTree)
         {
-            if (mapEntriesTree.TryRead(LastMapResultIdKey, out var reader) == false)
+            var read = mapEntriesTree.Read(LastMapResultIdKey);
+
+            if (read == null)
                 return;
 
-            NextMapResultId = *(long*)reader.Base;
+            NextMapResultId = *(long*)read.Reader.Base;
         }
     }
 }

@@ -122,7 +122,9 @@ public class RavenDB_19278 : StorageTest
         {
             foreach (var key in itemsToReadAfterRecovery)
             {
-                Assert.True(tx.ReadTree("tree").TryRead(key, out _));
+                var readA = tx.ReadTree("tree").Read(key);
+
+                Assert.NotNull(readA);
             }
         }
 
@@ -247,7 +249,9 @@ public class RavenDB_19278 : StorageTest
         {
             foreach (var key in itemsToReadAfterRecovery)
             {
-                Assert.True(tx.ReadTree("tree").TryRead(key, out _));
+                var readA = tx.ReadTree("tree").Read(key);
+
+                Assert.NotNull(readA);
             }
         }
 

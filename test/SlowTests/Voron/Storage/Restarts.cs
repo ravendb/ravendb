@@ -39,8 +39,8 @@ namespace SlowTests.Voron.Storage
                     using (var tx = env.ReadTransaction())
                     {
                         var tree = tx.CreateTree("foo");
-                        Assert.True(tree.TryRead("test/1", out _));
-                        Assert.True(tree.TryRead("test/2", out _));
+                        Assert.NotNull(tree.Read("test/1"));
+                        Assert.NotNull(tree.Read("test/2"));
                         tx.Commit();
                     }
                 }
@@ -74,8 +74,8 @@ namespace SlowTests.Voron.Storage
                     using (var tx = env.ReadTransaction())
                     {
                         var tree = tx.CreateTree("foo");
-                        Assert.True(tree.TryRead("test/1", out _));
-                        Assert.True(tree.TryRead("test/2", out _));
+                        Assert.NotNull(tree.Read("test/1"));
+                        Assert.NotNull(tree.Read("test/2"));
                         tx.Commit();
                     }
                 }
@@ -100,7 +100,7 @@ namespace SlowTests.Voron.Storage
                         var tree = tx.CreateTree("test");
                         tree.Add("test", Stream.Null);
 
-                        Assert.True(tree.TryRead("test", out _));
+                        Assert.NotNull(tree.Read("test"));
                         tx.Commit();
                     }
                 }
@@ -116,7 +116,7 @@ namespace SlowTests.Voron.Storage
                     using (var tx = env.ReadTransaction())
                     {
                         var tree = tx.CreateTree("test");
-                        Assert.True(tree.TryRead("test", out _));
+                        Assert.NotNull(tree.Read("test"));
                         tx.Commit();
                     }
                 }
