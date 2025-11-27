@@ -50,7 +50,7 @@ export default function Code(props: CodeProps) {
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const languageTitle = getLanguageTitle(props.language);
+    const languageTitle = languageTitles[props.language];
     const languageToHighlight = getLanguageToHighlight(props.language);
 
     const html = useMemo(
@@ -119,41 +119,21 @@ function getLanguageToHighlight(language: CodeLanguage): CodeLanguage {
     }
 }
 
-function getLanguageTitle(language: CodeLanguage): string {
-    switch (language) {
-        case "plaintext":
-            return "Plaintext";
-        case "markup":
-            return "Markup";
-        case "html":
-            return "HTML";
-        case "mathml":
-            return "MathML";
-        case "svg":
-            return "SVG";
-        case "xml":
-            return "XML";
-        case "ssml":
-            return "SSML";
-        case "atom":
-            return "Atom";
-        case "rss":
-            return "RSS";
-        case "css":
-            return "CSS";
-        case "clike":
-            return "C-like";
-        case "javascript":
-            return "JavaScript";
-        case "csharp":
-            return "C#";
-        case "json":
-            return "JSON";
-        case "sql":
-            return "SQL";
-        case "rql":
-            return "RQL";
-        default:
-            return null;
-    }
-}
+const languageTitles: Record<CodeLanguage, string> = {
+    plaintext: "Plaintext",
+    markup: "Markup",
+    html: "HTML",
+    mathml: "MathML",
+    svg: "SVG",
+    xml: "XML",
+    ssml: "SSML",
+    atom: "Atom",
+    rss: "RSS",
+    css: "CSS",
+    clike: "C-like",
+    javascript: "JavaScript",
+    csharp: "C#",
+    json: "JSON",
+    sql: "SQL",
+    rql: "RQL",
+};

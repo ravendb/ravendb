@@ -60,9 +60,9 @@ export function boundCopy<TArgs>(story: StoryFn<TArgs>, args?: TArgs): StoryFn<T
     return copy;
 }
 
-export async function tryHandleSubmit<T>(promiseFn: () => Promise<T>) {
+export async function tryHandleSubmit<T>(promise: () => Promise<T>) {
     try {
-        return await promiseFn();
+        return await promise();
     } catch (e) {
         console.error(e);
     }

@@ -40,7 +40,7 @@ export interface RunChatbotAiAssistantResultDto {
             Option: AdditionalContextOption;
         }
     >;
-    Endpoints: Record<string, string[]>; // <toolId, endpointUrl[]>
+    Endpoints: Record<string, string[]>;
 }
 
 export default class runChatbotAiAssistantCommand extends commandBase {
