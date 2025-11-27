@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -2342,6 +2343,60 @@ more responsive application.
             return true;
         }
 
+        public IEnumerable<(string Id, bool ExistsInSession)> GetDocumentsRequiredToLoad<TEnumerable>(string[] ids, TEnumerable includes)
+        where TEnumerable : IEnumerable<string>
+        {
+            foreach (var id in ids)
+            {
+                if (_knownMissingIds.Contains(id))
+                {
+                    yield return (id, true);
+                    continue;
+                }
+
+                // Check if a document was already loaded, the check if we've received it through include
+                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false &&
+                    IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
+                {
+                    yield return (id, false);
+                    continue;
+                }
+                
+                Debug.Assert(documentInfo is not null);
+                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
+                {
+                    yield return (id, false);
+                    continue;
+                }
+                
+                if (includes == null)
+                {
+                    // Document exists in a session, there is no include, so we've the data we need
+                    yield return (id, true);
+                    continue;
+                }
+
+                var hasAll = true;
+                foreach (var include in includes)
+                {
+                    // We've to check if every include is present in the session
+                    IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
+
+                    if (hasAll == false)
+                        break;
+                }
+
+                if (hasAll == false)
+                {
+                    // We missed at least one include, so we need to load the document
+                    yield return (id, false);
+                    continue;
+                }
+                
+                yield return (id, true);
+            }
+        }
+        
         protected void BuildEntityDocInfoByIdHolder<T>(
             IEnumerable<T> entities,
             out Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
