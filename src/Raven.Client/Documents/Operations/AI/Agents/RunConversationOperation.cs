@@ -23,7 +23,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
-    private readonly List<AiAgentArtificialAction> _artificialActions;
+    private readonly List<AiAgentArtificialActionResponse> _artificialActions;
     private readonly string _changeVector;
 
     private readonly string _streamPropertyPath;
@@ -44,7 +44,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string conversationId,
         List<ContentPart> promptParts,
         List<AiAgentActionResponse> actionResponses,
-        List<AiAgentArtificialAction> artificialActions,
+        List<AiAgentArtificialActionResponse> artificialActions,
         AiConversationCreationOptions options,
         string changeVector) : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, null, null)
     {
@@ -66,7 +66,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string conversationId,
         IEnumerable<ContentPart> promptParts,
         List<AiAgentActionResponse> actionResponses,
-        List<AiAgentArtificialAction> artificialActions,
+        List<AiAgentArtificialActionResponse> artificialActions,
         AiConversationCreationOptions options,
         string changeVector,
         string streamPropertyPath,

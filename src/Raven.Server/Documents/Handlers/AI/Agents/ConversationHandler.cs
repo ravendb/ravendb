@@ -522,7 +522,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 t.Validate();
 
                 string id = Guid.NewGuid().ToString("N");
-                _document.AddArtificialToolCall(context, [new AiToolCall(id, t.ToolName, "{}")]);
+                _document.AddArtificialToolCall(context, [new AiToolCall(id, t.ToolId, "{}")]);
                 _document.AddToolResponse(context, id, t.Content);
             }
         }

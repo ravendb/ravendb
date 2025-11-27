@@ -198,13 +198,13 @@ public interface IAiConversationOperations
     /// This is an advanced mechanism to programmatically prompt the agent, causing it to "believe" 
     /// it successfully executed a tool and received the specified <paramref name="actionResponse"/>.
     /// </summary>
-    /// <param name="toolName">
+    /// <param name="toolId">
     /// The name of the tool to simulate the agent called.
     /// </param>
     /// <param name="actionResponse">
     /// The string response to supply to the agent as the result of the simulated action.
     /// </param>
-    void AddArtificialActionWithResponse(string toolName, string actionResponse);
+    void AddArtificialActionWithResponse(string toolId, string actionResponse);
 
 
     /// <summary>
@@ -215,13 +215,13 @@ public interface IAiConversationOperations
     /// <typeparam name="TResponse">
     /// The CLR type of the response object. Must be a reference type.
     /// </typeparam>
-    /// <param name="toolName">
+    /// <param name="toolId">
     /// The name of the tool to simulate the agent called.
     /// </param>
     /// <param name="actionResponse">
     /// The response object to supply to the agent as the result of the simulated action.
     /// </param>
-    void AddArtificialActionWithResponse<TResponse>(string toolName, TResponse actionResponse) where TResponse : class;
+    void AddArtificialActionWithResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class;
 
     /// <summary>
     /// Sets the next user prompt to send to the AI agent.

@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents;
 internal class ConversionRequestBody : IDynamicJson
 {
     public List<AiAgentActionResponse> ActionResponses { get; set; }
-    public List<AiAgentArtificialAction> ArtificialActions { get; set; }
+    public List<AiAgentArtificialActionResponse> ArtificialActions { get; set; }
 
     public IEnumerable<ContentPart> UserPrompt { get; set; }
     public AiConversationCreationOptions CreationOptions { get; set; }

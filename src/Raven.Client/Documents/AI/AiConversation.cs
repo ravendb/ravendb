@@ -22,7 +22,7 @@ internal class AiConversation : IAiConversationOperations
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
     private readonly List<AiAgentActionResponse> _actionResponses = [];
-    private readonly List<AiAgentArtificialAction> _artificialActions = [];
+    private readonly List<AiAgentArtificialActionResponse> _artificialActions = [];
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     public string ChangeVector => _changeVector;
@@ -60,27 +60,27 @@ internal class AiConversation : IAiConversationOperations
         }
     }
     
-    public void AddArtificialActionWithResponse(string toolName, string actionResponse)
+    public void AddArtificialActionWithResponse(string toolId, string actionResponse)
     {
-        ValidationMethods.AssertNotNullOrEmpty(toolName, nameof(toolName));
+        ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
         ValidationMethods.AssertNotNullOrEmpty(actionResponse, nameof(actionResponse));
 
-        _artificialActions.Add(new AiAgentArtificialAction
+        _artificialActions.Add(new AiAgentArtificialActionResponse
         {
-            ToolName = toolName,
+            ToolId = toolId,
             Content = actionResponse,
         });
     }
 
-    public void AddArtificialActionWithResponse<TResponse>(string toolName, TResponse actionResponse) where TResponse : class
+    public void AddArtificialActionWithResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class
     {
-        ValidationMethods.AssertNotNullOrEmpty(toolName, nameof(toolName));
+        ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
         if (actionResponse == null)
-            throw new ArgumentNullException(nameof(actionResponse), $"Action response for '{toolName}' cannot be null.");
+            throw new ArgumentNullException(nameof(actionResponse), $"Action response for '{toolId}' cannot be null.");
 
         if (actionResponse is string str)
         {
-            AddArtificialActionWithResponse(toolName, str);
+            AddArtificialActionWithResponse(toolId, str);
             return;
         }
 
@@ -88,7 +88,7 @@ internal class AiConversation : IAiConversationOperations
         {
             var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
             var json = jsonSerializer.ToBlittable(actionResponse, context);
-            AddArtificialActionWithResponse(toolName, json.ToString());
+            AddArtificialActionWithResponse(toolId, json.ToString());
         }
     }
 

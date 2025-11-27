@@ -3,15 +3,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
-public class AiAgentArtificialAction : IDynamicJson
+public class AiAgentArtificialActionResponse : IDynamicJson
 {
-    public string ToolName;
+    public string ToolId;
     public string Content;
 
     public void Validate()
     {
-        if(string.IsNullOrWhiteSpace(ToolName))
-            throw new ArgumentException(nameof(ToolName));
+        if(string.IsNullOrWhiteSpace(ToolId))
+            throw new ArgumentException(nameof(ToolId));
         if(string.IsNullOrWhiteSpace(Content))
             throw new ArgumentException(nameof(Content));
     }
@@ -20,7 +20,7 @@ public class AiAgentArtificialAction : IDynamicJson
     {
         return new DynamicJsonValue
         {
-            [nameof(ToolName)] = ToolName,
+            [nameof(ToolId)] = ToolId,
             [nameof(Content)] = Content
         };
     }

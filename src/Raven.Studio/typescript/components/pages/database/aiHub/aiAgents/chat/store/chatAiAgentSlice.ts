@@ -168,7 +168,7 @@ const runChat = createAsyncThunk(
             databaseName,
             {
                 UserPrompt: getUserPrompt(toolCallParameters?.length ?? 0, formValues.prompts),
-                ArtificialActions: [], 
+                ArtificialActions: [],
                 ActionResponses: toolCallParameters?.map((x) => ({
                     ToolId: x.id,
                     Content: x.arguments,

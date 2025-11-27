@@ -354,7 +354,7 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, AiAgentActionResponse> ActionResponse = GenerateJsonDeserializationRoutine<AiAgentActionResponse>();
         
-        public static readonly Func<BlittableJsonReaderObject, AiAgentArtificialAction> AiAgentArtificialAction = GenerateJsonDeserializationRoutine<AiAgentArtificialAction>();
+        public static readonly Func<BlittableJsonReaderObject, AiAgentArtificialActionResponse> AiAgentArtificialAction = GenerateJsonDeserializationRoutine<AiAgentArtificialActionResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, AiConversationCreationOptions> ConversationCreationOptions = GenerateJsonDeserializationRoutine<AiConversationCreationOptions>();
     }

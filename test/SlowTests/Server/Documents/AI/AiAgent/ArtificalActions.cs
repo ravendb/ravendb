@@ -43,5 +43,5 @@ public class ArtificalActions(ITestOutputHelper output) : RavenTestBase(output)
         Assert.False(r.Answer.Recommend);
     }
 
-    public record ModelAnswer(bool Recommend, string Reason);
+    private record ModelAnswer(bool Recommend, string Reason);
 }
