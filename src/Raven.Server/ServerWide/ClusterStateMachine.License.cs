@@ -35,7 +35,6 @@ public sealed partial class ClusterStateMachine
     private const int MinBuildVersion60000 = 60_000;
     private const int MinBuildVersion60102 = 60_026;
     private const int MinBuildVersion60105 = 60_039;
-    private const int MinBuildVersion72000 = 72_000;
 
     private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
     {
@@ -1235,9 +1234,6 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (databaseRecord.RemoteAttachments == null || databaseRecord.RemoteAttachments.HasDestination())
-            return;
-
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion72000) == false)
             return;
 
         throw new LicenseLimitException(LimitType.RemoteAttachments, "Your license doesn't support adding the remote attachments configuration.");
