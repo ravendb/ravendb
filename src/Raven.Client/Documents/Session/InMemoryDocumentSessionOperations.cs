@@ -2314,30 +2314,10 @@ more responsive application.
 
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
-            foreach (var id in ids)
+            foreach (var (_, existsInSession) in GetDocumentsRequiredToLoad(ids, includes))
             {
-                if (_knownMissingIds.Contains(id))
-                    continue;
-
-                // Check if document was already loaded, the check if we've received it through include
-                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false &&
-                    IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
+                if (existsInSession == false)
                     return false;
-
-                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
-                    return false;
-
-                if (includes == null)
-                    continue;
-
-                foreach (var include in includes)
-                {
-                    var hasAll = true;
-                    IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
-
-                    if (hasAll == false)
-                        return false;
-                }
             }
 
             return true;
@@ -2348,6 +2328,7 @@ more responsive application.
         {
             foreach (var id in ids)
             {
+                
                 if (_knownMissingIds.Contains(id))
                 {
                     yield return (id, true);
@@ -2383,13 +2364,14 @@ more responsive application.
                     IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
 
                     if (hasAll == false)
+                    {
+                        yield return (id, false);
                         break;
+                    }
                 }
 
                 if (hasAll == false)
                 {
-                    // We missed at least one include, so we need to load the document
-                    yield return (id, false);
                     continue;
                 }
                 
