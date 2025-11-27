@@ -9,14 +9,14 @@ export class ChatbotStubs {
                 content: "Explain this view",
                 attachedContexts: [
                     {
-                        id: "1",
+                        id: "currentView",
                         type: "Current View",
                         label: "All Documents",
                         value: "All Documents",
                         state: "included",
                     },
                     {
-                        id: "2",
+                        id: "currentDatabaseName",
                         type: "Current Database Name",
                         label: "sample",
                         value: "sample",
@@ -58,14 +58,14 @@ export class ChatbotStubs {
                 content: "How to query all documents in collection?",
                 attachedContexts: [
                     {
-                        id: "1",
+                        id: "currentView",
                         type: "Current View",
                         label: "All Documents",
                         value: "All Documents",
                         state: "included",
                     },
                     {
-                        id: "2",
+                        id: "currentDatabaseName",
                         type: "Current Database Name",
                         label: "sample",
                         value: "sample",
@@ -114,14 +114,14 @@ export class ChatbotStubs {
                 content: "How to query all documents in collection?",
                 attachedContexts: [
                     {
-                        id: "1",
+                        id: "currentView",
                         type: "Current View",
                         label: "All Documents",
                         value: "All Documents",
                         state: "included",
                     },
                     {
-                        id: "2",
+                        id: "currentDatabaseName",
                         type: "Current Database Name",
                         label: "sample",
                         value: "sample",

@@ -47,9 +47,22 @@ function initRedux() {
     activeDatabaseTracker.default.database.subscribe((db) => {
         const dbName = db?.name ?? null;
         globalDispatch(databaseActions.activeDatabaseChanged(dbName));
-        globalDispatch(chatbotActions.attachedContextSet({ id: "currentDatabaseName", label: dbName, value: dbName }));
-        globalDispatch(chatbotActions.attachedContextReset("currentIndexDefinition"));
-        globalDispatch(chatbotActions.attachedContextReset("currentDocument"));
+        globalDispatch(
+            chatbotActions.attachedContextUpserted({
+                id: "currentDatabaseName",
+                type: "Current Database Name",
+                label: dbName,
+                value: dbName,
+                state: "included",
+            })
+        );
+        globalDispatch(
+            chatbotActions.attachedContextTypesRemoved([
+                "Current Document",
+                "Current Index Definition",
+                "Endpoints Response",
+            ])
+        );
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
@@ -141,10 +154,12 @@ function initRedux() {
 
     router.activeInstruction.subscribe((instruction) => {
         globalDispatch(
-            chatbotActions.attachedContextSet({
+            chatbotActions.attachedContextUpserted({
                 id: "currentView",
+                type: "Current View",
                 label: instruction?.config?.title,
                 value: instruction?.config?.title,
+                state: "included",
             })
         );
     });

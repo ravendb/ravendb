@@ -35,12 +35,12 @@ export default function ChatbotAskAiMessageEndpoints({
     const dispatch = useAppDispatch();
 
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
-    const alwaysAllowedEndpoints = useAppSelector(chatbotSelectors.alwaysAllowedEndpoints);
+    const conversationId = useAppSelector(chatbotSelectors.conversationId);
+    const hasAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.hasAlwaysAllowEndpointCalls);
+    const attachedContexts = useAppSelector(chatbotSelectors.attachedContexts);
 
     const endpointsArray = Object.values(endpoints).flatMap((x) => x);
-
     const hasOnlyDeniedEndpoints = endpointsArray.every((endpoint) => deniedEndpoints.includes(endpoint));
-    const hasOnlyAllowedEndpoints = endpointsArray.every((endpoint) => alwaysAllowedEndpoints.includes(endpoint));
 
     const asyncHandleAllow = useAsyncCallback(
         async () => {
@@ -54,7 +54,6 @@ export default function ChatbotAskAiMessageEndpoints({
                     };
 
                     const response = await tryCatch(() => fetch(endpoint));
-                    console.log("kalczur response", response);
                     if (response.status === "error") {
                         return { ...baseResult, status: "error", resultText: response.error };
                     }
@@ -62,13 +61,12 @@ export default function ChatbotAskAiMessageEndpoints({
                     if (!response.data.ok) {
                         const defaultErrorMessage = response.data.status + " " + response.data.statusText;
                         const jsonError = await tryCatch(() => response.data.json());
-                        console.log("kalczur jsonError", jsonError);
 
                         if (jsonError.status === "success") {
                             return {
                                 ...baseResult,
                                 status: "error",
-                                resultText: jsonError.data.Error?.slice(0, 100) ?? defaultErrorMessage,
+                                resultText: jsonError.data.Error?.slice(0, 200) ?? defaultErrorMessage,
                             };
                         }
 
@@ -80,13 +78,11 @@ export default function ChatbotAskAiMessageEndpoints({
                     }
 
                     const jsonResult = await tryCatch(() => response.data.json());
-                    console.log("kalczur jsonResult", jsonResult);
                     if (jsonResult.status === "success") {
                         return { ...baseResult, status: "success", resultText: JSON.stringify(jsonResult.data) };
                     }
 
                     const textResult = await tryCatch(() => response.data.text());
-                    console.log("kalczur textResult", textResult);
                     if (textResult.status === "success") {
                         return { ...baseResult, status: "success", resultText: textResult.data };
                     }
@@ -99,13 +95,19 @@ export default function ChatbotAskAiMessageEndpoints({
 
             for (const { toolId, endpoint, status, resultText } of results) {
                 if (status === "success") {
+                    const existingEndpoint = attachedContexts.find(
+                        (x) => x.type === "Endpoints Response" && x.label === endpoint
+                    );
+
+                    const id = existingEndpoint ? existingEndpoint.id : (`endpoint-${_.uniqueId()}` as const);
+
                     dispatch(
-                        chatbotActions.attachedContextAdded({
-                            id: `endpoint-${_.uniqueId()}`,
-                            type: "Endpoints Responses",
+                        chatbotActions.attachedContextUpserted({
+                            id,
+                            type: "Endpoints Response",
                             label: endpoint,
-                            value: resultText,
-                            state: "included",
+                            value: JSON.stringify({ endpoint, result: resultText }),
+                            state: "excluded",
                         })
                     );
                 }
@@ -115,7 +117,9 @@ export default function ChatbotAskAiMessageEndpoints({
                 };
             }
 
-            dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "allowed" } }));
+            const userActionState = results.some((x) => x.status === "error") ? "error" : "allowed";
+
+            dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState } }));
             dispatch(chatbotActions.runChat({ actionResponses }));
         },
         {
@@ -126,7 +130,7 @@ export default function ChatbotAskAiMessageEndpoints({
     );
 
     const handleAlwaysAllow = async () => {
-        dispatch(chatbotActions.alwaysAllowedEndpointsAdded(endpointsArray));
+        dispatch(chatbotActions.conversationsWithAlwaysAllowEndpointCallsAdded(conversationId));
         asyncHandleAllow.execute();
     };
 
@@ -145,15 +149,24 @@ export default function ChatbotAskAiMessageEndpoints({
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
-    // Deny -> Skip all (always)
     const handleDeny = () => {
-        // Skipped -> Denied
+        const actionResponses: Record<string, any> = {};
+
+        for (const toolId of Object.keys(endpoints)) {
+            for (const endpoint of endpoints[toolId]) {
+                actionResponses[toolId] = {
+                    [endpoint]: "Denied",
+                };
+            }
+        }
+
+        dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "denied" } }));
         dispatch(chatbotActions.deniedEndpointsAdded(endpointsArray));
-        handleSkip();
+        dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
     useEffect(() => {
-        if (hasOnlyAllowedEndpoints) {
+        if (hasAlwaysAllowEndpointCalls) {
             asyncHandleAllow.execute();
         }
     }, []);
@@ -226,10 +239,23 @@ export default function ChatbotAskAiMessageEndpoints({
                     </div>
                 ) : (
                     <div className="hstack justify-content-end mt-2">
+                        {userActionState === "denied" && (
+                            <Badge bg="secondary" className="rounded-pill">
+                                <Icon icon="cancel" />
+                                Denied
+                            </Badge>
+                        )}
                         {userActionState === "skipped" && (
                             <Badge bg="secondary" className="rounded-pill">
                                 <Icon icon="skip" />
                                 Skipped
+                            </Badge>
+                        )}
+
+                        {userActionState === "error" && (
+                            <Badge bg="danger" className="rounded-pill">
+                                <Icon icon="warning" />
+                                Error
                             </Badge>
                         )}
                         {userActionState === "allowed" && (

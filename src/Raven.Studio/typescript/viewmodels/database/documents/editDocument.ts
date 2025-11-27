@@ -1723,10 +1723,12 @@ class normalCrudActions implements editDocumentCrudActions {
 
         this.document.subscribe(doc => {
             if (doc) {
-                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextSet({
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                     id: "currentDocument",
+                    type: "Current Document",
                     label: doc.getId(),
-                    value: JSON.stringify(doc.toDto(true))
+                    value: JSON.stringify(doc.toDto(true)),
+                    state: "excluded"
                 }));
             }
         });

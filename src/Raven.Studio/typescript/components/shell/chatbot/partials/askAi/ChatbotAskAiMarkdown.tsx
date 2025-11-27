@@ -58,6 +58,7 @@ const markdownComponents: Components = {
 
         return <Code code={code} language={language} className="mb-2" />;
     },
+    li: ({ children }) => <li className="word-break">{children}</li>,
 };
 
 function getLanguageFromNode(node: Element): string {

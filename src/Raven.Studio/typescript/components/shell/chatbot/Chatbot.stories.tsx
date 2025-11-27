@@ -14,17 +14,33 @@ function commonInit() {
 
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
-    chatbot.with_attachedContextSet({ id: "currentView", label: "Edit Index", value: "Edit Index" });
-    chatbot.with_attachedContextSet({ id: "currentDatabaseName", label: "Sample DB", value: "Sample DB" });
-    chatbot.with_attachedContextSet({
+    chatbot.with_attachedContextUpserted({
+        id: "currentView",
+        type: "Current View",
+        label: "Edit Index",
+        value: "Edit Index",
+        state: "included",
+    });
+    chatbot.with_attachedContextUpserted({
+        id: "currentDatabaseName",
+        type: "Current Database Name",
+        label: "Sample DB",
+        value: "Sample DB",
+        state: "included",
+    });
+    chatbot.with_attachedContextUpserted({
         id: "currentDocument",
+        type: "Current Document",
         label: "products/78-A",
         value: '{"Name":"SomeName","Supplier":"suppliers/23-A","Category":"categories/1-A","QuantityPerUnit":"500 ml"',
+        state: "included",
     });
-    chatbot.with_attachedContextSet({
+    chatbot.with_attachedContextUpserted({
         id: "currentIndexDefinition",
+        type: "Current Index Definition",
         label: "Auto/Categories/ById()",
         value: '{"Name":"Auto/Categories/ById()","SourceType":"Documents","Type":"AutoMap"',
+        state: "included",
     });
 }
 
@@ -64,11 +80,11 @@ export const Endpoints: StoryObj<typeof Chatbot> = {
 
         const { chatbot } = mockStore;
 
-        for (let i = 0; i < 10; i++) {
-            const id = `endpoint-${_.uniqueId()}`;
-            chatbot.with_attachedContextAdded({
+        for (let i = 0; i < 40; i++) {
+            const id = `endpoint-${_.uniqueId()}` as const;
+            chatbot.with_attachedContextUpserted({
                 id,
-                type: "Endpoints Responses",
+                type: "Endpoints Response",
                 label: id,
                 value: '{"Name":"Auto/Categories/ById()","SourceType":"Documents","Type":"AutoMap"',
                 state: "included",

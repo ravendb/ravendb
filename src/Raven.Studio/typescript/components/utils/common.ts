@@ -85,7 +85,7 @@ export async function tryCatch<T>(promiseFn: () => Promise<T>): Promise<TryCatch
     } catch (error) {
         return {
             status: "error",
-            error: error instanceof Error ? error.message : "Unknown error // TODO first 100 characters",
+            error: error instanceof Error ? error.message : "Unknown error",
         };
     }
 }

@@ -51,34 +51,36 @@ export default function ChatbotPanelAskAi() {
             </div>
             <ChatbotMessages />
             <div className="prompt-wrapper">
-                <AttachedContext />
-                <FormInput
-                    type="textarea"
-                    as="textarea"
-                    control={control}
-                    name="prompt"
-                    placeholder="Ask anything"
-                    className="prompt-textarea"
-                    disabled={isPromptDisabled}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSubmit(handleSend)();
-                        }
-                    }}
-                />
-                {formValues.prompt && (
-                    <div className="hstack justify-content-end">
-                        <ButtonWithSpinner
-                            variant="secondary"
-                            icon="arrow-up"
-                            onClick={handleSubmit(handleSend)}
-                            className="rounded-pill p-0"
-                            style={{ width: "30px", height: "30px" }}
-                            isSpinning={isPromptDisabled}
-                        />
-                    </div>
-                )}
+                <div className="prompt-wrapper-inner">
+                    <AttachedContext />
+                    <FormInput
+                        type="textarea"
+                        as="textarea"
+                        control={control}
+                        name="prompt"
+                        placeholder="Ask anything"
+                        className="prompt-textarea"
+                        disabled={isPromptDisabled}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit(handleSend)();
+                            }
+                        }}
+                    />
+                    {formValues.prompt && (
+                        <div className="hstack justify-content-end">
+                            <ButtonWithSpinner
+                                variant="secondary"
+                                icon="arrow-up"
+                                onClick={handleSubmit(handleSend)}
+                                className="rounded-pill p-0"
+                                style={{ width: "30px", height: "30px" }}
+                                isSpinning={isPromptDisabled}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

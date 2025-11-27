@@ -10,22 +10,24 @@ import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotA
 import { aiAssistantActions } from "components/common/shell/aiAssistantSlice";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
-import { StringWithAutocomplete } from "components/utils/common";
 import { processStreamingResponse } from "components/utils/streamingUtils";
 import router from "plugins/router";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
-export type ChatbotUserActionState = "waiting" | "skipped" | "allowed";
+export type ChatbotUserActionState = "waiting" | "skipped" | "allowed" | "denied" | "error";
 
 type ChatbotRunChatData = {
     message?: string;
     actionResponses?: Record<string, any>;
 };
 
-export type ChatbotAttachedContextId = StringWithAutocomplete<
-    "currentView" | "currentDatabaseName" | "currentIndexDefinition" | "currentDocument"
->;
+export type ChatbotAttachedContextId =
+    | "currentView"
+    | "currentDatabaseName"
+    | "currentIndexDefinition"
+    | "currentDocument"
+    | `endpoint-${string}`;
 
 export type ChatbotAttachedContext = {
     id: ChatbotAttachedContextId;
@@ -34,7 +36,7 @@ export type ChatbotAttachedContext = {
         | "Current Database Name"
         | "Current Index Definition"
         | "Current Document"
-        | "Endpoints Responses";
+        | "Endpoints Response";
     value: string;
     label: string;
     state: "included" | "excluded";
@@ -76,7 +78,7 @@ interface ChatbotState {
     lastRunData: ChatbotRunChatData;
     attachedContexts: EntityState<ChatbotAttachedContext, string>;
     deniedEndpoints: string[];
-    alwaysAllowedEndpoints: string[];
+    conversationsWithAlwaysAllowEndpointCalls: string[];
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -100,37 +102,8 @@ const initialState: ChatbotState = {
     messages: chatbotMessagesAdapter.getInitialState(),
     lastRunData: null,
     deniedEndpoints: [],
-    alwaysAllowedEndpoints: [],
-    attachedContexts: chatbotAttachedContextAdapter.getInitialState(undefined, [
-        {
-            id: "currentView",
-            type: "Current View",
-            label: null,
-            value: null,
-            state: "included",
-        },
-        {
-            id: "currentDatabaseName",
-            type: "Current Database Name",
-            label: null,
-            value: null,
-            state: "excluded",
-        },
-        {
-            id: "currentIndexDefinition",
-            type: "Current Index Definition",
-            label: null,
-            value: null,
-            state: "excluded",
-        },
-        {
-            id: "currentDocument",
-            type: "Current Document",
-            label: null,
-            value: null,
-            state: "excluded",
-        },
-    ]),
+    conversationsWithAlwaysAllowEndpointCalls: [],
+    attachedContexts: chatbotAttachedContextAdapter.getInitialState(),
 };
 
 export const chatbotSlice = createSlice({
@@ -167,24 +140,18 @@ export const chatbotSlice = createSlice({
         lastRunDataSet: (state, action: PayloadAction<ChatbotRunChatData>) => {
             state.lastRunData = action.payload;
         },
-        attachedContextRemoved: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
-            chatbotAttachedContextAdapter.removeOne(state.attachedContexts, action.payload);
-        },
-        attachedContextAdded: (state, action: PayloadAction<ChatbotAttachedContext>) => {
-            chatbotAttachedContextAdapter.addOne(state.attachedContexts, action.payload);
-        },
-        attachedContextSet: (
-            state,
-            action: PayloadAction<{ id: ChatbotAttachedContextId; label: string; value: string }>
-        ) => {
-            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
-                id: action.payload.id,
-                changes: {
-                    value: action.payload.value,
-                    label: action.payload.label,
-                    state: "included",
-                },
-            });
+        attachedContextUpserted: (state, action: PayloadAction<ChatbotAttachedContext, "id">) => {
+            const { id, ...rest } = action.payload;
+            const isExisting = chatbotAttachedContextSelectors.selectById(state.attachedContexts, id);
+
+            if (isExisting) {
+                chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
+                    id,
+                    changes: rest,
+                });
+            } else {
+                chatbotAttachedContextAdapter.addOne(state.attachedContexts, action.payload);
+            }
         },
         attachedContextExcluded: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
             chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
@@ -198,17 +165,31 @@ export const chatbotSlice = createSlice({
                 changes: { state: "included" },
             });
         },
-        attachedContextReset: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
-            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
-                id: action.payload,
-                changes: { label: null, value: null, state: "excluded" },
-            });
+        attachedContextTypesExcluded: (state, action: PayloadAction<ChatbotAttachedContext["type"][]>) => {
+            chatbotAttachedContextAdapter.updateMany(
+                state.attachedContexts,
+                chatbotAttachedContextSelectors
+                    .selectAll(state.attachedContexts)
+                    .filter((x) => action.payload.includes(x.type))
+                    .map((x) => ({ id: x.id, changes: { state: "excluded" } }))
+            );
+        },
+        attachedContextTypesRemoved: (state, action: PayloadAction<ChatbotAttachedContext["type"][]>) => {
+            chatbotAttachedContextAdapter.removeMany(
+                state.attachedContexts,
+                chatbotAttachedContextSelectors
+                    .selectAll(state.attachedContexts)
+                    .filter((x) => action.payload.includes(x.type))
+                    .map((x) => x.id)
+            );
         },
         deniedEndpointsAdded: (state, action: PayloadAction<string[]>) => {
             state.deniedEndpoints = [...new Set([...state.deniedEndpoints, ...action.payload])];
         },
-        alwaysAllowedEndpointsAdded: (state, action: PayloadAction<string[]>) => {
-            state.alwaysAllowedEndpoints = [...new Set([...state.alwaysAllowedEndpoints, ...action.payload])];
+        conversationsWithAlwaysAllowEndpointCallsAdded: (state, action: PayloadAction<string>) => {
+            state.conversationsWithAlwaysAllowEndpointCalls = [
+                ...new Set([...state.conversationsWithAlwaysAllowEndpointCalls, action.payload]),
+            ];
         },
     },
     extraReducers: (builder) => {
@@ -279,9 +260,7 @@ const runChat = createAsyncThunk(
                     View: viewTitle,
                     ConversationId: chatbot.conversationId,
                     ActionsResponses: payload.actionResponses,
-                    AdditionalAttachedContext: Object.fromEntries(
-                        attachedContexts.map((context) => [context.type, context.value])
-                    ),
+                    AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),
                 }),
             streamPropertyPath: "Response.Answer",
             onChunksCombined(text) {
@@ -320,6 +299,22 @@ const runChat = createAsyncThunk(
         };
     }
 );
+
+function getAdditionalAttachedContext(attachedContexts: ChatbotAttachedContext[]): Record<string, any> {
+    const result: Record<string, any> = Object.fromEntries(
+        attachedContexts.filter((x) => x.type !== "Endpoints Response").map((context) => [context.type, context.value])
+    );
+
+    const endpointResponses = attachedContexts.filter((x) => x.type === "Endpoints Response");
+
+    if (endpointResponses.length) {
+        result["EndpointResponses"] = Object.fromEntries(
+            endpointResponses.map((context) => [context.label, context.value])
+        );
+    }
+
+    return result;
+}
 
 function getUserActionState(data: RunChatbotAiAssistantResultDto): ChatbotUserActionState {
     if (!_.isEmpty(data.AdditionalContext) || !_.isEmpty(data.Endpoints)) {
@@ -360,5 +355,8 @@ export const chatbotSelectors = {
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
-    alwaysAllowedEndpoints: (state: RootState) => state.chatbot.alwaysAllowedEndpoints,
+    conversationsWithAlwaysAllowEndpointCalls: (state: RootState) =>
+        state.chatbot.conversationsWithAlwaysAllowEndpointCalls,
+    hasAlwaysAllowEndpointCalls: (state: RootState) =>
+        state.chatbot.conversationsWithAlwaysAllowEndpointCalls.includes(state.chatbot.conversationId),
 };

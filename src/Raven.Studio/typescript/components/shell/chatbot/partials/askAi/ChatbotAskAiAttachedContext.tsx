@@ -98,7 +98,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
                 return "index";
             case "Current Document":
                 return "document";
-            case "Endpoints Responses":
+            case "Endpoints Response":
                 return "endpoint";
             default:
                 assertUnreachable(item.type);
@@ -106,7 +106,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     };
 
     return (
-        <PopoverWithHoverWrapper message={`Size: ${genUtils.formatBytesToSize(sizeInBytes)}`}>
+        <PopoverWithHoverWrapper message={`Size: ${genUtils.formatBytesToSize(sizeInBytes)}`} wrapperClassName="mw-100">
             <div
                 className={classNames(
                     "hstack rounded-2 border border-secondary text-truncate",
@@ -123,9 +123,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             >
                 <Icon icon={getIconName()} color={getIconColor()} />
                 <span className="text-truncate">{item.label}</span>
-                {sizeInBytes > 1024 && item.state === "included" && (
-                    <Icon icon="warning" color="warning" margin="ms-1" />
-                )}
+                {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
             </div>
         </PopoverWithHoverWrapper>
     );
