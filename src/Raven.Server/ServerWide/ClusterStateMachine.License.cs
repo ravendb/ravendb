@@ -1200,6 +1200,7 @@ public sealed partial class ClusterStateMachine
             }
         }
     }
+
     internal void AssertClusterSizeAndCores(ServerStore serverStore, LicenseStatus licenseStatus)
     {
         if (serverStore.IsPassive())
@@ -1224,6 +1225,17 @@ public sealed partial class ClusterStateMachine
 
         if (licenseStatus.HasSnmpMonitoring == false)
             throw new LicenseLimitException(LimitType.Snmp, message);
+    }
+
+    private void AssertSchemaValidationConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasSchemaValidation)
+            return;
+
+        if (databaseRecord.SchemaValidation == null || databaseRecord.SchemaValidation.Disabled)
+            return;
+
+        throw new LicenseLimitException(LimitType.SchemaValidation, "Your license doesn't support adding the schema validation configuration.");
     }
 
     private enum DatabaseRecordElementType
