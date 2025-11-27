@@ -14,7 +14,7 @@ public class SchemaValidationBasicTests : RavenTestBase
 {
     public SchemaValidationBasicTests(ITestOutputHelper output) : base(output) { }
 
-    [RavenTheory(RavenTestCategory.ClientApi)]
+    [RavenTheory(RavenTestCategory.ClientApi, LicenseRequired = true)]
     [InlineData("Users")]
     [InlineData("users")]
     public async Task Store(string collection)
