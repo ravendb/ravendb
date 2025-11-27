@@ -28,7 +28,10 @@ jest.mock("../typescript/common/versionProvider");
 
 jest.mock('plugins/router', () => ({
     activate: jest.fn(),
-    navigate: jest.fn()
+    navigate: jest.fn(),
+    activeInstruction: {
+        subscribe: jest.fn()
+    },
 }));
 jest.mock('plugins/dialog', () => ({
 }));
