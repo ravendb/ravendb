@@ -1558,6 +1558,66 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (node.Method.DeclaringType == typeof(MemoryExtensions) &&
+                node.Method.Name is "Contains" or "ContainsAny" &&
+                node.Arguments.Count > 1)
+            {
+                var firstArgument = node.Arguments[0];
+                if (firstArgument is MethodCallExpression { Method.Name: "op_Implicit" } firstCall)
+                    firstArgument = firstCall.Arguments[0];
+
+                var secondArgument = node.Arguments[1];
+                if (secondArgument is MethodCallExpression { Method.Name: "op_Implicit" } secondCall)
+                    secondArgument = secondCall.Arguments[0];
+
+                // T from MemoryExtensions.Contains<T>(ReadOnlySpan<T>, T)
+                Type elementType = null;
+                if (node.Method.IsGenericMethod)
+                    elementType = node.Method.GetGenericArguments().FirstOrDefault();
+
+                switch (node.Method.Name)
+                {
+                    case "Contains": // array.Contains((T)(...expr...))
+                        Visit(firstArgument);
+                        Out(".");
+                        Out("Contains");
+                        Out("(");
+
+                        if (elementType != null && TypeExistsOnServer(elementType))
+                        {
+                            // (T)( <secondArgument> )
+                            Out("(");
+                            Out(ConvertTypeToCSharpKeyword(elementType, out _));
+                            Out(")");
+                            Out("(");
+                            Visit(secondArgument);
+                            Out(")");
+                        }
+                        else
+                        {
+                            // no known T, just emit as is
+                            Visit(secondArgument);
+                        }
+
+                        Out(")");
+                        break;
+                    case "ContainsAny": // array1.Intersect(array2).Any()
+                        Visit(firstArgument);
+                        Out(".");
+                        Out("Intersect");
+                        Out("(");
+                        Visit(secondArgument);
+                        Out(")");
+                        Out(".");
+                        Out("Any");
+                        Out("(");
+                        Out(")");
+                        break;
+                }
+
+                return node;
+            }
+
             if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
             {
                 if (TypeExistsOnServer(node.Type) == false)
