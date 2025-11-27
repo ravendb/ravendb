@@ -67,7 +67,7 @@ function map(name, lambda) {
             engine.SetClrFunc("id", GetDocumentId);
             
             var schemaValidatorObject = new JsObject(engine);
-            schemaValidatorObject.SetClfFunc("validate", SchemaValidate);
+            schemaValidatorObject.SetClfFunc("getErrorsFor", GetErrorsFor);
             engine.SetValue("schema", schemaValidatorObject);
         }
 

@@ -77,7 +77,7 @@ namespace FastTests.Client
                 "DeleteRevisionsCommand", "ConfigureRevisionsBinCleanerCommand",
                 "GetCollectionRevisionsStatisticsCommand", "AddGenAiCommand","UpdateGenAiCommand", "AddEmbeddingsGenerationCommand",
                 "AddOrUpdateAiAgentOperationCommand","DeleteAiAgentOperationCommand","RunConversationOperationCommand","GetAiAgentOperationCommand",
-                "ConfigureSchemaValidationCommand", "GetSchemaValidationCommand", "ValidateSchemaCommand"
+                "ConfigureSchemaValidationCommand", "GetSchemaValidationCommand", "StartSchemaValidationCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

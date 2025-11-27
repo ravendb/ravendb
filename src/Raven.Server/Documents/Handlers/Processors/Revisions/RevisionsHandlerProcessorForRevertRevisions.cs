@@ -17,6 +17,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         protected override void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
         {
             var collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
+            
+            var schemaValidationCache = RequestHandler.Database.SchemaValidatorCache;
+            
+            if(schemaValidationCache.Disabled == false && collections == null
+                || schemaValidationCache.IsSchemaEnabledForAny(configuration.Collections))
+                throw new InvalidOperationException("Reverting documents to revisions is not allowed when Schema Validation is enabled. Please disable Schema Validation and try again.");
 
             var t = RequestHandler.Database.Operations.AddLocalOperation(
                 operationId,

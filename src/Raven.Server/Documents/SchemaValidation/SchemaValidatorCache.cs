@@ -21,7 +21,7 @@ public class SchemaValidatorCache : IDisposable
     private readonly RavenLogger _logger;
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
-    private bool _disabled;
+    public bool Disabled { get; private set; } = true;
 
     public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, DatabaseNotificationCenter notificationCenter, RavenLogger logger)
         where T : JsonOperationContext
@@ -43,7 +43,7 @@ public class SchemaValidatorCache : IDisposable
         if (configuration == null)
             return;
 
-        _disabled = configuration.Disabled;
+        Disabled = configuration.Disabled;
 
         if (configuration.ValidatorsPerCollection == null || configuration.ValidatorsPerCollection.Count == 0)
         {
@@ -110,7 +110,7 @@ public class SchemaValidatorCache : IDisposable
     private bool Validate(JsonOperationContext context, string collection, BlittableJsonReaderObject document, out string error)
     {
         error = null;
-        if (_schemaValidatorsPerCollection == null || _disabled)
+        if (_schemaValidatorsPerCollection == null || Disabled)
             return true;
 
         if (_schemaValidatorsPerCollection.TryGetValue(collection, out var validator) == false)
@@ -131,7 +131,7 @@ public class SchemaValidatorCache : IDisposable
 
     public bool Validate(string collection, BlittableJsonReaderObject document, ErrorBuilder errorBuilder)
     {
-        if (_schemaValidatorsPerCollection == null || _disabled)
+        if (_schemaValidatorsPerCollection == null || Disabled)
             return true;
 
         if (_schemaValidatorsPerCollection.TryGetValue(collection, out var validator) == false)
@@ -141,6 +141,20 @@ public class SchemaValidatorCache : IDisposable
             return true;
 
         return validator.Validate(document, errorBuilder);
+    }
+    
+    public bool IsSchemaEnabledForAny(string[] collections)
+    {
+        if (Disabled)
+            return false;
+
+        foreach (var collection in collections)
+        {
+            if (_schemaValidatorsPerCollection.TryGetValue(collection, out var validator) && validator.Disabled == false)
+                return true;
+        }
+
+        return false;
     }
 
     public void Dispose()
