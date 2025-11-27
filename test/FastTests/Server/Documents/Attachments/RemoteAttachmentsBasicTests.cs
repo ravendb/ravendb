@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Attachments
         {
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, LicenseRequired = true)]
         public async Task CanPutAndGetRemoteAttachmentsConfigurationWithCaseInsensitiveIdentifier()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, LicenseRequired = true)]
         public async Task CanPutAndGetRemoteAttachmentsConfigurationWithDefaultRemoteFrequencyInSec()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, LicenseRequired = true)]
         public async Task CanPutAndGetRemoteAttachmentsConfiguration()
         {
             using (var store = GetDocumentStore())
@@ -145,7 +145,7 @@ namespace FastTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, LicenseRequired = true)]
         public async Task CanPutAndUpdateRemoteAttachmentsConfiguration()
         {
             using (var store = GetDocumentStore())
