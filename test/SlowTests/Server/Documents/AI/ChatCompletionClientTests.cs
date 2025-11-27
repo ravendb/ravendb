@@ -50,7 +50,7 @@ public class ChatCompletionClientTests : RavenTestBase
 }";
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi ,DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiClientSanityTest(Options options, GenAiConfiguration configuration)
     {
         using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests())))
@@ -179,7 +179,7 @@ public class ChatCompletionClientTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI, DatabaseMode = RavenDatabaseMode.Single)]
     // Ollama Doesn't refuse
     public async Task RefuseToAnswer(Options options, GenAiConfiguration configuration)
     {

@@ -639,79 +639,63 @@ internal class ChatCompletionClient : IDisposable
     }
 
     [DoesNotReturn]
-    private void HandleUnsuccessfulResponse(HttpResponseMessage response, BlittableJsonReaderObject responseContent)
+    private void HandleUnsuccessfulResponse(HttpResponseMessage response, BlittableJsonReaderObject content)
     {
         var headers = response.Headers;
         var reqId = GetRequestId(headers);
 
-        if (responseContent.TryGet(Constants.ResponseFields.Error, out BlittableJsonReaderObject errBjo) is false || errBjo.TryGet(Constants.ResponseFields.Message, out string message) is false)
-            throw UnexpectedResponseException.Create(message: "Unexpected response", response, responseContent);
+        var error = _settings.ParseError(content, response);
+        var message = error.Message;
 
-        switch (response.StatusCode)
+        switch (error.ErrorType)
         {
-            case HttpStatusCode.TooManyRequests:
-
-                if (errBjo.TryGet(Constants.ResponseFields.ErrorType, out string type) == false)
-                    throw UnexpectedResponseException.Create(message: "No type specified", response, responseContent);
-
-                switch (type)
+            case ErrorType.InsufficientQuota:
+                throw new InsufficientQuotaException(message)
                 {
-                    case Constants.ResponseFields.ErrorTypeInsufficientQuota:
-                        throw new InsufficientQuotaException(message)
-                        {
-                            RequestId = reqId
-                        };
-
-                    case Constants.ResponseFields.ErrorTypeTokens:
-                    case Constants.ResponseFields.ErrorTypeRequests:
-
-                        var retryAfter = TimeSpan.Zero;
-                        if (headers.Contains(Constants.Headers.RetryAfter) == false)
-                        {
-                            throw new TooManyTokensException(message)
-                            {
-                                RequestId = reqId
-                            };
-                        }
-
-                        if (headers.TryGetValues(Constants.Headers.TokensResetTime, out var resetTokensValues))
-                        {
-                            // TPM
-                            var retryAfterAsString = resetTokensValues.FirstOrDefault();
-                            if (TryParseResetTime(retryAfterAsString, out retryAfter) == false)
-                                throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
-                        }
-
-                        if (headers.TryGetValues(Constants.Headers.RequestsResetTime, out var resetRequestsValues))
-                        {
-                            // RPM
-                            var retryAfterAsString = resetRequestsValues.FirstOrDefault();
-                            if (TryParseResetTime(retryAfterAsString, out var retryAfterForReqs) == false)
-                                throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
-
-                            retryAfter = retryAfterForReqs > retryAfter ? retryAfterForReqs : retryAfter;
-                        }
-
-                        // TPM/RPM - should retry only for this exception
-                        throw new
-                            RateLimitException(message)
-                            {
-                                RetryAfter = retryAfter,
-                                RequestId = reqId
-                            };
-                    default:
-                        throw new TooManyRequestsException(message)
-                        {
-                            RequestId = reqId
-                        };
+                    RequestId = reqId
+                };
+            case ErrorType.Other429:
+            case ErrorType.TooManyTokens:
+            case ErrorType.TooManyRequests:
+                var retryAfter = TimeSpan.Zero;
+                if (headers.Contains("retry-after-ms") == false && headers.Contains("retry-after") == false)
+                {
+                    throw new TooManyTokensException(message)
+                    {
+                        RequestId = reqId
+                    };
                 }
+
+                if (headers.TryGetValues("x-ratelimit-reset-tokens", out var resetTokensValues))
+                {
+                    // TPM
+                    var retryAfterAsString = resetTokensValues.FirstOrDefault();
+                    if (TryParseResetTime(retryAfterAsString, out retryAfter) == false)
+                        throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
+                }
+
+                if (headers.TryGetValues("x-ratelimit-reset-requests", out var resetRequestsValues))
+                {
+                    // RPM
+                    var retryAfterAsString = resetRequestsValues.FirstOrDefault();
+                    if (TryParseResetTime(retryAfterAsString, out var retryAfterForReqs) == false)
+                        throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
+
+                    retryAfter = retryAfterForReqs > retryAfter ? retryAfterForReqs : retryAfter;
+                }
+
+                // TPM/RPM - should retry only for this exception
+                throw new
+                    RateLimitException(message)
+                    {
+                        RetryAfter = retryAfter,
+                        RequestId = reqId
+                    };
+            case ErrorType.RefusedToAnswer:
+                RefusedToAnswerException.Throw(message, content.ToString(), null, reqId);
+                break;
             default:
-                if (errBjo.TryGet("code", out string errorCode) && errorCode == "content_filter")
-                {
-                    RefusedToAnswerException.Throw("content_filter", responseContent.ToString(), "content_filter", reqId);
-                }
-
-                UnsuccessfulRequestException.Throw(responseContent.ToString(), response.StatusCode, reqId);
+                UnsuccessfulRequestException.Throw(content.ToString(), response.StatusCode, reqId);
                 break;
         }
     }
@@ -955,6 +939,7 @@ internal class ChatCompletionClient : IDisposable
             public const string Refusal = "refusal";
             public const string Usage = "usage";
             public const string Error = "error";
+            public const string ErrorCode = "code";
             public const string ErrorType = "type";
             public const string ErrorTypeInsufficientQuota = "insufficient_quota";
             public const string ErrorTypeTokens = "tokens";
