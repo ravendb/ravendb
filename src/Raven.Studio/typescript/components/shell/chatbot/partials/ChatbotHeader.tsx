@@ -13,8 +13,13 @@ export default function ChatbotHeader() {
     const resetConversation = () => {
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
-        dispatch(chatbotActions.attachedContextTypesExcluded(["Current Document", "Current Index Definition"]));
-        dispatch(chatbotActions.attachedContextTypesRemoved(["Endpoints Response"]));
+        dispatch(
+            chatbotActions.attachedContextTypesRemoved([
+                "Current Document",
+                "Current Index Definition",
+                "Endpoints Response",
+            ])
+        );
     };
 
     return (
