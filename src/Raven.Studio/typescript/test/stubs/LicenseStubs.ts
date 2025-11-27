@@ -129,6 +129,7 @@ export class LicenseStubs {
             HasDataArchival: true,
             HasRevisionsInSubscriptions: true,
             HasMultiNodeSharding: true,
+            HasSchemaValidation: true,
             MaxNumberOfRevisionsToKeep: null,
             MaxNumberOfRevisionAgeToKeepInDays: null,
             MinPeriodForExpirationInHours: null,
