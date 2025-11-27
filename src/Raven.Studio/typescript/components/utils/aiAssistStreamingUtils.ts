@@ -7,7 +7,9 @@ interface ProcessStreamingResponseOptions<T extends object> {
     onChunksCombined?: (text: string) => void;
 }
 
-type ProcessStreamingResult<T extends object> = { status: "error"; error: string } | { status: "success"; data: T };
+type ProcessStreamingResult<T extends object> =
+    | { status: Exclude<AiAssistantResponseStatus, "Success"> | "Error"; error: string }
+    | { status: "Success"; data: T };
 
 export async function processStreamingResponse<T extends object>({
     promiseFn,
@@ -22,13 +24,19 @@ export async function processStreamingResponse<T extends object>({
             if (!response.ok) {
                 try {
                     const data = await response.json();
-                    return { status: "error", error: data.Message };
+
+                    // Get internal Status such as ConsentRequired, OutOfTokens, etc.
+                    if (expectedErrorStatuses.includes(response.status) && data.Status) {
+                        return { status: data.Status, error: data.Status };
+                    }
+
+                    return { status: "Error", error: data.Message };
                 } catch (error) {
-                    return { status: "error", error: error instanceof Error ? error.message : "Unknown error" };
+                    return { status: "Error", error: error instanceof Error ? error.message : "Unknown error" };
                 }
             }
 
-            return { status: "success", data: await response.json() };
+            return { status: "Success", data: await response.json() };
         }
 
         const reader = response.body.getReader();
@@ -51,24 +59,30 @@ export async function processStreamingResponse<T extends object>({
                 }
 
                 const dataString = line.trim().replace("data: ", "");
-                const data: { text: string | T; done: boolean } = JSON.parse(dataString);
+                const data: { text: string | T; type: "Ongoing" | "Done" | "Error" } = JSON.parse(dataString);
 
-                if (!data.done && typeof data.text === "string") {
+                if (data.type === "Error") {
+                    return { status: "Error", error: "Unknown error" };
+                }
+
+                if (data.type === "Ongoing" && typeof data.text === "string") {
                     streamText += data.text;
                     onChunk?.(data.text);
                     onChunksCombined?.(streamText);
                 }
 
-                if (data.done && typeof data.text === "object") {
+                if (data.type === "Done" && typeof data.text === "object") {
                     const result = { ...data.text };
                     _.set(result, streamPropertyPath, streamText);
-                    return { status: "success", data: result };
+                    return { status: "Success", data: result };
                 }
             }
         }
 
-        return { status: "error", error: "Failed to get the final response" };
+        return { status: "Error", error: "Failed to get the final response" };
     } catch (error) {
-        return { status: "error", error: error instanceof Error ? error.message : "Unknown error" };
+        return { status: "Error", error: error instanceof Error ? error.message : "Unknown error" };
     }
 }
+
+const expectedErrorStatuses = [401, 429];

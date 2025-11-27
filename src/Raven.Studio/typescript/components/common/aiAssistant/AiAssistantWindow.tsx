@@ -17,7 +17,7 @@ import { aiAssistantConstants } from "./aiAssistantConstants";
 import AiAssistantConsentStatusChecker from "./AiAssistantConsentStatusChecker";
 import { loadableData } from "components/models/common";
 import { createFailureState, createIdleState, createLoadingState, createSuccessState } from "components/utils/common";
-import { processStreamingResponse } from "components/utils/streamingUtils";
+import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import useTypewriter from "components/hooks/useTypewriter";
 
@@ -65,13 +65,18 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
             },
         });
 
-        if (result.status === "error") {
+        if (result.status === "Error") {
             setAssistResult(createFailureState(result.error));
             return;
         }
 
-        dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
-        setAssistResult(createSuccessState(result.data));
+        if (result.status === "Success") {
+            dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
+            setAssistResult(createSuccessState(result.data));
+            return;
+        }
+
+        setAssistResult(createSuccessState({ Status: result.status, UsagePercentage: 0, RefinedPrompt: "" }));
     }, []);
 
     const refinedPromptTypewriter = useTypewriter({

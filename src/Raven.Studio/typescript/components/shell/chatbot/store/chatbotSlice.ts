@@ -10,7 +10,7 @@ import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotA
 import { aiAssistantActions } from "components/common/shell/aiAssistantSlice";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
-import { processStreamingResponse } from "components/utils/streamingUtils";
+import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
 import router from "plugins/router";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
@@ -273,10 +273,10 @@ const runChat = createAsyncThunk(
             },
         });
 
-        if (result.status === "error") {
+        if (result.status !== "Success") {
             return {
                 ...assistantMessage,
-                state: "Error",
+                state: result.status,
                 errorMessage: result.error,
             };
         }

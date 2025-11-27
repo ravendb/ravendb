@@ -14,6 +14,20 @@ export default class checkUsageAiAssistantCommand extends commandBase {
     execute(): JQueryPromise<CheckUsageAiAssistantResultDto> {
         const url = endpoints.global.aiAssistant.assistantCheckUsage;
 
-        return this.query<CheckUsageAiAssistantResultDto>(url, null);
+        const deferred = $.Deferred<CheckUsageAiAssistantResultDto>();
+
+        this.query<CheckUsageAiAssistantResultDto>(url, null)
+            .done((result) => deferred.resolve(result))
+            .fail((xhr: JQueryXHR) => {
+                if (xhr.status === 401 && xhr.responseJSON?.Status) {
+                    deferred.resolve({
+                        Status: xhr.responseJSON.Status,
+                    });
+                } else {
+                    deferred.reject(xhr);
+                }
+            });
+
+        return deferred;
     }
 }

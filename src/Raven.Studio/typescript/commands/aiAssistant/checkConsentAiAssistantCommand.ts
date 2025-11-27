@@ -13,6 +13,20 @@ export default class checkConsentAiAssistantCommand extends commandBase {
     execute(): JQueryPromise<CheckConsentAiAssistantResultDto> {
         const url = endpoints.global.aiAssistant.assistantCheckConsent;
 
-        return this.query<CheckConsentAiAssistantResultDto>(url, null);
+        const deferred = $.Deferred<CheckConsentAiAssistantResultDto>();
+
+        this.query<CheckConsentAiAssistantResultDto>(url, null)
+            .done((result) => deferred.resolve(result))
+            .fail((xhr: JQueryXHR) => {
+                if (xhr.status === 401 && xhr.responseJSON?.Status) {
+                    deferred.resolve({
+                        Status: xhr.responseJSON.Status,
+                    });
+                } else {
+                    deferred.reject(xhr);
+                }
+            });
+
+        return deferred;
     }
 }
