@@ -189,22 +189,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void MarkAsRemoteAttachment(DocumentsOperationContext context, BlittableJsonReaderObject attachmentMetadata, Slice lowerDocumentId, string documentId)
+        public void MarkAsRemoteAttachment(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, LazyStringValue name, LazyStringValue contentType, LazyStringValue hash, long size)
         {
-            // we have attachment that should be remote
-            if (attachmentMetadata.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
-                attachmentMetadata.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
-                attachmentMetadata.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                attachmentMetadata.TryGet(nameof(AttachmentName.Size), out long size) == false)
-                throw new ArgumentException($"The attachment info is missing a mandatory value: {attachmentMetadata}");
-
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out var nameSlice))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out var contentTypeSlice))
             using (Slice.External(context.Allocator, hash, out var hashSlice))
             using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                        hashSlice, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
-                if (TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out var documentTvr) == false)
+                if (TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out _) == false)
                     throw new DocumentDoesNotExistException($"Cannot update metadata of remote attachment '{name}' on a non existent document '{documentId}'.");
 
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);

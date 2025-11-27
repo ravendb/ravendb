@@ -4,5 +4,7 @@ public enum BackgroundWorkInfoStatus
 {
     Process,
     Delete,
-    Conflict
+    Conflict,
+    Retry,
+    Skip
 }

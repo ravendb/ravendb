@@ -12,6 +12,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Documents.PeriodicBackup;
@@ -32,7 +33,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents;
 
-public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<AttachmentRemoteInfo>
+public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentExpirationInfo>
 {
     private DocumentInfoHelper _documentInfoHelper;
     private readonly RavenLogger _logger;
@@ -78,32 +79,13 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
         }
     }
 
-    protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string docId, DateTime currentTime)
-    {
-        using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
-        {
-            if (doc == null || doc.TryGetMetadata(out var metadata) == false)
-                return;
-
-            if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return;
-
-            foreach (var attachmentInMetadata in EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(attachments, currentTime, ShouldSkipItem))
-            {
-                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, attachmentInMetadata, lowerId, docId);
-            }
-
-            Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, docId);
-        }
-    }
-
     public void Put(DocumentsOperationContext context, Slice attachmentKey, string processDateString, string identifier)
     {
         using (AttachmentsStorage.AttachmentKey.ExtractLowerDocumentIdSliceFromAttachmentKey(context, attachmentKey, out var lowerDocumentId))
             base.Put(context, lowerDocumentId, processDateString);
     }
 
-    protected override AttachmentRemoteInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice docId, Slice ticksSlice)
+    protected override DocumentExpirationInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice docId, Slice ticksSlice)
     {
         using (var doc = Database.DocumentsStorage.Get(options.Context, docId, DocumentFields.Data | DocumentFields.Id))
         {
@@ -112,17 +94,17 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
                 || metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
                 // doc was deleted
-                return new AttachmentRemoteInfo(ticksSlice, docId, null, BackgroundWorkInfoStatus.Delete);
+                return new DocumentExpirationInfo(ticksSlice, docId, null, BackgroundWorkInfoStatus.Delete);
             }
 
             foreach (var _ in EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(attachments, options.CurrentTime, ShouldSkipItem))
             {
                 // this document has at least one attachment to upload
-                return new AttachmentRemoteInfo(ticksSlice, docId, doc.Id, BackgroundWorkInfoStatus.Process);
+                return new DocumentExpirationInfo(ticksSlice, docId, doc.Id, BackgroundWorkInfoStatus.Process);
             }
 
             // nothing to upload
-            return new AttachmentRemoteInfo(ticksSlice, docId, null, BackgroundWorkInfoStatus.Delete);
+            return new DocumentExpirationInfo(ticksSlice, docId, null, BackgroundWorkInfoStatus.Delete);
         }
     }
 
@@ -180,13 +162,18 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
             tree.MultiDelete(ticksSlice, lowerDocumentId);
     }
 
-    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<AttachmentRemoteInfo> expiredDocs, ref int totalCount)
+    protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string identifier, DateTime currentTime)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
         (bool allShouldRemote, string id) = GetConflictedRemoteAttachment(options.Context, options.CurrentTime, clonedId);
 
         if (allShouldRemote)
         {
-            expiredDocs.Enqueue(id == null ? new AttachmentRemoteInfo(ticksAsSlice, clonedId, null, BackgroundWorkInfoStatus.Delete) : new AttachmentRemoteInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
+            expiredDocs.Enqueue(id == null ? new DocumentExpirationInfo(ticksAsSlice, clonedId, null, BackgroundWorkInfoStatus.Delete) : new DocumentExpirationInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
             totalCount++;
         }
     }
@@ -373,5 +360,85 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<Attachment
 
             return null;
         }
+    }
+
+    public int ProcessRemoteAttachments(DocumentsOperationContext context, DateTime currentTime, Dictionary<string, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
+    {
+        var processedCount = 0;
+        var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
+        foreach (var (docId, allTicks) in seenDocs)
+        {
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var lowerId))
+            using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
+            {
+                // remove all entries for processed document
+                foreach (var ticks in allTicks)
+                {
+                    docsTree.MultiDelete(ticks, lowerId);
+                }
+
+                if (doc == null || doc.TryGetMetadata(out var metadata) == false || metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                {
+                    // doc was deleted
+                    continue;
+                }
+
+                // lets go over attachments and mark those we proceed as remote
+                foreach (BlittableJsonReaderObject attachmentInMetadata in attachments)
+                {
+                    if (attachmentInMetadata.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsObject) == false)
+                        continue;
+
+                    if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Flags), out object flagsObj) && Enum.TryParse(flagsObj.ToString(), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.Remote)
+                    {
+                        // this attachment is already remote
+                        continue;
+                    }
+
+                    if (HasPassed(remoteParamsObject, currentTime, MetadataPropertyName) == false)
+                        continue;
+
+                    if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Identifier), out LazyStringValue identifierFromMetadata) == false)
+                        continue;
+
+                    if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
+                        attachmentInMetadata.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
+                        attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                        attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long size) == false)
+                        continue;
+
+                    if (attachmentsToUploadByIdentifier.TryGetValue(identifierFromMetadata, out Dictionary<string, AttachmentRemoteInfo> dic) && dic.TryGetValue(hash, out AttachmentRemoteInfo info))
+                    {
+                        switch (info.Status)
+                        {
+                            case BackgroundWorkInfoStatus.Retry:
+                                // this upload errored lets add back to the tree
+                                remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.At), out LazyStringValue dateFromMetadata);
+                                base.Put(context, lowerId, dateFromMetadata);
+
+                                break;
+                            case BackgroundWorkInfoStatus.Skip:
+                                // this upload errored max retries, we are skipping it
+                                // TODO: egor now I have attachment that has remoteParamsObject in the docs metadata but doesn't have a value in the remote tree?
+                                break;
+                            case BackgroundWorkInfoStatus.Process:
+                                // we uploaded this, we can mark the attachment as remote and delete its stream
+                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, docId, name, contentType, hash, size);
+                                processedCount++;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(info.Status));
+                        } 
+                    }
+                }
+
+                if (processedCount > 0)
+                {
+                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, docId);
+                }
+            }
+        }
+
+        return processedCount;
     }
 }

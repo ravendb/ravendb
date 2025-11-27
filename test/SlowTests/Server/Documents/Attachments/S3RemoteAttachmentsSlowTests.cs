@@ -20,6 +20,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.BackgroundWork;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
@@ -197,7 +198,7 @@ namespace SlowTests.Server.Documents.Attachments
                     GetStorageAttachmentsMetadataFromAllAttachments(database);
                     Assert.Equal(attachmentsCount + 1, Attachments.Count);
 
-                    List<Exception> myExceptions = null;
+                    Dictionary<string, Dictionary<string, UploadAttachmentException>> myExceptions = null;
                     database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
                     {
                         myExceptions = exceptions;
@@ -334,10 +335,10 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(attachmentsCount + 1, Attachments.Count);
                     }
 
-                    AggregateException myException = null;
-                    database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeAllBatchFailure = exceptions =>
+                    List<Exception> myExceptions = new List<Exception>();
+                    database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
                     {
-                        myException = exceptions;
+                        myExceptions.AddRange(exceptions.Values.SelectMany(x => x.Values));
                     };
 
                     // move in time & start remote
@@ -347,16 +348,16 @@ namespace SlowTests.Server.Documents.Attachments
                     // nothing was uploaded because we had a faulty identifier
                     if (uploadAdditional)
                     {
-                        var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                        var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 2, 15_000);
 
-                        Assert.Equal(1, cloudObjects.Count);
+                        Assert.Equal(2, cloudObjects.Count);
 
                     }
                     else
                     {
-                        var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+                        var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
 
-                        Assert.Equal(0, cloudObjects.Count);
+                        Assert.Equal(1, cloudObjects.Count);
 
                     }
 
@@ -364,22 +365,25 @@ namespace SlowTests.Server.Documents.Attachments
                     if (uploadAdditional)
                     {
 
-                        Assert.Equal(1, stats.CountOfRemoteAttachments);
+                        Assert.Equal(2, stats.CountOfRemoteAttachments);
                         Assert.Equal(3, stats.CountOfAttachments);
 
 
                     }
                     else
                     {
-                        Assert.Equal(0, stats.CountOfRemoteAttachments);
+                        Assert.Equal(1, stats.CountOfRemoteAttachments);
                         Assert.Equal(2, stats.CountOfAttachments);
 
                     }
 
 
-                    Assert.NotNull(myException);
-                    Assert.Equal(1, myException.InnerExceptions.Count);
-                    Assert.Contains("Failed to upload all attachments. Failed keys: Orders/0", myException.Message);
+                    Assert.NotNull(myExceptions);
+                    Assert.Equal(1, myExceptions.Count);
+
+                    var exception = myExceptions.FirstOrDefault();
+                    Assert.NotNull(exception);
+                    Assert.Contains("Failed to upload remote attachment with identifier", exception.Message);
 
                     using AttachmentResult bad = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
 
@@ -391,7 +395,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using AttachmentResult good = await store.Operations.SendAsync(new GetAttachmentOperation(id, goodName, AttachmentType.Document, null));
 
                     Assert.Equal(goodName, good.Details.Name);
-                    Assert.Equal(RemoteAttachmentFlags.None, good.Details.RemoteParameters.Flags);
+                    Assert.Equal(RemoteAttachmentFlags.Remote, good.Details.RemoteParameters.Flags);
                     Assert.NotNull(good.Details.RemoteParameters.At);
 
 
@@ -473,7 +477,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyRemoteAttachmentsConfig = null;
                     identifier = await PutRemoteAttachmentsConfiguration(store, Settings); // rewrite the config without 2nd identifier
 
-                    List<Exception> myExceptions = null;
+                    Dictionary<string, Dictionary<string, UploadAttachmentException>> myExceptions = null;
                     database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
                     {
                         myExceptions = exceptions;
@@ -1029,7 +1033,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        public static void GetToRemoteAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<AttachmentRemoteInfo>> action = null)
+        public static void GetToRemoteAttachmentsCount(DocumentDatabase database, int expected, Action<Queue<DocumentExpirationInfo>> action = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
