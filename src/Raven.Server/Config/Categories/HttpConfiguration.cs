@@ -13,7 +13,12 @@ namespace Raven.Server.Config.Categories
     {
         public HttpConfiguration()
         {
+            Http2Profile = Http2Profile.Balanced;
             Protocols = PlatformDetails.CanUseHttp2 ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
+            
+            // Prefer lower memory defaults on 32-bit runtimes to avoid address space pressure.
+            if (PlatformDetails.Is32Bits)
+                Http2Profile = Http2Profile.Conservative;
         }
 
         [Description("Set Kestrel's minimum required data rate in bytes per second. This option must be configured together with 'Http.MinDataRateGracePeriod'.")]
@@ -103,5 +108,66 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Http.AllowSynchronousIO", ConfigurationEntryScope.ServerWideOnly)]
         public bool AllowSynchronousIo { get; set; }
+
+        [Description($"HTTP/2 performance profile: {nameof(Http2Profile.Performance)} | {nameof(Http2Profile.Balanced)} | {nameof(Http2Profile.Conservative)}. {nameof(Http2Profile.Performance)}=max throughput (more memory). {nameof(Http2Profile.Balanced)}=balanced. {nameof(Http2Profile.Conservative)}=lower memory (may cap throughput on high RTT).")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Http.Http2.Profile", ConfigurationEntryScope.ServerWideOnly)]
+        public Http2Profile Http2Profile { get; set; }
+
+        [Description($"Latency hint influencing profile sizing: {nameof(Http2LatencyHint.Default)} | {nameof(Http2LatencyHint.High)}. {nameof(Http2LatencyHint.Default)}=use profile as-is for low RTT (collocated: same region/AZ). {nameof(Http2LatencyHint.High)}=2x windows for WAN/high RTT unless explicit sizes are set.")]
+        [DefaultValue(Http2LatencyHint.Default)]
+        [ConfigurationEntry("Http.Http2.LatencyHint", ConfigurationEntryScope.ServerWideOnly)]
+        public Http2LatencyHint Http2Latency { get; set; }
+
+        [Description("EXPERT: Override Kestrel HTTP/2 InitialConnectionWindowSize in KB (per-connection receive window). Prefer Profile/LatencyHint unless you understand your BDP and memory tradeoffs. See RFC-9113 for details.")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("Http.Http2.InitialConnectionWindowSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? InitialConnectionWindowSize { get; set; }
+
+        [Description("EXPERT: Override Kestrel HTTP/2 InitialStreamWindowSize in KB (per-stream receive window). Prefer Profile/LatencyHint unless tuning for specific concurrency/RTT. See RFC-9113 for details.")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("Http.Http2.InitialStreamWindowSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? InitialStreamWindowSize { get; set; }
+
+        [Description("EXPERT: Override Kestrel HTTP/2 MaxFrameSize in KB (maximum payload per frame, 16KB-16MB). Larger frames reduce overhead for bulk transfers but delay small urgent frames. See RFC-9113 Section 4.2.")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Kilobytes)]
+        [ConfigurationEntry("Http.Http2.MaxFrameSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? MaxFrameSize { get; set; }
+    }
+
+    public enum Http2Profile
+    {
+        /// <summary>
+        /// Favor peak throughput: large HTTP/2 flow-control windows to keep high-BDP links full. Uses more memory per connection.
+        /// </summary>
+        Performance,
+        /// <summary>
+        /// Balanced defaults for most deployments: good throughput without excessive memory usage.
+        /// </summary>
+        Balanced,
+        /// <summary>
+        /// Favor lower memory usage: smaller windows. May limit throughput on high-latency or high-bandwidth links.
+        /// </summary>
+        Conservative
+    }
+
+    public enum Http2LatencyHint
+    {
+        /// <summary>
+        /// Low latency. Server and clients are collocated (same region/AZ) or on a LAN/Cluster.
+        /// Keeps the selected profile as-is. Choose this when round-trip times are short
+        /// and HTTP/2 throughput is not flattening due to flow control.
+        /// </summary>
+        Default,
+        /// <summary>
+        /// High latency. Cross-region or internet links where round-trip times are long.
+        /// Doubles the HTTP/2 flow-control windows derived from the selected profile to
+        /// maintain smooth throughput over larger RTTs. Use when downloads plateau under HTTP/2
+        /// and improve after increasing window sizes or when forcing HTTP/1.1.
+        /// </summary>
+        High
     }
 }
