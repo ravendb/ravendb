@@ -3,14 +3,12 @@ import { useRef } from "react";
 import { DatabasePanel } from "./DatabasePanel";
 
 interface DatabasesListProps {
-    maxHeight: number;
     filteredDatabaseNames: string[];
     selectedDatabaseNames: string[];
     toggleSelection: (dbName: string) => void;
 }
 
 export default function DatabasesList({
-    maxHeight,
     filteredDatabaseNames,
     selectedDatabaseNames,
     toggleSelection,
@@ -29,7 +27,7 @@ export default function DatabasesList({
     });
 
     return (
-        <div ref={listRef} style={{ overflow: "auto", height: maxHeight }} className="px-4">
+        <div ref={listRef} className="h-100 overflow-auto px-4">
             <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
                 {virtualizer.getVirtualItems().map((virtualRow) => {
                     const dbName = filteredDatabaseNames[virtualRow.index];
@@ -46,7 +44,7 @@ export default function DatabasesList({
                                 width: "100%",
                                 transform: `translateY(${virtualRow.start}px)`,
                             }}
-                            className="pb-2 pt-1"
+                            className="pb-2 pt-1 virtual-item"
                         >
                             <DatabasePanel
                                 key={dbName}
