@@ -101,7 +101,7 @@ export default function AddAttachmentWithRemoteParametersModal({ document, onClo
                             <FormLabel>
                                 Remote destination identifier
                             </FormLabel>
-                            <FormSelectAutocomplete placeholder="e.g. remote-attachment-1" isLoading={asyncGetRemoteAttachmentParametersConfig.loading} options={getRemoteAttachmentsDestinationsOptions(asyncGetRemoteAttachmentParametersConfig.result)} name="identifier" control={control} />
+                            <FormSelectAutocomplete placeholder="Select or enter a defined destination identifier" isLoading={asyncGetRemoteAttachmentParametersConfig.loading} options={getRemoteAttachmentsDestinationsOptions(asyncGetRemoteAttachmentParametersConfig.result)} name="identifier" control={control} />
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Scheduled upload time</FormLabel>

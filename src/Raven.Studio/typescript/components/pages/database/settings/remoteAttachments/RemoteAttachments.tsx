@@ -133,7 +133,7 @@ function DestinationsList() {
         const confirmed = await confirm({
             icon: "remote-attachment",
             actionColor: "danger",
-            title: "You're about to delete remote attachment",
+            title: `You are about to delete the remote destination: '${id}'`,
             message: "This action cannot be undone.",
             confirmText: "Delete",
         });

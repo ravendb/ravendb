@@ -60,7 +60,12 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
 
             <FormGroup marginClass="mt-2 mb-3">
                 <FormLabel>Destination identifier</FormLabel>
-                <FormInput type="text" name="identifier" placeholder="Destination identifier" control={control} />
+                <FormInput
+                    type="text"
+                    name="identifier"
+                    placeholder="Enter a unique identifier for this remote destination"
+                    control={control}
+                />
             </FormGroup>
 
             <FormGroup>
