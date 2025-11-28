@@ -121,7 +121,7 @@ namespace SlowTests.Issues
             var suffix = Guid.NewGuid().ToString().Split('-')[0];
 
             var caCommonNameValue = $"ca-{suffix}";
-            var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out _);
+            var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out _, generateNewKeyPair: true);
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
             log?.AppendLine($"Created CA: {ca.GetDisplayName()} ({ca.Thumbprint})");
 

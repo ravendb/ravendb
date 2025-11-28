@@ -23,7 +23,7 @@ public class RavenDB_19148 : ClusterTestBase
     {
         var suffix = Guid.NewGuid().ToString().Split('-')[0];
         var caCommonNameValue = $"auth-{suffix}";
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caName);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caName, generateNewKeyPair: true);
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey($"admin-{suffix}", caName, (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()), true, false,
             DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
         CertificateUtils.RemoveOldTestCertificatesFromOsStore(caCommonNameValue);
