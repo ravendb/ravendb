@@ -288,11 +288,11 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void PutRemoteAttachmentFromPatch(DocumentsOperationContext context, BlittableJsonReaderObject document, string docId, string attachmentName, string identifier, DateTime at)
+    public bool PutRemoteAttachmentFromPatch(DocumentsOperationContext context, BlittableJsonReaderObject document, string docId, string attachmentName, string identifier, DateTime at)
     {
         if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
             metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-            return;
+            return false;
 
         var attachmentsStorage = Database.DocumentsStorage.AttachmentsStorage;
         foreach (BlittableJsonReaderObject attachment in attachments)
@@ -314,9 +314,11 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
 
                 attachmentsStorage.PutAttachment(context, docId, name, contentType, hash, size, new RemoteAttachmentParameters(identifier, at), stream: null,
                     updateDocument: false); // we will update the document in PatchDocumentCommand
-                break;
+                return true;
             }
         }
+
+        return false;
     }
 
     public RemoteAttachmentsSender UpdateRemoteAttachmentsFromDatabaseRecord(DatabaseRecord dbRecord, RemoteAttachmentsSender remoteAttachmentsSender)

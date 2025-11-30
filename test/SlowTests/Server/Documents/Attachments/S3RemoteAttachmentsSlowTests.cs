@@ -137,6 +137,53 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanPatchRemoteAttachments_NonExists()
+        {
+            int attachmentsCount = 2;
+            int size = 3;
+            await using (var holder = CreateCloudSettings())
+            {
+                using (var store = GetDocumentStore())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+
+                    var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc, remote: false);
+
+                    var id = ids.First().Id;
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetStorageAttachmentsMetadataFromAllAttachments(database);
+                    Assert.Equal(attachmentsCount, Attachments.Count);
+                    var att1 = Attachments.First().Name;
+                    using (AttachmentResult att = await store.Operations.SendAsync(new GetAttachmentOperation(id, att1, AttachmentType.Document, null)))
+                    {
+                        Assert.Equal(att.Details.Name, att1);
+                        Assert.Null(att.Details.RemoteParameters);
+                    }
+
+                    var dt = DateTime.UtcNow.AddMinutes(3);
+
+                    var patch = new PatchRequest
+                    {
+                        Script = "attachments(this, args.name).remote(args.identifier, args.at);",
+                        Values =
+                        {
+                            { "name", "EGOR" },
+                            { "identifier", identifier },
+                            { "at", dt },
+                        }
+                    };
+
+                    var result = await store.Operations.SendAsync(new PatchOperation(id, null, patch));
+                    Assert.Equal(result, PatchStatus.NotModified);
+                }
+            }
+        }
+
         [AmazonS3RetryFact]
         public async Task RemoteAttachmentWithDisabledIdentifierShouldBeSkipped()
         {

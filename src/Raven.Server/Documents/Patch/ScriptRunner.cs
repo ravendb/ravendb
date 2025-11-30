@@ -860,10 +860,11 @@ namespace Raven.Server.Documents.Patch
                 string identifier = GetStringArg(args[0], signature2Args, "identifier");
                 var at = GetRemoteAttachmentAtArg(args[1], signature2Args, "at");
 
-                _database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.PutRemoteAttachmentFromPatch(_docsCtx, doc, id, attachmentName, identifier, at);
-
-                DocumentAttachmentsToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                DocumentAttachmentsToUpdate.Add(id);
+                if (_database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.PutRemoteAttachmentFromPatch(_docsCtx, doc, id, attachmentName, identifier, at))
+                {
+                    DocumentAttachmentsToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentAttachmentsToUpdate.Add(id);
+                }
 
                 if (DebugMode)
                 {
