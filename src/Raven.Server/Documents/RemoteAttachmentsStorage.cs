@@ -377,9 +377,9 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                     docsTree.MultiDelete(ticks, lowerId);
                 }
 
-                if (doc == null || doc.TryGetMetadata(out var metadata) == false || metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                if (doc == null || doc.TryGetMetadata(out var metadata) == false || metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false || attachments == null)
                 {
-                    // doc was deleted
+                    // the document was deleted or has no attachments anymore
                     continue;
                 }
 
@@ -389,7 +389,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                     if (attachmentInMetadata.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsObject) == false)
                         continue;
 
-                    if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Flags), out object flagsObj) && Enum.TryParse(flagsObj.ToString(), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.Remote)
+                    if (remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.Flags), out string flagsObj) && Enum.TryParse(flagsObj, out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.Remote)
                     {
                         // this attachment is already remote
                         continue;
@@ -404,7 +404,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                     if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachmentInMetadata.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                         attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                        attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long size) == false)
+                        attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long sizeInBytes) == false)
                         continue;
 
                     if (attachmentsToUploadByIdentifier.TryGetValue(identifierFromMetadata, out Dictionary<string, AttachmentRemoteInfo> dic) && dic.TryGetValue(hash, out AttachmentRemoteInfo info))
@@ -419,11 +419,11 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                                 break;
                             case BackgroundWorkInfoStatus.Skip:
                                 // this upload errored max retries, we are skipping it
-                                // TODO: egor now I have attachment that has remoteParamsObject in the docs metadata but doesn't have a value in the remote tree?
+                                // we already alerted on this item, when we iterated on it in RemoteAttachmentsSender._batchExceptionsByIdentifier so nothing to do here
                                 break;
                             case BackgroundWorkInfoStatus.Process:
                                 // we uploaded this, we can mark the attachment as remote and delete its stream
-                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, docId, name, contentType, hash, size);
+                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, docId, name, contentType, hash, sizeInBytes);
                                 processedCount++;
                                 break;
                             default:

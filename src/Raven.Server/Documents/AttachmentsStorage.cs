@@ -189,7 +189,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void MarkAsRemoteAttachment(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, LazyStringValue name, LazyStringValue contentType, LazyStringValue hash, long size)
+        public void MarkAsRemoteAttachment(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, LazyStringValue name, LazyStringValue contentType, LazyStringValue hash, long sizeInBytes)
         {
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out var nameSlice))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out var contentTypeSlice))
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents
                     tvb.Add(hashSlice);
                     tvb.Add(context.GetTransactionMarker());
                     tvb.Add(changeVectorSlice);
-                    tvb.Add(size);
+                    tvb.Add(sizeInBytes);
                     tvb.Add(Bits.SwapBytes((int)RemoteAttachmentFlags.Remote)); // add Remote flag
                     tvb.Add(remoteAt);
                     tvb.Add(identifierSlice);

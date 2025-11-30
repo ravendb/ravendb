@@ -37,7 +37,10 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _remotePeriod;
         private readonly OperationCancelToken _token;
-        private readonly Dictionary<string, Dictionary<string, UploadAttachmentException>> _exceptions = new Dictionary<string, Dictionary<string, UploadAttachmentException>>(StringComparer.OrdinalIgnoreCase);
+
+        // Identifier (case in-sensitive) -> (Hash (case sensitive) -> Exception): we keep the exceptions to alert at the end of the batch
+        private readonly Dictionary<string, Dictionary<string, UploadAttachmentException>> _batchExceptionsByIdentifier = new Dictionary<string, Dictionary<string, UploadAttachmentException>>(StringComparer.OrdinalIgnoreCase);
+        // Identifier (case in-sensitive) -> (Hash (case sensitive) -> RetryCount): we keep track of how many times we retried uploading an attachment
         private readonly Dictionary<string, Dictionary<string, long>> _inMemoryStateErrorsByIdentifier = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
         private long _totalUploaded;
 
@@ -80,7 +83,7 @@ namespace Raven.Server.Documents
 
             var totalCount = 0;
             var currentTime = _database.Time.GetUtcNow();
-            var directUploaders = new Dictionary<string, AttachmentUploader>();
+            var directUploaders = new Dictionary<string, AttachmentUploader>(StringComparer.OrdinalIgnoreCase);
             var uploadTasks = new Task<long>[Configuration.ConcurrentUploads ?? DefaultConcurrentThreadsNumber];
             var uploadTaskMetadata = new Dictionary<Task, (string Identifier, KeyValuePair<string, AttachmentRemoteInfo> MetadataPerHash)>();
             var alreadySeenDocs = new Dictionary<string, List<Slice>>(StringComparer.OrdinalIgnoreCase);
@@ -96,7 +99,7 @@ namespace Raven.Server.Documents
 
                     Stopwatch duration;
                     _totalUploaded = 0L;
-                    _exceptions.Clear();
+                    _batchExceptionsByIdentifier.Clear();
                     alreadySeenDocs.Clear();
                     attachmentsToUploadByIdentifier.Clear();
                     uploadTaskMetadata.Clear();
@@ -159,10 +162,10 @@ namespace Raven.Server.Documents
                                         {
                                             _token.ThrowIfCancellationRequested();
 
-                                            if (attachment.RemoteParameters.IsRemoteStorageAttachment())
+                                            if (attachment.RemoteParameters is null)
                                                 continue;
 
-                                            if (attachment.RemoteParameters is null)
+                                            if (attachment.RemoteParameters.IsRemoteStorageAttachment())
                                                 continue;
 
                                             if (currentTime < attachment.RemoteParameters.At)
@@ -177,15 +180,18 @@ namespace Raven.Server.Documents
                                                 continue;
                                             }
 
-                                            attachmentsToUploadByIdentifier
-                                                 .GetOrAdd(identifier)
-                                                 .GetOrAdd(attachment.Base64Hash.ToString())
-                                                 .DocumentIds.Add(document.Id);
-
-                                            if (directUploaders.ContainsKey(identifier) == false)
+                                            if (directUploaders.TryGetValue(identifier, out var uploader) == false)
                                             {
-                                                directUploaders[identifier] = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
+                                                uploader = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, identifier, destination.S3Settings, destination.AzureSettings), Logger, _token);
+                                                directUploaders[identifier] = uploader;
                                             }
+
+                                            var info = attachmentsToUploadByIdentifier
+                                                .GetOrAdd(identifier) // identifier is case-insensitive
+                                                .GetOrAdd(attachment.Base64Hash.ToString()); // hash is case-sensitive and GetOrAdd() extension method creates the Dictionary with default comparer which is StringComparer.Ordinal by default
+                                           
+                                            info.DocumentIds.Add(document.Id);
+                                            info.AttachmentUploader = uploader;
                                         }
 
                                         break;
@@ -201,7 +207,6 @@ namespace Raven.Server.Documents
                                     _token.ThrowIfCancellationRequested();
 
                                     var hash = kvp.Key;
-                                    var attachmentUploader = directUploaders[identifier];
                                     var index = Task.WaitAny(uploadTasks);
                                     Task<long> pendingTask = uploadTasks[index];
                                     try
@@ -218,7 +223,7 @@ namespace Raven.Server.Documents
                                     {
                                         uploadTaskMetadata.Remove(pendingTask);
 
-                                        Task<long> newTask = CreateUploadTaskAsync(attachmentUploader, hash);
+                                        Task<long> newTask = CreateUploadTaskAsync(kvp.Value.AttachmentUploader, hash);
                                         uploadTasks[index] = newTask;
                                         uploadTaskMetadata[newTask] = (identifier, kvp);
                                     }
@@ -254,7 +259,7 @@ namespace Raven.Server.Documents
                     var command = new UpdateRemoteAttachmentsCommand(_database, currentTime, alreadySeenDocs, attachmentsToUploadByIdentifier);
                     await _database.TxMerger.Enqueue(command);
 
-                    ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(_exceptions);
+                    ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(_batchExceptionsByIdentifier);
                 }
             }
             catch (OperationCanceledException)
@@ -272,10 +277,10 @@ namespace Raven.Server.Documents
 
         private void AlertAndLogOnBatchErrorsIfNeeded()
         {
-            if (_exceptions.Count <= 0) 
+            if (_batchExceptionsByIdentifier.Count <= 0) 
                 return;
 
-            foreach (var (identifier, hashPerError) in _exceptions)
+            foreach (var (identifier, hashPerError) in _batchExceptionsByIdentifier)
             {
                 _token.ThrowIfCancellationRequested();
 
@@ -305,6 +310,7 @@ namespace Raven.Server.Documents
         private const string AlertTitleError = "Remote attachment upload failed.";
         private long _counter = 0;
         private DateTime _lastAlertTime = DateTime.MinValue;
+        private static readonly long AlertThresholdTicks = TimeSpan.FromMinutes(1).Ticks;
 
         private void HandleSkippedItem(string documentId, Attachment item, RemoteAttachmentsDestinationConfiguration destination)
         {
@@ -312,7 +318,7 @@ namespace Raven.Server.Documents
             var timeSinceLastAlert = now.Ticks - _lastAlertTime.Ticks;
 
             // on first skip or each 16th time or if last alert was more than a minute ago
-            var shouldAlert = (_counter++ % 16 == 0) || (timeSinceLastAlert > 1000);
+            var shouldAlert = (_counter++ % 16 == 0) || (timeSinceLastAlert > AlertThresholdTicks);
 
             if (shouldAlert == false && Logger.IsDebugEnabled == false)
             {
@@ -341,7 +347,7 @@ namespace Raven.Server.Documents
             _totalUploaded += res;
         }
 
-        private void HandleUploadTaskException(Exception e, (string Identifier, KeyValuePair<string, AttachmentRemoteInfo> MetadataPerHash) tuple/*, Dictionary<string, HashSet<string>> retryErrorsByIdentifier*/)
+        private void HandleUploadTaskException(Exception e, (string Identifier, KeyValuePair<string, AttachmentRemoteInfo> MetadataPerHash) tuple)
         {
             var hash = tuple.MetadataPerHash.Key;
             var errors = _inMemoryStateErrorsByIdentifier.GetOrAdd(tuple.Identifier);
@@ -349,7 +355,6 @@ namespace Raven.Server.Documents
             var count = errors.GetOrAdd(hash);
             if (count < 3)
             {
-                //retryErrorsByIdentifier.GetOrAdd(tuple.Identifier).Add(hash);
                 errors[hash] = ++count;
 
                 tuple.MetadataPerHash.Value.Status = BackgroundWorkInfoStatus.Retry;
@@ -358,7 +363,7 @@ namespace Raven.Server.Documents
             {
                 // we have tried enough times, we need to remove it from background tree and alert
                 var ex = new UploadAttachmentException($"Failed to upload remote attachment with identifier '{tuple.Identifier}' and hash '{hash}', the attachment belong to following documents: {string.Join(", ", tuple.MetadataPerHash.Value.DocumentIds.Select(x => $"{x}"))}", e);
-                _exceptions.GetOrAdd(tuple.Identifier).TryAdd(hash, ex);
+                _batchExceptionsByIdentifier.GetOrAdd(tuple.Identifier).TryAdd(hash, ex);
                 errors.Remove(hash);
                 tuple.MetadataPerHash.Value.Status = BackgroundWorkInfoStatus.Skip;
             }
@@ -466,12 +471,12 @@ namespace Raven.Server.Documents
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
-                return null;
-                //TODO: egor
-                //return new UpdateRemoteAttachmentsCommandDto
-                //{
-                //    CurrentTime = _currentTime
-                //};
+                return new UpdateRemoteAttachmentsCommandDto
+                {
+                    CurrentTime = _currentTime,
+                    SeenDocs = _seenDocs,
+                    AttachmentsToUploadByIdentifier = _attachmentsToUploadByIdentifier
+                };
             }
         }
 
@@ -495,31 +500,14 @@ namespace Raven.Server.Documents
     {
         public RemoteAttachmentsSender.UpdateRemoteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
+            // clone slices
             var seenDocs = new Dictionary<string, List<Slice>>();
-            //TODO: egor
-            //foreach (var item in SeenDocs)
-            //{
-            //    var list = new List<Slice>();
-            //    foreach (var slice in item.Value)
-            //    {
-            //        slice.Clone(context.Allocator, out var cloned);
-            //        list.Add(cloned);
-            //    }
-            //    seenDocs[item.Key] = list;
-            //}
+            foreach (var item in SeenDocs)
+            {
+                seenDocs[item.Key] = item.Value.Select(slice => slice.Clone(context.Allocator)).ToList();
+            }
 
-            var attachmentsToUploadByIdentifier = new Dictionary<string, Dictionary<string, AttachmentRemoteInfo>>();
-            //foreach (var item in AttachmentsToUploadByIdentifier)
-            //{
-            //    var dict = new Dictionary<string, AttachmentRemoteInfo>();
-            //    foreach (var subItem in item.Value)
-            //    {
-            //        dict[subItem.Key] = new AttachmentRemoteInfo(subItem.Value.Ticks.Clone(context.Allocator), subItem.Value.LowerId.Clone(context.Allocator), subItem.Value.Id, subItem.Value.Status);
-            //    }
-            //    attachmentsToUploadByIdentifier[item.Key] = dict;
-            //}
-
-            var command = new RemoteAttachmentsSender.UpdateRemoteAttachmentsCommand(database, CurrentTime, seenDocs, attachmentsToUploadByIdentifier);
+            var command = new RemoteAttachmentsSender.UpdateRemoteAttachmentsCommand(database, CurrentTime, seenDocs, AttachmentsToUploadByIdentifier);
             return command;
         }
 
