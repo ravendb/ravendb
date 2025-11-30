@@ -658,7 +658,7 @@ internal class ChatCompletionClient : IDisposable
             case ErrorType.TooManyTokens:
             case ErrorType.TooManyRequests:
                 var retryAfter = TimeSpan.Zero;
-                if (headers.Contains("retry-after-ms") == false && headers.Contains("retry-after") == false)
+                if (headers.Contains(Constants.Headers.RetryAfterMs) == false && headers.Contains(Constants.Headers.RetryAfter) == false)
                 {
                     throw new TooManyTokensException(message)
                     {
@@ -666,7 +666,7 @@ internal class ChatCompletionClient : IDisposable
                     };
                 }
 
-                if (headers.TryGetValues("x-ratelimit-reset-tokens", out var resetTokensValues))
+                if (headers.TryGetValues(Constants.Headers.XRateLimitResetTokens, out var resetTokensValues))
                 {
                     // TPM
                     var retryAfterAsString = resetTokensValues.FirstOrDefault();
@@ -674,7 +674,7 @@ internal class ChatCompletionClient : IDisposable
                         throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
                 }
 
-                if (headers.TryGetValues("x-ratelimit-reset-requests", out var resetRequestsValues))
+                if (headers.TryGetValues(Constants.Headers.XRateLimitResetRequests, out var resetRequestsValues))
                 {
                     // RPM
                     var retryAfterAsString = resetRequestsValues.FirstOrDefault();
@@ -702,7 +702,7 @@ internal class ChatCompletionClient : IDisposable
 
     internal static string GetRequestId(HttpResponseHeaders headers)
     {
-        if (headers.TryGetValues(Constants.Headers.RequestId, out IEnumerable<string> values))
+        if (headers.TryGetValues(Constants.Headers.XRequestId, out IEnumerable<string> values))
         {
             return values.FirstOrDefault() ?? string.Empty;
         }
@@ -957,10 +957,11 @@ internal class ChatCompletionClient : IDisposable
 
         public static class Headers
         {
-            public const string RetryAfter = "retry-after-ms";
-            public const string TokensResetTime = "x-ratelimit-reset-tokens";
-            public const string RequestsResetTime = "x-ratelimit-reset-requests";
-            public const string RequestId = "X-Request-ID";
+            public const string RetryAfterMs = "retry-after-ms";
+            public const string RetryAfter = "retry-after";
+            public const string XRateLimitResetTokens = "x-ratelimit-reset-tokens";
+            public const string XRateLimitResetRequests = "x-ratelimit-reset-requests";
+            public const string XRequestId = "X-Request-ID";
         }
 
         public static class JsonSchemaFields
