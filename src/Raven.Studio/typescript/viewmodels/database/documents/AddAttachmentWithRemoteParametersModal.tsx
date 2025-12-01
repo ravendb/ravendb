@@ -18,38 +18,39 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 
-const schema = yup.object({
-    file: yup.mixed().required("File is required"),
-    identifier: yup.string().required("Identifier is required"),
-    uploadDate: yup.date().required("Upload date is required")
-})
-
-type AttachmentWithRemoteParametersFormData = yup.InferType<typeof schema>;
-
 type AddAttachmentWithRemoteParametersModalProps = {
     document: KnockoutObservable<document>;
-    db: database
+    db: database;
     onUploaded: () => void;
     onClose: () => void;
 };
 
-export default function AddAttachmentWithRemoteParametersModal({ document, onClose, db, onUploaded }: AddAttachmentWithRemoteParametersModalProps) {
-    const { databasesService } = useServices()
-    const asyncGetRemoteAttachmentParametersConfig = useAsyncCallback(() => databasesService.getRemoteAttachmentsConfiguration(db.name));
+export default function AddAttachmentWithRemoteParametersModal({
+    document,
+    onClose,
+    db,
+    onUploaded,
+}: AddAttachmentWithRemoteParametersModalProps) {
+    const { databasesService } = useServices();
+    const asyncGetRemoteAttachmentParametersConfig = useAsyncCallback(() =>
+        databasesService.getRemoteAttachmentsConfiguration(db.name)
+    );
 
     const form = useForm({
         resolver: yupResolver(schema),
         defaultValues: async () => {
-                const config = await asyncGetRemoteAttachmentParametersConfig.execute();
-                return getDefaultValues(config);
-            }
-        })
+            const config = await asyncGetRemoteAttachmentParametersConfig.execute();
+            return getDefaultValues(config);
+        },
+    });
 
-    const {control, formState} = form;
+    const { control, formState } = form;
 
-    const uploader = new editDocumentUploader(document, db, onUploaded)
+    const uploader = new editDocumentUploader(document, db, onUploaded);
 
-    const asyncUploadFileWithRemoteParameters = useAsyncCallback((file: File, dto: RemoteAttachmentParameters) => uploader.uploadFileWithRemoteParameters(file, dto));
+    const asyncUploadFileWithRemoteParameters = useAsyncCallback((file: File, dto: RemoteAttachmentParameters) =>
+        uploader.uploadFileWithRemoteParameters(file, dto)
+    );
 
     const handleSubmit = async (formData: AttachmentWithRemoteParametersFormData) => {
         try {
@@ -60,7 +61,7 @@ export default function AddAttachmentWithRemoteParametersModal({ document, onClo
                 return;
             }
         }
-    }
+    };
 
     const onFileDropzoneChange = async (files: File[], field: ControllerRenderProps<FieldValues, "file">) => {
         const file = files[0];
@@ -72,7 +73,7 @@ export default function AddAttachmentWithRemoteParametersModal({ document, onClo
         }
 
         field.onChange(file);
-    }
+    };
 
     return (
         <Modal size="lg" show contentClassName="modal-border bulge-info">
@@ -89,23 +90,37 @@ export default function AddAttachmentWithRemoteParametersModal({ document, onClo
                             <Controller
                                 name="file"
                                 render={({ field }) => (
-                                <FileDropzone
-                                    {...field}
-                                    maxFiles={1}
-                                    onChange={(files) => onFileDropzoneChange(files, field)}
-                                />
-                            )} >
-                            </Controller>
+                                    <FileDropzone
+                                        {...field}
+                                        maxFiles={1}
+                                        onChange={(files) => onFileDropzoneChange(files, field)}
+                                    />
+                                )}
+                            ></Controller>
                         </FormGroup>
                         <FormGroup>
-                            <FormLabel>
-                                Remote destination identifier
-                            </FormLabel>
-                            <FormSelectAutocomplete placeholder="Select or enter a defined destination identifier" isLoading={asyncGetRemoteAttachmentParametersConfig.loading} options={getRemoteAttachmentsDestinationsOptions(asyncGetRemoteAttachmentParametersConfig.result)} name="identifier" control={control} />
+                            <FormLabel>Remote destination identifier</FormLabel>
+                            <FormSelectAutocomplete
+                                placeholder="Select or enter a defined destination identifier"
+                                isLoading={asyncGetRemoteAttachmentParametersConfig.loading}
+                                options={getRemoteAttachmentsDestinationsOptions(
+                                    asyncGetRemoteAttachmentParametersConfig.result
+                                )}
+                                name="identifier"
+                                control={control}
+                            />
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Scheduled upload time</FormLabel>
-                            <FormDatePicker placeholderText="e.g. 11/21/2025 10:57 AM" showTimeSelect minDate={new Date()} minTime={moment().subtract(29, "minutes").toDate()} maxTime={moment().endOf("day").toDate()} name="uploadDate" control={control} />
+                            <FormDatePicker
+                                placeholderText="e.g. 11/21/2025 10:57 AM"
+                                showTimeSelect
+                                minDate={new Date()}
+                                minTime={moment().subtract(29, "minutes").toDate()}
+                                maxTime={moment().endOf("day").toDate()}
+                                name="uploadDate"
+                                control={control}
+                            />
                         </FormGroup>
                     </form>
                 </Modal.Body>
@@ -125,22 +140,30 @@ export default function AddAttachmentWithRemoteParametersModal({ document, onClo
                 </Modal.Footer>
             </FormProvider>
         </Modal>
-    )
+    );
 }
+
+const schema = yup.object({
+    file: yup.mixed().required("File is required"),
+    identifier: yup.string().required("Identifier is required"),
+    uploadDate: yup.date().required("Upload date is required"),
+});
+
+type AttachmentWithRemoteParametersFormData = yup.InferType<typeof schema>;
 
 const mapToDto = (values: AttachmentWithRemoteParametersFormData): RemoteAttachmentParameters => {
     return {
         At: values.uploadDate.toISOString(),
-        Identifier: values.identifier
-    }
-}
+        Identifier: values.identifier,
+    };
+};
 
 const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?: RemoteAttachmentsConfiguration) => {
     if (!remoteAttachmentsConfiguration) {
         return [];
     }
-    return Object.keys(remoteAttachmentsConfiguration.Destinations).map(d => ({ label: d, value: d }));
-}
+    return Object.keys(remoteAttachmentsConfiguration.Destinations).map((d) => ({ label: d, value: d }));
+};
 
 function getDefaultValues(configResult: RemoteAttachmentsConfiguration): AttachmentWithRemoteParametersFormData {
     const options = getRemoteAttachmentsDestinationsOptions(configResult);
@@ -149,13 +172,13 @@ function getDefaultValues(configResult: RemoteAttachmentsConfiguration): Attachm
         return {
             identifier: options[0].value,
             uploadDate: new Date(),
-            file: null
+            file: null,
         };
     }
 
     return {
         identifier: null,
         uploadDate: new Date(),
-        file: null
+        file: null,
     };
 }

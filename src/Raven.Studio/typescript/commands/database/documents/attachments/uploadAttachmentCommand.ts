@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-interface uploadAttachmentCommandArgs {
+interface UploadAttachmentCommandArgs {
     id: string;
     name: string;
     contentType: string;
@@ -24,7 +24,7 @@ class uploadAttachmentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Attachments.AttachmentDetails> {
-        const args: uploadAttachmentCommandArgs = {
+        const args: UploadAttachmentCommandArgs = {
             id: this.documentId,
             name: this.file.name,
             contentType: this.file.type,

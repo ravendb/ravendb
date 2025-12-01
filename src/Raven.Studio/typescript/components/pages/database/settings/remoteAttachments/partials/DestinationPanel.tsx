@@ -23,8 +23,8 @@ import {
     defaultS3FormData,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { useAsyncCallback } from "react-async-hook";
-import { mapAzureToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
-import { ReactNode, useEffect } from "react";
+import { mapAzureToDto, mapS3ToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
+import { useEffect } from "react";
 import { remoteAttachmentsActions } from "components/pages/database/settings/remoteAttachments/store/remoteAttachmentsSlice";
 import { FormGroup, FormLabel, FormSelect } from "components/common/Form";
 import {
@@ -36,7 +36,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
 import { remoteAttachmentsUtils } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsUtils";
-import { SelectOption } from "components/common/select/Select";
+import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { storageClassOptions } from "components/utils/common";
 
 interface DestinationPanelProps extends RemoteAttachmentsDestinationFormData {
@@ -132,9 +132,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
             case "s3":
                 return manageServerService.testPeriodicBackupCredentials(
                     "S3",
-                    remoteAttachmentsUtils.mapS3ToDto(
-                        formValues.s3
-                    ) as unknown as Raven.Client.Documents.Operations.Backups.AmazonSettings
+                    mapS3ToDto({ ...formValues.s3, isEnabled: true })
                 );
             case "azure":
                 return manageServerService.testPeriodicBackupCredentials(
@@ -202,7 +200,15 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
                 <ViewSheet.Body className="w-100 flex-grow-1 vstack p-4 overflow-auto">
                     <FormGroup marginClass="mb-0">
                         <FormLabel>Provider</FormLabel>
-                        <FormSelect name="provider" control={control} options={providerOptions} />
+                        <FormSelect
+                            name="provider"
+                            components={{
+                                Option: OptionWithIcon,
+                                SingleValue: SingleValueWithIcon,
+                            }}
+                            control={control}
+                            options={providerOptions}
+                        />
                     </FormGroup>
                     {formValues.provider === "s3" && <RemoteAttachmentsS3Fields asyncTest={asyncTest} />}
                     {formValues.provider === "azure" && <RemoteAttachmentsAzureFields asyncTest={asyncTest} />}
@@ -264,21 +270,15 @@ function getDefaultValues(
 }
 type DestinationProviderType = RemoteAttachmentsDestinationFormData["provider"];
 
-const providerOptions: SelectOption<string, ReactNode>[] = [
+const providerOptions: SelectOptionWithIcon[] = [
     {
-        label: (
-            <div>
-                <Icon icon="aws" /> Amazon S3
-            </div>
-        ),
+        label: "Amazon S3",
         value: "s3",
+        icon: "aws",
     },
     {
-        label: (
-            <div>
-                <Icon icon="azure" /> Azure
-            </div>
-        ),
+        label: "Azure",
         value: "azure",
+        icon: "azure",
     },
 ];

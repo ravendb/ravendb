@@ -16,9 +16,9 @@ import classNames from "classnames";
 
 export type SelectValue = string | number | boolean;
 
-export interface SelectOption<T = string, K = string> {
+export interface SelectOption<T = string> {
     value: T;
-    label: K;
+    label: string;
     isDisabled?: boolean;
 }
 
