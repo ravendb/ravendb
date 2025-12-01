@@ -16,7 +16,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import { useMemo } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, useFieldArray, FieldArrayWithId, Control, FieldPath } from "react-hook-form";
 import { ChatbotUserActionState, chatbotActions } from "../../store/chatbotSlice";
 import Form from "react-bootstrap/Form";
 import { FormGroup, FormLabel, FormSelect } from "components/common/Form";
@@ -36,79 +36,35 @@ export default function ChatbotAskAiMessageAdditionalContext({
     userActionState,
 }: ChatbotAskAiMessageAdditionalContextProps) {
     const dispatch = useAppDispatch();
-    const allAdditionalContextOptions = Object.values(additionalContext).map((option) => option.Option);
-
-    const isOption = (option: AdditionalContextOption) => allAdditionalContextOptions.includes(option);
-
-    const getToolCallId = (option: AdditionalContextOption) => {
-        return Object.keys(additionalContext).find((key) => additionalContext[key].Option === option);
-    };
-
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const allDatabases = useAppSelector(databaseSelectors.allDatabases);
-
-    const databaseOptions: DatabaseSwitcherOption[] = useMemo(() => {
-        const sortedByNameDatabases = allDatabases.sort((a, b) => a.name.localeCompare(b.name));
-        const sortedByStatusDatabases = [
-            ...sortedByNameDatabases.filter((item) => !item.isDisabled),
-            ...sortedByNameDatabases.filter((item) => item.isDisabled),
-        ];
-
-        return sortedByStatusDatabases.map((db) => ({
-            value: db.name,
-            isSharded: db.isSharded,
-            environment: db.environment,
-            isDisabled: db.isDisabled,
-        }));
-    }, [allDatabases]);
-
-    const collectionOptions: SelectOption[] = useAppSelector(collectionsTrackerSelectors.collectionNames).map((x) => ({
-        value: x,
-        label: x,
-    }));
 
     const { control, handleSubmit, formState } = useForm<ActionContextFormData>({
         defaultValues: {
-            databaseName:
-                isOption("DatabaseName") && activeDatabaseName
-                    ? (databaseOptions?.find((x) => x.value === activeDatabaseName)?.value ?? null)
-                    : null,
-            collectionName: null,
-            documentId: null,
-            indexName: null,
+            items: Object.entries(additionalContext).map(([toolId, context]) => ({
+                toolId,
+                option: context.Option,
+                label: context.Message,
+                value: context.Option === "DatabaseName" ? activeDatabaseName : "",
+            })),
         },
-        resolver: yupResolver(actionContextSchema),
+        resolver: actionContextResolver,
+    });
+
+    const itemsFieldsArray = useFieldArray({
+        control,
+        name: "items",
     });
 
     const handleSend: SubmitHandler<ActionContextFormData> = (data) => {
         return tryHandleSubmit(async () => {
-            const actionResponses: Record<string, any> = {};
-
-            if (isOption("DatabaseName")) {
-                actionResponses[getToolCallId("DatabaseName")] = data.databaseName;
-            }
-            if (isOption("CollectionName")) {
-                actionResponses[getToolCallId("CollectionName")] = data.collectionName;
-            }
-            if (isOption("DocumentId")) {
-                actionResponses[getToolCallId("DocumentId")] = data.documentId;
-            }
-            if (isOption("IndexName")) {
-                actionResponses[getToolCallId("IndexName")] = data.indexName;
-            }
-
+            const actionResponses = Object.fromEntries(data.items.map((item) => [item.toolId, item.value]));
             dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "allowed" } }));
             dispatch(chatbotActions.runChat({ actionResponses }));
         });
     };
 
     const handleSkip = () => {
-        const actionResponses: Record<string, any> = {};
-
-        for (const option of allAdditionalContextOptions) {
-            actionResponses[getToolCallId(option)] = "Skipped";
-        }
-
+        const actionResponses = Object.fromEntries(Object.keys(additionalContext).map((toolId) => [toolId, "Skipped"]));
         dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "skipped" } }));
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
@@ -120,50 +76,12 @@ export default function ChatbotAskAiMessageAdditionalContext({
                 Additional context
             </div>
             <div className="p-2">
-                {isOption("DatabaseName") && (
-                    <div>
-                        <FormGroup>
-                            <FormLabel>Database</FormLabel>
-                            <FormSelect
-                                control={control}
-                                name="databaseName"
-                                placeholder={<NoDatabasePlaceholder />}
-                                options={databaseOptions}
-                                components={{ Option: DatabaseOptionItem, SingleValue: DatabaseSingleValue }}
-                                isRoundedPill
-                            />
-                        </FormGroup>
-                    </div>
-                )}
-                {isOption("CollectionName") && (
-                    <div>
-                        <FormGroup>
-                            <FormLabel>Collection</FormLabel>
-                            <FormSelectAutocomplete
-                                control={control}
-                                name="collectionName"
-                                options={collectionOptions}
-                                isRoundedPill
-                            />
-                        </FormGroup>
-                    </div>
-                )}
-                {isOption("DocumentId") && (
-                    <div>
-                        <FormGroup>
-                            <FormLabel>Document ID</FormLabel>
-                            <FormInput type="text" control={control} name="documentId" className="rounded-pill" />
-                        </FormGroup>
-                    </div>
-                )}
-                {isOption("IndexName") && (
-                    <div>
-                        <FormGroup>
-                            <FormLabel>Index name</FormLabel>
-                            <FormInput type="text" control={control} name="indexName" className="rounded-pill" />
-                        </FormGroup>
-                    </div>
-                )}
+                {itemsFieldsArray.fields.map((field, index) => (
+                    <FormGroup key={field.id}>
+                        <FormLabel>{field.label}</FormLabel>
+                        <FormOptionField control={control} field={field} index={index} />
+                    </FormGroup>
+                ))}
                 <div className="hstack justify-content-end mt-2">
                     {userActionState === "waiting" && (
                         <div className="hstack gap-1">
@@ -199,11 +117,80 @@ export default function ChatbotAskAiMessageAdditionalContext({
     );
 }
 
+interface FormOptionFieldProps {
+    control: Control<ActionContextFormData>;
+    field: FieldArrayWithId<ActionContextFormData, "items", "id">;
+    index: number;
+}
+
+function FormOptionField({ control, field, index }: FormOptionFieldProps) {
+    const name = `items.${index}.value` as const;
+
+    if (field.option === "DatabaseName") {
+        return <FormDatabaseField control={control} name={name} />;
+    }
+
+    if (field.option === "CollectionName") {
+        return <FormCollectionField control={control} name={name} />;
+    }
+
+    return <FormInput type="text" control={control} name={name} className="rounded-pill" />;
+}
+
+interface FormFieldProps {
+    control: Control<ActionContextFormData>;
+    name: FieldPath<ActionContextFormData>;
+}
+
+function FormDatabaseField({ control, name }: FormFieldProps) {
+    const allDatabases = useAppSelector(databaseSelectors.allDatabases);
+
+    const databaseOptions: DatabaseSwitcherOption[] = useMemo(() => {
+        const sortedByNameDatabases = allDatabases.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedByStatusDatabases = [
+            ...sortedByNameDatabases.filter((item) => !item.isDisabled),
+            ...sortedByNameDatabases.filter((item) => item.isDisabled),
+        ];
+
+        return sortedByStatusDatabases.map((db) => ({
+            value: db.name,
+            isSharded: db.isSharded,
+            environment: db.environment,
+            isDisabled: db.isDisabled,
+        }));
+    }, [allDatabases]);
+
+    return (
+        <FormSelect
+            control={control}
+            name={name}
+            placeholder={<NoDatabasePlaceholder />}
+            options={databaseOptions}
+            components={{ Option: DatabaseOptionItem, SingleValue: DatabaseSingleValue }}
+            isRoundedPill
+        />
+    );
+}
+
+function FormCollectionField({ control, name }: FormFieldProps) {
+    const collectionOptions: SelectOption[] = useAppSelector(collectionsTrackerSelectors.collectionNames).map((x) => ({
+        value: x,
+        label: x,
+    }));
+
+    return <FormSelectAutocomplete control={control} name={name} options={collectionOptions} isRoundedPill />;
+}
+
 const actionContextSchema = yup.object({
-    databaseName: yup.string().nullable(),
-    collectionName: yup.string().nullable(),
-    documentId: yup.string().nullable(),
-    indexName: yup.string().nullable(),
+    items: yup.array().of(
+        yup.object({
+            toolId: yup.string(),
+            option: yup.string<AdditionalContextOption>(),
+            label: yup.string(),
+            value: yup.string().nullable().required(),
+        })
+    ),
 });
 
+const actionContextResolver = yupResolver(actionContextSchema);
 type ActionContextFormData = yup.InferType<typeof actionContextSchema>;
