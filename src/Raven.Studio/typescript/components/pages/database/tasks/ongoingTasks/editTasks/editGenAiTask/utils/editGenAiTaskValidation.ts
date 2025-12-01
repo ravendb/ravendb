@@ -1,3 +1,4 @@
+import { yupResolver } from "@hookform/resolvers/yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import * as yup from "yup";
 
@@ -16,7 +17,7 @@ const attachmentsSchema = yup.array().of(
     }).nullable()
 );
 
-export const editGenAiTaskSchema = yup.object({
+const editGenAiTaskSchema = yup.object({
     // basic step
     name: yup.string().required(),
     identifier: yup.string(),
@@ -152,5 +153,6 @@ export const editGenAiTaskSchema = yup.object({
     isForceSendingCachedObjects: yup.boolean(),
 });
 
+export const editGenAiTaskResolver = yupResolver(editGenAiTaskSchema);
 export type EditGenAiTaskFormData = yup.InferType<typeof editGenAiTaskSchema>;
 export type GenAiAiAttachment = yup.InferType<typeof attachmentsSchema>[number];

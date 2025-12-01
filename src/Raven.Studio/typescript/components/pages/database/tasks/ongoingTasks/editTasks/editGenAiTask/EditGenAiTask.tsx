@@ -1,6 +1,5 @@
 import "./EditGenAiTask.scss";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
 import { useServices } from "components/hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -10,7 +9,7 @@ import { useEffect } from "react";
 import { useEditGenAiTaskSteps } from "./hooks/useEditGenAiTaskSteps";
 import {
     EditGenAiTaskFormData,
-    editGenAiTaskSchema,
+    editGenAiTaskResolver,
     EditGenAiTaskValidationContext,
 } from "./utils/editGenAiTaskValidation";
 import { editGenAiTaskUtils } from "./utils/editGenAiTaskUtils";
@@ -63,28 +62,30 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
 
     const cancel = useEditGenAiCancel();
 
+    const getDefaultValues = async () => {
+        if (taskId) {
+            try {
+                const dto = await tasksService.getGenAiTaskInfo(databaseName, taskId);
+                return editGenAiTaskUtils.getDefaultValues(dto);
+            } catch {
+                cancel();
+            }
+        }
+
+        return editGenAiTaskUtils.getDefaultValues(null);
+    };
+
     const form = useForm<EditGenAiTaskFormData>({
         mode: "all",
         resolver: (data, _, options) =>
-            yupResolver(editGenAiTaskSchema)(
+            editGenAiTaskResolver(
                 data,
                 {
                     allQueryNames: data.queries?.map((x) => x.name) ?? [],
                 } satisfies EditGenAiTaskValidationContext,
                 options
             ),
-        defaultValues: async () => {
-            if (taskId) {
-                try {
-                    const dto = await tasksService.getGenAiTaskInfo(databaseName, taskId);
-                    return editGenAiTaskUtils.getDefaultValues(dto);
-                } catch {
-                    cancel();
-                }
-            }
-
-            return editGenAiTaskUtils.getDefaultValues(null);
-        },
+        defaultValues: getDefaultValues,
     });
 
     const { setIsDirty } = useDirtyFlag(form.formState.isDirty);
