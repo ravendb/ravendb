@@ -253,7 +253,7 @@ export function DetailedDatabaseStats() {
                                                 <span className="text-muted">•</span>
                                                 <small>
                                                     <span className="text-muted">
-                                                        {data.CountOfUniqueAttachments.toLocaleString()} unique
+                                                        {data.CountOfUniqueAttachments.toLocaleString()} unique (local)
                                                     </span>
                                                 </small>
                                                 <span className="text-muted">•</span>
