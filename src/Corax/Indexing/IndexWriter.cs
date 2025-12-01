@@ -99,7 +99,7 @@ namespace Corax.Indexing
         // Example:
         // _termsPerEntryIds: [(Index: 0, Value: 1 (docId))]
         // _termsPerEntryId: [0: [(id(): "Doc1"), (Field1: "Term1")], ...]
-        private NativeList<long> _termsPerEntryIds;
+        private NativeList<DocumentEntryId> _termsPerEntryIds;
         private NativeList<NativeList<RecordedTerm>> _termsPerEntryId;
         
         // Private context used by the index writer to store temporary data during an indexing process. We do not want to grow transaction's allocator too much for temporary data.
@@ -310,11 +310,11 @@ namespace Corax.Indexing
 
             _indexedEntries.Add(keySlice); // Register entry by key.
             int index = InsertTermsPerEntry(entryId);
-            _entryBuilder.Init(new DocumentEntryId(entryId), index, keySlice);
+            _entryBuilder.Init(entryId, index, keySlice);
             return _entryBuilder;
         }
 
-        private int InsertTermsPerEntry(long entryId)
+        private int InsertTermsPerEntry(DocumentEntryId entryId)
         {
             int index = _termsPerEntryId.Count;
             _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
@@ -328,7 +328,7 @@ namespace Corax.Indexing
 
         public IndexEntryBuilder Index(ReadOnlySpan<byte> key)
         {
-            long entryId = InitBuilder();
+            DocumentEntryId entryId = InitBuilder();
 
             // We do not dispose because we will be storing the slice in the hash set.
             Slice.From(_transaction.Allocator, key, ByteStringType.Immutable, out var keySlice);
@@ -337,7 +337,7 @@ namespace Corax.Indexing
                 DisablePaginationBasedOnEntryIdSupport();
 
             int index = InsertTermsPerEntry(entryId);
-            _entryBuilder.Init(new DocumentEntryId(entryId), index, keySlice);
+            _entryBuilder.Init(entryId, index, keySlice);
             return _entryBuilder;
         }
 
@@ -347,7 +347,7 @@ namespace Corax.Indexing
             _indexMetadata.Add(Constants.IndexWriter.PaginationBasedOnEntryIdSupportStatus, (long)EntryIdPaginationSupportStatus.Disabled);
         }
 
-        private long InitBuilder()
+        private DocumentEntryId InitBuilder()
         {
             if (_entryBuilder.Active)
                 ThrowPreviousBuilderIsNotDisposed();
@@ -355,7 +355,7 @@ namespace Corax.Indexing
             _numberOfModifications++;
             var entryId = ++_lastEntryId;
 
-            return entryId;
+            return new DocumentEntryId(entryId);
         }
 
         /// <summary>
@@ -560,12 +560,13 @@ namespace Corax.Indexing
                 if (_entryIdToLocation.TryRemove(entryToDelete, out var entryTermsIdLong) == false)
                     ThrowUnableToLocateEntry(entryToDelete);
 
+                var documentToDelete = new DocumentEntryId(entryToDelete);
                 ContainerEntryId entryTermsId = (ContainerEntryId)entryTermsIdLong;
-                RemoveDocumentBoost(new DocumentEntryId(entryToDelete));
+                RemoveDocumentBoost(documentToDelete);
                 Container.Get(_transaction.LowLevelTransaction, entryTermsId, out var entryTerms);
-                var termsPerEntryIndex = InsertTermsPerEntry(entryToDelete);
+                var termsPerEntryIndex = InsertTermsPerEntry(documentToDelete);
                 RecordTermDeletionsForEntry(entryTerms, _transaction.LowLevelTransaction, _fieldsByRootPage, _nullTermsMarkers, _nonExistingTermsMarkers,
-                    _compactTreeDictionaryId, entryToDelete, termsPerEntryIndex);
+                    _compactTreeDictionaryId, documentToDelete, termsPerEntryIndex);
 
 
                 Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)entryTermsId);
@@ -575,7 +576,7 @@ namespace Corax.Indexing
         }
 
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage,
-            HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, long entryToDelete, int termsPerEntryIndex)
+            HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
             var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId);
             reader.Reset();
@@ -622,7 +623,7 @@ namespace Corax.Indexing
                 }
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
                 scope.Dispose();
 
                 if (reader.HasNumeric == false)
@@ -636,7 +637,7 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
                 termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
                 if (exists == false)
@@ -646,11 +647,11 @@ namespace Corax.Indexing
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
-                term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, freq: 1, InserterMode.Numerical);
+                term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
             }
         }
 
-        private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, long entryToDelete, int termsPerEntryIndex)
+        private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
             ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
             if (exists == false)
@@ -661,7 +662,7 @@ namespace Corax.Indexing
             }
 
             ref var term = ref field.Storage.GetAsRef(termLocation);
-            term.Removal(_entriesAllocator, new DocumentEntryId(entryToDelete), termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
+            term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
         }
 
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
@@ -727,7 +728,7 @@ namespace Corax.Indexing
             return TryDeleteEntry(termSlice, out _);
         }
 
-        private bool TryDeleteEntry(Slice termSlice, out long entryId)
+        private bool TryDeleteEntry(Slice termSlice, out DocumentEntryId entryId)
         {
             if (_indexedEntries.Contains(termSlice) == false)
             {
@@ -740,7 +741,7 @@ namespace Corax.Indexing
                     // we'll delete them, but treat this as a _new_ entry, not an update to an existing
                     // one
                     RecordAndPrepareDocumentsIdsForDeletion(containerId, out var setsAreDisjoint, out var isSingleDocument, out var singleDocumentEntryId);
-                    entryId = isSingleDocument ? (long)singleDocumentEntryId : Constants.IndexSearcher.InvalidId;
+                    entryId = isSingleDocument ? singleDocumentEntryId : DocumentEntryId.Invalid;
 
                     Debug.Assert(isSingleDocument || setsAreDisjoint,
                         $"A single document can be deleted twice (delete + update), however if it's not a single document, the sets are supposed to be disjoint.");
@@ -750,7 +751,7 @@ namespace Corax.Indexing
                     return isSingleDocument;
                 }
 
-                entryId = Constants.IndexSearcher.InvalidId;
+                entryId = DocumentEntryId.Invalid;
                 return false;
             }
 
@@ -837,7 +838,7 @@ namespace Corax.Indexing
 
             _tempListBuffer = new(_entriesAllocator);
             _termsPerEntryId = new NativeList<NativeList<RecordedTerm>>();
-            _termsPerEntryIds = new NativeList<long>();
+            _termsPerEntryIds = new NativeList<DocumentEntryId>();
             _numberOfModifications = 0;
             _numberOfTermModifications = 0;
             _initialNumberOfEntries = _indexMetadata?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
@@ -1120,7 +1121,7 @@ namespace Corax.Indexing
                 ContainerEntryId entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
                 writer.Write(space);
 
-                _entryIdToLocation.Add(termsPerEntryIds[i], (long)entryTermsId);
+                _entryIdToLocation.Add((long)termsPerEntryIds[i], (long)entryTermsId);
             }
         }
 

@@ -22,7 +22,7 @@ public partial class IndexWriter
         private NativeList<DocumentEntryId> _entriesForTermsAdditionsBufferEntryId;
         private NativeList<ContainerEntryId> _entriesForTermsAdditionsBufferTermId;
         private readonly List<DocumentEntryId> _additionsForTerm, _removalsForTerm;
-        private readonly HashSet<long> _entriesAlreadyAdded;
+        private readonly HashSet<DocumentEntryId> _entriesAlreadyAdded;
         private ContainerEntryId _termContainerId;
         
         public EntriesToTermsTracker(IndexWriter writer)
@@ -80,7 +80,7 @@ public partial class IndexWriter
             foreach (DocumentEntryId removal in CollectionsMarshal.AsSpan(_removalsForTerm))
             {
                 // if already added, we don't need to remove it in this batch
-                if (_entriesAlreadyAdded.Contains((long)removal))
+                if (_entriesAlreadyAdded.Contains(removal))
                     continue;
                 _entriesForTermsRemovalsBuffer.AddUnsafe(removal);
             }
@@ -93,7 +93,7 @@ public partial class IndexWriter
             
             foreach (DocumentEntryId addition in CollectionsMarshal.AsSpan(_additionsForTerm))
             {
-                if (_entriesAlreadyAdded.Add((long)addition) == false)
+                if (_entriesAlreadyAdded.Add(addition) == false)
                     continue;
                 
                 _entriesForTermsAdditionsBufferEntryId.AddUnsafe(addition);
