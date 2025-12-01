@@ -655,21 +655,11 @@ namespace Raven.Server.Documents.Replication.Senders
 
             foreach (var item in _orderedReplicaItems)
             {
-                if (item.Value is AttachmentReplicationItem)
+                // we will dispose item.Value when we are done with writing the stream in the loop below
+                using (item.Value is AttachmentReplicationItem ? item.Value : null)
+                using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
                 {
-                    // we will dispose item.Value when we are done with writing the stream in the loop below
-                    using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
-                    {
-                        item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);
-                    }
-                }
-                else
-                {
-                    using (item.Value)
-                    using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
-                    {
-                        item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);
-                    }
+                    item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);
                 }
             }
 

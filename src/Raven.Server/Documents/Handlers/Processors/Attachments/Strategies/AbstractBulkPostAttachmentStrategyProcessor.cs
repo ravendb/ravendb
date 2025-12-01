@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -18,8 +19,7 @@ internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHand
     }
 
     public abstract void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
-    public abstract (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, DirectFileDownloader downloader, Attachment attachment);
-    public abstract DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs);
+    public abstract (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken tcs);
 
     public void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
     {

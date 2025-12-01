@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -23,14 +24,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             }
         }
 
-        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, DirectFileDownloader downloader, Attachment attachment)
+        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken tcs)
         {
             return (Task.FromResult(attachment.Stream), true);
-        }
-
-        public override DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs)
-        {
-            return null;
         }
     }
 }

@@ -338,12 +338,22 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.SizeInBytes:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        if (state.CurrentTokenType != JsonParserToken.Integer)
-                        {
-                            ThrowUnexpectedToken(JsonParserToken.Integer, state);
-                        }
-                        commandData.SizeInBytes = state.Long;
 
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.SizeInBytes = null;
+                                break;
+
+                            case JsonParserToken.Integer:
+                                commandData.SizeInBytes = state.Long;
+
+                                break;
+
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                                break;
+                        }
                         break;
 
                     case CommandPropertyName.RemoteParameters:

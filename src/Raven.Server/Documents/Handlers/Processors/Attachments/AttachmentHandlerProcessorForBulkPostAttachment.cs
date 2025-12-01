@@ -24,14 +24,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             OperationCancelToken tcs)
         {
             var tasks = new List<Task<Stream>>();
-            var attachmentsStreams = new List<Stream>();
-            DirectFileDownloader downloader = null;
             bool canDisposeReadTransaction = true;
+            var downloaders = new Dictionary<string, DirectFileDownloader>(StringComparer.OrdinalIgnoreCase);
             using DocumentsTransaction tx = context.OpenReadTransaction();
-            var stream = new MemoryStream();
             try
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(GetAttachmentsOperation.GetAttachmentsCommand.AttachmentsMetadata));
@@ -53,7 +51,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (attachment.RemoteParameters.IsRemoteStorageAttachment())
                         {
                             strategy = new RemoteBulkPostAttachmentStrategyProcessor(RequestHandler);
-                            downloader ??= strategy.GetAttachmentsDownloader(attachment, tcs);
                         }
                         else
                         {
@@ -66,8 +63,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             writer.WriteComma();
                         first = false;
 
-                        (var attachmentStream, var isLocal) = strategy.GetAttachmentStream(context, downloader, attachment);
-                        tasks.Add(attachmentStream);
+                        (var getAttachmentStreamTask, var isLocal) = strategy.GetAttachmentStream(context, downloaders, attachment, tcs);
+                        tasks.Add(getAttachmentStreamTask);
                         if (isLocal)
                         {
                             canDisposeReadTransaction = false;
@@ -90,35 +87,17 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     tx.Dispose();
                 }
 
-                foreach (var t in tasks)
+                foreach (Task<Stream> t in tasks)
                 {
-                    await t;
-                    attachmentsStreams.Add(t.Result);
+                    await using Stream stream = await t;
+                    await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
                 }
-
-                stream.Position = 0;
-                await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
             }
             finally
             {
-                downloader?.Dispose();
-                await stream.DisposeAsync();
-            }
-
-            using (context.GetMemoryBuffer(out var buffer))
-            {
-                var responseStream = RequestHandler.ResponseBodyStream();
-                foreach (var stream2 in attachmentsStreams)
+                foreach (var kvp in downloaders)
                 {
-                    await using (var tmpStream = stream2)
-                    {
-                        var count = await tmpStream.ReadAsync(buffer.Memory.Memory, tcs.Token);
-                        while (count > 0)
-                        {
-                            await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), tcs.Token);
-                            count = await tmpStream.ReadAsync(buffer.Memory.Memory, tcs.Token);
-                        }
-                    }
+                    kvp.Value.Dispose();
                 }
             }
         }
