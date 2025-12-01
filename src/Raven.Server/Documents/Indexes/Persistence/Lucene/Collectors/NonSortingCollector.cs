@@ -1,22 +1,24 @@
 ﻿using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
     public sealed class NonSortingCollector : Collector
     {
-        private readonly RavenTopDocs _ravenTopDocs;
         private readonly int _numberOfDocsToCollect;
+        private readonly ManagedScoreDocArray _scoreDocArray;
+
         private int _totalHits;
+        private float _maxScore;
         private int _docBase;
 
         private Scorer _scorer;
-        private float _maxScore;
 
         public NonSortingCollector(int numberOfDocsToCollect)
         {
-            _ravenTopDocs = new RavenTopDocs();
+            _scoreDocArray = new ManagedScoreDocArray();
             _numberOfDocsToCollect = numberOfDocsToCollect;
         }
 
@@ -27,13 +29,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public override void Collect(int doc, IState state)
         {
-            if (_ravenTopDocs.Count < _numberOfDocsToCollect)
+            if (_scoreDocArray.Length < _numberOfDocsToCollect)
             {
                 var score = _scorer?.Score(state) ?? 0;
                 if (score > _maxScore)
                     _maxScore = score;
 
-                _ravenTopDocs.Add(doc + _docBase, score);
+                _scoreDocArray.Add(doc + _docBase, score);
             }
 
             _totalHits++;
@@ -48,9 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 
         public TopDocs ToTopDocs()
         {
-            _ravenTopDocs.TotalHits = _totalHits;
-            _ravenTopDocs.MaxScore = _maxScore;
-            return _ravenTopDocs;
+            return new TopDocs(_totalHits, _maxScore, _scoreDocArray);
         }
     }
 }
