@@ -95,7 +95,7 @@ const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelecto
 
 const initialState: ChatbotState = {
     isOpen: false,
-    isPinned: false,
+    isPinned: true,
     chatbotTab: "Ask AI",
     chatbotResourcesTab: "Help and resources",
     conversationId: null,
