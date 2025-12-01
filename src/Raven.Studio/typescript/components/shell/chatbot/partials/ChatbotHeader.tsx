@@ -4,19 +4,15 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
 import AiAssistantUsagePercentageCircle from "components/common/aiAssistant/AiAssistantUsagePercentageCircle";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
+import { Toggles } from "components/common/toggles/Toggles.stories";
+import { Switch } from "components/common/Checkbox";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
     const chatbotTab = useAppSelector(chatbotSelectors.chatbotTab);
     const isPinned = useAppSelector(chatbotSelectors.isPinned);
-
-    const resetConversation = () => {
-        dispatch(chatbotActions.messagesSet([]));
-        dispatch(chatbotActions.conversationIdSet(null));
-        dispatch(
-            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
-        );
-    };
 
     return (
         <div className="chatbot-header panel-bg-2 border-bottom border-secondary p-2 hstack justify-content-between align-items-center">
@@ -24,11 +20,7 @@ export default function ChatbotHeader() {
                 <HeaderTitle />
             </h4>
             <div className="hstack">
-                {chatbotTab === "Ask AI" && (
-                    <Button variant="link" size="sm" className="text-reset" onClick={resetConversation}>
-                        <Icon icon="plus" margin="m-0" />
-                    </Button>
-                )}
+                {chatbotTab === "Ask AI" && <AskAiActions />}
                 <Button
                     variant="link"
                     size="sm"
@@ -47,6 +39,43 @@ export default function ChatbotHeader() {
                 </Button>
             </div>
         </div>
+    );
+}
+
+function AskAiActions() {
+    const dispatch = useAppDispatch();
+    const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
+
+    const resetConversation = () => {
+        dispatch(chatbotActions.messagesSet([]));
+        dispatch(chatbotActions.conversationIdSet(null));
+        dispatch(
+            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
+        );
+    };
+
+    return (
+        <>
+            <Button variant="link" size="sm" className="text-reset" onClick={resetConversation}>
+                <Icon icon="plus" margin="m-0" />
+            </Button>
+            <Dropdown>
+                <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="link" className="text-emphasis">
+                    <Icon icon="settings" margin="m-0" />
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="p-2" style={{ minWidth: "max-content" }}>
+                    <Switch
+                        color="primary"
+                        selected={isAlwaysAllowEndpointCalls}
+                        toggleSelection={() =>
+                            dispatch(chatbotActions.isAlwaysAllowEndpointCallsSet(!isAlwaysAllowEndpointCalls))
+                        }
+                    >
+                        Always allow endpoints calls
+                    </Switch>
+                </Dropdown.Menu>
+            </Dropdown>
+        </>
     );
 }
 

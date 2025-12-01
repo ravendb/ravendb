@@ -79,7 +79,7 @@ interface ChatbotState {
     lastRunData: ChatbotRunChatData;
     attachedContexts: EntityState<ChatbotAttachedContext, string>;
     deniedEndpoints: string[];
-    conversationsWithAlwaysAllowEndpointCalls: string[];
+    isAlwaysAllowEndpointCalls: boolean;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -103,8 +103,8 @@ const initialState: ChatbotState = {
     messages: chatbotMessagesAdapter.getInitialState(),
     lastRunData: null,
     deniedEndpoints: [],
-    conversationsWithAlwaysAllowEndpointCalls: [],
     attachedContexts: chatbotAttachedContextAdapter.getInitialState(),
+    isAlwaysAllowEndpointCalls: true,
 };
 
 export const chatbotSlice = createSlice({
@@ -187,10 +187,8 @@ export const chatbotSlice = createSlice({
         deniedEndpointsAdded: (state, action: PayloadAction<string[]>) => {
             state.deniedEndpoints = [...new Set([...state.deniedEndpoints, ...action.payload])];
         },
-        conversationsWithAlwaysAllowEndpointCallsAdded: (state, action: PayloadAction<string>) => {
-            state.conversationsWithAlwaysAllowEndpointCalls = [
-                ...new Set([...state.conversationsWithAlwaysAllowEndpointCalls, action.payload]),
-            ];
+        isAlwaysAllowEndpointCallsSet: (state, action: PayloadAction<boolean>) => {
+            state.isAlwaysAllowEndpointCalls = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -368,8 +366,5 @@ export const chatbotSelectors = {
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
-    conversationsWithAlwaysAllowEndpointCalls: (state: RootState) =>
-        state.chatbot.conversationsWithAlwaysAllowEndpointCalls,
-    hasAlwaysAllowEndpointCalls: (state: RootState) =>
-        state.chatbot.conversationsWithAlwaysAllowEndpointCalls.includes(state.chatbot.conversationId),
+    isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
 };

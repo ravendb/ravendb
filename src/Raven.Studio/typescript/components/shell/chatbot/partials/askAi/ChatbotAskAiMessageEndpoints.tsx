@@ -34,8 +34,7 @@ export default function ChatbotAskAiMessageEndpoints({
     const dispatch = useAppDispatch();
 
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
-    const conversationId = useAppSelector(chatbotSelectors.conversationId);
-    const hasAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.hasAlwaysAllowEndpointCalls);
+    const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
 
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
@@ -123,7 +122,7 @@ export default function ChatbotAskAiMessageEndpoints({
     );
 
     const handleAlwaysAllow = async () => {
-        dispatch(chatbotActions.conversationsWithAlwaysAllowEndpointCallsAdded(conversationId));
+        dispatch(chatbotActions.isAlwaysAllowEndpointCallsSet(true));
         asyncHandleAllow.execute();
     };
 
@@ -173,14 +172,10 @@ export default function ChatbotAskAiMessageEndpoints({
     };
 
     useEffect(() => {
-        if (hasAlwaysAllowEndpointCalls) {
+        if (isAlwaysAllowEndpointCalls) {
             asyncHandleAllow.execute();
-        }
-    }, []);
-
-    useEffect(() => {
-        if (hasOnlyDeniedEndpoints) {
-            handleSkip();
+        } else if (hasOnlyDeniedEndpoints) {
+            handleDeny();
         }
     }, []);
 
@@ -265,7 +260,7 @@ export default function ChatbotAskAiMessageEndpoints({
                         {userActionState === "allowed" && (
                             <Badge bg="success" className="rounded-pill">
                                 <Icon icon="check" />
-                                Success
+                                {isAlwaysAllowEndpointCalls ? "Always allowed" : "Success"}
                             </Badge>
                         )}
                     </div>

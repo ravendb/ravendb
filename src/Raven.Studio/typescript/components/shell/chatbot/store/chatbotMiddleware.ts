@@ -1,6 +1,7 @@
 import { createListenerMiddleware, isAnyOf } from "@reduxjs/toolkit";
 import { chatbotActions } from "./chatbotSlice";
 import { RootState } from "components/store";
+import studioSettings from "common/settings/studioSettings";
 
 export const chatbotMiddleware = createListenerMiddleware();
 
@@ -17,6 +18,15 @@ chatbotMiddleware.startListening({
     effect: (_, { getState }) => {
         const state = getState() as RootState;
         toggleLayoutClass("pin-chatbot", state.chatbot.isPinned);
+    },
+});
+
+chatbotMiddleware.startListening({
+    actionCreator: chatbotActions.isAlwaysAllowEndpointCallsSet,
+    effect: async (_, { getState }) => {
+        const state = getState() as RootState;
+        const globalSettings = await studioSettings.default.globalSettings();
+        globalSettings.isChatbotAlwaysAllowEndpointCalls.setValue(state.chatbot.isAlwaysAllowEndpointCalls);
     },
 });
 
