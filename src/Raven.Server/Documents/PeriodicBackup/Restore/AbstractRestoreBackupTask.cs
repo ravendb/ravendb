@@ -403,6 +403,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (RestoreConfiguration.DisableOngoingTasks == false)
                 return;
 
+            if (databaseRecord.AiAgents != null)
+            {
+                foreach (var agent in databaseRecord.AiAgents)
+                {
+                    agent.Disabled = true;
+                }
+            }
+
             if (databaseRecord.ExternalReplications != null)
             {
                 foreach (var task in databaseRecord.ExternalReplications)

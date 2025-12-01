@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -37,6 +38,10 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         {
             Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
         };
+
+        if (body.Configuration.Disabled)
+            throw new InvalidOperationException($"The AI Agent '{body.Configuration.Identifier}' is currently disabled. Please enable the agent before starting\\continuing a conversation.");
+
         await ExecuteInternalAsync(handler, context, body.Configuration, "TestConversation", req, changeVector: null, streaming: streaming, token: token);
     }
 
