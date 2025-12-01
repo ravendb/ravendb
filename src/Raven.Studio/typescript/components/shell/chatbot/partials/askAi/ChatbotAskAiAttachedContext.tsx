@@ -98,8 +98,8 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
                 return "index";
             case "Current Document":
                 return "document";
-            case "Endpoints Response":
-                return "endpoint";
+            case "Query Result":
+                return "query";
             default:
                 assertUnreachable(item.type);
         }
@@ -151,5 +151,5 @@ const tooltipTitles: Record<ChatbotAttachedContext["type"], string> = {
     "Current Database Name": "Database Name",
     "Current Index Definition": "Index Definition",
     "Current Document": "Document",
-    "Endpoints Response": "Endpoint Response",
+    "Query Result": "Query Result",
 };

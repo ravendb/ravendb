@@ -79,18 +79,6 @@ export const Endpoints: StoryObj<typeof Chatbot> = {
         commonInit();
 
         const { chatbot } = mockStore;
-
-        for (let i = 0; i < 40; i++) {
-            const id = `endpoint-${_.uniqueId()}` as const;
-            chatbot.with_attachedContextUpserted({
-                id,
-                type: "Endpoints Response",
-                label: id,
-                value: '{"Name":"Auto/Categories/ById()","SourceType":"Documents","Type":"AutoMap"',
-                state: "included",
-            });
-        }
-
         chatbot.with_messages(ChatbotStubs.messagesWithEndpoints());
 
         return <ChatbotInLayout />;

@@ -57,11 +57,7 @@ function initRedux() {
             })
         );
         globalDispatch(
-            chatbotActions.attachedContextTypesRemoved([
-                "Current Document",
-                "Current Index Definition",
-                "Endpoints Response",
-            ])
+            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
         );
 
         if (!db) {

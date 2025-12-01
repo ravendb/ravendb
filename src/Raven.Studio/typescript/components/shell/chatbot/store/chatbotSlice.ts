@@ -17,30 +17,31 @@ type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
 export type ChatbotUserActionState = "waiting" | "skipped" | "allowed" | "denied" | "error";
 
-type ChatbotRunChatData = {
+interface ChatbotRunChatData {
     message?: string;
     actionResponses?: Record<string, any>;
-};
+}
 
 export type ChatbotAttachedContextId =
     | "currentView"
     | "currentDatabaseName"
     | "currentIndexDefinition"
     | "currentDocument"
-    | `endpoint-${string}`;
+    | `query-${string}`;
 
-export type ChatbotAttachedContext = {
+export interface ChatbotAttachedContext {
     id: ChatbotAttachedContextId;
-    type:
-        | "Current View"
-        | "Current Database Name"
-        | "Current Index Definition"
-        | "Current Document"
-        | "Endpoints Response";
+    type: "Current View" | "Current Database Name" | "Current Index Definition" | "Current Document" | "Query Result";
     value: string;
     label: string;
     state: "included" | "excluded";
-};
+}
+
+export interface ChatbotEndpointItem {
+    toolId: string;
+    url: string;
+    state: ChatbotUserActionState;
+}
 
 interface ChatbotMessageBase {
     id: string;
@@ -61,7 +62,7 @@ export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     usage: Raven.Client.Documents.Operations.AI.AiUsage;
     relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
     followUpQuestions: string[];
-    endpoints: RunChatbotAiAssistantResultDto["Endpoints"];
+    endpoints: ChatbotEndpointItem[];
     additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
     userActionState: ChatbotUserActionState;
 }
@@ -244,7 +245,7 @@ const runChat = createAsyncThunk(
             usage: null,
             relevantLinks: [],
             followUpQuestions: [],
-            endpoints: {},
+            endpoints: [],
             additionalContext: {},
             userActionState: null,
         };
@@ -293,24 +294,36 @@ const runChat = createAsyncThunk(
             thinkingTimeInMs: new Date().getTime() - startThinkingTime,
             relevantLinks: data.Response.RelevantLinks ?? [],
             followUpQuestions: data.Response.FollowUpQuestions ?? [],
-            endpoints: data.Endpoints ?? {},
+            endpoints: getEndpointItems(data.Endpoints ?? {}),
             additionalContext: data.AdditionalContext ?? {},
             userActionState: getUserActionState(data),
         };
     }
 );
 
+function getEndpointItems(endpointsDto: Record<string, string[]>): ChatbotEndpointItem[] {
+    if (!_.isObject(endpointsDto)) {
+        return [];
+    }
+
+    return Object.entries(endpointsDto).flatMap(([toolId, endpoints]) =>
+        endpoints.map((url) => ({
+            toolId,
+            url,
+            state: "waiting",
+        }))
+    );
+}
+
 function getAdditionalAttachedContext(attachedContexts: ChatbotAttachedContext[]): Record<string, any> {
     const result: Record<string, any> = Object.fromEntries(
-        attachedContexts.filter((x) => x.type !== "Endpoints Response").map((context) => [context.type, context.value])
+        attachedContexts.filter((x) => x.type !== "Query Result").map((context) => [context.type, context.value])
     );
 
-    const endpointResponses = attachedContexts.filter((x) => x.type === "Endpoints Response");
+    const queryResults = attachedContexts.filter((x) => x.type === "Query Result");
 
-    if (endpointResponses.length) {
-        result["EndpointResponses"] = Object.fromEntries(
-            endpointResponses.map((context) => [context.label, context.value])
-        );
+    if (queryResults.length) {
+        result["Query Results"] = JSON.stringify(queryResults.map((x) => ({ query: x.label, result: x.value })));
     }
 
     return result;

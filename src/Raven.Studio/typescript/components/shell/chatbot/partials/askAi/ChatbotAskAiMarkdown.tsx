@@ -42,7 +42,7 @@ const markdownComponents: Components = {
         </a>
     ),
     table: ({ children }) => (
-        <Table bordered striped hover className="mb-2">
+        <Table bordered striped hover responsive className="mb-2">
             {children}
         </Table>
     ),

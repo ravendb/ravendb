@@ -152,7 +152,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         );
     }
 
-    if (Object.keys(message.endpoints).length > 0) {
+    if (message.endpoints.length > 0) {
         return (
             <ChatbotAskAiMessageEndpoints
                 id={message.id}

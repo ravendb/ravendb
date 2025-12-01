@@ -1,10 +1,9 @@
 import { Icon } from "components/common/Icon";
-import { chatbotActions, ChatbotUserActionState } from "../../store/chatbotSlice";
+import { chatbotActions, ChatbotEndpointItem, ChatbotUserActionState } from "../../store/chatbotSlice";
 import { useEffect } from "react";
 import Button from "react-bootstrap/Button";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotSelectors } from "../../store/chatbotSlice";
-import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotAiAssistantCommand";
 import { tryCatch } from "components/utils/common";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import Dropdown from "react-bootstrap/Dropdown";
@@ -16,13 +15,13 @@ import Badge from "react-bootstrap/Badge";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
-    endpoints: RunChatbotAiAssistantResultDto["Endpoints"];
+    endpoints: ChatbotEndpointItem[];
     userActionState: ChatbotUserActionState;
 }
 
 interface EndpointResult {
     toolId: string;
-    endpoint: string;
+    url: string;
     status: "success" | "error";
     resultText: string;
 }
@@ -37,89 +36,83 @@ export default function ChatbotAskAiMessageEndpoints({
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
     const conversationId = useAppSelector(chatbotSelectors.conversationId);
     const hasAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.hasAlwaysAllowEndpointCalls);
-    const attachedContexts = useAppSelector(chatbotSelectors.attachedContexts);
 
-    const endpointsArray = Object.values(endpoints).flatMap((x) => x);
-    const hasOnlyDeniedEndpoints = endpointsArray.every((endpoint) => deniedEndpoints.includes(endpoint));
+    const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
     const asyncHandleAllow = useAsyncCallback(
         async () => {
             const actionResponses: Record<string, any> = {};
 
-            const endpointPromises = Object.keys(endpoints).flatMap((toolId) =>
-                endpoints[toolId].map(async (endpoint): Promise<EndpointResult> => {
-                    const baseResult: Omit<EndpointResult, "status" | "resultText"> = {
-                        toolId,
-                        endpoint,
-                    };
+            const endpointPromises = endpoints.map(async ({ toolId, url }): Promise<EndpointResult> => {
+                const baseResult: Omit<EndpointResult, "status" | "resultText"> = {
+                    toolId,
+                    url,
+                };
 
-                    const response = await tryCatch(() => fetch(endpoint));
-                    if (response.status === "error") {
-                        return { ...baseResult, status: "error", resultText: response.error };
-                    }
+                const response = await tryCatch(() => fetch(url));
+                if (response.status === "error") {
+                    return { ...baseResult, status: "error", resultText: response.error };
+                }
 
-                    if (!response.data.ok) {
-                        const defaultErrorMessage = response.data.status + " " + response.data.statusText;
-                        const jsonError = await tryCatch(() => response.data.json());
+                if (!response.data.ok) {
+                    const defaultErrorMessage = response.data.status + " " + response.data.statusText;
+                    const jsonError = await tryCatch(() => response.data.json());
 
-                        if (jsonError.status === "success") {
-                            return {
-                                ...baseResult,
-                                status: "error",
-                                resultText: jsonError.data.Error?.slice(0, 200) ?? defaultErrorMessage,
-                            };
-                        }
-
+                    if (jsonError.status === "success") {
                         return {
                             ...baseResult,
                             status: "error",
-                            resultText: defaultErrorMessage,
+                            resultText: jsonError.data.Error?.slice(0, 200) ?? defaultErrorMessage,
                         };
                     }
 
-                    const jsonResult = await tryCatch(() => response.data.json());
-                    if (jsonResult.status === "success") {
-                        return { ...baseResult, status: "success", resultText: JSON.stringify(jsonResult.data) };
-                    }
+                    return {
+                        ...baseResult,
+                        status: "error",
+                        resultText: defaultErrorMessage,
+                    };
+                }
 
-                    const textResult = await tryCatch(() => response.data.text());
-                    if (textResult.status === "success") {
-                        return { ...baseResult, status: "success", resultText: textResult.data };
-                    }
+                const jsonResult = await tryCatch(() => response.data.json());
+                if (jsonResult.status === "success") {
+                    return { ...baseResult, status: "success", resultText: JSON.stringify(jsonResult.data) };
+                }
 
-                    return { ...baseResult, status: "error", resultText: "Failed to parse the response" };
-                })
-            );
+                const textResult = await tryCatch(() => response.data.text());
+                if (textResult.status === "success") {
+                    return { ...baseResult, status: "success", resultText: textResult.data };
+                }
+
+                return { ...baseResult, status: "error", resultText: "Failed to parse the response" };
+            });
 
             const results = await Promise.all(endpointPromises);
 
-            for (const { toolId, endpoint, status, resultText } of results) {
-                if (status === "success") {
-                    const existingEndpoint = attachedContexts.find(
-                        (x) => x.type === "Endpoints Response" && x.label === endpoint
-                    );
-
-                    const id = existingEndpoint ? existingEndpoint.id : (`endpoint-${_.uniqueId()}` as const);
-
-                    dispatch(
-                        chatbotActions.attachedContextUpserted({
-                            id,
-                            type: "Endpoints Response",
-                            label: endpoint,
-                            value: JSON.stringify({ endpoint, result: resultText }),
-                            state: "excluded",
-                        })
-                    );
+            for (const { toolId, url, resultText } of results) {
+                if (!actionResponses[toolId]) {
+                    actionResponses[toolId] = {
+                        [url]: resultText,
+                    };
+                } else {
+                    actionResponses[toolId][url] = resultText;
                 }
-
-                actionResponses[toolId] = {
-                    [endpoint]: resultText,
-                };
             }
 
             const userActionState = results.some((x) => x.status === "error") ? "error" : "allowed";
 
-            dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState } }));
+            dispatch(
+                chatbotActions.messageUpdated({
+                    id,
+                    changes: {
+                        userActionState,
+                        endpoints: results.map((x) => ({
+                            toolId: x.toolId,
+                            url: x.url,
+                            state: x.status === "success" ? "allowed" : "error",
+                        })),
+                    },
+                })
+            );
             dispatch(chatbotActions.runChat({ actionResponses }));
         },
         {
@@ -137,31 +130,45 @@ export default function ChatbotAskAiMessageEndpoints({
     const handleSkip = () => {
         const actionResponses: Record<string, any> = {};
 
-        for (const toolId of Object.keys(endpoints)) {
-            for (const endpoint of endpoints[toolId]) {
-                actionResponses[toolId] = {
-                    [endpoint]: "Skipped",
+        for (const endpoint of endpoints) {
+            if (!actionResponses[endpoint.toolId]) {
+                actionResponses[endpoint.toolId] = {
+                    [endpoint.url]: "Skipped",
                 };
+            } else {
+                actionResponses[endpoint.toolId][endpoint.url] = "Skipped";
             }
         }
 
-        dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "skipped" } }));
+        dispatch(
+            chatbotActions.messageUpdated({
+                id,
+                changes: { userActionState: "skipped", endpoints: endpoints.map((x) => ({ ...x, state: "skipped" })) },
+            })
+        );
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
     const handleDeny = () => {
         const actionResponses: Record<string, any> = {};
 
-        for (const toolId of Object.keys(endpoints)) {
-            for (const endpoint of endpoints[toolId]) {
-                actionResponses[toolId] = {
-                    [endpoint]: "Denied",
+        for (const endpoint of endpoints) {
+            if (!actionResponses[endpoint.toolId]) {
+                actionResponses[endpoint.toolId] = {
+                    [endpoint.url]: "Denied",
                 };
+            } else {
+                actionResponses[endpoint.toolId][endpoint.url] = "Denied";
             }
         }
 
-        dispatch(chatbotActions.messageUpdated({ id, changes: { userActionState: "denied" } }));
-        dispatch(chatbotActions.deniedEndpointsAdded(endpointsArray));
+        dispatch(
+            chatbotActions.messageUpdated({
+                id,
+                changes: { userActionState: "denied", endpoints: endpoints.map((x) => ({ ...x, state: "denied" })) },
+            })
+        );
+        dispatch(chatbotActions.deniedEndpointsAdded(endpoints.map((x) => x.url)));
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
@@ -184,13 +191,11 @@ export default function ChatbotAskAiMessageEndpoints({
                 Retrieve endpoints
             </div>
             <div className="p-2">
-                <ul className="vstack gap-1 ps-3">
-                    {endpointsArray.map((endpoint) => (
-                        <li key={endpoint} className="text-break">
-                            GET {endpoint}
-                        </li>
+                <div className="vstack gap-1">
+                    {endpoints.map((endpoint) => (
+                        <EndpointItem key={endpoint.url} endpoint={endpoint} />
                     ))}
-                </ul>
+                </div>
                 {userActionState === "waiting" ? (
                     <div className="hstack justify-content-between mt-2">
                         <Button
@@ -251,7 +256,6 @@ export default function ChatbotAskAiMessageEndpoints({
                                 Skipped
                             </Badge>
                         )}
-
                         {userActionState === "error" && (
                             <Badge bg="danger" className="rounded-pill">
                                 <Icon icon="warning" />
@@ -268,5 +272,27 @@ export default function ChatbotAskAiMessageEndpoints({
                 )}
             </div>
         </div>
+    );
+}
+
+interface EndpointItemProps {
+    endpoint: ChatbotEndpointItem;
+}
+
+function EndpointItem({ endpoint }: EndpointItemProps) {
+    return (
+        <span className="text-break">
+            <span>
+                {endpoint.state === "waiting" && <span className="me-1">-</span>}
+                {endpoint.state === "allowed" && <Icon icon="check" color="success" />}
+                {endpoint.state === "error" && <Icon icon="warning" color="danger" />}
+                {endpoint.state === "skipped" && <Icon icon="skip" />}
+                {endpoint.state === "denied" && <Icon icon="cancel" />}
+                GET
+            </span>
+            <a href={endpoint.url} target="_blank" className="ms-1 text-break text-emphasis">
+                {endpoint.url} <Icon icon="newtab" margin="m-0" />
+            </a>
+        </span>
     );
 }

@@ -14,11 +14,7 @@ export default function ChatbotHeader() {
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
         dispatch(
-            chatbotActions.attachedContextTypesRemoved([
-                "Current Document",
-                "Current Index Definition",
-                "Endpoints Response",
-            ])
+            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
         );
     };
 

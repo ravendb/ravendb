@@ -25,6 +25,8 @@ export async function processStreamingResponse<T extends object>({
                 try {
                     const data = await response.json();
 
+                    // TODO For 413 show request is to large and send it back to assist
+
                     // Get internal Status such as ConsentRequired, OutOfTokens, etc.
                     if (expectedErrorStatuses.includes(response.status) && data.Status) {
                         return { status: data.Status, error: data.Status };

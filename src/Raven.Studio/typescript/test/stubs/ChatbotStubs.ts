@@ -43,7 +43,7 @@ export class ChatbotStubs {
                     "How do I create and manage indexes in RavenDB Studio?",
                     "How can I import and export data using RavenDB Studio?",
                 ],
-                endpoints: {},
+                endpoints: [],
                 additionalContext: {},
                 userActionState: null,
             },
@@ -80,7 +80,7 @@ export class ChatbotStubs {
                 state: "Success",
                 thinkingTimeInMs: 1505,
                 usage: null,
-                endpoints: {},
+                endpoints: [],
                 additionalContext: {
                     call_3qQEMACL5cB1zkSMVTkWRsu1: {
                         Message: "Please specify the collection name.",
@@ -136,10 +136,18 @@ export class ChatbotStubs {
                 state: "Success",
                 thinkingTimeInMs: 3018,
                 usage: null,
-                endpoints: {
-                    call_180MLXGBoOd1yMC79Lq7M1Qt: ["/databases/AiAssistant/indexes?pageSize=1024"],
-                    call_wrdx4K9jyZhDjbZaQcZAS047: ["/databases/AiAssistant/indexes/stats?pageSize=1024"],
-                },
+                endpoints: [
+                    {
+                        toolId: "call_180MLXGBoOd1yMC79Lq7M1Qt",
+                        url: "/databases/AiAssistant/indexes?pageSize=1024",
+                        state: "waiting",
+                    },
+                    {
+                        toolId: "call_wrdx4K9jyZhDjbZaQcZAS047",
+                        url: "/databases/AiAssistant/indexes/stats?pageSize=1024",
+                        state: "waiting",
+                    },
+                ],
                 userActionState: "waiting",
                 additionalContext: {},
                 followUpQuestions: [],

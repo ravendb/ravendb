@@ -7,7 +7,7 @@ import ChatbotMessages from "./ChatbotMessages";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAssistantConsentStatusChecker";
 import ChatbotAskAiAttachedContext from "./askAi/ChatbotAskAiAttachedContext";
-import ChatbotAskAiCommonActions from "./askAi/ChatbotAskAiCommonActions";
+import ChatbotAskAiWelcome from "./askAi/ChatbotAskAiWelcome";
 
 export default function ChatbotPanelAskAi() {
     const dispatch = useAppDispatch();
@@ -27,6 +27,10 @@ export default function ChatbotPanelAskAi() {
     });
 
     const handleSend = async () => {
+        if (!formValues.prompt.trim()) {
+            return;
+        }
+
         reset();
         await dispatch(
             chatbotActions.runChat({
@@ -47,7 +51,7 @@ export default function ChatbotPanelAskAi() {
         <div className="vstack flex-grow py-2 h-100">
             <div className="overflow-y-auto">
                 <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
-                <ChatbotAskAiCommonActions />
+                <ChatbotAskAiWelcome />
             </div>
             <ChatbotMessages />
             <div className="prompt-wrapper">
@@ -68,7 +72,7 @@ export default function ChatbotPanelAskAi() {
                             }
                         }}
                     />
-                    {formValues.prompt && (
+                    {formValues.prompt.trim() && (
                         <div className="hstack justify-content-end">
                             <ButtonWithSpinner
                                 variant="secondary"
