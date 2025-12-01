@@ -106,7 +106,10 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     };
 
     return (
-        <PopoverWithHoverWrapper message={`Size: ${genUtils.formatBytesToSize(sizeInBytes)}`} wrapperClassName="mw-100">
+        <PopoverWithHoverWrapper
+            message={<TooltipContent sizeInBytes={sizeInBytes} type={item.type} />}
+            wrapperClassName="mw-100"
+        >
             <div
                 className={classNames(
                     "hstack rounded-2 border border-secondary text-truncate",
@@ -128,3 +131,25 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
         </PopoverWithHoverWrapper>
     );
 }
+
+interface TooltipContentProps {
+    type: ChatbotAttachedContext["type"];
+    sizeInBytes: number;
+}
+
+function TooltipContent({ type, sizeInBytes }: TooltipContentProps) {
+    return (
+        <>
+            <div className="small-label mb-1">{tooltipTitles[type]}</div>
+            <div>Size: {genUtils.formatBytesToSize(sizeInBytes)}</div>
+        </>
+    );
+}
+
+const tooltipTitles: Record<ChatbotAttachedContext["type"], string> = {
+    "Current View": "Current View",
+    "Current Database Name": "Database Name",
+    "Current Index Definition": "Index Definition",
+    "Current Document": "Document",
+    "Endpoints Response": "Endpoint Response",
+};
