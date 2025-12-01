@@ -359,7 +359,7 @@ namespace FastTests.Sharding
             {
                 using (context.OpenReadTransaction())
                 {
-                    var attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: 0, remoteAttachments: true).ToList();
                     var expected = 20;
                     Assert.Equal(expected, attachments.Count);
                     
@@ -374,7 +374,7 @@ namespace FastTests.Sharding
                     }
 
                     var fromEtag = attachments[12].Etag;
-                    attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: fromEtag, remoteAttachments: true).ToList();
                     expected = 8;
                     Assert.Equal(expected, attachments.Count);
                 }

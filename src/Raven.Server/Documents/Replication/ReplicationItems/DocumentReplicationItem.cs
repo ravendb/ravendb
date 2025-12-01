@@ -102,8 +102,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return size;
         }
 
-        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats,
-            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
+        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
             fixed (byte* pTemp = tempBuffer)
             {
@@ -176,8 +175,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats,
-            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             var scope = Type == ReplicationItemType.Document ?
                 stats.For(ReplicationOperation.Incoming.DocumentRead, start: false) :

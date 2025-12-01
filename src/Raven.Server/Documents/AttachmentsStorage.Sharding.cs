@@ -1,8 +1,8 @@
 ﻿using System;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,7 +17,7 @@ namespace Raven.Server.Documents
 {
     public unsafe partial class AttachmentsStorage
     {
-        public IEnumerable<AttachmentReplicationItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<AttachmentReplicationItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool remoteAttachments)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents
 
                 attachment.Stream = stream;
 
-                yield return AttachmentReplicationItem.From(context, attachment);
+                yield return AttachmentReplicationItem.From(context, attachment, remoteAttachments);
             }
         }
 

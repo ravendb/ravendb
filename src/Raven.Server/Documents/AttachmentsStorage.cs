@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
             return it.SeekToLast() ? it.CurrentKey : 0;
         }
 
-        public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag, bool remoteAttachments)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
                     attachment.Stream = stream;
                 }
 
-                yield return AttachmentReplicationItem.From(context, attachment);
+                yield return AttachmentReplicationItem.From(context, attachment, remoteAttachments);
             }
         }
 

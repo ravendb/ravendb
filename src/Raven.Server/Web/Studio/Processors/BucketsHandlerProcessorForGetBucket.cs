@@ -22,10 +22,16 @@ namespace Raven.Server.Web.Studio.Processors
             {
                 var shardedDocumentDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(RequestHandler.Database);
                 var stats = new ReplicationDocumentSenderBase.ReplicationStats();
+                var supportedFeatures = new ReplicationDocumentSenderBase.ReplicationSupportedFeatures()
+                {
+                    RemoteAttachments = true,
+                    CaseInsensitiveCounters = true,
+                    RevisionTombstonesWithId = true
+                };
                 using var helper = new DocumentInfoHelper(context);
 
                 var items = new List<string>();
-                foreach (var item in MigrationReplicationDocumentSender.ReplicationBatchItemsForBucket(shardedDocumentDatabase.ShardedDocumentsStorage, context, 0, stats, bucket))
+                foreach (var item in MigrationReplicationDocumentSender.ReplicationBatchItemsForBucket(shardedDocumentDatabase.ShardedDocumentsStorage, context, 0, stats, bucket, supportedFeatures))
                 {
                     var info = helper.GetItemInformation(item); 
                     items.Add(info);

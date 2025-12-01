@@ -129,7 +129,8 @@ namespace Raven.Server.Documents.Handlers
                 var supportedFeatures = new ReplicationDocumentSenderBase.ReplicationSupportedFeatures
                 {
                     CaseInsensitiveCounters = true,
-                    RevisionTombstonesWithId = true
+                    RevisionTombstonesWithId = true,
+                    RemoteAttachments = true
                 };
 
                 var items = ReplicationDocumentSenderBase.GetReplicationItems(Database, context, etag: etag == 0 ? 0 : etag - 1, stats, supportedFeatures);

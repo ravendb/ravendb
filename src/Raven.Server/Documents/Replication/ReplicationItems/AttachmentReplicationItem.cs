@@ -25,6 +25,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public RemoteAttachmentFlags Flags;
         public DateTime? RemoteAtUtc;
         public Slice RemoteIdentifier;
+        private const long NullTicks = -1L;
+
+        public bool RemoteAttachments { get; set; }
 
         public override long Size => base.Size + // common
 
@@ -40,9 +43,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      sizeof(byte) + // size of Base64Hash
                                      Base64Hash.Size
 
-                                     + sizeof(long)
-                                     + sizeof(int) // size of AttachmentSize
-                                     + (RemoteAtUtc == null ? 0 : sizeof(long)) // size of RemoteAtUtc
+                                     + sizeof(long) // size of AttachmentSize
+                                     + sizeof(long) // size of RemoteAtUtc
                                      + sizeof(int) // size of Flags
                                      + sizeof(int) + //  size of RemoteIdentifier
                                      + RemoteIdentifier.Size;
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return djv;
         }
 
-        public static unsafe AttachmentReplicationItem From(DocumentsOperationContext context, Attachment attachment)
+        public static unsafe AttachmentReplicationItem From(DocumentsOperationContext context, Attachment attachment, bool remoteAttachments)
         {
             var item = new AttachmentReplicationItem
             {
@@ -81,6 +83,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Stream = attachment.Stream,
                 TransactionMarker = attachment.TransactionMarker,
                 AttachmentSize = attachment.Size,
+                RemoteAttachments = remoteAttachments
             };
 
             if (attachment.RemoteParameters != null)
@@ -103,8 +106,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override long AssertChangeVectorSize() => Size;
 
-        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats,
-            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
+        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
         {
             fixed (byte* pTemp = tempBuffer)
             {
@@ -132,16 +134,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += Base64Hash.Size;
 
-                tempBufferPos = WriteRemoteAttachmentsProperties(supportedFeaturesReplication, pTemp, tempBufferPos);
+                tempBufferPos = WriteRemoteAttachmentsProperties(RemoteAttachments, pTemp, tempBufferPos);
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
         }
 
-        private unsafe int WriteRemoteAttachmentsProperties(TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication, byte* pTemp, int tempBufferPos)
+        private unsafe int WriteRemoteAttachmentsProperties(bool remoteAttachments, byte* pTemp, int tempBufferPos)
         {
-            if (supportedFeaturesReplication.RemoteAttachments == false)
+            if (remoteAttachments == false)
                 return tempBufferPos;
 
             *(long*)(pTemp + tempBufferPos) = AttachmentSize;
@@ -153,7 +155,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
             else
             {
-                *(long*)(pTemp + tempBufferPos) = -1L;
+                *(long*)(pTemp + tempBufferPos) = NullTicks;
                 tempBufferPos += sizeof(long);
             }
 
@@ -171,8 +173,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return tempBufferPos;
         }
 
-        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats,
-            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
         {
             using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
             {
@@ -185,11 +186,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
-                if (supportedFeaturesReplication.RemoteAttachments)
+                if (RemoteAttachments)
                 {
                     AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
                     var ticks = *(long*)Reader.ReadExactly(sizeof(long));
-                    if (ticks != -1)
+                    if (ticks != NullTicks)
                         RemoteAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
                     Flags = *(RemoteAttachmentFlags*)Reader.ReadExactly(sizeof(RemoteAttachmentFlags)) | RemoteAttachmentFlags.None;
@@ -236,6 +237,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.Base64Hash = Base64Hash.Clone(allocator);
             item.Key = Key.Clone(allocator);
 
+            item.RemoteAttachments = RemoteAttachments;
             item.AttachmentSize = AttachmentSize;
             item.RemoteAtUtc = RemoteAtUtc;
             item.Flags = Flags;

@@ -45,11 +45,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public abstract long AssertChangeVectorSize();
 
-        public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats,
-            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication);
+        public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats);
 
-        public abstract void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats,
-            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication);
+        public abstract void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats);
 
         protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator);
 
@@ -65,7 +63,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader)
+        public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader, bool replicationRemoteAttachments)
         {
             var type = *(ReplicationItemType*)reader.ReadExactly(sizeof(byte));
 
@@ -76,7 +74,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     return new DocumentReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.Attachment:
                 case ReplicationItemType.AttachmentStream:
-                    return new AttachmentReplicationItem { Type = type, Reader = reader };
+                    return new AttachmentReplicationItem { Type = type, Reader = reader, RemoteAttachments = replicationRemoteAttachments };
                 case ReplicationItemType.AttachmentTombstone:
                     return new AttachmentTombstoneReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.RevisionTombstone:

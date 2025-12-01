@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Replication.Senders
             var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data).Select(x => DocumentReplicationItem.From(x, ctx));
-            var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
+            var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1, replicationSupportedFeatures.RemoteAttachments);
             var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, replicationSupportedFeatures.CaseInsensitiveCounters);
             var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
             var deletedTimeSeriesRanges = database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(ctx, etag + 1);
@@ -146,7 +146,8 @@ namespace Raven.Server.Documents.Replication.Senders
                     var replicationSupportedFeatures = new ReplicationSupportedFeatures
                     {
                         CaseInsensitiveCounters = _parent.SupportedFeatures.Replication.CaseInsensitiveCounters,
-                        RevisionTombstonesWithId = _parent.SupportedFeatures.Replication.RevisionTombstonesWithId
+                        RevisionTombstonesWithId = _parent.SupportedFeatures.Replication.RevisionTombstonesWithId,
+                        RemoteAttachments = _parent.SupportedFeatures.Replication.RemoteAttachments
                     };
 
                     using (_stats.Storage.Start())
@@ -188,7 +189,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
-                                    var attachmentItem = AttachmentReplicationItem.From(documentsContext, attachment);
+                                    var attachmentItem = AttachmentReplicationItem.From(documentsContext, attachment, _parent.SupportedFeatures.Replication.RemoteAttachments);
                                     AddReplicationItemToBatch(documentsContext, attachmentItem, _stats.Storage, state, skippedReplicationItemsInfo);
                                     state.Size += attachmentItem.Size;
                                 }
@@ -659,7 +660,7 @@ namespace Raven.Server.Documents.Replication.Senders
                 using (item.Value is AttachmentReplicationItem ? item.Value : null)
                 using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
                 {
-                    item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);
+                    item.Value.Write(cv, _stream, _tempBuffer, stats);
                 }
             }
 
@@ -840,6 +841,7 @@ namespace Raven.Server.Documents.Replication.Senders
         {
             public bool CaseInsensitiveCounters;
             public bool RevisionTombstonesWithId;
+            public bool RemoteAttachments;
         }
 
         public virtual void Dispose()
