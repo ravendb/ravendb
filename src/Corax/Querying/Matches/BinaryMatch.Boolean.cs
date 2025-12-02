@@ -66,7 +66,7 @@ namespace Corax.Querying.Matches
                     // which can be really expensive, instead, let's memoize the outer and remember that 
                     if (resultsSpan.Length == 0 && match._memoizedOuter is null)
                     {
-                        match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._indexSearcher, match._outer);
+                        match._memoizedOuter = new MemoizationMatchProvider<TOuter>(match._indexSearcher, outer);
                         match._memoizedOuter.SortingRequired();
                     }
 

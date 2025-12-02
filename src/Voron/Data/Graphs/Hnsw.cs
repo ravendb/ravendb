@@ -12,7 +12,6 @@ using Sparrow.Compression;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Sparrow.Server.Utils.VxSort;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -28,180 +27,12 @@ namespace Voron.Data.Graphs;
 
 public unsafe partial class Hnsw
 {
-    public ref struct NodeReader(ByteStringContext allocator, Span<byte> buffer)
-    {
-        public long PostingListId;
-        public long VectorId;
-        public int CountOfLevels;
-
-        private int _offset;
-        private readonly Span<byte> _buffer = buffer;
-
-        public void LoadInto(ref Node node)
-        {
-            node.VectorId = VectorId;
-            node.PostingListId = PostingListId;
-            node.EdgesPerLevel.EnsureCapacityFor(allocator, CountOfLevels);
-            while (NextReadEdges(out var list))
-            {
-                node.EdgesPerLevel.AddUnsafe(list);
-            }
-        }
-
-        private bool NextReadEdges(out NativeList<long> list)
-        {
-            if (_offset >= _buffer.Length)
-            {
-                list = default;
-                return false;
-            }
-
-            var count = VariableSizeEncoding.Read<int>(_buffer, out int offset, _offset);
-            _offset += offset;
-            list = new NativeList<long>();
-            list.EnsureCapacityFor(allocator, count);
-            long prev = 0;
-            for (int i = 0; i < count; i++)
-            {
-                var item = VariableSizeEncoding.Read<long>(_buffer, out offset, _offset);
-                _offset += offset;
-                prev += item;
-                Debug.Assert(prev >= 0, "prev >= 0");
-                list.AddUnsafe(prev);
-            }
-            return true;
-        }
-
-        public UnmanagedSpan ReadVector(in SearchState state) => ReadVector(VectorId, in state);
-
-        public static UnmanagedSpan ReadVector(long vectorId, in SearchState state)
-        {
-            if ((vectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
-            {
-                Container.Get(state.Llt, new ContainerEntryId(vectorId), out var item);
-                var vectorSpan = new UnmanagedSpan(item.Address, item.Length);
-                Debug.Assert(state.Options.VectorSizeBytes == vectorSpan.Length, "state.Options.VectorSizeBytes == vectorSpan.Length");
-                return vectorSpan;
-            }
-
-            var count = (byte)(vectorId >> 1);
-            var containerId = vectorId & ~0xFFF;
-            Container.Get(state.Llt, new ContainerEntryId(containerId), out var container);
-            var offset = count * state.Options.VectorSizeBytes;
-            Debug.Assert(offset >= 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset >= 0 && offset + state.Options.VectorSizeBytes <= container.Length");
-            return new UnmanagedSpan(container.Address + offset, state.Options.VectorSizeBytes);
-        }
-    }
-
-    public struct Node
-    {
-        public long PostingListId;
-        public long VectorId;
-        public long NodeId;
-        public NativeList<NativeList<long>> EdgesPerLevel;
-        public NativeList<NativeList<int>> EdgesIndexesPerLevel;
-        private UnmanagedSpan _vectorSpan;
-        public int Visited;
-
-        public bool VectorLoaded => _vectorSpan.Length > 0;
-
-        public ContainerId GetVectorContainerId()
-        {
-            if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
-                return new ContainerId(VectorId);
-
-            return new ContainerId(VectorId & ~0xFFF);
-        }
-
-        public static NodeReader Decode(LowLevelTransaction llt, long id)
-        {
-            var span = Container.GetReadOnly(llt, new ContainerEntryId(id));
-            return Decode(llt, span);
-        }
-
-        public static NodeReader Decode(LowLevelTransaction llt, Span<byte> span)
-        {
-            var postingListId = VariableSizeEncoding.Read<long>(span, out var pos);
-            var offset = pos;
-            var vectorId = VariableSizeEncoding.Read<long>(span, out pos, offset);
-            offset += pos;
-            var countOfLevels = VariableSizeEncoding.Read<int>(span, out pos, offset);
-            offset += pos;
-
-            return new NodeReader(llt.Allocator, span[offset..]) { PostingListId = postingListId, VectorId = vectorId, CountOfLevels = countOfLevels };
-        }
-
-        public Span<byte> Encode(ref ContextBoundNativeList<byte> buffer)
-        {
-            int countOfLevels = EdgesPerLevel.Count;
-
-            // posting list id, vector id, count of levels
-            var maxSize = 3 * VariableSizeEncoding.MaximumSizeOf<long>();
-            for (int i = 0; i < countOfLevels; i++)
-            {
-                maxSize += EdgesPerLevel[i].Count * VariableSizeEncoding.MaximumSizeOf<long>();
-            }
-
-            buffer.EnsureCapacityFor(maxSize);
-
-            var bufferSpan = buffer.ToFullCapacitySpan();
-
-            var pos = VariableSizeEncoding.Write(bufferSpan, PostingListId);
-            pos += VariableSizeEncoding.Write(bufferSpan, VectorId, pos);
-            pos += VariableSizeEncoding.Write(bufferSpan, countOfLevels, pos);
-
-            for (int i = 0; i < countOfLevels; i++)
-            {
-                Span<long> span = EdgesPerLevel[i].ToSpan();
-                int len = Sorting.SortAndRemoveDuplicates(span);
-                span = span[..len];
-                long prev = 0;
-                pos += VariableSizeEncoding.Write(bufferSpan, span.Length, pos);
-                for (int j = 0; j < span.Length; j++)
-                {
-                    var delta = span[j] - prev;
-                    prev = span[j];
-                    pos += VariableSizeEncoding.Write(bufferSpan, delta, pos);
-                }
-            }
-
-            return bufferSpan[..pos];
-        }
-
-        public UnmanagedSpan GetVectorUnmanagedSpan(SearchState state)
-        {
-            if (_vectorSpan.Length > 0)
-                return _vectorSpan;
-
-            _vectorSpan = NodeReader.ReadVector(VectorId, in state);
-            return _vectorSpan;
-        }
-
-        public Span<byte> GetVector(SearchState state)
-        {
-            return GetVectorUnmanagedSpan(state).ToSpan();
-        }
-
-        internal void SetVector(SearchState searchState, UnmanagedSpan span)
-        {
-            if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
-            {
-                _vectorSpan = span;
-                return;
-            }
-
-            var count = (byte)(VectorId >> 1);
-            var offset = count * searchState.Options.VectorSizeBytes;
-            _vectorSpan = new UnmanagedSpan(span.Address + offset, searchState.Options.VectorSizeBytes);
-        }
-    }
-
     public static void Create(LowLevelTransaction llt, string name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates, VectorEmbeddingType embeddingType)
     {
         using var _ = Slice.From(llt.Allocator, name, out var slice);
         Create(llt, slice, vectorSizeBytes, numberOfEdges, numberOfCandidates, embeddingType);
     }
-    
+
     public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates, VectorEmbeddingType embeddingType)
     {
         var tree = llt.Transaction.CreateTree(name);
@@ -258,7 +89,7 @@ public unsafe partial class Hnsw
         return vectorsContainerId;
     }
 
-    public class SearchState
+    public partial class SearchState
     {
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
@@ -271,17 +102,17 @@ public unsafe partial class Hnsw
         private int _visitsCounter;
         public readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
         public readonly bool IsEmpty;
-        
+
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
 
         public int CreatedNodes => _newNodes.Count;
-        
+
         public int GetCreatedNodeIndex(int index) => _newNodes[index];
 
         public Options Options;
 
-        public SearchState(LowLevelTransaction llt, string name): this(llt, SliceFromString(llt, name))
+        public SearchState(LowLevelTransaction llt, string name) : this(llt, SliceFromString(llt, name))
         {
         }
 
@@ -290,6 +121,8 @@ public unsafe partial class Hnsw
             Slice.From(llt.Allocator, name, out var slice);
             return slice;
         }
+        
+        public Lookup<Int64LookupKey> NodeIdsByVectorId => _tree.LookupFor<Int64LookupKey>(Hnsw.NodesByVectorIdSlice);
 
         public SearchState(LowLevelTransaction llt, Slice name)
         {
@@ -301,7 +134,7 @@ public unsafe partial class Hnsw
                 IsEmpty = true;
                 return;
             }
-            
+
             var options = _tree.DirectRead(OptionsSlice);
             Options = Unsafe.Read<Options>(options);
             SimilarityCalc = Options.SimilarityMethod switch
@@ -321,7 +154,7 @@ public unsafe partial class Hnsw
                 case SimilarityMethod.CosineSimilarityI8:
                     return 2f * (1.0f - minimumSimilarity);
                 case SimilarityMethod.HammingDistance:
-                    return Options.VectorSizeBytes * 8 * (1f - minimumSimilarity);  // number_of_bits * minimum_similarity
+                    return Options.VectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * minimum_similarity
                 default:
                     throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
             }
@@ -336,7 +169,7 @@ public unsafe partial class Hnsw
                 case SimilarityMethod.CosineSimilarityI8:
                     return 1 - score;
                 case SimilarityMethod.HammingDistance:
-                    return ((Options.VectorSizeBytes * 8) - score) / (8f * Options.VectorSizeBytes);  // number_of_bits * minimum_similarity
+                    return ((Options.VectorSizeBytes * 8) - score) / (8f * Options.VectorSizeBytes); // number_of_bits * minimum_similarity
                 default:
                     throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
             }
@@ -358,7 +191,7 @@ public unsafe partial class Hnsw
                     throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
             }
         }
-        
+
         public void FlushOptions()
         {
             using (_tree.DirectAdd(OptionsSlice, sizeof(Options), out var dst))
@@ -366,11 +199,11 @@ public unsafe partial class Hnsw
                 Unsafe.Write(dst, Options);
             }
         }
-        
+
         public int RegisterVectorNode(long newNodeId, long vectorId)
         {
             int nodeIndex = AllocateNodeIndex(newNodeId);
-            
+
             _newNodes.Add(Llt.Allocator, nodeIndex);
             _nodes[nodeIndex].VectorId = vectorId;
 
@@ -421,7 +254,7 @@ public unsafe partial class Hnsw
                     nodeIds[i] = -1;
                 }
             }
-            
+
             if (indexes.Count == nodeIds.Count)
                 return;
 
@@ -436,8 +269,9 @@ public unsafe partial class Hnsw
                 _nodeIdToIdx[keys[i]] = nodeIdx;
                 indexes.AddUnsafe(nodeIdx);
             }
+
             _nodeIdToLocations.GetFor(keys, keys, -1);
-            
+
             var spans = Buffers.GetSpans(keys.Length);
             Container.GetAll(Llt, keys, spans, -1, Llt.PageLocator);
             for (int i = 0; i < keys.Length; i++)
@@ -453,17 +287,17 @@ public unsafe partial class Hnsw
             ref var nodeIdx = ref CollectionsMarshal.GetValueRefOrAddDefault(_nodeIdToIdx, nodeId, out var exists);
             if (exists)
                 return nodeIdx;
-            
+
             if (TryGetLocationForNode(nodeId, out var nodeLocation) is false)
                 throw new InvalidOperationException($"Unable to find node id {nodeId}");
 
-            nodeIdx =  AllocateNodeIndex(nodeId);
+            nodeIdx = AllocateNodeIndex(nodeId);
             var reader = Node.Decode(Llt, nodeLocation);
             ref var n = ref GetNodeByIndex(nodeIdx);
             reader.LoadInto(ref n);
             return nodeIdx;
         }
-        
+
         public ref Node GetNodeById(long nodeId)
         {
             int idx = GetNodeIndexById(nodeId);
@@ -484,8 +318,25 @@ public unsafe partial class Hnsw
             }
 
             ref var to = ref GetNodeByIndex(toIdx);
+            if (to.QueryDistance is not null)
+                return to.QueryDistance.Value;
+            
             Span<byte> v2 = to.GetVector(this);
             var distance = SimilarityCalc(vector, v2);
+            
+            return distance;
+        }
+
+        //Allows storing cached distance to the queried vector. Should be used only in querying part!
+        private float QueryDistance(ReadOnlySpan<byte> vector, int toIdx)
+        {
+            ref var to = ref GetNodeByIndex(toIdx);
+            if (to.QueryDistance is not null)
+                return to.QueryDistance.Value;
+            
+            Span<byte> v2 = to.GetVector(this);
+            var distance = SimilarityCalc(vector, v2);
+            to.QueryDistance = distance;
             return distance;
         }
 
@@ -498,11 +349,11 @@ public unsafe partial class Hnsw
         {
             Container.Get(llt, rawPostingListId, out var smallPostingList);
             var count = VariableSizeEncoding.Read<int>(smallPostingList.Address, out var offset);
-            
+
             var requiredSize = Math.Max(256, 256 * (int)Math.Ceiling((count + listBuffer.Count) / 256f));
             listBuffer.EnsureCapacityFor(requiredSize);
-            Debug.Assert(listBuffer.Capacity > 0 && listBuffer.Capacity % 256 ==0, "The buffer must be multiple of 256 for PForDecoder.Read");
-            
+            Debug.Assert(listBuffer.Capacity > 0 && listBuffer.Capacity % 256 == 0, "The buffer must be multiple of 256 for PForDecoder.Read");
+
             pforDecoder.Init(smallPostingList.Address + offset, smallPostingList.Length - offset);
             listBuffer.Count += pforDecoder.Read(listBuffer.RawItems + listBuffer.Count, listBuffer.Capacity - listBuffer.Count);
             postingListSize = smallPostingList.Length;
@@ -515,104 +366,21 @@ public unsafe partial class Hnsw
             StartingPointAsEdge = 1 << 1,
             FilterNodesWithEmptyPostingLists = 1 << 2
         }
-
-        public void NearestEdges(int startingPointIndex, 
-            int dstIdx, ReadOnlySpan<byte> vector, 
-            int level, int numberOfCandidates, 
-            ref NativeList<int> candidates,
-            NearestEdgesFlags flags)
+        
+        public IHnswSearcher NearestSearch(int startingPointIndex, Memory<byte> vector,
+            int level, int numberOfCandidates,
+            ContextBoundNativeList<int> candidates,
+            NearestEdgesFlags flags,
+            bool hasFilterMatch)
         {
-            Debug.Assert(_candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-            Debug.Assert(_nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-            
-            float lowerBound = -Distance(vector, dstIdx, startingPointIndex);
-            var visitedCounter = ++_visitsCounter; 
-            ref var startingPoint = ref GetNodeByIndex(startingPointIndex);
-            startingPoint.Visited = visitedCounter;
-            // candidates queue is sorted using the distance, so the lowest distance
-            // will always pop first.
-            // nearest edges is sorted using _reversed_ distance, so when we add a 
-            // new item to the queue, we'll pop the one with the largest distance
-            
-            _candidatesQ.Enqueue(startingPointIndex, -lowerBound);
-            if (flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) && 
-                    ((startingPoint.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) != Constants.Graphs.VectorId.Tombstone 
-                     || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
-            {
-                _nearestEdgesQ.Enqueue(startingPointIndex, lowerBound);
-            }
-            
-            var indexes = new NativeList<int>();
-            var nodeIds = new NativeList<long>();
-            while (_candidatesQ.TryDequeue(out var cur, out var curDistance))
-            {
-                if (-curDistance < lowerBound && 
-                    _nearestEdgesQ.Count == numberOfCandidates)
-                    break;
-
-                ref var candidate = ref GetNodeByIndex(cur);
-                candidate.Visited = visitedCounter;
-             
-                ref var edges = ref candidate.EdgesPerLevel[level];
-
-                nodeIds.ResetAndCopyFrom(Llt.Allocator, edges.ToSpan());
-                LoadNodeIndexes(ref nodeIds, ref indexes);
-
-                for (int i = 0; i < indexes.Count; i++)
-                {
-                    var nextIndex = indexes[i];
-                    ref var next = ref GetNodeByIndex(nextIndex);
-                    if(next.Visited == visitedCounter)
-                        continue; // already checked it
-                    next.Visited = visitedCounter;
-                    var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone;
-
-                    float nextDist = -Distance(vector, dstIdx, nextIndex);
-                    if (_nearestEdgesQ.Count < numberOfCandidates)
-                    {
-                        _candidatesQ.Enqueue(nextIndex, -nextDist);
-                        
-                        if (nextIndex != dstIdx && 
-                            (isDeleted == false || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
-                        {
-                            _nearestEdgesQ.Enqueue(nextIndex, nextDist);
-                        }
-                    }
-                    else if (lowerBound < nextDist)
-                    {
-                        _candidatesQ.Enqueue(nextIndex, -nextDist);
-                        
-                        if (nextIndex != dstIdx && 
-                            (isDeleted == false || flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
-                        {
-                            _nearestEdgesQ.EnqueueDequeue(nextIndex, nextDist);
-                        }
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                    
-                    Debug.Assert(_candidatesQ.Count > 0);
-                    _nearestEdgesQ.TryPeek(out _, out lowerBound);
-                }
-            }
-
-            _candidatesQ.Clear();
-            candidates.EnsureCapacityFor(Llt.Allocator, _nearestEdgesQ.Count);
-            
-            while (_nearestEdgesQ.TryDequeue(out var edgeId, out var d))
-            {
-                candidates.AddUnsafe(edgeId);
-            }
-
-            candidates.Reverse();
-            Debug.Assert(candidates.ToSpan().Contains(dstIdx) == false, "candidates.ToSpan().Contains(dstIdx) == false");
-            
-            nodeIds.Dispose(Llt.Allocator);
-            indexes.Dispose(Llt.Allocator);
+            // in case of filtered match we want to over-fetch. 
+            return new NearestSearcher(this, startingPointIndex, vector, level, numberOfCandidates * (hasFilterMatch ? 2 : 1), candidates, flags, hasFilterMatch);
         }
 
+        public IHnswSearcher EmptySearch() => new EmptySearcher();
+        
+        public IHnswSearcher ExactSearch(Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan) => new ExactSearcher(this, vector, hasFilterMatch, numberOfCandidates, nodesToScan);
+        
         public void SearchNearestAcrossLevels(ReadOnlySpan<byte> vector, int dstIdx, int maxLevel, ref NativeList<int> nearestIndexes)
         {
             var visitCounter = ++_visitsCounter;
@@ -655,62 +423,63 @@ public unsafe partial class Hnsw
                 nearestIndexes.AddUnsafe(currentNodeIndex);
                 level--;
             }
+
             indexes.Dispose(Llt.Allocator);
             nodeIds.Dispose(Llt.Allocator);
             nearestIndexes.Reverse();
         }
-        
-        
-       private static class Buffers
-       {
-           [ThreadStatic]
-           private static long[] IdsToLoad;
-           [ThreadStatic]
-           private static int[] IndexesOfIds;
-           [ThreadStatic]
-           private static long[] VectorIdsToLoad;
-           [ThreadStatic]
-           private static UnmanagedSpan[] SpansToLoad;
-           [ThreadStatic]
-           private static int[] NodeIndexes;
 
-           public static Span<UnmanagedSpan> GetSpans(int count)
-           {
-               if (IdsToLoad is null || count > IdsToLoad.Length)
-               {
-                   Allocate(count);
-               }
 
-               return SpansToLoad;
-           }
+        private static class Buffers
+        {
+            [ThreadStatic]
+            private static long[] IdsToLoad;
+            [ThreadStatic]
+            private static int[] IndexesOfIds;
+            [ThreadStatic]
+            private static long[] VectorIdsToLoad;
+            [ThreadStatic]
+            private static UnmanagedSpan[] SpansToLoad;
+            [ThreadStatic]
+            private static int[] NodeIndexes;
 
-           public static void Get(int count, out Span<long> idsToLoad, out Span<long> vectorIdsToLoad, out Span<UnmanagedSpan> spansToLoad, out Span<int> nodeIndexes, out Span<int> indexesOfIds)
-           {
-               if (IdsToLoad is null || count > IdsToLoad.Length)
-               {
-                   Allocate(count);
-               }
+            public static Span<UnmanagedSpan> GetSpans(int count)
+            {
+                if (IdsToLoad is null || count > IdsToLoad.Length)
+                {
+                    Allocate(count);
+                }
 
-               idsToLoad = IdsToLoad;
-               vectorIdsToLoad = VectorIdsToLoad;
-               spansToLoad = SpansToLoad;
-               nodeIndexes = NodeIndexes;
-               indexesOfIds = IndexesOfIds;
-           }
+                return SpansToLoad;
+            }
 
-           private static void Allocate(int count)
-           {
-               count = Bits.NextAllocationSize(count);
+            public static void Get(int count, out Span<long> idsToLoad, out Span<long> vectorIdsToLoad, out Span<UnmanagedSpan> spansToLoad, out Span<int> nodeIndexes, out Span<int> indexesOfIds)
+            {
+                if (IdsToLoad is null || count > IdsToLoad.Length)
+                {
+                    Allocate(count);
+                }
 
-               IndexesOfIds = new int[count];
-               IdsToLoad = new long[count];
-               VectorIdsToLoad = new long[count];
-               SpansToLoad = new UnmanagedSpan[count];
-               NodeIndexes = new int[count];
-           }
-       }
+                idsToLoad = IdsToLoad;
+                vectorIdsToLoad = VectorIdsToLoad;
+                spansToLoad = SpansToLoad;
+                nodeIndexes = NodeIndexes;
+                indexesOfIds = IndexesOfIds;
+            }
 
-       /// <summary>
+            private static void Allocate(int count)
+            {
+                count = Bits.NextAllocationSize(count);
+
+                IndexesOfIds = new int[count];
+                IdsToLoad = new long[count];
+                VectorIdsToLoad = new long[count];
+                SpansToLoad = new UnmanagedSpan[count];
+                NodeIndexes = new int[count];
+            }
+        }
+
+        /// <summary>
        /// Load all the _vectors_ associated with the provided node ids.
        /// Note that this actually requires us to first look up the nodes by id (loading them via batch)
        /// then load any yet unloaded vector (again using a batch) 
@@ -732,9 +501,9 @@ public unsafe partial class Hnsw
                    ref var n = ref _nodes[existingIdx];
                    if (n.VectorLoaded)
                        continue;
-                    nodeIndexes[vectorsToLoadIdx] = existingIdx;
-                    vectorIdsToLoad[vectorsToLoadIdx++] = (long)n.GetVectorContainerId();
-                    continue;
+                   nodeIndexes[vectorsToLoadIdx] = existingIdx;
+                   vectorIdsToLoad[vectorsToLoadIdx++] = n.GetVectorContainerId();
+                   continue;
                }
 
                var nodeIdx = AllocateNodeIndex(nodeId);
@@ -759,8 +528,8 @@ public unsafe partial class Hnsw
                    var nodeIndex = indexesOfIds[i];
                    ref var n = ref _nodes[nodeIndex];
                    reader.LoadInto(ref n);
-                    nodeIndexes[vectorsToLoadIdx] = nodeIndex;
-                    vectorIdsToLoad[vectorsToLoadIdx++] = (long)n.GetVectorContainerId();
+                   nodeIndexes[vectorsToLoadIdx] = nodeIndex;
+                   vectorIdsToLoad[vectorsToLoadIdx++] = n.GetVectorContainerId();
                }
            }
            if (vectorsToLoadIdx is 0)
@@ -783,7 +552,7 @@ public unsafe partial class Hnsw
            return _nodeIdToIdx.TryGetValue(nodeId, out nodeIndex);
        }
     }
-    
+
     public partial class Registration : IDisposable
     {
         public bool IsCommited { get; private set; }
@@ -797,7 +566,7 @@ public unsafe partial class Hnsw
         private PostingList _largePostingListSet;
 
         public int AmountOfModifiedVectorsInTransaction => _vectorHashCache.Count;
-        
+
         public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {
             Random = random ?? Random.Shared;
@@ -822,7 +591,7 @@ public unsafe partial class Hnsw
 
             _searchState.Llt.Allocator.AllocateDirect(Sodium.GenericHashSize, out var hashBuffer);
             vectorHash.CopyTo(hashBuffer.ToSpan());
-            
+
             ref var postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
             if (exists)
             {
@@ -834,12 +603,12 @@ public unsafe partial class Hnsw
 
             if (_vectorsByHash.TryGetValue(vectorHash, out var vectorId) is false)
                 PortableExceptions.Throw<InvalidOperationException>($"Unable to find the vector corresponding to the provided vector hash: base64({Convert.ToBase64String(vectorHash)}).");
-            
+
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId) is false)
                 PortableExceptions.Throw<InvalidOperationException>($"Unable to find the node corresponding to the provided vector hash: base64({Convert.ToBase64String(vectorHash)}) and VectorId({vectorId}).");
 
             int nodeIndex = _searchState.GetNodeIndexById(nodeId);
-            postingList = (hashBuffer, nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId  | RemovalMask));
+            postingList = (hashBuffer, nodeIndex, NativeList<long>.Create(_searchState.Llt.Allocator, entryId | RemovalMask));
         }
 
         /// <summary>
@@ -853,6 +622,9 @@ public unsafe partial class Hnsw
             return entryId << 2;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static long InternalEntryIdToEntryId(long entryId) => entryId >> 2;
+
         /// <summary>
         /// During indexing, we're shifting each ID 2 bits to the left to use the two lowest bits as a mask placeholder. This is for querying decoding.
         /// </summary>
@@ -861,11 +633,11 @@ public unsafe partial class Hnsw
         {
             var entriesPos = 0;
             ref var entriesRef = ref MemoryMarshal.GetReference(entries);
-            
+
             if (AdvInstructionSet.IsAcceleratedVector512)
             {
                 var N = Vector512<long>.Count;
-                
+
                 for (; entriesPos + N < entries.Length; entriesPos += N)
                 {
                     ref var currentMemory = ref Unsafe.Add(ref entriesRef, entriesPos);
@@ -873,11 +645,11 @@ public unsafe partial class Hnsw
                     Vector512.ShiftRightLogical(current, 2).StoreUnsafe(ref currentMemory);
                 }
             }
-            
+
             if (AdvInstructionSet.IsAcceleratedVector256)
             {
                 var N = Vector256<long>.Count;
-                
+
                 for (; entriesPos + N < entries.Length; entriesPos += N)
                 {
                     ref var currentMemory = ref Unsafe.Add(ref entriesRef, entriesPos);
@@ -889,7 +661,7 @@ public unsafe partial class Hnsw
             for (; entriesPos < entries.Length; entriesPos++)
                 Unsafe.Add(ref entriesRef, entriesPos) >>= 2;
         }
-        
+
         /// <summary>
         /// Adds a vector to the graph.
         /// </summary>
@@ -906,7 +678,7 @@ public unsafe partial class Hnsw
 
             var hashBuffer = ComputeHashFor(vector);
             ref (ByteString Hash, int NodeIndex, NativeList<long> PostingList) postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
-            if(exists)
+            if (exists)
             {
                 // already added this in the current batch
                 ref var l = ref postingList.PostingList;
@@ -923,7 +695,7 @@ public unsafe partial class Hnsw
                 vectorId = (long)vectorEntryId;
                 _vectorsByHash.Add(vectorHash, vectorId);
             }
-            
+
             if (_nodesByVectorId.TryGetValue(vectorId, out var nodeId))
             {
                 int nodeIndex = _searchState.GetNodeIndexById(nodeId);
@@ -934,11 +706,11 @@ public unsafe partial class Hnsw
             long newNodeId = ++_searchState.Options.CountOfVectors;
             int nodeIdx = _searchState.RegisterVectorNode(newNodeId, vectorId);
             _nodesByVectorId.Add(vectorId, newNodeId);
-            
+
             postingList = (hashBuffer, nodeIdx, ToPostingListTuple(entryId));
             return hashBuffer;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         NativeList<long> ToPostingListTuple(long entryId)
         {
@@ -964,7 +736,7 @@ public unsafe partial class Hnsw
                 var sizeInBytes = _vectorBatchSizeInPages * Constants.Storage.PageSize - PageHeader.SizeOf;
                 var batchId = Container.Allocate(_searchState.Llt, _globalVectorsContainerId,
                     sizeInBytes, out var vectorStorage);
-                
+
                 Debug.Assert(vectorStorage.Length / _searchState.Options.VectorSizeBytes <= byte.MaxValue, "vectorStorage.Length / _searchState.Options.VectorSizeBytes <= byte.MaxValue");
                 Debug.Assert(((long)batchId & 0xFFF) == 0, "We allocate > 1 page, so we get the full page container id");
                 _searchState.Options.LastUsedContainerId = new ContainerId((long)batchId);
@@ -986,6 +758,7 @@ public unsafe partial class Hnsw
                 _searchState.Options.LastUsedContainerId = new ContainerId(0);
                 _searchState.Options.VectorBatchIndex = 0;
             }
+
             return id;
 
             ContainerEntryId GetVectorId(ContainerId containerId, int index)
@@ -1006,7 +779,7 @@ public unsafe partial class Hnsw
         public void Commit(CancellationToken token)
         {
             PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(_searchState.Llt.Committed);
-            
+
             var pforEncoder = new FastPForEncoder(_searchState.Llt.Allocator);
             var pforDecoder = new FastPForDecoder(_searchState.Llt.Allocator);
             var listBuffer = new ContextBoundNativeList<long>(_searchState.Llt.Allocator);
@@ -1019,7 +792,7 @@ public unsafe partial class Hnsw
                 ref var node = ref nodes[nodeIndex];
                 node.PostingListId = MergePostingList(node.PostingListId, modifications);
             }
-            
+
             // Intentionally zeroing the nodes var, we may realloc the underlying array in the insert vector phase
             nodes = Span<Node>.Empty;
             _ = nodes;
@@ -1034,14 +807,14 @@ public unsafe partial class Hnsw
 
             // flush the local modifications
             _searchState.FlushOptions();
-            
+
             listBuffer.Dispose();
             byteBuffer.Dispose();
             pforEncoder.Dispose();
             pforDecoder.Dispose();
 
             IsCommited = true;
-            
+
             long MergePostingList(long postingList, NativeList<long> modifications)
             {
                 // We may have duplicates in the list.
@@ -1053,10 +826,10 @@ public unsafe partial class Hnsw
                 // - There was a removal
                 // In such case, we can just sort and remove duplicates to have unique list.
                 modifications.Shrink(Sorting.SortAndRemoveDuplicates(modifications.ToSpan()));
-                
+
                 listBuffer.Clear();
                 listBuffer.AddRange(modifications.ToSpan());
-                
+
                 int currentSize = 0;
                 bool hasSmallPostingList = false;
                 ContainerEntryId rawPostingListId = new ContainerEntryId(postingList & Constants.Graphs.VectorId.ContainerType);
@@ -1084,7 +857,7 @@ public unsafe partial class Hnsw
                 // 3) 1x Addition: New document 
                 // INFO: All other scenarios are invalid.
                 PostingList.SortModificationsAndRemoveDuplicates(ref listBuffer);
-                
+
                 if (listBuffer.Count is 0 or 1)
                 {
                     if (hasSmallPostingList)
@@ -1121,6 +894,7 @@ public unsafe partial class Hnsw
                     DeleteOldSmallPostingListIfNeeded();
                     rawPostingListId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, byteBuffer.Count, out mutable);
                 }
+
                 Span<byte> span = byteBuffer.ToSpan();
                 span.CopyTo(mutable);
 
@@ -1137,7 +911,7 @@ public unsafe partial class Hnsw
                 }
             }
         }
-        
+
         public void Dispose()
         {
             //todo: we may wants to release the vector hash cache
@@ -1164,10 +938,10 @@ public unsafe partial class Hnsw
                 lists[listIdx][curIndex] = cur;
             }
 
-            var numberOfEntries = PostingList.Update(_searchState.Llt, ref postingListState, lists[0], indexes[0], 
+            var numberOfEntries = PostingList.Update(_searchState.Llt, ref postingListState, lists[0], indexes[0],
                 lists[1], indexes[1], pForEncoder, ref tempListBuffer, ref pForDecoder);
 
-            if(numberOfEntries is 0)
+            if (numberOfEntries is 0)
             {
                 _largePostingListSet ??= _searchState.Llt.Transaction.OpenPostingList(Constants.PostingList.PostingListRegister);
                 _largePostingListSet.Remove((long)postingListId);
@@ -1218,210 +992,39 @@ public unsafe partial class Hnsw
         Slice.From(llt.Allocator, name, out var slice);
         return RegistrationFor(llt, slice, random);
     }
+
     public static Registration RegistrationFor(LowLevelTransaction llt, Slice name, Random random = null)
     {
         return new Registration(llt, name, random);
     }
-
-    public static NearestSearch ExactNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
-    {
-        Slice.From(llt.Allocator, name, out var slice);
-        return ExactNearest(llt, slice, numberOfCandidates, vector, minimumSimilarity);
-    }
-
-    public static NearestSearch ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
+    
+    public static VectorSearchRetriever ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
     {
         var searchState = new SearchState(llt, name);
-        var pq = new PriorityQueue<long, float>();
-        for (long nodeId = 1; nodeId <= searchState.Options.CountOfVectors; nodeId++)
-        {
-            searchState.ReadNode(nodeId, out var reader);
-            if (reader.PostingListId is 0)
-                continue; // no entries, can skip
-
-            var curVect = reader.ReadVector(in searchState);
-            var distance = searchState.SimilarityCalc(vector, curVect);
-            if (pq.Count < numberOfCandidates)
-            {
-                pq.Enqueue(nodeId, -distance);
-            }
-            else
-            {
-                pq.EnqueueDequeue(nodeId, -distance);
-            }
-        }
-
-        var candidates = new ContextBoundNativeList<int>(llt.Allocator);
-        while(pq.TryDequeue(out var nodeId, out _))
-        {
-            var nodeIdx = searchState.GetNodeIndexById(nodeId);
-            candidates.Add(nodeIdx);
-        }
-        candidates.Inner.Reverse();
-        return new NearestSearch(searchState, candidates, vector, minimumSimilarity);
+        var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
+        return new VectorSearchRetriever(searchState,  results, vector, minimumSimilarity);
     }
-
-    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, string name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
-    {
-        Slice.From(llt.Allocator, name, out var slice);
-        return ApproximateNearest(llt, slice, numberOfCandidates, vector, minimumSimilarity);
-    }
-
-    public static NearestSearch ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, ReadOnlySpan<byte> vector, float minimumSimilarity)
+    
+    public static VectorSearchRetriever ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch = false)
     {
         var searchState = new SearchState(llt, name);
         var nearestNodesByLevel = new ContextBoundNativeList<int>(llt.Allocator);
         nearestNodesByLevel.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
 
         if (searchState.Options.CountOfVectors == 0)
-            return new NearestSearch(searchState, nearestNodesByLevel, vector, minimumSimilarity);
-        
-        searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel.Inner);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
+
+        searchState.SearchNearestAcrossLevels(vector.Span, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel.Inner);
         var nearest = nearestNodesByLevel[0];
         nearestNodesByLevel.Clear();
-        searchState.NearestEdges(nearest, -1, vector, level: 0, numberOfCandidates: numberOfCandidates, candidates: ref nearestNodesByLevel.Inner, 
-            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
-        return new NearestSearch(searchState, nearestNodesByLevel, vector, minimumSimilarity);
+        var nearestEdgesSearch = searchState.NearestSearch(nearest, vector, 0, numberOfCandidates, nearestNodesByLevel,
+            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists, hasFilterMatch);
+        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity);
     }
-    
-    public class IndexedVectorsRetriever(LowLevelTransaction llt, string name) : IIndexedTermsRetriever
+
+    public static VectorSearchRetriever EmptySearch(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity)
     {
-        private readonly SearchState _searchState = new(llt, name);
-        private long _lastReadNodeId = 1;
-
-        public bool GetNextTerm(out ReadOnlySpan<byte> term)
-        {
-            if (_lastReadNodeId > _searchState.Options.CountOfVectors)
-            {
-                term = [];
-                return false;
-            }
-
-            _searchState.ReadNode(_lastReadNodeId, out var reader);
-            term = reader.ReadVector(in _searchState).ToReadOnlySpan();
-            _lastReadNodeId++;
-            return true;
-        }
-
-        public ConvertTo Type => ConvertTo.Base64;
-    }
-    
-    public struct NearestSearch : IDisposable
-    {
-        public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector, float minimumSimilarity)
-        {
-            _searchState = searchState;
-            _indexes = indexes;
-            _postingListResults = new(_searchState.Llt.Allocator);
-            _pforDecoder = new(searchState.Llt.Allocator);
-            searchState.Llt.Allocator.AllocateDirect(vector.Length, out _vector);
-            vector.CopyTo(_vector.ToSpan());
-            _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
-        }
-
-        private ContextBoundNativeList<int> _indexes;
-        private SearchState _searchState;
-        private int _currentNode, _currentMatchesIndex;
-        private ContextBoundNativeList<long> _postingListResults;
-        private FastPForDecoder _pforDecoder;
-        private ByteString _vector;
-        private PostingList.Iterator _postingListIterator;
-        private PostingList _postingList;
-        private readonly float _maximumDistance;
-        public SimilarityMethod SimilarityMethod => _searchState.Options.SimilarityMethod;
-        public bool IsEmpty => _searchState.IsEmpty;
-
-        public void Dispose()
-        {
-            _indexes.Dispose();
-            _postingListResults.Dispose();
-            _pforDecoder.Dispose();
-            _searchState.Llt.Allocator.Release(ref _vector);
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float DistanceToScore(float distance) => _searchState.DistanceToScore(distance);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DistancesToScores(Span<float> distances) => _searchState.DistancesToScores(distances);
-        
-        public int Fill(Span<long> matches, Span<float> distances)
-        {
-            int index = 0;
-            float distance = float.NaN;
-            while (index < matches.Length)
-            {
-                if (_currentNode >= _indexes.Count)
-                    break;
-
-                if(_postingList != null)
-                {
-                    if (_postingListIterator.Fill(matches[index..], out var total) is false && total is 0)
-                    {
-                        _postingListIterator = default;
-                        _postingList = null;
-                        _currentNode++;
-                        continue;
-                    }
-                    distances.Slice(index, total).Fill(distance);
-                    index += total;
-                    continue;
-                }
-
-                if (_currentMatchesIndex < _postingListResults.Count)
-                {
-                    var copy = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
-                    _postingListResults.CopyTo(matches[index..], _currentMatchesIndex, copy);
-                    distances.Slice(index, copy).Fill(distance);
-                    index += copy;
-                    _currentMatchesIndex += copy;
-                    if(_currentMatchesIndex == _postingListResults.Count)
-                    {
-                        _currentMatchesIndex = 0;
-                        _postingListResults.Clear();
-                        _currentNode++;
-                    }
-                    continue;
-                }
-
-                var nodeIdx = _indexes[_currentNode];
-                ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
-                ContainerEntryId rawPostingListId = new ContainerEntryId(node.PostingListId & Constants.Graphs.VectorId.ContainerType);
-                distance = _searchState.Distance(_vector.ToSpan(), -1, nodeIdx);
-
-                if (distance > _maximumDistance)
-                {
-                    _currentNode++;
-                    continue;
-                }
-
-                switch (node.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
-                {
-                    case Constants.Graphs.VectorId.Tombstone: // empty
-                        _currentNode++;
-                        continue;
-                    case Constants.Graphs.VectorId.Single: // single item posting list
-                        distances[index] = distance;
-                        matches[index++] = (long)rawPostingListId;
-                        _currentNode++;
-                        continue;
-                    case Constants.Graphs.VectorId.SmallPostingList: // small posting list
-                        Debug.Assert(_postingListResults.Count is 0 && _currentMatchesIndex is 0);
-                        _searchState.ReadPostingList(rawPostingListId, ref _postingListResults, ref _pforDecoder, out _);
-                        continue;
-                    case Constants.Graphs.VectorId.PostingList: // large posting list
-                        var setStateSpan = Container.GetReadOnly(_searchState.Llt, rawPostingListId);
-                        ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
-                        _postingList = new PostingList(_searchState.Llt, Slices.Empty, setState);
-                        _postingListIterator = _postingList.Iterate();
-                        continue;
-                    default:
-                        throw new ArgumentOutOfRangeException("Impossible scenario, we have only 4 options, but got: " + node.PostingListId);
-                }
-            }
-
-            Registration.InternalEntryIdToEntryId(matches.Slice(0, index));
-            return index;
-        }
+        var searchState = new SearchState(llt, name);
+        return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
     }
 }

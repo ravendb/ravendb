@@ -4,134 +4,207 @@ using System.Diagnostics;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
+using Sparrow.Server.Collections;
 using Sparrow.Server.Utils;
 using Voron.Data.Graphs;
+using Voron.Util;
 
 namespace Corax.Querying.Matches;
 
 public struct MultiVectorSearchMatch : IQueryMatch
 {
-    private readonly IndexSearcher _searcher;
+    private const int ScanningThreshold = 1024;
+
+    private readonly IndexSearcher _indexSearcher;
     private readonly FieldMetadata _metadata;
-    private readonly bool _singleVectorSearchDoNotSortByIds;
-    private readonly Hnsw.NearestSearch[] _nearestSearches;
-    private readonly bool _isEmpty;
+    private readonly float _minimumMatch;
+    private readonly int _numberOfCandidates;
+    private readonly bool _isExact;
+    private VectorValue[] _vectorsToSearch;
+
+
+    // Number of documents to be directly scanned instead of ANN / Exact on HNSW.
+    private readonly int _scanningThreshold;
+    private bool _scanningQuery;
+
+
+    // Internal buffers used to store results from VectorSearch.
     private GrowableBuffer<long, Constant<long>> _matches;
     private GrowableBuffer<float, Constant<float>> _distances;
-    private bool _persisted = false;
-    private int _positionOnPersistedValues = 0;
 
-    private const long InitialSize = 16;
+    // Voron VectorSearch Retriever
+    private Hnsw.VectorSearchRetriever[] _vectorsRetrievers;
+    private bool _vectorRetrieverInitialized;
+
+    private bool _resultsPersisted;
+    private int _positionOnPersistedValues = 0;
+    private bool _isEmpty;
+
+
+    /// <summary>
+    /// When VectorSearch is the only condition in the WHERE statement,
+    /// do not sort to fulfill the Fill guarantees.
+    /// Otherwise, sorting is necessary as it may produce incorrect results in the upper AST statements.
+    /// </summary>
+    private readonly bool _singleVectorSearchDoNotSort;
+
+    private GrowableBitArray _filterResults;
+    private IQueryMatch _filterQuery;
+    private bool _filterQueryLoaded;
+    private long _filterMatchesCount;
+
+    private bool _canStreamResults => IsBoosting == false;
+
 
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
-        in bool isExact, in bool singleVectorSearchDoNotSortByIds)
+        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold)
     {
-        _searcher = searcher;
+        _indexSearcher = searcher;
         _metadata = metadata;
-        _singleVectorSearchDoNotSortByIds = singleVectorSearchDoNotSortByIds;
-        _nearestSearches = new Hnsw.NearestSearch[vectorsToSearch.Length];
-        _isEmpty = true;
-        
-        for (var i = 0; i < vectorsToSearch.Length; ++i)
-        {
-            var vectorToSearch = vectorsToSearch[i];
-            _nearestSearches[i] = isExact == false
-                ? Hnsw.ApproximateNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding(),
-                    minimumMatch)
-                : Hnsw.ExactNearest(searcher.Transaction.LowLevelTransaction, metadata.FieldName, numberOfCandidates, vectorToSearch.GetEmbedding(),
-                    minimumMatch);
+        _minimumMatch = minimumMatch;
+        _vectorsToSearch = vectorsToSearch;
+        _numberOfCandidates = numberOfCandidates;
+        _isExact = isExact;
+        _filterQuery = filterQuery;
+        _scanningThreshold = scanningThreshold;
+        IsBoosting = true;
+        _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
+    }
 
-            _isEmpty &= _nearestSearches[i].IsEmpty;
-            vectorToSearch.Dispose();
+
+    private void InitializeVectorSearch()
+    {
+        Debug.Assert(_vectorRetrieverInitialized == false, "Vector Retriever should be initialized only once.");
+        _vectorRetrieverInitialized = true;
+
+        if (_filterQuery != null)
+        {
+            _filterQueryLoaded = true;
+            _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery);
+            _filterMatchesCount = _filterResults.Count;
         }
 
-        IsBoosting = true;
+        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold);
+        ContextBoundNativeList<long> nodesIdsToScan = default;
+        if (_scanningQuery)
+            IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+
+        _vectorsRetrievers = new Hnsw.VectorSearchRetriever[_vectorsToSearch.Length];
+        var llt = _indexSearcher.Transaction.LowLevelTransaction;
+        var allEmpty = true;
+        for (int i = 0; i < _vectorsRetrievers.Length; ++i)
+        {
+            var vector = _vectorsToSearch[i].GetEmbeddingMemory();
+            _vectorsRetrievers[i] = (_isExact) switch
+            {
+                _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, nodesIdsToScan),
+                true => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
+                false => Hnsw.ApproximateNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null)
+            };
+
+            allEmpty &= _vectorsRetrievers[i].IsEmpty;
+        }
+
+        _isEmpty = allEmpty || (_filterQuery != null && _filterResults.Count == 0);
     }
-
-    public long Count { get; private set; }
-
-    public SkipSortingResult AttemptToSkipSorting()
-    {
-        return _singleVectorSearchDoNotSortByIds
-            ? SkipSortingResult.ResultsNativelySorted
-            : SkipSortingResult.SortingIsRequired;
-    }
-
-    public QueryCountConfidence Confidence => QueryCountConfidence.Low;
-    public bool IsBoosting { get; }
 
     public int Fill(Span<long> matches)
     {
+        if (_vectorRetrieverInitialized == false)
+            InitializeVectorSearch();
+
         if (_isEmpty)
             return 0;
-
-        if (_persisted == false)
+        
+        if (_resultsPersisted == false)
             FillAndPersistResults();
+        
+        var resultsLeft = _matches.Count - _positionOnPersistedValues;
 
-        if (_positionOnPersistedValues == _matches.Count)
+        if (resultsLeft == 0)
             return 0;
 
-        var amountToCopy = Math.Min(matches.Length, _matches.Count - _positionOnPersistedValues);
-        _matches.Results.Slice(_positionOnPersistedValues, amountToCopy).CopyTo(matches[..amountToCopy]);
+        var amountToCopy = Math.Min(resultsLeft, matches.Length);
+        _matches.Results.Slice(_positionOnPersistedValues,  amountToCopy).CopyTo(matches.Slice(0, amountToCopy));
         _positionOnPersistedValues += amountToCopy;
         return amountToCopy;
     }
 
     private void FillAndPersistResults()
     {
-        _matches.Init(_searcher.Allocator, InitialSize);
-        _distances.Init(_searcher.Allocator, InitialSize);
-        for (var i = 0; i < _nearestSearches.Length; ++i)
+        Debug.Assert(_resultsPersisted == false, "Results should be persisted only once.");
+        _resultsPersisted = true;
+
+        _matches.Init(_indexSearcher.Allocator, 128);
+        _distances.Init(_indexSearcher.Allocator, 128);
+        for (var i = 0; i < _vectorsRetrievers.Length; ++i)
         {
-            ref var nearestSearch = ref _nearestSearches[i];
-            int read = 0;
+            ref var vectorSearcher = ref _vectorsRetrievers[i];
+            int currentRead = 0;
             do
             {
                 var matchBuffer = _matches.GetSpace();
                 var distanceBuffer = _distances.GetSpace();
                 Debug.Assert(matchBuffer.Length == distanceBuffer.Length, "matchBuffer.Length == distanceBuffer.Length");
 
-                read = nearestSearch.Fill(matchBuffer, distanceBuffer);
-                _matches.AddUsage(read);
-                _distances.AddUsage(read);
-                Count += read;
-            } while (read > 0);
+                currentRead = (_filterQuery is null) switch
+                {
+                    true => vectorSearcher.Fill(matchBuffer, distanceBuffer),
+                    false => vectorSearcher.Fill(matchBuffer, distanceBuffer, _filterResults),
+                };
+                
+                _matches.AddUsage(currentRead);
+                _distances.AddUsage(currentRead);
+                Count += currentRead;
+            } while (currentRead > 0);
 
-            nearestSearch.Dispose();
+            vectorSearcher.Dispose();
+            _vectorsToSearch[i].Dispose();
         }
 
+        // Min on distances is Max on score.
         var uniqueCount = Sorting.SortAndMinOnDuplicates(_matches.Results, _distances.Results);
         _matches.Truncate(uniqueCount);
         _distances.Truncate(uniqueCount);
 
-        if (_singleVectorSearchDoNotSortByIds)
+        // Streaming query, we need to return already sorted
+        if (_singleVectorSearchDoNotSort) 
             _distances.Results.Sort(_matches.Results);
-
-        _persisted = true;
+        
+        _filterResults.Dispose();
     }
 
     public int AndWith(Span<long> buffer, int matches)
     {
+        if (_vectorRetrieverInitialized == false)
+            InitializeVectorSearch();
+
+        if (_resultsPersisted == false)
+            FillAndPersistResults();
+
         if (_isEmpty)
             return 0;
-
-        if (_persisted == false)
-            FillAndPersistResults();
 
         return MergeHelper.And(buffer, buffer[..matches], _matches.Results);
     }
 
-    public void Score(Span<long> matches, Span<float> scores, float _)
+    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
-        if (_persisted == false)
+        if (_resultsPersisted == false)
         {
             // BinaryMatch may skip the method call if the other node of the AND clause 
             // is empty, the evaluation of this primitive is pointless. In these cases, the call is ignored.
             return;
         }
         
-        if (_singleVectorSearchDoNotSortByIds == false)
+        if (_singleVectorSearchDoNotSort == false)
         {
+            if (_filterQuery != null)
+            {
+                ref var filterQuery = ref _filterQuery;
+                filterQuery.Score(matches, scores, boostFactor);
+            }
+
             for (int i = 0; i < matches.Length; ++i)
             {
                 var match = matches[i];
@@ -140,18 +213,33 @@ public struct MultiVectorSearchMatch : IQueryMatch
                     continue;
 
                 var distance = _distances.Results[pos];
-                scores[i] += _nearestSearches[0].DistanceToScore(distance);
+                scores[i] += boostFactor * _vectorsRetrievers[0].DistanceToScore(distance);
             }
         }
         else
         {
             _distances.Results[..scores.Length].CopyTo(scores);
-            _nearestSearches[0].DistancesToScores(scores);
+            _vectorsRetrievers[0].DistancesToScores(scores);
+            for (int i = 0; i < scores.Length; ++i)
+                scores[i] *= boostFactor;
         }
 
         _matches.Dispose();
         _distances.Dispose();
     }
+
+    public long Count { get; private set; }
+
+    public SkipSortingResult AttemptToSkipSorting()
+    {
+        return _singleVectorSearchDoNotSort
+            ? SkipSortingResult.ResultsNativelySorted
+            : SkipSortingResult.SortingIsRequired;
+    }
+
+    public QueryCountConfidence Confidence => QueryCountConfidence.Low;
+
+    public bool IsBoosting { get; }
 
     public QueryInspectionNode Inspect()
     {
@@ -159,7 +247,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
-                { nameof(Hnsw.SimilarityMethod), _nearestSearches[0].SimilarityMethod.ToString() },
+                { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers[0].SimilarityMethod.ToString() },
             });
     }
 
