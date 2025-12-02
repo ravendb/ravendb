@@ -287,6 +287,9 @@ const runChat = createAsyncThunk(
 
         dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
         dispatch(chatbotActions.conversationIdSet(result.data.ConversationId));
+        dispatch(
+            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
+        );
 
         const data = result.data;
 

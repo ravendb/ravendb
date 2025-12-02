@@ -257,12 +257,6 @@ export default function ChatbotAskAiMessageEndpoints({
                     </div>
                 ) : (
                     <div className="hstack justify-content-end mt-2">
-                        {userActionState === "allowed" && (
-                            <Badge bg="success" className="rounded-pill">
-                                <Icon icon="check" />
-                                Success
-                            </Badge>
-                        )}
                         {userActionState === "alwaysAllowed" && (
                             <Badge bg="success" className="rounded-pill">
                                 <Icon icon="check" />
@@ -281,12 +275,6 @@ export default function ChatbotAskAiMessageEndpoints({
                                 Skipped
                             </Badge>
                         )}
-                        {userActionState === "error" && (
-                            <Badge bg="danger" className="rounded-pill">
-                                <Icon icon="warning" />
-                                Error
-                            </Badge>
-                        )}
                     </div>
                 )}
             </div>
@@ -300,7 +288,7 @@ interface EndpointItemProps {
 
 function EndpointItem({ endpoint }: EndpointItemProps) {
     return (
-        <span className="text-break">
+        <div className="hstack w-100">
             <span>
                 {endpoint.state === "waiting" && <span className="me-1">-</span>}
                 {endpoint.state === "allowed" ||
@@ -310,9 +298,9 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
                 {endpoint.state === "denied" && <Icon icon="cancel" />}
                 GET
             </span>
-            <a href={endpoint.url} target="_blank" className="ms-1 text-break text-emphasis">
-                {endpoint.url} <Icon icon="newtab" margin="m-0" />
+            <a href={endpoint.url} target="_blank" className="ms-1 text-emphasis text-truncate" title={endpoint.url}>
+                {endpoint.url}
             </a>
-        </span>
+        </div>
     );
 }
