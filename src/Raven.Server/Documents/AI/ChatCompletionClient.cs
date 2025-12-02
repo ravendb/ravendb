@@ -314,7 +314,7 @@ internal class ChatCompletionClient : IDisposable
         };
     }
 
-    public async Task<string> TestCompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
+    public async Task<(string Result, string Message)> TestCompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
     {
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext context);
         var prompt = context.ReadObject(new DynamicJsonValue
@@ -331,7 +331,7 @@ internal class ChatCompletionClient : IDisposable
 
         var request = CreateCompletionRequest(context, [prompt, user], attachments: null, tools: null, useTools: false, streaming: false, schema);
         var r = await CompleteAsync(context, request, new AiUsage(), token);
-        return r.Result.ToString();
+        return (r.Result.ToString(), r.Message.ToString());
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
