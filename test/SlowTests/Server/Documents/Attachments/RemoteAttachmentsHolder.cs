@@ -586,7 +586,6 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
-                using (database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.Initialize(ctx))
                 {
                     var totalCount = 0;
                     var dbRecord = database.ReadDatabaseRecord();
@@ -909,7 +908,6 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
                     var database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
-                    using (database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.Initialize(ctx))
                     {
                         var totalCount = 0;
 

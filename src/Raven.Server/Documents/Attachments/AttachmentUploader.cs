@@ -19,6 +19,8 @@ public sealed class AttachmentUploader : DirectFileUploader
         _backupDescription = $"{nameof(AttachmentUploader)} for identifier '{_settings.TaskName}'";
     }
 
+    public string Identifier => _settings.TaskName;
+
     public override string GetBackupDescription()
     {
         return _backupDescription;

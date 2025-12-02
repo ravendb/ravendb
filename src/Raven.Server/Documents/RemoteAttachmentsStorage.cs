@@ -11,13 +11,11 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
-using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -35,7 +33,6 @@ namespace Raven.Server.Documents;
 
 public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentExpirationInfo>
 {
-    private DocumentInfoHelper _documentInfoHelper;
     private readonly RavenLogger _logger;
     private const string AttachmentsByRemote = "AttachmentsByRemote";
 
@@ -44,16 +41,6 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
     public RemoteAttachmentsStorage(Transaction tx, DocumentDatabase database) : base(tx, database, AttachmentsByRemote, nameof(AttachmentName.RemoteParameters.At))
     {
         _logger = database.Loggers.GetLogger<RemoteAttachmentsStorage>();
-    }
-
-    public IDisposable Initialize(DocumentsOperationContext context)
-    {
-        _documentInfoHelper = new DocumentInfoHelper(context);
-
-        return new DisposableAction(() =>
-        {
-            _documentInfoHelper.Dispose();
-        });
     }
 
     private IEnumerator<BlittableJsonReaderObject> EnumerateAttachmentsFromMetadataAndCheckIfShouldSkip(BlittableJsonReaderArray attachments, DateTime currentTime, Func<string, bool> shouldSkip)

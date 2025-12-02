@@ -1101,15 +1101,12 @@ namespace SlowTests.Server.Documents.Attachments
 
                 var totalCount = 0;
 
-                using (database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.Initialize(context))
-                {
-                    var expired = database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.GetDocuments(options, ref totalCount, out _,
-                        CancellationToken.None);
+                var expired = database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.GetDocuments(options, ref totalCount, out _,
+                    CancellationToken.None);
 
-                    Assert.Equal(expected, totalCount);
+                Assert.Equal(expected, totalCount);
 
-                    action?.Invoke(expired);
-                }
+                action?.Invoke(expired);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Server.Documents.BackgroundWork;
 
 namespace Raven.Server.Documents.Attachments;
@@ -11,8 +12,12 @@ public class AttachmentRemoteInfo
 
     public AttachmentUploader AttachmentUploader;
 
+    public string Hash;
+
     public AttachmentRemoteInfo()
     {
 
     }
+
+    public Exception Exception { get; set; }
 }

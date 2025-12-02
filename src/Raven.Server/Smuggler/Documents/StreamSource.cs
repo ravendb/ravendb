@@ -1858,11 +1858,10 @@ namespace Raven.Server.Smuggler.Documents
                         var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
                         if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
                         {
+                            // this should skip this attachment from the results array
+                            didWork = true;
                             if (_log.IsInfoEnabled)
                                 _log.Info($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");
-
-                            Debug.Assert(false, "imported attachment doesn't have hash");
-                            didWork = true;
                             continue;
                         }
 
