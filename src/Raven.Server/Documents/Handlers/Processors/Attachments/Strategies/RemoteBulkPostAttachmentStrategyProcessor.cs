@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
                 downloaders[attachment.RemoteParameters.Identifier] = downloader;
             }
 
-
             return (RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
                 attachment.Base64Hash.ToString()), false);
         }

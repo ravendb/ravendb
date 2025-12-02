@@ -134,16 +134,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += Base64Hash.Size;
 
-                tempBufferPos = WriteRemoteAttachmentsProperties(RemoteAttachments, pTemp, tempBufferPos);
+                tempBufferPos = WriteRemoteAttachmentsProperties(pTemp, tempBufferPos);
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
         }
 
-        private unsafe int WriteRemoteAttachmentsProperties(bool remoteAttachments, byte* pTemp, int tempBufferPos)
+        private unsafe int WriteRemoteAttachmentsProperties(byte* pTemp, int tempBufferPos)
         {
-            if (remoteAttachments == false)
+            if (RemoteAttachments == false)
                 return tempBufferPos;
 
             *(long*)(pTemp + tempBufferPos) = AttachmentSize;

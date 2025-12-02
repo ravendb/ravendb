@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected override NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => base.GetNonPersistentDocumentFlags() | NonPersistentDocumentFlags.FromResharding;
 
-            protected override ChangeVector PreProcessItemInternal(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 switch (item)
                 {

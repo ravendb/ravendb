@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _database = database;
             }
 
-            protected override ChangeVector PreProcessItemInternal(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 switch (item)
                 {

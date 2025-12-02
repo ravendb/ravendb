@@ -315,11 +315,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _isInternal = isInternal;
             }
 
-            protected ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                PreProcessAttachments(context, item);
-
-                return PreProcessItemInternal(context, item);
+                return context.GetChangeVector(item.ChangeVector).Order;
             }
 
             protected void PreProcessAttachments(DocumentsOperationContext context, ReplicationBatchItem item)
@@ -348,11 +346,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                             break;
                     }
                 }
-            }
-
-            protected virtual ChangeVector PreProcessItemInternal(DocumentsOperationContext context, ReplicationBatchItem item)
-            {
-                return context.GetChangeVector(item.ChangeVector).Order;
             }
 
             protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
@@ -402,6 +395,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         operationsCount++;
 
+                        PreProcessAttachments(context, item);
                         var changeVectorToMerge = PreProcessItem(context, item);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
