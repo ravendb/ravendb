@@ -139,6 +139,10 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                             />
                         </FormGroup>
                         <FormGroup>
+                            <FormLabel>Agent State</FormLabel>
+                            <FormSelect control={control} name="state" options={stateOptions} />
+                        </FormGroup>
+                        <FormGroup>
                             <FormLabel>
                                 Connection String
                                 <PopoverWithHoverWrapper message="The selected connection string determines which LLM the agent will interact with.">
@@ -308,3 +312,8 @@ const JsonSchemaSyntaxHelp = () => {
         </div>
     );
 };
+
+const stateOptions: SelectOption[] = ["Enabled", "Disabled"].map((x) => ({
+    label: x,
+    value: x,
+}));

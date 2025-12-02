@@ -83,7 +83,8 @@ export default function ChatAiAgentFormBody({
         dispatch(chatAiAgentActions.isDocumentChangedSet(false));
     };
 
-    const isPromptDisabled = isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged;
+    const isPromptDisabled =
+        isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged || config.data?.Disabled;
     const hasPromptErrors = formState.errors.prompts?.length > 0;
 
     return (
