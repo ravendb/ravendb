@@ -298,6 +298,7 @@ class indexDefinition {
 
     toDto(): Raven.Client.Documents.Indexes.IndexDefinition {
         return {
+            SchemaDefinitions: null,
             Name: this.name(),
             Maps: this.maps().map(m => m.map()),
             Reduce: this.reduce(),
@@ -404,6 +405,7 @@ class indexDefinition {
     
     static createDefaultIndexDefinition(indexingDatabaseSettings?: indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType): indexDefinition {
         return new indexDefinition({
+            SchemaDefinitions: null,
             Fields: {},
             Maps: [""],
             Name: "",

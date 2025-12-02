@@ -25,14 +25,18 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import useConfirm from "components/common/ConfirmDialog";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { useAppUrls } from "hooks/useAppUrls";
+import { useViewSheet } from "components/common/splitView/ViewSheet";
+import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 
-interface OperationConfirm {
+export interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
     onConfirm: () => void;
     validators: DocumentSchemaValidatorConfig[];
 }
 
 export default function DocumentSchemaSelectActions() {
+    const { forCurrentDatabase: urls } = useAppUrls();
     const dispatch = useDispatch();
     const { reportEvent } = useEventsCollector();
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
@@ -42,8 +46,8 @@ export default function DocumentSchemaSelectActions() {
         setTrue: setIsTogglingGlobalStatusTrue,
         setFalse: setIsTogglingGlobalStatusFalse,
     } = useBoolean(false);
-    const [operationConfirm, setOperationConfirm] = React.useState<OperationConfirm>(null);
     const confirm = useConfirm();
+    const [operationConfirm, setOperationConfirm] = React.useState<OperationConfirm>(null);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -51,6 +55,16 @@ export default function DocumentSchemaSelectActions() {
     const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
     const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
+
+    const { open } = useViewSheet();
+
+    const handleOpenSheet = () => {
+        const validators = allValidators.filter((v) => selectedCollectionNames.includes(v.Name));
+        open({
+            component: <ValidationSchemaViewSheetPanel validators={validators} />,
+        });
+        dispatch(documentSchemaActions.selectedCollectionNamesCleared());
+    };
 
     if (allCollectionNames.length === 0) {
         return null;
@@ -169,6 +183,10 @@ export default function DocumentSchemaSelectActions() {
                                 selected
                             </div>
                             <ButtonGroup className="gap-2 flex-wrap justify-content-center">
+                                <Button onClick={handleOpenSheet} className="rounded-pill flex-grow-0">
+                                    <Icon icon="rocket" />
+                                    Run test
+                                </Button>
                                 <Dropdown>
                                     <Dropdown.Toggle
                                         variant="secondary"
@@ -207,25 +225,21 @@ export default function DocumentSchemaSelectActions() {
                         </div>
                     </SelectionActions>
                 </div>
-                {isGlobalDisabled ? (
+                <div className="d-flex gap-2 align-items-center">
+                    <a className="btn btn-secondary rounded-pill" href={urls.documentSchemaPlayground()}>
+                        <Icon icon="rocket" />
+                        Schema Playground
+                    </a>
                     <ButtonWithSpinner
-                        variant="success"
-                        onClick={() => handleGlobalStatusOperation(false)}
+                        variant={isGlobalDisabled ? "success" : "secondary"}
+                        onClick={() => handleGlobalStatusOperation(!isGlobalDisabled)}
                         isSpinning={isTogglingGlobalStatus}
+                        className="rounded-pill"
                     >
-                        <Icon icon="play" />
-                        Enable Schema Validation
+                        <Icon icon={isGlobalDisabled ? "play" : "stop"} />
+                        {isGlobalDisabled ? "Enable" : "Disable"} Schema Validation
                     </ButtonWithSpinner>
-                ) : (
-                    <ButtonWithSpinner
-                        variant="secondary"
-                        onClick={() => handleGlobalStatusOperation(true)}
-                        isSpinning={isTogglingGlobalStatus}
-                    >
-                        <Icon icon="stop" />
-                        Disable Schema Validation
-                    </ButtonWithSpinner>
-                )}
+                </div>
             </div>
             {isDeleteModalOpen && (
                 <DocumentSchemaDeleteModal

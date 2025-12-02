@@ -1120,3 +1120,23 @@ interface AiModelsRequestDto {
 interface GetAiAgentResultDto {
     AiAgents: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration[];
 }
+
+interface ValidateSchemaRequestDto {
+    SchemaDefinition: string;
+    Collection: string;
+    MaxErrorMessages?: number;
+    MaxDocumentsToValidate?: number;
+    StartEtag?: string;
+}
+
+interface ValidateSchemaResponseDto {
+    OperationId: number;
+    OperationNodeTag: string;
+}
+
+interface ValidateSchemaResult {
+    ErrorCount: number;
+    Errors: Record<string, string>
+    LastEtag: number;
+    ValidatedCount: number;
+}

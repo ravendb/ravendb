@@ -201,6 +201,7 @@ export class IndexesStubs {
                         AdditionalSources: {},
                         AdditionalAssemblies: [],
                         CompoundFields: [],
+                        SchemaDefinitions: null,
                     },
                     Collection: "Products",
                     SurpassingIndex: "",

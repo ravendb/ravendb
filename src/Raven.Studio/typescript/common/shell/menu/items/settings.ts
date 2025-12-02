@@ -21,6 +21,7 @@ import Integrations = require("components/pages/database/settings/integrations/I
 import UnusedDatabaseIds = require("components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds");
 import RevisionsBinCleaner = require("components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleaner");
 import DocumentSchema = require("components/pages/database/settings/documentSchema/DocumentSchema");
+import DocumentSchemaPlayground = require("components/pages/database/settings/documentSchema/partials/DocumentSchemaPlayground");
 
 export = getSettingsMenuItem;
 
@@ -168,16 +169,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-document-schema',
             dynamicHash: appUrls.documentSchema,
         }),
-        // TODO: For now schema playground is not available. https://issues.hibernatingrhinos.com/issue/RavenDB-22142/Schema-Validation
-        // new leafMenuItem({
-        //     route: 'databases/settings/documentSchema/playground',
-        //     moduleId: reactUtils.bridgeToReact(DocumentSchemaPlayground.default, "nonShardedView"),
-        //     title: 'Document Schema Playground',
-        //     nav: false,
-        //     css: 'icon-document',
-        //     dynamicHash: appUrls.documentSchemaPlayground,
-        //     itemRouteToHighlight: "databases/settings/documentSchema",
-        // }),
+        new leafMenuItem({
+            route: 'databases/settings/documentSchema/playground',
+            moduleId: reactUtils.bridgeToReact(DocumentSchemaPlayground.default, "nonShardedView"),
+            title: 'Document Schema Playground',
+            nav: false,
+            css: 'icon-document',
+            dynamicHash: appUrls.documentSchemaPlayground,
+            itemRouteToHighlight: "databases/settings/documentSchema",
+        }),
         new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: reactUtils.bridgeToReact(DocumentRevisions.default, "nonShardedView"),

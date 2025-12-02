@@ -289,7 +289,7 @@ class shell extends viewModelBase {
         this.helpAndResourcesWidgetView = ko.pureComputed(() => ({ component: HelpAndResourcesWidget.HelpAndResourcesWidget }));
 
         this.isHelpAndResourcesWidgetVisible = ko.pureComputed(() => {
-            const routesToHide: string[] = ["databases/ai/agents/edit", "databases/ai/agents/chat"];
+            const routesToHide: string[] = ["databases/ai/agents/edit", "databases/ai/agents/chat", "databases/settings/documentSchema", "databases/settings/documentSchema/playground"];
             const route = genUtils.getSingleRoute(router.activeInstruction()?.config?.route);
 
             return !routesToHide.includes(route);

@@ -81,6 +81,9 @@ export const documentSchemaSlice = createSlice({
                 state.selectedCollectionNames.push(name);
             }
         },
+        selectedCollectionNamesCleared: (state) => {
+            state.selectedCollectionNames = [];
+        },
         selectedValidatorsDeleted: (state) => {
             validatorsAdapter.removeMany(state.validators, state.selectedCollectionNames);
             state.selectedCollectionNames = [];
@@ -102,9 +105,7 @@ export const documentSchemaSlice = createSlice({
     extraReducers: () => {},
 });
 
-export const documentSchemaActions = {
-    ...documentSchemaSlice.actions,
-};
+export const documentSchemaActions = documentSchemaSlice.actions;
 
 export const documentSchemaSliceInternal = {
     validatorsSelectors,

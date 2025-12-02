@@ -1,0 +1,9 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.validation-schema-view-sheet-panel {
+    .hide-accordion-dropdown .accordion-button::after {
+        display: none;
+    }
+}

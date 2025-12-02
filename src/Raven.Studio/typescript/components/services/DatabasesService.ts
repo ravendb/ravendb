@@ -76,6 +76,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsByIDPrefixCommand = require("commands/database/documents/getDocumentsByIDPrefixCommand");
 import getSchemaValidationCommand from "commands/database/settings/getSchemaValidationCommand";
 import saveSchemaValidationCommand from "commands/database/settings/saveSchemaValidationCommand";
+import validateSchemaCommand from "commands/database/settings/validateSchemaCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -364,5 +365,9 @@ export default class DatabasesService {
 
     async saveSchemaValidation(...args: ConstructorParameters<typeof saveSchemaValidationCommand>) {
         return new saveSchemaValidationCommand(...args).execute();
+    }
+
+    async validateSchema(...args: ConstructorParameters<typeof validateSchemaCommand>) {
+        return new validateSchemaCommand(...args).execute();
     }
 }

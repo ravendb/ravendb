@@ -2,6 +2,7 @@ import { DocumentSchemaValidatorConfig } from "components/pages/database/setting
 import { DocumentSchemaFormData } from "components/pages/database/settings/documentSchema/DocumentSchema";
 import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 import genUtils from "common/generalUtils";
+import { ValidateSchemaFormData } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 
 const mapToSchemaValidationConfigurationDto = (
     formData: DocumentSchemaValidatorConfig[],
@@ -31,4 +32,20 @@ const mapToDocumentSchemaValidatorConfigDto = (formData: DocumentSchemaFormData)
     };
 };
 
-export const documentSchemaUtils = { mapToSchemaValidationConfigurationDto, mapToDocumentSchemaValidatorConfigDto };
+const mapToValidateSchemaRequestDto = (
+    validator: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">,
+    formData: ValidateSchemaFormData
+) => {
+    if (!validator) {
+        return null;
+    }
+
+    return {
+        Collection: validator.Name,
+        SchemaDefinition: validator.Schema,
+        MaxDocumentsToValidate: formData.isTestSettingsEnabled ? formData.maxDocumentsToValidate : null,
+        MaxErrorMessages: formData.isTestSettingsEnabled ? formData.maxErrorMessages : null,
+    };
+};
+
+export const documentSchemaUtils = { mapToSchemaValidationConfigurationDto, mapToDocumentSchemaValidatorConfigDto, mapToValidateSchemaRequestDto };

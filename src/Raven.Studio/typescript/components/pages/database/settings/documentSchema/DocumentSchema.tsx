@@ -17,7 +17,7 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import { FormAceEditor, FormGroup, FormLabel, FormSelectCreatable } from "components/common/Form";
+import { FormAceEditor, FormGroup, FormLabel, FormSelectAutocomplete } from "components/common/Form";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace/lib/ace";
 import useBoolean from "hooks/useBoolean";
@@ -25,6 +25,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import jsonUtil from "common/jsonUtil";
 import * as yup from "yup";
+import { TestContext } from "yup";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
@@ -51,6 +52,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Code from "components/common/Code";
 import DocumentSchemaFilter from "components/pages/database/settings/documentSchema/DocumentSchemaFilter";
 import Ajv from "ajv";
+import { useViewSheet } from "components/common/splitView/ViewSheet";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import {
+    ValidationSchemaViewSheetPanel
+} from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 
 const ajv = new Ajv({
     allErrors: true,
@@ -82,59 +88,57 @@ export default function DocumentSchema() {
 
     return (
         <div className="content-margin">
-            <Col>
-                <Row className="gy-sm">
-                    <Col>
-                        <AboutViewHeading marginBottom={4} title="Document Schema" icon="document-schema" />
-                        {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
+            <Row className="gy-sm">
+                <Col>
+                    <AboutViewHeading marginBottom={4} title="Document Schema" icon="document-schema" />
+                    {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
 
-                        {hasAnyValidator && (
-                            <DocumentSchemaFilter
-                                selectedCollections={selectedCollections}
-                                setSelectedCollections={handleOnSelectCollection}
-                                collectionOptions={options}
-                                selectedStatuses={selectedStatuses}
-                                setSelectedStatuses={setSelectedStatuses}
-                                schemasCount={filteredValidators.length}
-                                isLoading={asyncLoadValidators.loading}
-                            />
-                        )}
+                    {hasAnyValidator && (
+                        <DocumentSchemaFilter
+                            selectedCollections={selectedCollections}
+                            setSelectedCollections={handleOnSelectCollection}
+                            collectionOptions={options}
+                            selectedStatuses={selectedStatuses}
+                            setSelectedStatuses={setSelectedStatuses}
+                            schemasCount={filteredValidators.length}
+                            isLoading={asyncLoadValidators.loading}
+                        />
+                    )}
 
-                        <div className="mt-4">
-                            <HrHeader
-                                count={filteredValidators.length}
-                                right={
-                                    hasDatabaseAdminAccess && (
-                                        <Button
-                                            size="xs"
-                                            variant="info"
-                                            className="rounded-pill"
-                                            onClick={handleAddNew}
-                                            title="Click to add a new schema for a collection"
-                                        >
-                                            <Icon icon="plus" />
-                                            Add new
-                                        </Button>
-                                    )
-                                }
-                            >
-                                <Icon icon="documents" />
-                                <span>Collection specific document schemas</span>
-                                <PopoverWithHoverWrapper message="Define and manage JSON Schemas for each collection">
-                                    <Icon icon="info-new" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </HrHeader>
-                            <DocumentSchemaBody
-                                filteredValidators={filteredValidators}
-                                asyncLoadValidators={asyncLoadValidators}
-                            />
-                        </div>
-                    </Col>
-                    <Col sm={12} lg={4}>
-                        <DocumentSchemaAboutView />
-                    </Col>
-                </Row>
-            </Col>
+                    <div className="mt-4">
+                        <HrHeader
+                            count={filteredValidators.length}
+                            right={
+                                hasDatabaseAdminAccess && (
+                                    <Button
+                                        size="xs"
+                                        variant="info"
+                                        className="rounded-pill"
+                                        onClick={handleAddNew}
+                                        title="Click to add a new schema for a collection"
+                                    >
+                                        <Icon icon="plus" />
+                                        Add new
+                                    </Button>
+                                )
+                            }
+                        >
+                            <Icon icon="documents" />
+                            <span>Collection specific document schemas</span>
+                            <PopoverWithHoverWrapper message="Define and manage JSON Schemas for each collection">
+                                <Icon icon="info-new" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </HrHeader>
+                        <DocumentSchemaBody
+                            filteredValidators={filteredValidators}
+                            asyncLoadValidators={asyncLoadValidators}
+                        />
+                    </div>
+                </Col>
+                <Col sm={12} lg={4}>
+                    <DocumentSchemaAboutView />
+                </Col>
+            </Row>
         </div>
     );
 }
@@ -246,6 +250,7 @@ const CollectionSchemaRichPanel = ({
 }: CollectionSchemaRichPanelProps) => {
     const { value: isEditingSchema, toggle: toggleEditingSchema } = useBoolean(false);
     const { value: isTogglingStatus, setTrue: setTogglingStatus, setFalse: unsetTogglingStatus } = useBoolean(false);
+    const { open } = useViewSheet();
     const [operationConfirm, setOperationConfirm] = React.useState<{
         type: DocumentSchemaOperationConfirmType;
         onConfirm: () => void;
@@ -275,6 +280,7 @@ const CollectionSchemaRichPanel = ({
             collection: validator.Name,
             schema,
         },
+        context: { schemaValidatorCollections },
     });
 
     const { handleSubmit, reset } = form;
@@ -303,11 +309,16 @@ const CollectionSchemaRichPanel = ({
 
     const handleStatusToggle = (disabled: boolean) => {
         const operationType: DocumentSchemaOperationConfirmType = disabled ? "disable" : "enable";
-
         setOperationConfirm({
             type: operationType,
             onConfirm: () => handleBulkStatusToggle(disabled),
             validators: [validator],
+        });
+    };
+
+    const handleOpenSheet = () => {
+        open({
+            component: <ValidationSchemaViewSheetPanel validators={[validator]} />,
         });
     };
 
@@ -339,6 +350,17 @@ const CollectionSchemaRichPanel = ({
                                     onStatusToggle={handleStatusToggle}
                                     isTogglingState={isTogglingStatus}
                                 />
+                                <ConditionalPopover
+                                    conditions={{
+                                        isActive: isEditingSchema,
+                                        message:
+                                            "The schema must be saved in order to test it against existing documents.",
+                                    }}
+                                >
+                                    <Button disabled={isEditingSchema} onClick={handleOpenSheet} variant="secondary">
+                                        <Icon icon="rocket" margin="m-0" />
+                                    </Button>
+                                </ConditionalPopover>
                                 <ButtonWithSpinner
                                     onClick={isEditingSchema ? handleSubmit(handleEditSchema) : toggleEditingSchema}
                                     variant={isEditingSchema ? "success" : "secondary"}
@@ -514,7 +536,7 @@ const RichPanelDetailsEditSchema = ({
             <FormGroup className="w-100 mt-2">
                 <FormGroup>
                     <FormLabel>Collection</FormLabel>
-                    <FormSelectCreatable
+                    <FormSelectAutocomplete
                         control={control}
                         name="collection"
                         placeholder="Select a collection (or enter a new one)"
@@ -574,6 +596,7 @@ const NewCollectionSchemaRichPanel = ({
 }: NewCollectionSchemaRichPanelProps) => {
     const form = useForm<DocumentSchemaFormData>({
         resolver: yupResolver(formSchema),
+        context: { schemaValidatorCollections },
     });
 
     const handleSubmit = async (data: DocumentSchemaFormData) => {
@@ -606,7 +629,22 @@ const NewCollectionSchemaRichPanel = ({
 };
 
 const formSchema = yup.object({
-    collection: yup.string().required(),
+    collection: yup
+        .string()
+        .required()
+        .test(
+            "is-unique-collection",
+            "A schema for this collection already exists",
+            function (value, ctx: TestContext<{ schemaValidatorCollections: string[] }>) {
+                if (!value) {
+                    return true;
+                }
+
+                return !ctx.options.context.schemaValidatorCollections
+                    .map((x) => x.toLowerCase())
+                    .includes(value.toLowerCase());
+            }
+        ),
     schema: yup
         .string()
         .required()
