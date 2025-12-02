@@ -224,14 +224,14 @@ internal sealed class IndexedField
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Hnsw.Registration GetVectorIndexer(LowLevelTransaction llt, int vectorSize = Constants.IndexWriter.Hnsw.TreeExists)
+    public Hnsw.Registration GetVectorIndexer(LowLevelTransaction llt, int vectorSize = Constants.IndexWriter.Hnsw.TreeExists, Random random = null)
     {
         if (_hnswIsCreated == false && vectorSize != Constants.IndexWriter.Hnsw.TreeExists)
             CreateHnswTree(llt, vectorSize);
 
         if (VectorIndexer == null)
         {
-            VectorIndexer = Hnsw.RegistrationFor(llt, Name);
+            VectorIndexer = Hnsw.RegistrationFor(llt, Name, random);
             if (IsVirtual)
             {
                 _parent._hnswIsCreated = true;

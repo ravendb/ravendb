@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow.Server;
 
 namespace Voron.Util
@@ -17,6 +18,12 @@ namespace Voron.Util
             Inner = new NativeList<T>();
             if (requestedSize > 0)
                 Inner.Initialize(ctx, requestedSize);
+        }
+
+        public IEnumerable<T> Iterate()
+        {
+            for (int i = 0; i < Count; i++)
+                yield return this[i];
         }
 
         public T* RawItems => Inner.RawItems;

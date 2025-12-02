@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Querying.Matches;
 using FastTests.Voron.FixedSize;
+using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Tests.Infrastructure;
 using Xunit;
@@ -17,7 +18,7 @@ public class VectorSearchMatchTests(ITestOutputHelper output) : NoDisposalNeeded
     [RavenFact(RavenTestCategory.Vector)]
     public void CanHandleEmpty()
     {
-        var result = VectorSearchMatch.RemoveDuplicates([], []);
+        var result = Sorting.SortAndMinOnDuplicates([], []);
         Assert.Equal(0, result);
     }
     
@@ -27,7 +28,7 @@ public class VectorSearchMatchTests(ITestOutputHelper output) : NoDisposalNeeded
         long[] matches = [1L];
         float[] distances = [.5f];
 
-        var result = VectorSearchMatch.RemoveDuplicates(matches, distances);
+        var result = Sorting.SortAndMinOnDuplicates(matches, distances);
         Assert.Equal(1, result);
     }
 
@@ -37,7 +38,7 @@ public class VectorSearchMatchTests(ITestOutputHelper output) : NoDisposalNeeded
         long[] matches = [1L, 1L, 1L, 1L, 1L];
         float[] distances = [0.7f, 0.1f, 0.2f, 0.3f, 0.8f];
 
-        var result = VectorSearchMatch.RemoveDuplicates(matches, distances);
+        var result = Sorting.SortAndMinOnDuplicates(matches, distances);
         Assert.Equal(1, result);
         Assert.Equal(1L, matches[0]);
         Assert.Equal(0.1f, distances[0], 0.001);
@@ -63,8 +64,7 @@ public class VectorSearchMatchTests(ITestOutputHelper output) : NoDisposalNeeded
         var originalDistances = distances.ToArray();
         var originalMatches = matches.ToArray();
         
-        matches.AsSpan().Sort(distances.AsSpan());
-        var result = VectorSearchMatch.RemoveDuplicates(matches, distances);
+        var result = Sorting.SortAndMinOnDuplicates(matches, distances);
         Assert.Equal(amount, result);
 
         originalMatches.AsSpan().Sort(originalDistances.AsSpan());
@@ -100,7 +100,7 @@ public class VectorSearchMatchTests(ITestOutputHelper output) : NoDisposalNeeded
 
         var originalMatches = matches.ToArray();
         var originalDistances = distances.ToArray();
-        var result = VectorSearchMatch.RemoveDuplicates(matches, distances);
+        var result = Sorting.SortAndMinOnDuplicates(matches, distances);
 
         Dictionary<long, float > idToSmallestDistance = new();
         for (int i = 0; i < amount; ++i)

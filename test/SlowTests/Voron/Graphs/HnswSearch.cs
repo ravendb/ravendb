@@ -6,6 +6,7 @@ using System.Threading;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
+using Voron;
 using Voron.Data.Graphs;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,6 +22,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
     [InlineData(237493337)]
     public void CanReturnAllOfVector(int seed)
     {
+        using var _ = Slice.From(Allocator, nameof(CanReturnAllOfVector), out var treeName);
         const int vectorSize = 1536;
         const int vectorSizeInBytes = vectorSize * sizeof(float);
         const int numberOfEntries = 1024;
@@ -31,9 +33,9 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         
         using (var wTx = Env.WriteTransaction())
         {
-            Hnsw.Create(wTx.LowLevelTransaction, nameof(CanReturnAllOfVector), vectorSizeInBytes, 3, 16, VectorEmbeddingType.Single);
+            Hnsw.Create(wTx.LowLevelTransaction, treeName, vectorSizeInBytes, 3, 16, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, nameof(CanReturnAllOfVector), random))
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, treeName, random))
             {
                 foreach (var (id, vector) in storage)
                     registration.Register(id, MemoryMarshal.Cast<float, byte>(vector));
@@ -47,7 +49,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(storage[random.Next(1, storage.Count + 1)]);
-            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, nameof(CanReturnAllOfVector), 1024, qV, 0f);
+            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName, 1024, qV.ToArray(), 0f, false);
 
             var totalReturned = 0;
             var matches = new long[64];

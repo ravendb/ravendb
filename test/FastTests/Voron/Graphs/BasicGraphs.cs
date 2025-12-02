@@ -8,6 +8,7 @@ using System.Threading;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Tests.Infrastructure;
+using Voron;
 using Voron.Data.Graphs;
 using Voron.Global;
 using Xunit;
@@ -20,10 +21,13 @@ namespace FastTests.Voron.Graphs;
 
 public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 {
+    private const string TreeName = "test";
+    
     [RavenTheory(RavenTestCategory.Voron | RavenTestCategory.Vector)]
     [InlineDataWithRandomSeed]
     public void CanTransformIdsFromNormalToInternalAndReverse(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         var random = new Random(seed);
         var N512 = Vector512<long>.Count;
         var N256 = Vector256<long>.Count;
@@ -42,25 +46,27 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [RavenFact(RavenTestCategory.Voron)]
     public void CanCreateEmptyGraph()
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
+
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 16, 3, 12, VectorEmbeddingType.Single);
 
             txw.Commit();
         }
 
         using (var txr = Env.ReadTransaction())
         {
-            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, treeName);
             var options = state.Options;
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
             Assert.Equal(0, options.CountOfVectors);
             float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
 
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v1), 0f);
+                MemoryMarshal.Cast<float, byte>(v1).ToArray(), 0f);
             Span<float> scores = new float[32];
             Span<long> docs = new long[32];
             var r = nearest.Fill(docs, scores);
@@ -75,6 +81,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [InlineData(1199463143)]
     public void BasicSearchBigVec(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         Random hnswRandom = new Random(seed);
 
         float[] v1 = Enumerable.Range(0, 1536).Select(_ => hnswRandom.NextSingle() * (hnswRandom.NextInt64() % 2 == 0 ? 1f : -1f)).ToArray();
@@ -92,16 +99,16 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 1536 * sizeof(float), 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 1536 * sizeof(float), 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(1, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(2, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit(CancellationToken.None);
             }
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(3, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit(CancellationToken.None);
@@ -112,7 +119,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txr = Env.ReadTransaction())
         {
-            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, treeName);
             var options = state.Options;
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
@@ -123,7 +130,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[8];
             Span<float> distances = new float[8];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test", numberOfCandidates: 32, MemoryMarshal.Cast<float, byte>(v3), 0f);
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName, numberOfCandidates: 32, MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             int read = nearest.Fill(matches, distances);
             Assert.Equal(3, read);
             Assert.False(distances.Slice(0, read).ToArray().Any(float.IsNaN));
@@ -139,6 +146,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed]
     public void BasicSearch(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         Random hnswRandom = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
@@ -148,16 +156,16 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit(CancellationToken.None);
             }
             
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit(CancellationToken.None);
@@ -168,7 +176,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txr = Env.ReadTransaction())
         {
-            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, treeName);
             var options = state.Options;
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
@@ -179,9 +187,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[8];
             Span<float> distances = new float[8];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             int read = nearest.Fill(matches, distances);
             Assert.Equal(3, read);
             Assert.Equal(8, matches[0]);
@@ -196,6 +204,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed]
     public void CanAddAndRemove(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         Random hnswRandom = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
@@ -207,16 +216,16 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 vectorHashToRemove = registration.Register(entryIdToRemove, MemoryMarshal.Cast<float, byte>(v1)).ToSpan().ToArray();
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit(CancellationToken.None);
             }
             
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit(CancellationToken.None);
@@ -227,9 +236,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Remove(entryIdToRemove, vectorHashToRemove);
                 registration.Commit(CancellationToken.None);
@@ -242,9 +251,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[8];
             Span<float> distances = new float[8];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             int read = nearest.Fill(matches, distances);
             Assert.Equal(2, read);
             Assert.Equal(8, matches[0]);
@@ -258,6 +267,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed]
     public void CanCalculateGoodDistances(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         var random = new Random(seed);
         var vecOpt = new VectorOptions()
         {
@@ -270,8 +280,8 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var wTx = Env.WriteTransaction())
         {
-            Hnsw.Create(wTx.LowLevelTransaction, nameof(CanCalculateGoodDistances), v1.Length, 3, 12, VectorEmbeddingType.Single);
-            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, nameof(CanCalculateGoodDistances), random))
+            Hnsw.Create(wTx.LowLevelTransaction, treeName, v1.Length, 3, 12, VectorEmbeddingType.Single);
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, treeName, random))
             {
                 registration.Register(1, v1.GetEmbedding());
                 registration.Register(2, v2.GetEmbedding());
@@ -283,7 +293,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var rTx = Env.ReadTransaction())
         {
-            using var search = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, nameof(CanCalculateGoodDistances), 12, vQ.GetEmbedding(), 0f);
+            using var search = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, treeName, 12, vQ.GetEmbeddingMemory(), 0f);
             var distances = new float[16];
             var matches = new long[16];
             var read = search.Fill(matches, distances);
@@ -305,6 +315,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [InlineData(387668521)]
     public void CanHandleLargePostingLists(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         Random hnswRandom = new Random(seed);
         float[] v1 = [0.1f, 0.2f, 0.3f, 0.4f];
         float[] v2 = [0.15f, 0.25f, 0.35f, 0.45f];
@@ -315,9 +326,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         List<(long entryId, byte[] vectorHash)> elementInGraph = new();
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", 16, 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, 16, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 for (int i = 1; i <= 20_000; i++)
                 {
@@ -337,9 +348,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[500];
             Span<float> distances = new float[500];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             var read = 0;
             readFromGraph.Clear();
             do
@@ -355,7 +366,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         var toRemove = elementInGraph.ToArray()[100..];
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 foreach (var el in toRemove)
                     registration.Remove(el.entryId, el.vectorHash);
@@ -369,9 +380,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[500];
             Span<float> distances = new float[500];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             readFromGraph.Clear();
             var read = 0;
             do
@@ -386,7 +397,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         toRemove = elementInGraph.ToArray()[1..];
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 foreach (var id in toRemove)
                     registration.Remove(id.entryId, id.vectorHash);
@@ -401,9 +412,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[100];
             Span<float> distances = new float[100];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             readFromGraph.Clear();
             var read = 0;
             do
@@ -417,7 +428,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         
         using (var txw = Env.WriteTransaction())
         {
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Remove(elementInGraph[0].entryId, elementInGraph[0].vectorHash);
                 registration.Commit(CancellationToken.None);
@@ -430,9 +441,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[4];
             Span<float> distances = new float[4];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             var read = nearest.Fill(matches, distances);
             Assert.Equal(0, read);
         }
@@ -454,6 +465,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed]
     public void WithLargeVectors(int seed)
     {
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
         Random hnswRandom = new Random(seed);
         float[] v1 = new float[768];
         float[] v2 = new float[768];
@@ -467,16 +479,16 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txw = Env.WriteTransaction())
         {
-            Hnsw.Create(txw.LowLevelTransaction, "test", v1.Length * 4, 3, 12, VectorEmbeddingType.Single);
+            Hnsw.Create(txw.LowLevelTransaction, treeName, v1.Length * 4, 3, 12, VectorEmbeddingType.Single);
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
                 registration.Commit(CancellationToken.None);
             }
 
-            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Commit(CancellationToken.None);
@@ -487,7 +499,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
 
         using (var txr = Env.ReadTransaction())
         {
-            var state = new Hnsw.SearchState(txr.LowLevelTransaction, "test");
+            var state = new Hnsw.SearchState(txr.LowLevelTransaction, treeName);
             var options = state.Options;
             Assert.Equal(12, options.NumberOfCandidates);
             Assert.Equal(3, options.NumberOfEdges);
@@ -498,9 +510,9 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         {
             Span<long> matches = new long[8];
             Span<float> distances = new float[8];
-            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "test",
+            using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
-                MemoryMarshal.Cast<float, byte>(v3), 0f);
+                MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
             int read = nearest.Fill(matches, distances);
             Assert.Equal(3, read);
         }

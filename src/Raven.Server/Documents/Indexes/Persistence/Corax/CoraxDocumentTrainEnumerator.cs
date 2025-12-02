@@ -68,7 +68,7 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             // nothing to do
         }
 
-        public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value)
+        public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value, Random random = null)
         {
             // nothing to do here
         }
