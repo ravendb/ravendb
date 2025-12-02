@@ -131,6 +131,10 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         return <AiAssistantConsentStatusChecker onConsentGiven={() => dispatch(chatbotActions.retryRunChat())} />;
     }
 
+    if (message.state === "RequestTooLarge") {
+        return <RichAlert variant="danger">{message.errorMessage}</RichAlert>;
+    }
+
     if (message.state === "Error") {
         return (
             <RichAlert variant="danger">

@@ -97,17 +97,35 @@ export default function ChatbotAskAiMessageEndpoints({
                 }
             }
 
-            const userActionState = results.some((x) => x.status === "error") ? "error" : "allowed";
+            const getUserActionState = (): ChatbotUserActionState => {
+                if (results.some((x) => x.status === "error")) {
+                    return "error";
+                }
+                if (isAlwaysAllowEndpointCalls) {
+                    return "alwaysAllowed";
+                }
+                return "allowed";
+            };
+
+            const getEndpointState = (status: "success" | "error"): ChatbotUserActionState => {
+                if (status === "error") {
+                    return "error";
+                }
+                if (isAlwaysAllowEndpointCalls) {
+                    return "alwaysAllowed";
+                }
+                return "allowed";
+            };
 
             dispatch(
                 chatbotActions.messageUpdated({
                     id,
                     changes: {
-                        userActionState,
+                        userActionState: getUserActionState(),
                         endpoints: results.map((x) => ({
                             toolId: x.toolId,
                             url: x.url,
-                            state: x.status === "success" ? "allowed" : "error",
+                            state: getEndpointState(x.status),
                         })),
                     },
                 })
@@ -239,6 +257,18 @@ export default function ChatbotAskAiMessageEndpoints({
                     </div>
                 ) : (
                     <div className="hstack justify-content-end mt-2">
+                        {userActionState === "allowed" && (
+                            <Badge bg="success" className="rounded-pill">
+                                <Icon icon="check" />
+                                Success
+                            </Badge>
+                        )}
+                        {userActionState === "alwaysAllowed" && (
+                            <Badge bg="success" className="rounded-pill">
+                                <Icon icon="check" />
+                                Always allowed
+                            </Badge>
+                        )}
                         {userActionState === "denied" && (
                             <Badge bg="secondary" className="rounded-pill">
                                 <Icon icon="cancel" />
@@ -257,12 +287,6 @@ export default function ChatbotAskAiMessageEndpoints({
                                 Error
                             </Badge>
                         )}
-                        {userActionState === "allowed" && (
-                            <Badge bg="success" className="rounded-pill">
-                                <Icon icon="check" />
-                                {isAlwaysAllowEndpointCalls ? "Always allowed" : "Success"}
-                            </Badge>
-                        )}
                     </div>
                 )}
             </div>
@@ -279,7 +303,8 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
         <span className="text-break">
             <span>
                 {endpoint.state === "waiting" && <span className="me-1">-</span>}
-                {endpoint.state === "allowed" && <Icon icon="check" color="success" />}
+                {endpoint.state === "allowed" ||
+                    (endpoint.state === "alwaysAllowed" && <Icon icon="check" color="success" />)}
                 {endpoint.state === "error" && <Icon icon="warning" color="danger" />}
                 {endpoint.state === "skipped" && <Icon icon="skip" />}
                 {endpoint.state === "denied" && <Icon icon="cancel" />}

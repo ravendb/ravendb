@@ -8,7 +8,7 @@ interface ProcessStreamingResponseOptions<T extends object> {
 }
 
 type ProcessStreamingResult<T extends object> =
-    | { status: Exclude<AiAssistantResponseStatus, "Success"> | "Error"; error: string }
+    | { status: Exclude<AiAssistantResponseStatus, "Success"> | "Error" | "RequestTooLarge"; error: string }
     | { status: "Success"; data: T };
 
 export async function processStreamingResponse<T extends object>({
@@ -20,12 +20,17 @@ export async function processStreamingResponse<T extends object>({
     try {
         const response = await promiseFn();
 
+        if (!response.ok && response.status === 413) {
+            return {
+                status: "RequestTooLarge",
+                error: "The request exceeds the maximum allowed size. Please reduce your attached context and try again.",
+            };
+        }
+
         if (response.headers.get("content-type").includes("application/json")) {
             if (!response.ok) {
                 try {
                     const data = await response.json();
-
-                    // TODO For 413 show request is to large and send it back to assist
 
                     // Get internal Status such as ConsentRequired, OutOfTokens, etc.
                     if (expectedErrorStatuses.includes(response.status) && data.Status) {

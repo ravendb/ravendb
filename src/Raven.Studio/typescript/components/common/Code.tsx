@@ -5,10 +5,11 @@ import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
 import Button from "react-bootstrap/Button";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import queryCriteria from "models/database/query/queryCriteria";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -43,10 +44,12 @@ interface CodeProps {
     codeClassName?: string;
     whiteSpace?: "pre" | "normal";
     isActionsHidden?: boolean;
+    sourceView?: "chatbot";
 }
 
 export default function Code(props: CodeProps) {
-    const { code, className, codeClassName, whiteSpace, isActionsHidden } = props;
+    const dispatch = useAppDispatch();
+    const { code, className, codeClassName, whiteSpace, isActionsHidden, sourceView } = props;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -59,8 +62,11 @@ export default function Code(props: CodeProps) {
     );
 
     const handleRunQuery = () => {
-        const query = queryCriteria.empty();
+        if (sourceView === "chatbot") {
+            dispatch(chatbotActions.isRunQueryFromChatbotSet(true));
+        }
 
+        const query = queryCriteria.empty();
         query.queryText(code);
         query.recentQuery(true);
         const queryDto = query.toStorageDto();
@@ -88,7 +94,7 @@ export default function Code(props: CodeProps) {
                             <Button
                                 variant="link"
                                 className="text-emphasis fs-6"
-                                title="Copy to clipboard"
+                                title="Run query"
                                 onClick={handleRunQuery}
                             >
                                 <Icon icon="rocket" />

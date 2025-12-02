@@ -15,7 +15,7 @@ import router from "plugins/router";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
-export type ChatbotUserActionState = "waiting" | "skipped" | "allowed" | "denied" | "error";
+export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
 
 interface ChatbotRunChatData {
     message?: string;
@@ -57,7 +57,7 @@ export interface ChatbotUserMessage extends ChatbotMessageBase {
 export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     role: "assistant";
     thinkingTimeInMs: number;
-    state: "Loading" | "Error" | AiAssistantResponseStatus;
+    state: "Loading" | "Error" | "RequestTooLarge" | AiAssistantResponseStatus;
     errorMessage?: string;
     usage: Raven.Client.Documents.Operations.AI.AiUsage;
     relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
@@ -80,6 +80,7 @@ interface ChatbotState {
     attachedContexts: EntityState<ChatbotAttachedContext, string>;
     deniedEndpoints: string[];
     isAlwaysAllowEndpointCalls: boolean;
+    isRunQueryFromChatbot: boolean;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -105,6 +106,7 @@ const initialState: ChatbotState = {
     deniedEndpoints: [],
     attachedContexts: chatbotAttachedContextAdapter.getInitialState(),
     isAlwaysAllowEndpointCalls: true,
+    isRunQueryFromChatbot: false,
 };
 
 export const chatbotSlice = createSlice({
@@ -189,6 +191,9 @@ export const chatbotSlice = createSlice({
         },
         isAlwaysAllowEndpointCallsSet: (state, action: PayloadAction<boolean>) => {
             state.isAlwaysAllowEndpointCalls = action.payload;
+        },
+        isRunQueryFromChatbotSet: (state, action: PayloadAction<boolean>) => {
+            state.isRunQueryFromChatbot = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -367,4 +372,5 @@ export const chatbotSelectors = {
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
     isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
+    isRunQueryFromChatbot: (state: RootState) => state.chatbot.isRunQueryFromChatbot,
 };
