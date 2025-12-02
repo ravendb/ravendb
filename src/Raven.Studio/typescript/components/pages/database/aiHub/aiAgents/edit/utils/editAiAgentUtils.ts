@@ -123,6 +123,7 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
         MaxModelIterationsPerCall: null,
+        Disabled: false,
         ChatTrimming:
             formData.trimming?.method != null
                 ? {
