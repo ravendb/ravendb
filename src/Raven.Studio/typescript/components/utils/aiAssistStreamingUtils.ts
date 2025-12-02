@@ -8,7 +8,7 @@ interface ProcessStreamingResponseOptions<T extends object> {
 }
 
 type ProcessStreamingResult<T extends object> =
-    | { status: Exclude<AiAssistantResponseStatus, "Success"> | "Error" | "RequestTooLarge"; error: string }
+    | { status: Exclude<AiAssistantResponseStatus, "Success"> | "Error"; error: string }
     | { status: "Success"; data: T };
 
 export async function processStreamingResponse<T extends object>({

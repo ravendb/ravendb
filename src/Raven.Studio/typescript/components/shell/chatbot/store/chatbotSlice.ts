@@ -57,7 +57,7 @@ export interface ChatbotUserMessage extends ChatbotMessageBase {
 export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     role: "assistant";
     thinkingTimeInMs: number;
-    state: "Loading" | "Error" | "RequestTooLarge" | AiAssistantResponseStatus;
+    state: "Loading" | "Error" | AiAssistantResponseStatus;
     errorMessage?: string;
     usage: Raven.Client.Documents.Operations.AI.AiUsage;
     relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
