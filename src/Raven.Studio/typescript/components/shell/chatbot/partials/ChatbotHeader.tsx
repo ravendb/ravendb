@@ -49,9 +49,7 @@ function AskAiActions() {
     const resetConversation = () => {
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
-        dispatch(
-            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
-        );
+        dispatch(chatbotActions.attachedContextExcludableRemoved());
     };
 
     return (

@@ -27,14 +27,22 @@ export type ChatbotAttachedContextId =
     | "currentDatabaseName"
     | "currentIndexDefinition"
     | "currentDocument"
-    | `query-${string}`;
+    | `query-${string}`
+    | `queryError-${string}`;
 
 export interface ChatbotAttachedContext {
     id: ChatbotAttachedContextId;
-    type: "Current View" | "Current Database Name" | "Current Index Definition" | "Current Document" | "Query Result";
+    type:
+        | "Current View"
+        | "Current Database Name"
+        | "Current Index Definition"
+        | "Current Document"
+        | "Query Result"
+        | "Query Error";
     value: string;
     label: string;
     state: "included" | "excluded";
+    query?: string;
 }
 
 export interface ChatbotEndpointItem {
@@ -168,21 +176,14 @@ export const chatbotSlice = createSlice({
                 changes: { state: "included" },
             });
         },
-        attachedContextTypesExcluded: (state, action: PayloadAction<ChatbotAttachedContext["type"][]>) => {
-            chatbotAttachedContextAdapter.updateMany(
-                state.attachedContexts,
-                chatbotAttachedContextSelectors
-                    .selectAll(state.attachedContexts)
-                    .filter((x) => action.payload.includes(x.type))
-                    .map((x) => ({ id: x.id, changes: { state: "excluded" } }))
-            );
-        },
-        attachedContextTypesRemoved: (state, action: PayloadAction<ChatbotAttachedContext["type"][]>) => {
+        attachedContextExcludableRemoved: (state) => {
+            const notExcludableTypes: ChatbotAttachedContext["type"][] = ["Current View", "Current Database Name"];
+
             chatbotAttachedContextAdapter.removeMany(
                 state.attachedContexts,
                 chatbotAttachedContextSelectors
                     .selectAll(state.attachedContexts)
-                    .filter((x) => action.payload.includes(x.type))
+                    .filter((x) => !notExcludableTypes.includes(x.type))
                     .map((x) => x.id)
             );
         },
@@ -287,9 +288,7 @@ const runChat = createAsyncThunk(
 
         dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
         dispatch(chatbotActions.conversationIdSet(result.data.ConversationId));
-        dispatch(
-            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
-        );
+        dispatch(chatbotActions.attachedContextExcludableRemoved());
 
         const data = result.data;
 
@@ -323,13 +322,19 @@ function getEndpointItems(endpointsDto: Record<string, string[]>): ChatbotEndpoi
 
 function getAdditionalAttachedContext(attachedContexts: ChatbotAttachedContext[]): Record<string, any> {
     const result: Record<string, any> = Object.fromEntries(
-        attachedContexts.filter((x) => x.type !== "Query Result").map((context) => [context.type, context.value])
+        attachedContexts
+            .filter((x) => x.type !== "Query Result" && x.type !== "Query Error")
+            .map((context) => [context.type, context.value])
     );
 
     const queryResults = attachedContexts.filter((x) => x.type === "Query Result");
-
     if (queryResults.length) {
         result["Query Results"] = JSON.stringify(queryResults.map((x) => ({ query: x.label, result: x.value })));
+    }
+
+    const queryErrors = attachedContexts.filter((x) => x.type === "Query Error");
+    if (queryErrors.length) {
+        result["Query Errors"] = JSON.stringify(queryErrors.map((x) => ({ query: x.query, error: x.value })));
     }
 
     return result;

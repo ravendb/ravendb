@@ -56,9 +56,7 @@ function initRedux() {
                 state: "included",
             })
         );
-        globalDispatch(
-            chatbotActions.attachedContextTypesRemoved(["Current Document", "Current Index Definition", "Query Result"])
-        );
+        globalDispatch(chatbotActions.attachedContextExcludableRemoved());
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));

@@ -1229,6 +1229,24 @@ class query extends shardViewModelBase {
                         this.queryStats(null);
                         this.totalResultsForUi(0);
                         resultsTask.reject(request);
+
+                        const errorMessage = request.responseJSON?.Message;
+                        const isQueryErrorInContext = !!Object.values(
+                            store.default.getState().chatbot.attachedContexts.entities
+                        ).find((x) => x.type === "Query Error" && x.query === criteriaForFetcher.queryText());
+
+                        if (errorMessage && !isQueryErrorInContext) {
+                            storeCompat.globalDispatch(
+                                chatbotSlice.chatbotActions.attachedContextUpserted({
+                                    id: `queryError-${_.uniqueId()}}`,
+                                    type: "Query Error",
+                                    label: errorMessage.replaceAll("\r\n", " "),
+                                    value: errorMessage,
+                                    state: "included",
+                                    query: criteriaForFetcher.queryText(),
+                                })
+                            );
+                        }
                     });
                 
                 return resultsTask;

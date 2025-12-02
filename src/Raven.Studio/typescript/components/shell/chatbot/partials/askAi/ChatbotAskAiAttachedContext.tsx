@@ -100,6 +100,8 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
                 return "document";
             case "Query Result":
                 return "query";
+            case "Query Error":
+                return "danger";
             default:
                 assertUnreachable(item.type);
         }
@@ -152,4 +154,5 @@ const tooltipTitles: Record<ChatbotAttachedContext["type"], string> = {
     "Current Index Definition": "Index Definition",
     "Current Document": "Document",
     "Query Result": "Query Result",
+    "Query Error": "Query Error",
 };
