@@ -16,13 +16,11 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
     {
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
-            var streaming = RequestHandler.GetBoolValueQueryString("streaming", required: false) ?? false;
             var requestBody = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "assist request");
             
             var modifications = new DynamicJsonValue(requestBody);
             requestBody.Modifications = modifications;
             FulfillRequestMetadata(modifications);
-            modifications["UseStreaming"] = streaming;
 
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             var content = new StringContent(context.ReadObject(requestBody, "ai-assist").ToString(), Encoding.UTF8, "application/json");
