@@ -52,32 +52,12 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
         return blob.size;
     }, [item.value]);
 
-    const canDiscard = item.type !== "View";
-    const canClick = canDiscard && !isReadOnly;
+    const canRemove = item.type !== "View" && !isReadOnly;
+    const canInclude = item.state === "excluded" && !isReadOnly;
 
     const { value: isHovering, setValue: setIsHovering } = useBoolean(false);
 
-    if (!item.value) {
-        return null;
-    }
-
-    const handleClick = () => {
-        if (!canClick) {
-            return;
-        }
-
-        if (item.state === "included") {
-            dispatch(chatbotActions.attachedContextExcluded(item.id));
-        } else {
-            dispatch(chatbotActions.attachedContextIncluded(item.id));
-        }
-    };
-
     const getIconColor = (): ThemeColor => {
-        if (canClick && isHovering) {
-            return "secondary";
-        }
-
         if (item.state === "included") {
             return "primary";
         } else {
@@ -86,6 +66,10 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     };
 
     const getIconName = (): IconName => {
+        if (canInclude && isHovering) {
+            return "plus";
+        }
+
         switch (item.type) {
             case "View":
                 return "studio-configuration";
@@ -112,29 +96,21 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             wrapperClassName="mw-100"
         >
             <div
-                className={classNames(
-                    "hstack rounded-2 border border-secondary text-truncate",
-                    { "opacity-50 ": item.state === "excluded" },
-                    { "cursor-pointer hover-filter": canClick }
-                )}
+                className={classNames("hstack rounded-2 border border-secondary text-truncate", {
+                    "cursor-pointer hover-filter opacity-50": canInclude,
+                })}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
                 style={{
                     padding: "1px 6px",
                     fontSize: "12px",
                 }}
-                onClick={handleClick}
+                onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
             >
                 <Icon icon={getIconName()} color={getIconColor()} />
-                <span
-                    className={classNames("text-truncate", {
-                        "text-decoration-line-through ": item.state === "excluded",
-                    })}
-                >
-                    {item.label}
-                </span>
+                <span>{item.label}</span>
                 {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
-                {canClick && (
+                {canRemove && (
                     <Button
                         variant="link"
                         className="text-muted p-0"

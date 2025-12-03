@@ -163,12 +163,6 @@ export const chatbotSlice = createSlice({
                 chatbotAttachedContextAdapter.addOne(state.attachedContexts, action.payload);
             }
         },
-        attachedContextExcluded: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
-            chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
-                id: action.payload,
-                changes: { state: "excluded" },
-            });
-        },
         attachedContextIncluded: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
             chatbotAttachedContextAdapter.updateOne(state.attachedContexts, {
                 id: action.payload,
@@ -178,14 +172,14 @@ export const chatbotSlice = createSlice({
         attachedContextRemoved: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
             chatbotAttachedContextAdapter.removeOne(state.attachedContexts, action.payload);
         },
-        attachedContextExcludableRemoved: (state) => {
-            const notExcludableTypes: ChatbotAttachedContext["type"][] = ["View"];
+        attachedContextUnrelatedRemoved: (state) => {
+            const typesToKeep: ChatbotAttachedContext["type"][] = ["View", "DatabaseName"];
 
             chatbotAttachedContextAdapter.removeMany(
                 state.attachedContexts,
                 chatbotAttachedContextSelectors
                     .selectAll(state.attachedContexts)
-                    .filter((x) => !notExcludableTypes.includes(x.type))
+                    .filter((x) => !typesToKeep.includes(x.type))
                     .map((x) => x.id)
             );
         },
@@ -297,7 +291,6 @@ const runChat = createAsyncThunk(
 
         dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
         dispatch(chatbotActions.conversationIdSet(result.data.ConversationId));
-        dispatch(chatbotActions.attachedContextExcludableRemoved());
 
         const data = result.data;
 

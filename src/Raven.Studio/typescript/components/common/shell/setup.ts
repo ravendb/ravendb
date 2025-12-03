@@ -47,7 +47,7 @@ function initRedux() {
     activeDatabaseTracker.default.database.subscribe((db) => {
         const dbName = db?.name ?? null;
         globalDispatch(databaseActions.activeDatabaseChanged(dbName));
-        globalDispatch(chatbotActions.attachedContextExcludableRemoved());
+        globalDispatch(chatbotActions.attachedContextUnrelatedRemoved());
         globalDispatch(
             chatbotActions.attachedContextUpserted({
                 id: "DatabaseName",

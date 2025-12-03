@@ -48,7 +48,7 @@ function AskAiActions() {
     const resetConversation = () => {
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
-        dispatch(chatbotActions.attachedContextExcludableRemoved());
+        dispatch(chatbotActions.attachedContextUnrelatedRemoved());
     };
 
     return (
