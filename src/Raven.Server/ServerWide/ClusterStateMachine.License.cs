@@ -1089,7 +1089,7 @@ public sealed partial class ClusterStateMachine
         if (licenseStatus.HasAiAgent)
             return;
 
-        if (databaseRecord.AiAgents.Any(x => x.Disabled == false) == false)
+        if (databaseRecord.AiAgents.All(x => x.Disabled))
             return;
 
         throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
