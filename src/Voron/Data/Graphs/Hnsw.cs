@@ -374,7 +374,7 @@ public unsafe partial class Hnsw
             bool hasFilterMatch)
         {
             // in case of filtered match we want to over-fetch. 
-            return new NearestSearcher(this, startingPointIndex, vector, level, numberOfCandidates * (hasFilterMatch ? 2 : 1), candidates, flags, hasFilterMatch);
+            return new NearestSearcher(this, startingPointIndex, vector, level, numberOfCandidates, candidates, flags, hasFilterMatch);
         }
 
         public IHnswSearcher EmptySearch() => new EmptySearcher();

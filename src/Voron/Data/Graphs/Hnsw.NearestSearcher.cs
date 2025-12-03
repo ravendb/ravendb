@@ -43,7 +43,7 @@ public partial class Hnsw
                 _vector = vector;
                 _level = level;
                 NumberOfCandidates = numberOfCandidates;
-                _internalNumberOfCandidates = numberOfCandidates;
+                _internalNumberOfCandidates = hasFilterMatch ? (int)Math.Min((long)int.MaxValue, (2 * (long)numberOfCandidates)) : numberOfCandidates;
                 _candidates = candidates;
                 _flags = flags;
                 _hasFilterMatch = hasFilterMatch;

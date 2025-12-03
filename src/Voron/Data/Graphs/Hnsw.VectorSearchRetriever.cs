@@ -39,6 +39,8 @@ public partial class Hnsw
         // We cannot do it internally since the flow is made in a streaming manner.
         public bool IsSortedByDistance = true;
         
+        public int NumberOfCandidates => _vectorsSearcher.NumberOfCandidates;
+        
         public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity)
         {
             _searchState = searchState;
