@@ -6,7 +6,6 @@ import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
 import AiAssistantUsagePercentageCircle from "components/common/aiAssistant/AiAssistantUsagePercentageCircle";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
-import { Toggles } from "components/common/toggles/Toggles.stories";
 import { Switch } from "components/common/Checkbox";
 
 export default function ChatbotHeader() {
@@ -61,7 +60,7 @@ function AskAiActions() {
                 <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="link" className="text-emphasis">
                     <Icon icon="settings" margin="m-0" />
                 </Dropdown.Toggle>
-                <Dropdown.Menu className="p-2" style={{ minWidth: "max-content" }}>
+                <Dropdown.Menu className="p-3" style={{ minWidth: "max-content" }}>
                     <Switch
                         color="primary"
                         selected={isAlwaysAllowEndpointCalls}
@@ -71,6 +70,14 @@ function AskAiActions() {
                     >
                         Always allow endpoints calls
                     </Switch>
+                    <Button
+                        variant="outline-secondary"
+                        onClick={() => dispatch(chatbotActions.exportConversation())}
+                        className="d-block ps-0 rounded-2 w-100 text-center mt-2"
+                    >
+                        <Icon icon="export" />
+                        Export conversation
+                    </Button>
                 </Dropdown.Menu>
             </Dropdown>
         </>

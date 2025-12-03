@@ -7,10 +7,12 @@ import {
     Update,
 } from "@reduxjs/toolkit";
 import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import fileDownloader from "common/fileDownloader";
 import { aiAssistantActions } from "components/common/shell/aiAssistantSlice";
 import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
+import moment from "moment";
 import router from "plugins/router";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
@@ -306,6 +308,25 @@ const runChat = createAsyncThunk(
     }
 );
 
+const exportConversation = createAsyncThunk(chatbotSlice.name + "/exportConversation", async (_, { getState }) => {
+    const { chatbot, license } = getState() as RootState;
+
+    fileDownloader.downloadAsJson(
+        {
+            licenseId: license.status.Id,
+            conversationId: chatbot.conversationId,
+            exportedAtLocal: moment().format(),
+            exportedAtUTC: moment.utc().format(),
+            isAlwaysAllowEndpointCalls: chatbot.isAlwaysAllowEndpointCalls,
+            deniedEndpoints: chatbot.deniedEndpoints,
+            lastRunData: chatbot.lastRunData,
+            attachedContexts: chatbotAttachedContextSelectors.selectAll(chatbot.attachedContexts),
+            messages: chatbotMessagesSelectors.selectAll(chatbot.messages),
+        },
+        `conversation-${chatbot.conversationId}.json`
+    );
+});
+
 function getEndpointItems(endpointsDto: Record<string, string[]>): ChatbotEndpointItem[] {
     if (!_.isObject(endpointsDto)) {
         return [];
@@ -358,6 +379,7 @@ export const chatbotActions = {
     ...chatbotSlice.actions,
     runChat,
     retryRunChat,
+    exportConversation,
 };
 
 export const chatbotSelectors = {
