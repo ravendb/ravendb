@@ -34,7 +34,7 @@ export type ChatbotAttachedContextId =
 export interface ChatbotAttachedContext {
     id: ChatbotAttachedContextId;
     type: "View" | "DatabaseName" | "IndexName" | "CollectionName" | "DocumentId" | "QueryResult" | "QueryError";
-    value: string;
+    value: any;
     label: string;
     state: "included" | "excluded";
     query?: string;
@@ -329,7 +329,7 @@ function getAdditionalAttachedContext(attachedContexts: ChatbotAttachedContext[]
 
     const queryResults = attachedContexts.filter((x) => x.type === "QueryResult");
     if (queryResults.length) {
-        result["Query Results"] = queryResults.map((x) => ({ query: x.label, result: x.value }));
+        result["Query Results"] = queryResults.map((x) => ({ query: x.query, result: x.value }));
     }
 
     const queryErrors = attachedContexts.filter((x) => x.type === "QueryError");

@@ -46,7 +46,9 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     const dispatch = useAppDispatch();
 
     const sizeInBytes = useMemo(() => {
-        const blob = new Blob([item.value]);
+        const stringValue = typeof item.value === "string" ? item.value : JSON.stringify(item.value);
+
+        const blob = new Blob([stringValue]);
         return blob.size;
     }, [item.value]);
 

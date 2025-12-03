@@ -1202,7 +1202,8 @@ class query extends shardViewModelBase {
                             const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id" | "state"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
-                                value: JSON.stringify(queryResults.items?.map(doc => doc?.toDto(true))) ?? "[]",
+                                query: criteriaForFetcher.queryText(),
+                                value: queryResults.items?.map(doc => doc?.toDto(true)) ?? [],
                             };
                             
                             if (store.default.getState().chatbot.isRunQueryFromChatbot) {
