@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -73,6 +74,8 @@ ai.genContext({}).withPdf(pdf);
             config.UpdateScript = @"this.PdfDescription = $output.PdfDescription;";
             config.GenAiTransformation = new GenAiTransformation { Script = withNullAttachments ? PdfScript : PdfScriptWithoutNull };
 
+            config.EnableTracing = true;
+
             await store.Maintenance.SendAsync(new AddGenAiOperation(config));
 
             var marker = new PdfDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
@@ -108,12 +111,33 @@ ai.genContext({}).withPdf(pdf);
                 Assert.False(item1.PdfDescription.Description == marker.Description);
                 var item2Changed = ((item2.PdfDescription.Description == marker.Description) == false);
                 if (withNullAttachments)
-                    Assert.True(item2Changed);
+                {
+                    var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    Assert.True(item2Changed || ValidateErrorNotification(db, "The request was refused by the model"));
+                }
                 else
                     Assert.False(item2Changed);
             }
 
-            await AssertHashes(store, withNullAttachments);
+            try
+            {
+                await AssertHashes(store, withNullAttachments);
+            }
+            catch (Exception e)
+            {
+                var sb = new StringBuilder();
+                sb.Append("[");
+                using (var session = store.OpenAsyncSession())
+                {
+                    var docs = await session.Advanced.LoadStartingWithAsync<dynamic>("openai-aiintegrationtask/");
+                    foreach (var d in docs)
+                    {
+                        sb.AppendLine(d + ",");
+                    }
+                }
+                sb.Append("]");
+                throw new AggregateException("Conversation Docs: " + Environment.NewLine + sb, e);
+            }
         }
 
         private static async Task<string> GetHash<T>(DocumentStore store, string id)
@@ -173,7 +197,7 @@ ai.genContext({}).withPdf(pdf);
                 hash2 = await GetHash<Item>(store, SecondItemId);
 
                 Assert.NotNull(hash1);
-                Assert.NotNull(hash2);
+                Assert.False(hash2 == null, $"oldHash1={oldHash1}, oldHash2={oldHash2}, hash1={hash1}, hash2={hash2}");
                 Assert.NotEqual(oldHash1, hash1);
                 Assert.NotEqual(oldHash2, hash1);
             });
