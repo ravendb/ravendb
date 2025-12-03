@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Binary;
 using Sparrow.Utils;
@@ -18,7 +19,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue x, LazyStringValue y)
         {
-            if (x == y)
+            if (ReferenceEquals(x, y))
                 return true;
             if (x == null || y == null)
                 return false;
@@ -32,6 +33,27 @@ namespace Sparrow.Json
         }
     }
 
+    internal sealed class LazyStringValueWithMetadataComparer : IEqualityComparer<LazyStringValue>
+    {
+        public static readonly LazyStringValueWithMetadataComparer Instance = new LazyStringValueWithMetadataComparer();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(LazyStringValue x, LazyStringValue y)
+        {
+            if (ReferenceEquals(x, y))
+                return true;
+            if (x == null || y == null)
+                return false;
+            return x.EqualsWithMetadata(y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(LazyStringValue obj)
+        {
+            return obj.GetHashCodeWithMetadata();
+        }
+    }
+    
     internal struct LazyStringValueStructComparer : IEqualityComparer<LazyStringValue>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -58,7 +80,7 @@ namespace Sparrow.Json
     }
 
     // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
-    public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
+    public sealed unsafe partial class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IConvertible, IEnumerable<char>
     {
         internal JsonOperationContext _context;
@@ -257,6 +279,54 @@ namespace Sparrow.Json
 
             return Memory.CompareInline(Buffer, other.Buffer, size) == 0;
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool EqualsWithMetadata(LazyStringValue other)
+        {
+#if DEBUG
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+#endif
+
+            int size = Size;
+            var otherSize = other.Size;
+
+            if (otherSize != size)
+                return false;
+
+            ReadEscapePositions();
+            other.ReadEscapePositions();
+
+            if (EscapePositions.Length != other.EscapePositions.Length)
+                return false;
+
+            if (Memory.CompareInline(Buffer, other.Buffer, size) != 0)
+                return false;
+
+            return EscapePositions.SequenceCompareTo(other.EscapePositions) == 0; //TODO To check if this is the right way to compare
+        }
+        
+        private void ReadEscapePositions()
+        {
+            if(EscapePositions != null)
+                return;
+
+            var escapeSequencePos = Size;
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
+            EscapePositions = new int[numberOfEscapeSequences]; //TODO Maybe to use array pool
+            if(ToString().Equals("A"))
+                Console.WriteLine();
+            var i = 0;
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
+                EscapePositions[i] = bytesToSkip;
+                ++i;
+            }
+        }
+        
+        
 
         public int CompareTo(string other)
         {
@@ -293,7 +363,18 @@ namespace Sparrow.Json
             var result = Memory.CompareInline(Buffer, other, Math.Min(size, otherSize));
             return result == 0 ? size - otherSize : result;
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int CompareWithMetadata(LazyStringValue other)
+        {
+            var result = CompareTo(other);
+            if(result != 0)
+                return result;
+            
+            result = EscapePositions.SequenceCompareTo(other.EscapePositions);
+            return result == 0 ? EscapePositions.Length - other.EscapePositions.Length : result;
+        }
+        
         public static bool operator !=(LazyStringValue self, LazyStringValue str) => !(self == str);
 
         public static bool operator !=(LazyStringValue self, string str) => !(self == str);
@@ -431,6 +512,7 @@ namespace Sparrow.Json
         }
 
         private int? _hashCode;
+        private int? _hashCodeWithMetadata;
 
         public override int GetHashCode()
         {
@@ -446,6 +528,31 @@ namespace Sparrow.Json
                 : (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
 
             return _hashCode.Value;
+        }
+        
+        public int GetHashCodeWithMetadata()
+        {
+#if DEBUG
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+#endif
+            ReadEscapePositions();
+
+            var escapeBytes = MemoryMarshal.Cast<int, byte>((EscapePositions ?? []).AsSpan());
+
+            if (IntPtr.Size == 4)
+            {
+                var hash = Hashing.XXHash32.CalculateInline(Buffer, Size);
+                return (int) Hashing.XXHash32.CalculateInline(escapeBytes, hash);
+            }
+            else
+            {
+                var hash = Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
+                return (int) Hashing.XXHash64.CalculateInline(escapeBytes, hash);
+            }
+            //
+            // _hashCodeWithMetadata = (int)hash;
+            // return _hashCodeWithMetadata.Value;
         }
 
         public override string ToString()
@@ -1194,6 +1301,7 @@ namespace Sparrow.Json
             IsDisposed = false;
             AllocatedMemoryData = null;
             _hashCode = default;
+            _hashCodeWithMetadata = default;
             _context = context;
         }
 
@@ -1301,7 +1409,7 @@ namespace Sparrow.Json
                 return false;
 
             return CompareToOrdinalIgnoreCase(this.Buffer, prefix.Size,
-                       prefix.Buffer, prefix.Size) == 0;
+                prefix.Buffer, prefix.Size) == 0;
         }
 
         public void Truncate(int size)

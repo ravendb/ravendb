@@ -475,10 +475,7 @@ namespace Sparrow.Json
         private unsafe LazyStringValue CreateLazyStringValueFromParserState()
         {
             var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
-            if (_state.EscapePositions.Count <= 0)
-                return lazyStringValueFromParserState;
-
-            lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.ToArray();
+            lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.Count > 0 ? _state.EscapePositions.ToArray() : [];
             return lazyStringValueFromParserState;
         }
 

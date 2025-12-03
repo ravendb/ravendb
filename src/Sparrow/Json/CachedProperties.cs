@@ -104,7 +104,7 @@ namespace Sparrow.Json
 
             public int CompareTo(PropertyName other)
             {
-                return Comparer.CompareTo(other.Comparer);
+                return Comparer.CompareWithMetadata(other.Comparer);
             }
 
             public override string ToString()
@@ -170,7 +170,7 @@ namespace Sparrow.Json
 
         private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
-        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(default(LazyStringValueStructComparer));
+        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueWithMetadataComparer.Instance);
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
@@ -210,7 +210,7 @@ namespace Sparrow.Json
 
             // PERF: The hash for the property needs to be a hash code, if its not
             //       we will be paying the cost of hash collisions in the sort checks.
-            var prop = new PropertyName(propName.GetHashCode(), propName, -1, propIndex);
+            var prop = new PropertyName(propName.GetHashCodeWithMetadata(), propName, -1, propIndex);
 
             _docPropNames.Add(prop);
             _propertiesSortOrder.Add(prop, prop);

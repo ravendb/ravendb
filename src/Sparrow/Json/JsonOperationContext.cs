@@ -38,6 +38,7 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
 
         private readonly Dictionary<StringSegment, LazyStringValue> _fieldNames = new Dictionary<StringSegment, LazyStringValue>(StringSegmentEqualityStructComparer.BoxedInstance);
+        private readonly Dictionary<LazyStringValue, LazyStringValue> _fieldNamesLazyStrings = new Dictionary<LazyStringValue, LazyStringValue>(LazyStringValueWithMetadataComparer.Instance);
 
         private static readonly PerCoreContainer<PathCache> _perCorePathCache = new PerCoreContainer<PathCache>();
         private PathCache _activeAllocatePathCaches;
@@ -438,6 +439,20 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LazyStringValue GetLazyStringForFieldWithCaching(LazyStringValue field)
+        {
+            EnsureNotDisposed();
+            if (_fieldNamesLazyStrings.TryGetValue(field, out LazyStringValue value))
+            {
+                // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
+                Debug.Assert(value.IsDisposed == false);
+                return value;
+            }
+
+            return GetLazyStringForFieldWithCachingUnlikely(field);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             EnsureNotDisposed();
@@ -457,13 +472,43 @@ namespace Sparrow.Json
             using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
-            EnsureNotDisposed();
-            LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key.Value] = value;
+                EnsureNotDisposed();
+                LazyStringValue value = GetLazyString(key, longLived: true);
+                _fieldNames[key.Value] = value;
+                _fieldNamesLazyStrings[value] = value;
 
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
+#if DEBUG || VALIDATE
+            }
+#endif
+        }
+
+
+        private unsafe LazyStringValue GetLazyStringForFieldWithCachingUnlikely(LazyStringValue key)
+        {
+#if DEBUG || VALIDATE
+            using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
+            {
+#endif
+                EnsureNotDisposed();
+                var memory = GetLongLivedMemory(key.Size + 1);
+                Memory.Copy(memory.Address, key.Buffer, key.Size);
+                // This is a marker for the numberOfEscapeSequences that follows _after_ the lazy string
+                // The GetLazyStringForFieldWithCachingUnlikely(LazyStringValue) overload is used to process values read directly 
+                // from the parser, without the escapes, and we aren't writing directly from it anyway
+                memory.Address[key.Size] = 0;
+                string keyStr = key;
+                var str = new LazyStringValue(keyStr, memory.Address, key.Size, this)
+                {
+                    EscapePositions = key.EscapePositions,
+                    AllocatedMemoryData = memory,
+                };
+                _fieldNames[keyStr] = str;
+                _fieldNamesLazyStrings[str] = str;
+
+                return str;
 #if DEBUG || VALIDATE
             }
 #endif
@@ -500,10 +545,7 @@ namespace Sparrow.Json
                 LazyStringValue result = longLived == false ? AllocateStringValue(field.Value, address, actualSize) : new LazyStringValue(field.Value, address, actualSize, this);
                 result.AllocatedMemoryData = memory;
 
-                if (state.EscapePositions.Count > 0)
-                {
-                    result.EscapePositions = state.EscapePositions.ToArray();
-                }
+                result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];  
                 return result;
             }
         }
@@ -528,10 +570,7 @@ namespace Sparrow.Json
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
             result.AllocatedMemoryData = memory;
 
-            if (state.EscapePositions.Count > 0)
-            {
-                result.EscapePositions = state.EscapePositions.ToArray();
-            }
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : []; 
             return result;
         }
 
@@ -913,6 +952,7 @@ namespace Sparrow.Json
                 allocatorForLongLivedValues.Dispose();
 
                 _fieldNames.Clear();
+                _fieldNamesLazyStrings.Clear(); // no need to dispose the data here, same instances as in _fieldNames 
             }
 
             if (_allocateStringValues != null)
