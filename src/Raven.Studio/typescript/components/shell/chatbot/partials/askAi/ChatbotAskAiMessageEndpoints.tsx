@@ -289,7 +289,7 @@ interface EndpointItemProps {
 function EndpointItem({ endpoint }: EndpointItemProps) {
     return (
         <div className="hstack w-100">
-            <span>
+            <span className="text-nowrap">
                 {endpoint.state === "waiting" && <span className="me-1">-</span>}
                 {endpoint.state === "allowed" ||
                     (endpoint.state === "alwaysAllowed" && <Icon icon="check" color="success" />)}
