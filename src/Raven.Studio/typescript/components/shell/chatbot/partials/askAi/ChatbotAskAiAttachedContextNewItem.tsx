@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from "components/store";
-import { chatbotActions, chatbotSelectors } from "../../store/chatbotSlice";
+import { chatbotActions, ChatbotAttachedContext, chatbotSelectors } from "../../store/chatbotSlice";
 import { Icon } from "components/common/Icon";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -15,15 +15,23 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { useAsync } from "react-async-hook";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
+import IconName from "typings/server/icons";
 
 export default function ChatbotAskAiAttachedContextNewItem() {
+    const dispatch = useAppDispatch();
     const tab = useAppSelector(chatbotSelectors.newContextTab);
+    const isNewContextOpen = useAppSelector(chatbotSelectors.isNewContextOpen);
 
     return (
-        <Dropdown autoClose="outside" drop="up">
+        <Dropdown
+            show={isNewContextOpen}
+            onToggle={() => dispatch(chatbotActions.isNewContextOpenToggled())}
+            autoClose="outside"
+        >
             <Dropdown.Toggle
                 as={CustomDropdownToggle}
                 isCaretHidden
+                id="chatbot-add-context"
                 variant="link"
                 className="rounded-2 border border-secondary hstack"
                 style={{
@@ -35,12 +43,14 @@ export default function ChatbotAskAiAttachedContextNewItem() {
             >
                 <Icon icon="plus" margin="m-0" size="xs" />
             </Dropdown.Toggle>
-            <Dropdown.Menu style={{ width: 300, height: 350, zIndex: 1000 }} className="vstack">
-                {tab === null && <AllTabs />}
-                {tab === "DatabaseName" && <DatabaseNameTab />}
-                {tab === "DocumentId" && <DocumentIdTab />}
-                {tab === "CollectionName" && <CollectionNameTab />}
-                {tab === "IndexName" && <IndexNameTab />}
+            <Dropdown.Menu style={{ width: 300, height: 350 }} renderOnMount popperConfig={{ strategy: "fixed" }}>
+                <div className="vstack h-100">
+                    {tab === null && <AllTabs />}
+                    {tab === "DatabaseName" && <DatabaseNameTab />}
+                    {tab === "DocumentId" && <DocumentIdTab />}
+                    {tab === "CollectionName" && <CollectionNameTab />}
+                    {tab === "IndexName" && <IndexNameTab />}
+                </div>
             </Dropdown.Menu>
         </Dropdown>
     );
@@ -49,64 +59,60 @@ export default function ChatbotAskAiAttachedContextNewItem() {
 function AllTabs() {
     const dispatch = useAppDispatch();
 
-    const hasDatabaseName =
-        useAppSelector((state) => chatbotSelectors.attachedContextById(state, "DatabaseName")) != null;
-
     return (
         <>
-            <Dropdown.Header>
-                <span className="small-label">Add context</span>
+            <Dropdown.Header className="hstack justify-content-between">
+                <div className="small-label">Add context</div>
+                <Button
+                    onClick={() => dispatch(chatbotActions.isNewContextOpenToggled())}
+                    variant="link"
+                    size="sm"
+                    className="p-0 text-emphasis ms-auto"
+                >
+                    <Icon icon="close" margin="m-0" size="xs" />
+                </Button>
             </Dropdown.Header>
-            <Dropdown.Item onClick={() => dispatch(chatbotActions.newContextTabSet("DatabaseName"))}>
-                <Icon icon="database" />
-                Database Name
-            </Dropdown.Item>
-            <ConditionalPopover
-                conditions={{
-                    isActive: !hasDatabaseName,
-                    message: "Please add Database Name first.",
-                }}
-                popoverPlacement="left"
-            >
-                <Dropdown.Item
-                    onClick={() => dispatch(chatbotActions.newContextTabSet("DocumentId"))}
-                    disabled={!hasDatabaseName}
-                >
-                    <Icon icon="document" />
-                    Document ID
-                </Dropdown.Item>
-            </ConditionalPopover>
-            <ConditionalPopover
-                conditions={{
-                    isActive: !hasDatabaseName,
-                    message: "Please add Database Name first.",
-                }}
-                popoverPlacement="left"
-            >
-                <Dropdown.Item
-                    onClick={() => dispatch(chatbotActions.newContextTabSet("CollectionName"))}
-                    disabled={!hasDatabaseName}
-                >
-                    <Icon icon="document2" />
-                    Collection Name
-                </Dropdown.Item>
-            </ConditionalPopover>
-            <ConditionalPopover
-                conditions={{
-                    isActive: !hasDatabaseName,
-                    message: "Please add Database Name first.",
-                }}
-                popoverPlacement="left"
-            >
-                <Dropdown.Item
-                    onClick={() => dispatch(chatbotActions.newContextTabSet("IndexName"))}
-                    disabled={!hasDatabaseName}
-                >
-                    <Icon icon="index" />
-                    Index Name
-                </Dropdown.Item>
-            </ConditionalPopover>
+            <AllTabsItem tab="DatabaseName" label="Database Name" iconName="database" />
+            <AllTabsItem tab="DocumentId" label="Document ID" iconName="document" isRequiredDatabaseName />
+            <AllTabsItem tab="CollectionName" label="Collection Name" iconName="document2" isRequiredDatabaseName />
+            <AllTabsItem tab="IndexName" label="Index Name" iconName="index" isRequiredDatabaseName />
         </>
+    );
+}
+
+interface AllTabsItemProps {
+    tab: ChatbotAttachedContext["type"];
+    label: ReactNode;
+    iconName: IconName;
+    isRequiredDatabaseName?: boolean;
+}
+
+function AllTabsItem({ tab, label, iconName, isRequiredDatabaseName }: AllTabsItemProps) {
+    const dispatch = useAppDispatch();
+    const databaseNameContext = useAppSelector((state) => chatbotSelectors.attachedContextById(state, "DatabaseName"));
+
+    const isDisabled = isRequiredDatabaseName && (!databaseNameContext || databaseNameContext?.state === "excluded");
+
+    return (
+        <ConditionalPopover
+            conditions={[
+                {
+                    isActive: isRequiredDatabaseName && !databaseNameContext,
+                    message: "Please add Database Name to context.",
+                },
+                {
+                    isActive: isRequiredDatabaseName && databaseNameContext?.state === "excluded",
+                    message: "Please include Database Name by clicking on it in attached context.",
+                },
+            ]}
+            popoverPlacement="left"
+            className="w-100"
+        >
+            <Dropdown.Item onClick={() => dispatch(chatbotActions.newContextTabSet(tab))} disabled={isDisabled}>
+                <Icon icon={iconName} />
+                {label}
+            </Dropdown.Item>
+        </ConditionalPopover>
     );
 }
 

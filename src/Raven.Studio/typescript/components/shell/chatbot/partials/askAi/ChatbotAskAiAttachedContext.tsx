@@ -29,7 +29,7 @@ export default function ChatbotAskAiAttachedContext({
 
     return (
         <div className={classNames("hstack flex-wrap", className)} style={{ gap: "4px" }}>
-            <ChatbotAskAiAttachedContextNewItem />
+            {!isReadOnly && <ChatbotAskAiAttachedContextNewItem />}
             {attachedContexts.map((item) => (
                 <Item key={item.id} item={item} isReadOnly={isReadOnly} />
             ))}

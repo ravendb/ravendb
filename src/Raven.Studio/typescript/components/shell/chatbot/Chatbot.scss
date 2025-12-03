@@ -36,10 +36,6 @@
             border-radius: sizes.$border-radius-md;
             overflow-y: auto;
 
-            &:has(.dropdown-menu) {
-                overflow-y: unset;
-            }
-
             .prompt-textarea {
                 z-index: 11;
                 border-radius: sizes.$border-radius-md;

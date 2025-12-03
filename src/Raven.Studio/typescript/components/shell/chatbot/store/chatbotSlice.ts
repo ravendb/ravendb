@@ -82,6 +82,7 @@ interface ChatbotState {
     messages: EntityState<ChatbotMessage, string>;
     lastRunData: ChatbotRunChatData;
     attachedContexts: EntityState<ChatbotAttachedContext, string>;
+    isNewContextOpen: boolean;
     newContextTab: ChatbotAttachedContext["type"];
     deniedEndpoints: string[];
     isAlwaysAllowEndpointCalls: boolean;
@@ -110,6 +111,7 @@ const initialState: ChatbotState = {
     lastRunData: null,
     deniedEndpoints: [],
     attachedContexts: chatbotAttachedContextAdapter.getInitialState(),
+    isNewContextOpen: false,
     newContextTab: null,
     isAlwaysAllowEndpointCalls: true,
     isRunQueryFromChatbot: false,
@@ -187,6 +189,14 @@ export const chatbotSlice = createSlice({
                     .filter((x) => !notExcludableTypes.includes(x.type))
                     .map((x) => x.id)
             );
+        },
+        isNewContextOpenToggled: (state) => {
+            const newState = !state.isNewContextOpen;
+            state.isNewContextOpen = newState;
+
+            if (!newState) {
+                state.newContextTab = null;
+            }
         },
         newContextTabSet: (state, action: PayloadAction<ChatbotAttachedContext["type"]>) => {
             state.newContextTab = action.payload;
@@ -402,6 +412,7 @@ export const chatbotSelectors = {
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
     attachedContextById: (state: RootState, id: string) =>
         chatbotAttachedContextSelectors.selectById(state.chatbot.attachedContexts, id),
+    isNewContextOpen: (state: RootState) => state.chatbot.isNewContextOpen,
     newContextTab: (state: RootState) => state.chatbot.newContextTab,
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
     isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
