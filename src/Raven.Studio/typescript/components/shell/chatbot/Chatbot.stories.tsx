@@ -63,17 +63,6 @@ export const Basic: StoryObj<typeof Chatbot> = {
     },
 };
 
-export const AdditionalContext: StoryObj<typeof Chatbot> = {
-    render: () => {
-        commonInit();
-
-        const { chatbot } = mockStore;
-        chatbot.with_messages(ChatbotStubs.messagesWithAdditionalContext());
-
-        return <ChatbotInLayout />;
-    },
-};
-
 export const Endpoints: StoryObj<typeof Chatbot> = {
     render: () => {
         commonInit();

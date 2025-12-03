@@ -22,8 +22,6 @@ export interface ChatbotRelevantLink {
     Url: string;
 }
 
-export type AdditionalContextOption = "DatabaseName" | "IndexName" | "CollectionName" | "DocumentId";
-
 export interface RunChatbotAiAssistantResultDto {
     ConversationId: string;
     Status: AiAssistantResponseStatus;
@@ -33,13 +31,6 @@ export interface RunChatbotAiAssistantResultDto {
         RelevantLinks: ChatbotRelevantLink[];
         FollowUpQuestions: string[];
     };
-    AdditionalContext: Record<
-        string,
-        {
-            Message: string;
-            Option: AdditionalContextOption;
-        }
-    >;
     Endpoints: Record<string, string[]>;
 }
 

@@ -12,7 +12,6 @@ import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAss
 import useTypewriter from "components/hooks/useTypewriter";
 import ChatbotAskAiAttachedContext from "./askAi/ChatbotAskAiAttachedContext";
 import ChatbotAskAiMarkdown from "./askAi/ChatbotAskAiMarkdown";
-import ChatbotAskAiMessageAdditionalContext from "./askAi/ChatbotAskAiMessageAdditionalContext";
 import ChatbotAskAiMessageEndpoints from "./askAi/ChatbotAskAiMessageEndpoints";
 import ChatbotAskAiMessageRelevantLinks from "./askAi/ChatbotAskAiMessageRelevantLinks";
 import ChatbotAskAiMessageFollowUpQuestions from "./askAi/ChatbotAskAiMessageFollowUpQuestions";
@@ -143,16 +142,6 @@ function AgentMessageBody({ message }: AgentMessageProps) {
                     Please try again
                 </Button>
             </RichAlert>
-        );
-    }
-
-    if (Object.keys(message.additionalContext).length > 0) {
-        return (
-            <ChatbotAskAiMessageAdditionalContext
-                id={message.id}
-                additionalContext={message.additionalContext}
-                userActionState={message.userActionState}
-            />
         );
     }
 

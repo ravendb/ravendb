@@ -44,64 +44,7 @@ export class ChatbotStubs {
                     "How can I import and export data using RavenDB Studio?",
                 ],
                 endpoints: [],
-                additionalContext: {},
                 userActionState: null,
-            },
-        ];
-    }
-
-    static messagesWithAdditionalContext(): ChatbotMessage[] {
-        return [
-            {
-                id: "1",
-                role: "user",
-                content: "How to query all documents in collection?",
-                attachedContexts: [
-                    {
-                        id: "currentView",
-                        type: "Current View",
-                        label: "All Documents",
-                        value: "All Documents",
-                        state: "included",
-                    },
-                    {
-                        id: "currentDatabaseName",
-                        type: "Current Database Name",
-                        label: "sample",
-                        value: "sample",
-                        state: "included",
-                    },
-                ],
-            },
-            {
-                id: "2",
-                role: "assistant",
-                content: "",
-                state: "Success",
-                thinkingTimeInMs: 1505,
-                usage: null,
-                endpoints: [],
-                additionalContext: {
-                    call_3qQEMACL5cB1zkSMVTkWRsu1: {
-                        Message: "Please specify the collection name.",
-                        Option: "CollectionName",
-                    },
-                    call_3qQEMACL5cB1zkSMVTkWRsu2: {
-                        Message: "Please specify the database name.",
-                        Option: "DatabaseName",
-                    },
-                    call_3qQEMACL5cB1zkSMVTkWRsu3: {
-                        Message: "Please specify the document ID.",
-                        Option: "DocumentId",
-                    },
-                    call_3qQEMACL5cB1zkSMVTkWRsu4: {
-                        Message: "Please specify the Index name.",
-                        Option: "IndexName",
-                    },
-                },
-                userActionState: "waiting",
-                followUpQuestions: [],
-                relevantLinks: [],
             },
         ];
     }
@@ -149,7 +92,6 @@ export class ChatbotStubs {
                     },
                 ],
                 userActionState: "waiting",
-                additionalContext: {},
                 followUpQuestions: [],
                 relevantLinks: [],
             },

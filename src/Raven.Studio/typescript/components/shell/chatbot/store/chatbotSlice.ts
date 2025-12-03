@@ -71,7 +71,6 @@ export interface ChatbotAssistantMessage extends ChatbotMessageBase {
     relevantLinks: RunChatbotAiAssistantResultDto["Response"]["RelevantLinks"];
     followUpQuestions: string[];
     endpoints: ChatbotEndpointItem[];
-    additionalContext: RunChatbotAiAssistantResultDto["AdditionalContext"];
     userActionState: ChatbotUserActionState;
 }
 
@@ -250,7 +249,6 @@ const runChat = createAsyncThunk(
             relevantLinks: [],
             followUpQuestions: [],
             endpoints: [],
-            additionalContext: {},
             userActionState: null,
         };
 
@@ -300,7 +298,6 @@ const runChat = createAsyncThunk(
             relevantLinks: data.Response.RelevantLinks ?? [],
             followUpQuestions: data.Response.FollowUpQuestions ?? [],
             endpoints: getEndpointItems(data.Endpoints ?? {}),
-            additionalContext: data.AdditionalContext ?? {},
             userActionState: getUserActionState(data),
         };
     }
@@ -341,7 +338,7 @@ function getAdditionalAttachedContext(attachedContexts: ChatbotAttachedContext[]
 }
 
 function getUserActionState(data: RunChatbotAiAssistantResultDto): ChatbotUserActionState {
-    if (!_.isEmpty(data.AdditionalContext) || !_.isEmpty(data.Endpoints)) {
+    if (!_.isEmpty(data.Endpoints)) {
         return "waiting";
     }
     return null;
