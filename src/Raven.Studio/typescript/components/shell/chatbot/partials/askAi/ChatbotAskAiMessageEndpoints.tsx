@@ -72,11 +72,6 @@ export default function ChatbotAskAiMessageEndpoints({
                     };
                 }
 
-                const jsonResult = await tryCatch(() => response.data.json());
-                if (jsonResult.status === "success") {
-                    return { ...baseResult, status: "success", resultText: JSON.stringify(jsonResult.data) };
-                }
-
                 const textResult = await tryCatch(() => response.data.text());
                 if (textResult.status === "success") {
                     return { ...baseResult, status: "success", resultText: textResult.data };
