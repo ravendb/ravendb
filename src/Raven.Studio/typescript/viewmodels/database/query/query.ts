@@ -1200,7 +1200,7 @@ class query extends shardViewModelBase {
                         // Attach query first page result to chatbot context
                         if (skip === 0) {
                             const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id" | "state"> = {
-                                type: "Query Result",
+                                type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
                                 value: JSON.stringify(queryResults.items?.map(doc => doc?.toDto(true))) ?? "[]",
                             };
@@ -1208,14 +1208,14 @@ class query extends shardViewModelBase {
                             if (store.default.getState().chatbot.isRunQueryFromChatbot) {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
-                                    id: `query-from-chatbot-${_.uniqueId()}}`,
+                                    id: `QueryResult-from-chatbot-${_.uniqueId()}}`,
                                     state: "included",
                                 }));
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.isRunQueryFromChatbotSet(false));
                             } else {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
-                                    id: "query-regular",
+                                    id: "QueryResult-regular",
                                     state: "excluded",
                                 }));
                             }
@@ -1233,13 +1233,13 @@ class query extends shardViewModelBase {
                         const errorMessage = request.responseJSON?.Message;
                         const isQueryErrorInContext = !!Object.values(
                             store.default.getState().chatbot.attachedContexts.entities
-                        ).find((x) => x.type === "Query Error" && x.query === criteriaForFetcher.queryText());
+                        ).find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
 
                         if (errorMessage && !isQueryErrorInContext) {
                             storeCompat.globalDispatch(
                                 chatbotSlice.chatbotActions.attachedContextUpserted({
-                                    id: `queryError-${_.uniqueId()}}`,
-                                    type: "Query Error",
+                                    id: `QueryError-${_.uniqueId()}}`,
+                                    type: "QueryError",
                                     label: errorMessage.replaceAll("\r\n", " "),
                                     value: errorMessage,
                                     state: "included",

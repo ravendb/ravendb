@@ -9,15 +9,15 @@ export class ChatbotStubs {
                 content: "Explain this view",
                 attachedContexts: [
                     {
-                        id: "currentView",
-                        type: "Current View",
+                        id: "View",
+                        type: "View",
                         label: "All Documents",
                         value: "All Documents",
                         state: "included",
                     },
                     {
-                        id: "currentDatabaseName",
-                        type: "Current Database Name",
+                        id: "DatabaseName",
+                        type: "DatabaseName",
                         label: "sample",
                         value: "sample",
                         state: "included",
@@ -57,15 +57,15 @@ export class ChatbotStubs {
                 content: "How to query all documents in collection?",
                 attachedContexts: [
                     {
-                        id: "currentView",
-                        type: "Current View",
+                        id: "View",
+                        type: "View",
                         label: "All Documents",
                         value: "All Documents",
                         state: "included",
                     },
                     {
-                        id: "currentDatabaseName",
-                        type: "Current Database Name",
+                        id: "DatabaseName",
+                        type: "DatabaseName",
                         label: "sample",
                         value: "sample",
                         state: "included",

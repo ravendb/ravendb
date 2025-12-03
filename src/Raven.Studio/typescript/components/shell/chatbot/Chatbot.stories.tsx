@@ -15,29 +15,29 @@ function commonInit() {
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
     chatbot.with_attachedContextUpserted({
-        id: "currentView",
-        type: "Current View",
+        id: "View",
+        type: "View",
         label: "Edit Index",
         value: "Edit Index",
         state: "included",
     });
     chatbot.with_attachedContextUpserted({
-        id: "currentDatabaseName",
-        type: "Current Database Name",
+        id: "DatabaseName",
+        type: "DatabaseName",
         label: "Sample DB",
         value: "Sample DB",
         state: "included",
     });
     chatbot.with_attachedContextUpserted({
-        id: "currentDocument",
-        type: "Current Document",
+        id: "DocumentId",
+        type: "DocumentId",
         label: "products/78-A",
         value: '{"Name":"SomeName","Supplier":"suppliers/23-A","Category":"categories/1-A","QuantityPerUnit":"500 ml"',
         state: "included",
     });
     chatbot.with_attachedContextUpserted({
-        id: "currentIndexDefinition",
-        type: "Current Index Definition",
+        id: "IndexName",
+        type: "IndexName",
         label: "Auto/Categories/ById()",
         value: '{"Name":"Auto/Categories/ById()","SourceType":"Documents","Type":"AutoMap"',
         state: "included",

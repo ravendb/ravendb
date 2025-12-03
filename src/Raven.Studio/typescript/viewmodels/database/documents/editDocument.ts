@@ -232,6 +232,16 @@ class editDocument extends shardViewModelBase {
     }) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
+
+        if (navigationArgs?.id) {
+            storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
+                id: "DocumentId",
+                type: "DocumentId",
+                label: navigationArgs.id,
+                value: navigationArgs.id,
+                state: "excluded"
+            }));
+        }
         
         if (!navigationArgs || !navigationArgs.id) {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
@@ -1719,18 +1729,6 @@ class normalCrudActions implements editDocumentCrudActions {
             }
 
             return doc.__metadata.counters().length;
-        });
-
-        this.document.subscribe(doc => {
-            if (doc) {
-                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
-                    id: "currentDocument",
-                    type: "Current Document",
-                    label: doc.getId(),
-                    value: JSON.stringify(doc.toDto(true)),
-                    state: "excluded"
-                }));
-            }
         });
     }
 

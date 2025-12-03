@@ -991,10 +991,10 @@ class editIndex extends shardViewModelBase {
                 }
 
                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
-                    id: "currentIndexDefinition",
-                    type: "Current Index Definition",
+                    id: "IndexName",
+                    type: "IndexName",
                     label: this.editedIndex().name(),
-                    value: JSON.stringify(result),
+                    value: this.editedIndex().name(),
                     state: "excluded",
                 }));
                 

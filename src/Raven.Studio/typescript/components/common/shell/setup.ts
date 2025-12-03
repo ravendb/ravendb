@@ -47,16 +47,16 @@ function initRedux() {
     activeDatabaseTracker.default.database.subscribe((db) => {
         const dbName = db?.name ?? null;
         globalDispatch(databaseActions.activeDatabaseChanged(dbName));
+        globalDispatch(chatbotActions.attachedContextExcludableRemoved());
         globalDispatch(
             chatbotActions.attachedContextUpserted({
-                id: "currentDatabaseName",
-                type: "Current Database Name",
+                id: "DatabaseName",
+                type: "DatabaseName",
                 label: dbName,
                 value: dbName,
                 state: "included",
             })
         );
-        globalDispatch(chatbotActions.attachedContextExcludableRemoved());
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
@@ -149,8 +149,8 @@ function initRedux() {
     router.activeInstruction.subscribe((instruction) => {
         globalDispatch(
             chatbotActions.attachedContextUpserted({
-                id: "currentView",
-                type: "Current View",
+                id: "View",
+                type: "View",
                 label: instruction?.config?.title,
                 value: instruction?.config?.title,
                 state: "included",

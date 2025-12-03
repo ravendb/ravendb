@@ -9,6 +9,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { useMemo } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import genUtils from "common/generalUtils";
+import ChatbotAskAiAttachedContextNewItem from "components/shell/chatbot/partials/askAi/ChatbotAskAiAttachedContextNewItem";
 
 interface ChatbotAskAiAttachedContextProps {
     attachedContexts: ChatbotAttachedContext[];
@@ -27,6 +28,7 @@ export default function ChatbotAskAiAttachedContext({
 
     return (
         <div className={classNames("hstack flex-wrap", className)} style={{ gap: "4px" }}>
+            <ChatbotAskAiAttachedContextNewItem />
             {attachedContexts.map((item) => (
                 <Item key={item.id} item={item} isReadOnly={isReadOnly} />
             ))}
@@ -47,7 +49,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
         return blob.size;
     }, [item.value]);
 
-    const canDiscard = item.type !== "Current View" && item.type !== "Current Database Name";
+    const canDiscard = item.type !== "View";
     const canClick = canDiscard && !isReadOnly;
 
     const { value: isHovering, setValue: setIsHovering } = useBoolean(false);
@@ -90,17 +92,19 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
         }
 
         switch (item.type) {
-            case "Current View":
+            case "View":
                 return "studio-configuration";
-            case "Current Database Name":
+            case "DatabaseName":
                 return "database";
-            case "Current Index Definition":
+            case "IndexName":
                 return "index";
-            case "Current Document":
+            case "CollectionName":
+                return "document2";
+            case "DocumentId":
                 return "document";
-            case "Query Result":
+            case "QueryResult":
                 return "query";
-            case "Query Error":
+            case "QueryError":
                 return "danger";
             default:
                 assertUnreachable(item.type);
@@ -149,10 +153,11 @@ function TooltipContent({ type, sizeInBytes }: TooltipContentProps) {
 }
 
 const tooltipTitles: Record<ChatbotAttachedContext["type"], string> = {
-    "Current View": "Current View",
-    "Current Database Name": "Database Name",
-    "Current Index Definition": "Index Definition",
-    "Current Document": "Document",
-    "Query Result": "Query Result",
-    "Query Error": "Query Error",
+    View: "Current View",
+    DatabaseName: "Database Name",
+    DocumentId: "Document ID",
+    IndexName: "Index Name",
+    CollectionName: "Collection Name",
+    QueryResult: "Query Result",
+    QueryError: "Query Error",
 };

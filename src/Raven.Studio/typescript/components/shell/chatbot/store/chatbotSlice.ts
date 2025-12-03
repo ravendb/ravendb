@@ -23,22 +23,17 @@ interface ChatbotRunChatData {
 }
 
 export type ChatbotAttachedContextId =
-    | "currentView"
-    | "currentDatabaseName"
-    | "currentIndexDefinition"
-    | "currentDocument"
-    | `query-${string}`
-    | `queryError-${string}`;
+    | "View"
+    | "DatabaseName"
+    | "DocumentId"
+    | "CollectionName"
+    | "IndexName"
+    | `QueryResult-${string}`
+    | `QueryError-${string}`;
 
 export interface ChatbotAttachedContext {
     id: ChatbotAttachedContextId;
-    type:
-        | "Current View"
-        | "Current Database Name"
-        | "Current Index Definition"
-        | "Current Document"
-        | "Query Result"
-        | "Query Error";
+    type: "View" | "DatabaseName" | "IndexName" | "CollectionName" | "DocumentId" | "QueryResult" | "QueryError";
     value: string;
     label: string;
     state: "included" | "excluded";
@@ -85,6 +80,7 @@ interface ChatbotState {
     messages: EntityState<ChatbotMessage, string>;
     lastRunData: ChatbotRunChatData;
     attachedContexts: EntityState<ChatbotAttachedContext, string>;
+    newContextTab: ChatbotAttachedContext["type"];
     deniedEndpoints: string[];
     isAlwaysAllowEndpointCalls: boolean;
     isRunQueryFromChatbot: boolean;
@@ -112,6 +108,7 @@ const initialState: ChatbotState = {
     lastRunData: null,
     deniedEndpoints: [],
     attachedContexts: chatbotAttachedContextAdapter.getInitialState(),
+    newContextTab: null,
     isAlwaysAllowEndpointCalls: true,
     isRunQueryFromChatbot: false,
 };
@@ -176,7 +173,7 @@ export const chatbotSlice = createSlice({
             });
         },
         attachedContextExcludableRemoved: (state) => {
-            const notExcludableTypes: ChatbotAttachedContext["type"][] = ["Current View", "Current Database Name"];
+            const notExcludableTypes: ChatbotAttachedContext["type"][] = ["View"];
 
             chatbotAttachedContextAdapter.removeMany(
                 state.attachedContexts,
@@ -185,6 +182,9 @@ export const chatbotSlice = createSlice({
                     .filter((x) => !notExcludableTypes.includes(x.type))
                     .map((x) => x.id)
             );
+        },
+        newContextTabSet: (state, action: PayloadAction<ChatbotAttachedContext["type"]>) => {
+            state.newContextTab = action.payload;
         },
         deniedEndpointsAdded: (state, action: PayloadAction<string[]>) => {
             state.deniedEndpoints = [...new Set([...state.deniedEndpoints, ...action.payload])];
@@ -320,18 +320,18 @@ function getEndpointItems(endpointsDto: Record<string, string[]>): ChatbotEndpoi
 function getAdditionalAttachedContext(attachedContexts: ChatbotAttachedContext[]): Record<string, any> {
     const result: Record<string, any> = Object.fromEntries(
         attachedContexts
-            .filter((x) => x.type !== "Query Result" && x.type !== "Query Error")
+            .filter((x) => x.type !== "QueryResult" && x.type !== "QueryError")
             .map((context) => [context.type, context.value])
     );
 
-    const queryResults = attachedContexts.filter((x) => x.type === "Query Result");
+    const queryResults = attachedContexts.filter((x) => x.type === "QueryResult");
     if (queryResults.length) {
-        result["Query Results"] = JSON.stringify(queryResults.map((x) => ({ query: x.label, result: x.value })));
+        result["Query Results"] = queryResults.map((x) => ({ query: x.label, result: x.value }));
     }
 
-    const queryErrors = attachedContexts.filter((x) => x.type === "Query Error");
+    const queryErrors = attachedContexts.filter((x) => x.type === "QueryError");
     if (queryErrors.length) {
-        result["Query Errors"] = JSON.stringify(queryErrors.map((x) => ({ query: x.query, error: x.value })));
+        result["Query Errors"] = queryErrors.map((x) => ({ query: x.query, error: x.value }));
     }
 
     return result;
@@ -375,6 +375,9 @@ export const chatbotSelectors = {
     conversationId: (state: RootState) => state.chatbot.conversationId,
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
+    attachedContextById: (state: RootState, id: string) =>
+        chatbotAttachedContextSelectors.selectById(state.chatbot.attachedContexts, id),
+    newContextTab: (state: RootState) => state.chatbot.newContextTab,
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
     isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
     isRunQueryFromChatbot: (state: RootState) => state.chatbot.isRunQueryFromChatbot,
