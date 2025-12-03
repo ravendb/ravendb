@@ -61,9 +61,10 @@ public partial class IndexSearcher
             // and then filter the documents stored in the posting list of each node individually.
             // Ideally, each node represents only a single document.
             Page p = default;
-            foreach (var docId in filterResults.Iterate(0))
+            var it = filterResults.GetIterator(0);
+            while (it.MoveNext())
             {
-                var entryTermsReader = indexSearcher.GetEntryTermsReader(docId, ref p);
+                var entryTermsReader = indexSearcher.GetEntryTermsReader(it.Current, ref p);
                 while (entryTermsReader.FindNextStored(vectorRootPage))
                 {
                     var vectorHash = entryTermsReader.StoredField.Value;

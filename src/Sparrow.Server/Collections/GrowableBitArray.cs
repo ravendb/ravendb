@@ -1,8 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Sparrow.Binary;
 
 namespace Sparrow.Server.Collections;
 
@@ -36,15 +36,61 @@ public unsafe struct GrowableBitArray : IDisposable
         }
     }
 
-    public IEnumerable<long> Iterate(long from)
+    public Iterator GetIterator(long from) => new Iterator(this, from);
+    
+    public ref struct Iterator : IEnumerator<long>
     {
-        for (int bitArrayIdx = (int)(from / MaxCapacityPerBitmapInBits); bitArrayIdx < _bitArrays.Length; bitArrayIdx++)
+        private readonly GrowableBitArray _bitArray;
+        private readonly long _from;
+        private int _currentBitArrayIdx;
+        private long _currentShift;
+        private BitArray.Iterator _iterator;
+        
+        public Iterator(GrowableBitArray bitArray, long from)
         {
-            var shift = bitArrayIdx * MaxCapacityPerBitmapInBits;
-            foreach (var result in _bitArrays[bitArrayIdx].Iterate((int)(from % MaxCapacityPerBitmapInBits)))
+            _bitArray = bitArray;
+            _from = from;
+            Reset();
+        }
+
+        public bool MoveNext()
+        {
+            while (_currentBitArrayIdx < _bitArray._bitArrays.Length)
             {
-                yield return result + shift;
+                if (_iterator.MoveNext())
+                {
+                    return true;
+                }
+
+                _currentShift += MaxCapacityPerBitmapInBits;
+                _currentBitArrayIdx++;
+                
+                if (_currentBitArrayIdx < _bitArray._bitArrays.Length)
+                    _iterator = new(_bitArray._bitArrays[_currentBitArrayIdx], 0);
             }
+            
+            return false;
+        }
+
+        public void Reset()
+        {
+            _currentBitArrayIdx = (int)(_from / MaxCapacityPerBitmapInBits);
+            _currentShift = _currentBitArrayIdx * MaxCapacityPerBitmapInBits;
+            
+            if (_currentBitArrayIdx <= _bitArray._bitArrays.Length)
+                _iterator = new (_bitArray._bitArrays[_currentBitArrayIdx], (int)(_from % MaxCapacityPerBitmapInBits));
+        }
+
+        public long Current => _currentShift + _iterator.Current;
+
+        object IEnumerator.Current
+        {
+            get => Current;
+        }
+        
+        public void Dispose()
+        {
+            //nothing to dispose
         }
     }
 
@@ -124,6 +170,69 @@ public unsafe struct GrowableBitArray : IDisposable
         }
 
         //adjusted from src/Raven.Server/Documents/Queries/LuceneIntegration/FastBitArray.cs:7
+        public ref struct Iterator : IEnumerator<long>
+        {
+            private int _it;
+            private ulong _bitmap = 0;
+            private int _count = 0;
+            private readonly BitArray _array;
+            private readonly int _from;
+
+            public Iterator(BitArray array, int from)
+            {
+                _from = from;
+                _array = array;
+                Reset();
+            }
+            
+            public bool MoveNext()
+            {
+                if (_it >= _array._length)
+                    return false;
+                
+                while (true)
+                {
+                    if (_bitmap != 0)
+                    {
+                        ulong t = _bitmap & (ulong)-(long)_bitmap;
+                        _count = BitOperations.TrailingZeroCount(_bitmap);
+                        _bitmap ^= t;
+                        return true;
+                    }
+
+                    _it++;
+                    if (_it >= _array._length)
+                        break;
+                    
+                    _bitmap = *(_array._bits + _it);
+                }
+
+                return false;
+            }
+
+            public void Reset()
+            {
+                _it = _from / 64;
+                _bitmap = 0;
+                _count = 0;
+                
+                _bitmap = *(_array._bits + _it);
+                _bitmap &= ulong.MaxValue << (_from % 64);
+            }
+
+            public long Current => _it * 64 + _count;
+
+            object IEnumerator.Current
+            {
+                get => Current;
+            }
+
+            public void Dispose()
+            {
+                // nothing to dispose
+            }
+        }
+        
         public unsafe IEnumerable<int> Iterate(int from)
         {
             // https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/
