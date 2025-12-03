@@ -13,7 +13,6 @@ import { services } from "components/hooks/useServices";
 import { RootState } from "components/store";
 import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
 import moment from "moment";
-import router from "plugins/router";
 
 type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
 type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
@@ -269,13 +268,10 @@ const runChat = createAsyncThunk(
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
-        const viewTitle = router.activeInstruction().config.title;
-
         const result = await processStreamingResponse<RunChatbotAiAssistantResultDto>({
             promiseFn: () =>
                 services.aiAssistantService.runChatbot({
                     Message: payload.message,
-                    View: viewTitle,
                     ConversationId: chatbot.conversationId,
                     ActionsResponses: payload.actionResponses,
                     AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),

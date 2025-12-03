@@ -4,7 +4,6 @@ import buildInfo = require("models/resources/buildInfo");
 
 interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
-    View: string;
     Message: string;
     RavenVersion: string;
     ConversationId?: string;
