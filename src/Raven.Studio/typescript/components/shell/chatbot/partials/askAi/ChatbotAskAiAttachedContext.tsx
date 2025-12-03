@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import genUtils from "common/generalUtils";
 import ChatbotAskAiAttachedContextNewItem from "components/shell/chatbot/partials/askAi/ChatbotAskAiAttachedContextNewItem";
+import Button from "react-bootstrap/Button";
 
 interface ChatbotAskAiAttachedContextProps {
     attachedContexts: ChatbotAttachedContext[];
@@ -83,14 +84,6 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     };
 
     const getIconName = (): IconName => {
-        if (canClick && item.state === "included" && isHovering) {
-            return "cancel";
-        }
-
-        if (item.state === "excluded") {
-            return "plus";
-        }
-
         switch (item.type) {
             case "View":
                 return "studio-configuration";
@@ -119,7 +112,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             <div
                 className={classNames(
                     "hstack rounded-2 border border-secondary text-truncate",
-                    { "opacity-50": item.state === "excluded" },
+                    { "opacity-50 ": item.state === "excluded" },
                     { "cursor-pointer hover-filter": canClick }
                 )}
                 onMouseEnter={() => setIsHovering(true)}
@@ -131,8 +124,24 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
                 onClick={handleClick}
             >
                 <Icon icon={getIconName()} color={getIconColor()} />
-                <span className="text-truncate">{item.label}</span>
+                <span
+                    className={classNames("text-truncate", {
+                        "text-decoration-line-through ": item.state === "excluded",
+                    })}
+                >
+                    {item.label}
+                </span>
                 {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
+                {canClick && (
+                    <Button
+                        variant="link"
+                        className="text-muted p-0"
+                        onClick={() => dispatch(chatbotActions.attachedContextRemoved(item.id))}
+                        size="xs"
+                    >
+                        <Icon icon="cancel" margin="ms-1" size="xs" />
+                    </Button>
+                )}
             </div>
         </PopoverWithHoverWrapper>
     );

@@ -172,6 +172,9 @@ export const chatbotSlice = createSlice({
                 changes: { state: "included" },
             });
         },
+        attachedContextRemoved: (state, action: PayloadAction<ChatbotAttachedContextId>) => {
+            chatbotAttachedContextAdapter.removeOne(state.attachedContexts, action.payload);
+        },
         attachedContextExcludableRemoved: (state) => {
             const notExcludableTypes: ChatbotAttachedContext["type"][] = ["View"];
 
