@@ -23,12 +23,12 @@ public partial class Hnsw
         private int _currentNode, _currentMatchesIndex;
         private ContextBoundNativeList<long> _postingListResults;
         private FastPForDecoder _pforDecoder;
-        private ByteString _vector;
         private PostingList.Iterator _postingListIterator;
         private PostingList _postingList;
         private readonly float _maximumDistance;
         private bool _foundCandidateInCurrentSmallPostingList;
         private readonly IHnswSearcher _vectorsSearcher;
+        private readonly Memory<byte> _vector;
         private IEnumerator<bool> _resultsEnumerator;
 
         public SimilarityMethod SimilarityMethod => _searchState.Options.SimilarityMethod;
@@ -43,10 +43,9 @@ public partial class Hnsw
         {
             _searchState = searchState;
             _vectorsSearcher = vectorsSearcher;
+            _vector = vector;
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
-            searchState.Llt.Allocator.AllocateDirect(vector.Length, out _vector);
-            vector.Span.CopyTo(_vector.ToSpan());
             _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
             _resultsEnumerator = _vectorsSearcher.Search().GetEnumerator();
             _resultsEnumerator.MoveNext(); //read first batch
@@ -105,7 +104,7 @@ public partial class Hnsw
                 var nodeIdx = indexes[_currentNode];
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
-                distance = _searchState.Distance(_vector.ToSpan(), -1, nodeIdx);
+                distance = _searchState.QueryDistance(_vector.Span, nodeIdx);
 
                 if (distance > _maximumDistance)
                 {
@@ -245,7 +244,7 @@ public partial class Hnsw
                 var nodeIdx = indexes[_currentNode];
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
-                distance = _searchState.Distance(_vector.ToSpan(), -1, nodeIdx);
+                distance = _searchState.QueryDistance(_vector.Span, nodeIdx);
 
                 if (distance > _maximumDistance)
                 {
@@ -292,7 +291,6 @@ public partial class Hnsw
         {
             _postingListResults.Dispose();
             _pforDecoder.Dispose();
-            _searchState.Llt.Allocator.Release(ref _vector);
             _resultsEnumerator?.Dispose();
             _vectorsSearcher?.Dispose();
         }

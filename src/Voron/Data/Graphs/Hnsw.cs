@@ -328,7 +328,7 @@ public unsafe partial class Hnsw
         }
 
         //Allows storing cached distance to the queried vector. Should be used only in querying part!
-        private float QueryDistance(ReadOnlySpan<byte> vector, int toIdx)
+        public float QueryDistance(ReadOnlySpan<byte> vector, int toIdx)
         {
             ref var to = ref GetNodeByIndex(toIdx);
             if (to.QueryDistance is not null)
