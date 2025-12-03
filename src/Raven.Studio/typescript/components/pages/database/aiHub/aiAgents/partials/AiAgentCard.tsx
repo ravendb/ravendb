@@ -33,18 +33,9 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
         onSuccess: reloadAiAgents,
     });
 
-    const asyncDisableAiAgent = useAsyncCallback(
-        () => aiAgentService.saveAiAgent(databaseName, { ...config, Disabled: true }),
-        {
-            onSuccess: reloadAiAgents,
-        }
-    );
-
-    const asyncEnableAiAgent = useAsyncCallback(
-        () => aiAgentService.saveAiAgent(databaseName, { ...config, Disabled: false }),
-        {
-            onSuccess: reloadAiAgents,
-        }
+    const asyncToggleAiAgent = useAsyncCallback(
+        (isDisabled: boolean) => aiAgentService.saveAiAgent(databaseName, { ...config, Disabled: isDisabled }),
+        { onSuccess: reloadAiAgents }
     );
 
     const handleDelete = async () => {
@@ -122,31 +113,17 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
                             <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
                                 <Icon icon="copy" /> Clone
                             </Dropdown.Item>
-                            {config.Disabled ? (
-                                <Dropdown.Item
-                                    onClick={asyncEnableAiAgent.execute}
-                                    disabled={asyncEnableAiAgent.loading}
-                                >
-                                    {asyncEnableAiAgent.loading ? (
-                                        <Spinner size="sm" className="me-1" />
-                                    ) : (
-                                        <Icon icon="play" />
-                                    )}
-                                    Enable
-                                </Dropdown.Item>
-                            ) : (
-                                <Dropdown.Item
-                                    onClick={asyncDisableAiAgent.execute}
-                                    disabled={asyncDisableAiAgent.loading}
-                                >
-                                    {asyncDisableAiAgent.loading ? (
-                                        <Spinner size="sm" className="me-1" />
-                                    ) : (
-                                        <Icon icon="stop" />
-                                    )}
-                                    Disable
-                                </Dropdown.Item>
-                            )}
+                            <Dropdown.Item
+                                onClick={() => asyncToggleAiAgent.execute(!config.Disabled)}
+                                disabled={asyncToggleAiAgent.loading}
+                            >
+                                {asyncToggleAiAgent.loading ? (
+                                    <Spinner size="sm" className="me-1" />
+                                ) : (
+                                    <Icon icon={config.Disabled ? "play" : "stop"} />
+                                )}
+                                {config.Disabled ? "Enable" : "Disable"}
+                            </Dropdown.Item>{" "}
                             <Dropdown.Item
                                 className="text-danger"
                                 onClick={handleDelete}
