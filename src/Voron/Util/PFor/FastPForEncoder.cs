@@ -29,7 +29,6 @@ public sealed unsafe class FastPForEncoder  : IDisposable
     private int _metadataPos;
     private ByteStringContext<ByteStringMemoryCache>.InternalScope _entriesOutputScope;
 
-
     public FastPForEncoder(ByteStringContext allocator)
     {
         _allocator = allocator;
