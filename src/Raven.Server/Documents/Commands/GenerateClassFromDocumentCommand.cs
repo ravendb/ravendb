@@ -27,7 +27,17 @@ public sealed class GenerateClassFromDocumentCommand : RavenCommand<string>
     public override bool IsReadRequest => true;
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/{node.Database}/docs/class?id={Uri.EscapeDataString(_id)}&collection={Uri.EscapeDataString(_collection)}&lang={Uri.EscapeDataString(_lang)}";
+        url = $"{node.Url}/databases/{node.Database}/docs/class?lang={Uri.EscapeDataString(_lang)}";
+
+        if (string.IsNullOrEmpty(_collection) == false)
+        {
+            url += $"&collection={Uri.EscapeDataString(_collection)}";
+        }
+
+        if (string.IsNullOrEmpty(_id) == false)
+        {
+            url += $"&id={Uri.EscapeDataString(_id)}";
+        }
 
         return new HttpRequestMessage
         {
