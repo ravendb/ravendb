@@ -405,6 +405,8 @@ public static partial class CoraxQueryBuilder
                         switch (@where.Left, @where.Right)
                         {
                             case (NegatedExpression ne1, NegatedExpression ne2):
+                                throw new Exception($"NegatedExpression, NegatedExpression");
+                                
                                 left = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
                                 right = ToCoraxQuery(builderParameters, ne2.Expression, ref builderParameters.StreamingDisabled, exact);
 
@@ -413,6 +415,7 @@ public static partial class CoraxQueryBuilder
                                 return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right), token: builderParameters.Token);
 
                             case (NegatedExpression ne1, _):
+                                throw new Exception($"NegatedExpression, _");
                                 left = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
                                 if (TryUseNegatedQuery(builderParameters, ne1, out right, exact) == false)
                                 {
