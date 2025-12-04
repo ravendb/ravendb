@@ -183,6 +183,15 @@ export const chatbotSlice = createSlice({
                     .map((x) => x.id)
             );
         },
+        attachedContextTypesRemoved: (state, action: PayloadAction<ChatbotAttachedContext["type"][]>) => {
+            chatbotAttachedContextAdapter.removeMany(
+                state.attachedContexts,
+                chatbotAttachedContextSelectors
+                    .selectAll(state.attachedContexts)
+                    .filter((x) => action.payload.includes(x.type))
+                    .map((x) => x.id)
+            );
+        },
         isNewContextOpenToggled: (state) => {
             const newState = !state.isNewContextOpen;
             state.isNewContextOpen = newState;
@@ -291,6 +300,7 @@ const runChat = createAsyncThunk(
 
         dispatch(aiAssistantActions.usagePercentageSet(result.data.UsagePercentage));
         dispatch(chatbotActions.conversationIdSet(result.data.ConversationId));
+        dispatch(chatbotActions.attachedContextTypesRemoved(["QueryResult", "QueryError"]));
 
         const data = result.data;
 
