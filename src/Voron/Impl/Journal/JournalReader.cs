@@ -245,17 +245,47 @@ namespace Voron.Impl.Journal
 
             if ((current->Flags & TransactionPersistenceModeFlags.HasFreePages) == TransactionPersistenceModeFlags.HasFreePages)
             {
-                using var reader = new FastPForBufferedReader(_allocator);
+                var freePages = ReadEncodedFreePage(outputPage + totalRead, _allocator);
 
-                var encodedFreePagesSize = current->UncompressedSize - totalRead;
-                
-                reader.Init(outputPage + totalRead, (int)encodedFreePagesSize);
+                foreach (var freedPage in freePages)
+                {
+                    _modifiedPages.Remove(freedPage);
+                }
+            }
+            
+            LastTransactionHeader = current;
 
-                var readBatchSize = 256;
+            return true;
+        }
+
+        internal static List<long> ReadEncodedFreePage(byte* src, ByteStringContext allocator)
+        {
+            var readPtr = src;
+
+            var headerPtr = readPtr;
+
+            var header = *(FreePagesHeader*)headerPtr;
+            var sectionHeaders = (EncodedFreePagesSection*)(headerPtr + sizeof(FreePagesHeader) + header.EncodedSectionsSize);
+
+            readPtr += sizeof(FreePagesHeader);
+            
+            var result = new List<long>(header.NumberOfPages);
+            
+            var readBatchSize = 256;
+            
+            using var _ = allocator.Allocate(readBatchSize * sizeof(long), out var buffer);
                 
-                using var _ = _allocator.Allocate(readBatchSize * sizeof(long), out var buffer);
+            long* freePages = (long*)buffer.Ptr;
+
+            var totalCount = 0;
+            
+            for (int i = 0; i < header.EncodedSectionsCount; i++)
+            {
+                var sectionSize = sectionHeaders[i].Size;
                 
-                long* freePages = (long*)buffer.Ptr;
+                using var reader = new FastPForBufferedReader(allocator);
+
+                reader.Init(readPtr, sectionSize);
                 
                 while (true)
                 {
@@ -264,19 +294,23 @@ namespace Voron.Impl.Journal
                     if (readCount == 0)
                         break;
 
-                    for (int i = 0; i < readCount; i++)
+                    totalCount += readCount;
+                    
+                    for (int j = 0; j < readCount; j++)
                     {
-                        var freedPage = freePages[i];
-                        _modifiedPages.Remove(freedPage);
+                        var freedPage = freePages[j];
+                    
+                        result.Add(freedPage);
                     }
                 }
                 
-                totalRead += encodedFreePagesSize;
+                readPtr += sectionSize;
             }
             
-            LastTransactionHeader = current;
+            if (header.NumberOfPages != totalCount)
+                throw new InvalidDataException($"Expected {header.NumberOfPages} free pages but read {totalCount}");
 
-            return true;
+            return result;
         }
 
         private static void WritePageToFile(SafeFileHandle fileHandle, byte* currentBuffer, long pageSize, long pageNumber)

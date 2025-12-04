@@ -25,6 +25,7 @@ using Sparrow.Server.LowMemory;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
@@ -2060,13 +2061,10 @@ namespace Voron.Impl.Journal
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var overheadInPages = checked((int)(overhead / Constants.Storage.PageSize + (overhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
-            int encodedFreePagesSize = 0;
-            int freedPagesOverheadInPages = 0;
+            const int transactionHeaderPageOverhead = 1;
+            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
             
             var freedPages = tx.GetFreedPages();
-            int numberOfFreedPages = 0;
-            
-            using var freePagesEncoder = new FastPForEncoder(tx.Allocator);
             
             if (freedPages is { Count: > 0 })
             {
@@ -2077,25 +2075,16 @@ namespace Voron.Impl.Journal
                     {
                         freedPages.Remove(page.PageNumberInDataFile + i);
                     }
-                }
-
+                } 
+                
                 if (freedPages.Count > 0)
                 {
-                    var sortedFreePages = freedPages.ToArray();
-                    sortedFreePages.Sort();
-
-                    numberOfFreedPages = sortedFreePages.Length;
+                    var freePagesOverhead = freedPages.Count * sizeof(long) * 2; // twice as much as the number of pages guarantees enough space for the encoding
+                    var freePagesOverheadInPages = checked(freePagesOverhead / Constants.Storage.PageSize + (freePagesOverhead % Constants.Storage.PageSize == 0 ? 0 : 1));
                     
-                    fixed (long* p = sortedFreePages)
-                    {
-                        encodedFreePagesSize = freePagesEncoder.Encode(p, numberOfFreedPages);
-                        freedPagesOverheadInPages = checked(encodedFreePagesSize / Constants.Storage.PageSize + (encodedFreePagesSize % Constants.Storage.PageSize == 0 ? 0 : 1));
-                    }
+                    pagesRequired += freePagesOverheadInPages;
                 }
             }
-            
-            const int transactionHeaderPageOverhead = 1;
-            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages + freedPagesOverheadInPages);
             
             if (_is32Bit)
             {
@@ -2187,13 +2176,10 @@ namespace Voron.Impl.Journal
                 ++pageSequentialNumber;
             }
 
-            if (numberOfFreedPages > 0)
+            if (freedPages is { Count: > 0 })
             {
-                var (count, sizeUsed) = freePagesEncoder.Write(write, encodedFreePagesSize);
-
-                Debug.Assert(count == numberOfFreedPages, $"count == numberOfFreedPages, expected {numberOfFreedPages}, actual {count}");
-                
-                write += sizeUsed;
+                var encodedFreePagesSize = EncodeFreePages(freedPages, write, tx.Allocator);
+                write += encodedFreePagesSize;
             }
 
             var totalSizeWritten = write - txPageInfoPtr;
@@ -2287,7 +2273,7 @@ namespace Voron.Impl.Journal
             txHeader.PageCount = numberOfPages;
             txHeader.JournalId = _headerAccessor.JournalId;
             
-            if (numberOfFreedPages > 0)
+            if (freedPages is { Count: > 0 })
                 txHeader.Flags |= TransactionPersistenceModeFlags.HasFreePages;
             
             if (_env.Options.Encryption.IsEnabled == false)
@@ -2513,5 +2499,66 @@ namespace Voron.Impl.Journal
         }
 
         private void RejectCommitsToMerge() => SharedJournalState.SetCancel();
+        
+        internal static long EncodeFreePages(HashSet<long> freedPages, byte* dst, ByteStringContext allocator)
+        {
+            var pages = freedPages.ToArray();
+
+            var headerPtr = dst;
+            var header = (FreePagesHeader*)headerPtr;
+            var output = dst + sizeof(FreePagesHeader);
+            
+            fixed (long* p = pages)
+            {
+                Sort.Run(p, pages.Length);
+
+                const int maxEncodingSectionSize = 32 * Constants.Size.Kilobyte;
+
+                using var encoder = new FastPForEncoder(allocator);
+                
+                var remainingCount = pages.Length;
+                var processedCount = 0;
+                
+                var encodedSize = 0;
+
+                var sectionSizes = new List<EncodedFreePagesSection>(1);
+                
+                while (remainingCount > 0)
+                {
+                    encoder.Encode(p + processedCount, remainingCount);
+
+                    var (count, size) = encoder.Write(output, maxEncodingSectionSize);
+                    
+                    remainingCount -= count;
+                    processedCount += count;
+
+                    encodedSize += size;
+
+                    sectionSizes.Add(new EncodedFreePagesSection { Size = size });
+                    
+                    output += size;
+                }
+                
+                if (processedCount != freedPages.Count)
+                {
+                    throw new InvalidOperationException($"Expected to encode and write {freedPages.Count} freed pages, but wrote {processedCount} instead");
+                }
+                
+                header->NumberOfPages = processedCount;
+                header->EncodedSectionsSize = encodedSize;
+                header->EncodedSectionsCount = sectionSizes.Count;
+                
+                EncodedFreePagesSection* sectionHeaderPtr = (EncodedFreePagesSection*)output;
+
+                for (int i = 0; i < sectionSizes.Count; i++)
+                {
+                    sectionHeaderPtr[i] = sectionSizes[i];
+                    
+                    output += sizeof(EncodedFreePagesSection);
+                }
+            }
+
+            return output - dst;
+        }
     }
 }

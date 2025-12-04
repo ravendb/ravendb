@@ -1,12 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using FastTests.Voron;
 using Sparrow;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
+using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -581,5 +585,36 @@ public class RavenDB_24327 : StorageTest
         var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck);
         
         Assert.False(header.Flags.HasFlag(TransactionPersistenceModeFlags.HasFreePages));
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(7116089348, 600_000)]
+    [InlineData(11797517316, 600_000)]
+    public unsafe void CanSplitLargeNumberOfFreedPagesIntoMultipleEncodingSections(long startPage, int numberOfPages)
+    {
+        using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        var freePages = new HashSet<long>(numberOfPages);
+
+        for (int i = 0; i < numberOfPages; i++)
+        {
+            freePages.Add(startPage + i);
+        }
+
+        using var _ = allocator.Allocate(freePages.Count * sizeof(long) * 2, out var bufferAllocation);
+
+        var buffer = bufferAllocation.Ptr;
+
+        var written = WriteAheadJournal.EncodeFreePages(freePages, buffer, allocator);
+
+        Assert.True(written > ushort.MaxValue);
+
+        var readPages = JournalReader.ReadEncodedFreePage(buffer, allocator);
+
+        Assert.Equal(numberOfPages, readPages.Count);
+
+        for (int i = 0; i < numberOfPages; i++)
+        {
+            Assert.Contains(readPages[i], freePages);
+        }
     }
 }
