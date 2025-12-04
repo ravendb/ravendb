@@ -161,8 +161,6 @@ public partial class Hnsw
                     {
                         break;
                     }
-
-                    Console.WriteLine($"CP: {_vectorsSearcher.CandidatesProcessed}");
                     
                     if (_resultsEnumerator.MoveNext() == false)
                     {
@@ -295,6 +293,7 @@ public partial class Hnsw
             _pforDecoder.Dispose();
             _resultsEnumerator?.Dispose();
             _vectorsSearcher?.Dispose();
+            _searchState.Dispose();
         }
     }
 }

@@ -89,7 +89,7 @@ public unsafe partial class Hnsw
         return vectorsContainerId;
     }
 
-    public partial class SearchState
+    public partial class SearchState : IDisposable
     {
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
@@ -550,6 +550,16 @@ public unsafe partial class Hnsw
        public bool TryGetNodeById(long nodeId, out int nodeIndex)
        {
            return _nodeIdToIdx.TryGetValue(nodeId, out nodeIndex);
+       }
+
+       public void Dispose()
+       {
+           _candidatesQ.Clear();
+           _nearestEdgesQ.Clear();
+           _newNodes.Dispose(Llt.Allocator);
+           
+           _nodes.Dispose(Llt.Allocator);
+           
        }
     }
 

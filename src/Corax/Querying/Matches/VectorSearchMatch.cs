@@ -57,7 +57,7 @@ public struct VectorSearchMatch : IQueryMatch
     private bool _filterQueryLoaded;
     private long _filterMatchesCount;
 
-    private bool _canStreamResults => IsBoosting == false;
+    private bool CanStreamResults => IsBoosting == false && _singleVectorSearchDoNotSort;
 
     public VectorSearchMatch(IndexSearcher searcher, 
         in FieldMetadata metadata, 
@@ -84,9 +84,8 @@ public struct VectorSearchMatch : IQueryMatch
     }
 
     /// <summary>
-    /// Initialization of vector search is lazy to avoid expensive computation/IO during QueryBuilding phase.
+    /// Initialization of vector search is lazy to avoid expensive computation/IO during the QueryBuilding phase.
     /// </summary>
-    /// <param name="tmpBuffer">Used to fetch data from a filter match. This way we can spare on allocations, since the actual data will be stored in bitmap.</param>
     private void InitializeVectorSearch()
     {
         Debug.Assert(_vectorRetrieverInitialized == false, "Vector Retriever should be initialized only once.");
@@ -130,7 +129,7 @@ public struct VectorSearchMatch : IQueryMatch
         if (_isEmpty)
             return 0;
         
-        if (_canStreamResults) // case when we do not care about scores.
+        if (CanStreamResults) // case when we do not care about scores.
             return FillDiscardSimilarity(matches);
 
         if (_resultsPersisted == false)
@@ -178,6 +177,7 @@ public struct VectorSearchMatch : IQueryMatch
         
         if (read == 0)
         {
+            _returnedAllResults = true;
             _distances.Dispose();
             _distances = default;
             Dispose();

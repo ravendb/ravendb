@@ -50,10 +50,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     private GrowableBitArray _filterResults;
     private IQueryMatch _filterQuery;
-    private bool _filterQueryLoaded;
     private long _filterMatchesCount;
-
-    private bool _canStreamResults => IsBoosting == false;
 
 
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
@@ -71,7 +68,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
     }
 
-
     private void InitializeVectorSearch()
     {
         Debug.Assert(_vectorRetrieverInitialized == false, "Vector Retriever should be initialized only once.");
@@ -79,7 +75,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
         if (_filterQuery != null)
         {
-            _filterQueryLoaded = true;
             _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery);
             _filterMatchesCount = _filterResults.Count;
         }
