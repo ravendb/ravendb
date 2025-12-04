@@ -108,7 +108,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
                 onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
             >
                 <Icon icon={getIconName()} color={getIconColor()} />
-                <span>{item.label}</span>
+                <span className="text-truncate">{item.label}</span>
                 {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
                 {canRemove && (
                     <Button
