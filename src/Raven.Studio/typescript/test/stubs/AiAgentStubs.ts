@@ -59,6 +59,7 @@ export class AiAgentStubs {
                     ],
                     ChatTrimming: null,
                     MaxModelIterationsPerCall: null,
+                    Disabled: false,
                 },
             ],
         };

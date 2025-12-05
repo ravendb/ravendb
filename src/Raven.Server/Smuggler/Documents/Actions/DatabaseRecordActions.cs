@@ -649,6 +649,7 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
             foreach (var config in databaseRecord.AiAgents)
             {
+                config.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(_name, config, RaftIdGenerator.DontCareId)));
             }
 

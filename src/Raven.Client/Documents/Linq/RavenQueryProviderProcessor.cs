@@ -1257,19 +1257,46 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
+        private void VisitContainsAny(MethodCallExpression expression)
+        {
+            var sourceExpression = StripSpanLikeConversion(expression.Arguments[0]);
+            var valuesExpression = StripSpanLikeConversion(expression.Arguments[1]);
+
+            var memberInfo = GetMember(sourceExpression);
+            var objects = GetValueFromExpression(valuesExpression, GetMemberType(memberInfo));
+            DocumentQuery.ContainsAny(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
+        }
+
         private void VisitContains(MethodCallExpression expression)
         {
-            var memberInfo = GetMember(expression.Arguments[0]);
-            var containsArgument = expression.Arguments[1];
+            var sourceExpression = StripSpanLikeConversion(expression.Arguments[0]);
+            var valueExpression  = StripSpanLikeConversion(expression.Arguments[1]);
 
+            var memberInfo = GetMember(sourceExpression);
             DocumentQuery.WhereEquals(new WhereParams
             {
                 FieldName = memberInfo.Path,
-                Value = GetValueFromExpression(containsArgument, containsArgument.Type),
+                Value = GetValueFromExpression(valueExpression, valueExpression.Type),
                 AllowWildcards = false,
                 Exact = _insideExact
             });
+        }
 
+        private static Expression StripSpanLikeConversion(Expression expression)
+        {
+            while (expression is UnaryExpression { NodeType: ExpressionType.Convert or ExpressionType.ConvertChecked } unary && IsSpanLike(unary.Type))
+                expression = unary.Operand; // We only need the underlying array / enumerable for query translation.
+
+            return expression;
+        }
+
+        private static bool IsSpanLike(Type type)
+        {
+            if (type.IsGenericType == false)
+                return false;
+
+            var genericType = type.GetGenericTypeDefinition();
+            return genericType == typeof(Span<>) || genericType == typeof(ReadOnlySpan<>);
         }
 
         private void VisitMemberAccess(MemberExpression memberExpression, bool boolValue)
@@ -1443,9 +1470,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             switch (expression.Method.Name)
             {
                 case nameof(RavenQueryableExtensions.ContainsAny):
-                    var memberInfo = GetMember(expression.Arguments[0]);
-                    var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
-                    DocumentQuery.ContainsAny(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
+                    VisitContainsAny(expression);
                     break;
                 case nameof(MemoryExtensions.Contains):
                     VisitContains(expression);

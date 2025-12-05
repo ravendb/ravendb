@@ -1,4 +1,7 @@
+import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { EditGenAiTaskFormData } from "./editGenAiTaskValidation";
+
+const DEFAULT_TRACING_EXPIRATION_IN_SECONDS = TimeInSeconds.Day * 14;
 
 const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.GenAi): EditGenAiTaskFormData => {
     if (!dto) {
@@ -20,6 +23,10 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
             prompt: "",
             jsonSchema: "",
             sampleObject: "",
+            queries: [],
+            isEnableTracing: false,
+            isSetTracingExpiration: false,
+            tracingExpirationInSeconds: DEFAULT_TRACING_EXPIRATION_IN_SECONDS,
             updateScript: "",
             isResetScript: false,
             scriptToReset: null,
@@ -50,6 +57,23 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
         prompt: dto.Configuration.Prompt ?? "",
         jsonSchema: dto.Configuration.JsonSchema ?? "",
         sampleObject: dto.Configuration.SampleObject ?? "",
+        queries:
+            dto.Configuration.Queries?.map((x) => ({
+                name: x.Name,
+                description: x.Description,
+                isAllowModelQueries: x.Options?.AllowModelQueries ?? null,
+                isAllowModelQueriesOverride: x.Options?.AllowModelQueries != null,
+                isAddToInitialContext: x.Options?.AddToInitialContext ?? null,
+                isAddToInitialContextOverride: x.Options?.AddToInitialContext != null,
+                query: x.Query,
+                parametersSchema: x.ParametersSchema ?? "",
+                parametersSampleObject: x.ParametersSampleObject ?? "",
+                canRegenerateSchema: false,
+                isEditing: false,
+            })) ?? [],
+        isEnableTracing: dto.Configuration.EnableTracing,
+        isSetTracingExpiration: dto.Configuration.ExpirationInSec != null,
+        tracingExpirationInSeconds: dto.Configuration.ExpirationInSec ?? DEFAULT_TRACING_EXPIRATION_IN_SECONDS,
         updateScript: dto.Configuration.UpdateScript ?? "",
         isResetScript: true,
         scriptToReset: dto.Configuration.Transforms?.[0].Name ?? null,
@@ -82,14 +106,24 @@ const mapToDto = (
         Prompt: data.prompt,
         JsonSchema: data.jsonSchema,
         SampleObject: data.sampleObject,
+        Queries:
+            data.queries?.map((x) => ({
+                Name: x.name,
+                Description: x.description,
+                Query: x.query,
+                ParametersSampleObject: x.parametersSampleObject || null,
+                ParametersSchema: x.parametersSchema || null,
+                Options: {
+                    AddToInitialContext: x.isAddToInitialContextOverride ? x.isAddToInitialContext : null,
+                    AllowModelQueries: x.isAllowModelQueriesOverride ? x.isAllowModelQueries : null,
+                },
+            })) ?? [],
+        EnableTracing: data.isEnableTracing,
+        ExpirationInSec: data.isEnableTracing && data.isSetTracingExpiration ? data.tracingExpirationInSeconds : null,
         UpdateScript: data.updateScript,
         GenAiTransformation: {
             Script: data.script,
         },
-        //temporary until UI supports queries
-        Queries: null,
-        EnableTracing: false,
-        ExpirationInSec: null,
     };
 };
 

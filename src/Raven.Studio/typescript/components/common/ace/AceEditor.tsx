@@ -12,6 +12,7 @@ import AceEditorLoadFileAction from "./actions/AceEditorLoadFileAction";
 import AceEditorDeleteAction from "./actions/AceEditorDeleteAction";
 import AceEditorHelpAction from "./actions/AceEditorHelpAction";
 import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesAction";
+import { aceEditorConstants } from "./aceEditorConstants";
 
 interface ActionItem {
     component: ReactNode;
@@ -128,7 +129,7 @@ function AceEditor(props: AceEditorProps) {
                         theme="raven"
                         editorProps={{ $blockScrolling: Infinity }}
                         fontSize={14}
-                        style={{ lineHeight: "26px" }}
+                        style={{ lineHeight: `${aceEditorConstants.lineHeightInPx}px` }}
                         showPrintMargin={true}
                         showGutter={true}
                         highlightActiveLine={true}

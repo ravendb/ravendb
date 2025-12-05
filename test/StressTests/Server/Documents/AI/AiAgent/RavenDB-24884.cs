@@ -28,7 +28,7 @@ public class RavenDB_24884 : RavenTestBase
 
     private static readonly string BananaPngBase64 = GetFileAsBase64("banana.png");
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Etl)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Takes too long")]
     public async Task TextFileWithTooManyTokens(Options options, GenAiConfiguration config)
     {
@@ -139,7 +139,7 @@ ai.genContext({
     }
 
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Etl)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Takes too long")]
     public async Task ImgOver32MbRequest(Options options, GenAiConfiguration config)
     {
@@ -276,7 +276,7 @@ else{
         return ms; // Stream contains a valid BMP file (not Base64)
     }
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Etl)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Takes too long")]
     public async Task Over1500ImagesRequest(Options options, GenAiConfiguration config)
     {

@@ -66,6 +66,11 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                         <Icon icon="ai-agents" /> {title}
                     </h2>
                     {document.data?.TotalUsage && <TotalUsageBadge usage={document.data.TotalUsage} />}
+                    {config.data?.Disabled && (
+                        <Badge bg="warning" pill>
+                            Disabled
+                        </Badge>
+                    )}
                 </div>
                 <ChatAiAgentInfoHub />
             </div>

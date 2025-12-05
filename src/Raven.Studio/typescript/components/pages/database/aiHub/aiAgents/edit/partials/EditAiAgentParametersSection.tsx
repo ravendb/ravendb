@@ -1,5 +1,5 @@
 import { EmptySet } from "components/common/EmptySet";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormErrorIcon } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useFieldArray } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
@@ -7,9 +7,8 @@ import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import OptionalLabel from "components/common/OptionalLabel";
 import useBoolean from "components/hooks/useBoolean";
-import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
-import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
 import Collapse from "react-bootstrap/Collapse";
+import CollapseButton from "components/common/CollapseButton";
 
 export default function EditAiAgentParametersSection() {
     const { control } = useFormContext<EditAiAgentFormData>();
@@ -42,8 +41,8 @@ export default function EditAiAgentParametersSection() {
                         <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </h3>
-                <EditAiAgentErrorIcon fieldNames={["parameters"]} openPanel={setIsPanelOpen} />
-                <EditAiAgentCollapseButton isPanelOpen={isPanelOpen} toggleIsPanelOpen={toggleIsPanelOpen} />
+                <FormErrorIcon control={control} paths={["parameters"]} onError={() => setIsPanelOpen(true)} />
+                <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
             </div>
             <div className="mb-1">
                 Define query parameters that the agent will replace with fixed values before executing a query tool

@@ -19,7 +19,6 @@ import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
 import Button from "react-bootstrap/Button";
-import SizeGetter from "components/common/SizeGetter";
 import DatabasesList from "./partials/DatabasesList";
 
 interface DatabasesPageProps {
@@ -107,8 +106,8 @@ export function DatabasesPage({ queryParams }: ReactQueryParamsProps<DatabasesPa
     const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
 
     return (
-        <div className="h-100 vstack">
-            <div className="d-flex flex-wrap gap-3 align-items-end px-4 pt-4">
+        <div className="h-100 vstack py-4">
+            <div className="d-flex flex-wrap gap-3 align-items-end px-4">
                 {isOperatorOrAbove && (
                     <>
                         <Button
@@ -144,23 +143,17 @@ export function DatabasesPage({ queryParams }: ReactQueryParamsProps<DatabasesPa
                 selectedDatabases={selectedDatabases}
                 setSelectedDatabaseNames={setSelectedDatabaseNames}
             />
-            {databases.length > 0 ? (
-                <div className="flex-grow-1">
-                    <SizeGetter
-                        isHeighRequired
-                        render={({ height }) => (
-                            <DatabasesList
-                                maxHeight={height}
-                                filteredDatabaseNames={filteredDatabaseNames}
-                                selectedDatabaseNames={selectedDatabaseNames}
-                                toggleSelection={toggleSelection}
-                            />
-                        )}
+            <div className="flex-grow-1 overflow-hidden pt-2">
+                {databases.length > 0 ? (
+                    <DatabasesList
+                        filteredDatabaseNames={filteredDatabaseNames}
+                        selectedDatabaseNames={selectedDatabaseNames}
+                        toggleSelection={toggleSelection}
                     />
-                </div>
-            ) : (
-                <NoDatabases />
-            )}
+                ) : (
+                    <NoDatabases />
+                )}
+            </div>
         </div>
     );
 }

@@ -110,6 +110,12 @@ public class AiAgentConfiguration : IDynamicJson
     /// </value>
     public int? MaxModelIterationsPerCall { get; set; }
 
+    /// <summary>
+    /// Indicates whether the ai-agent is disabled.
+    /// </summary>
+    public bool Disabled { get; set; }
+
+
     internal AiAgentToolQuery FindQuery(string name)
     {
         foreach (AiAgentToolQuery query in Queries ?? [])
@@ -146,7 +152,8 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
             [nameof(Parameters)] = new DynamicJsonArray(Parameters),
             [nameof(ChatTrimming)] = ChatTrimming?.ToJson(),
-            [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall
+            [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall,
+            [nameof(Disabled)] = Disabled,
         };
     }
 }
