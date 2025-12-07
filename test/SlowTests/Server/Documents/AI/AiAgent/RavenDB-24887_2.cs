@@ -283,7 +283,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<MoviesSampleObject>());
         Assert.Contains("Failed to 'talk' with the agent 'movies-agent'", e.Message);
         Assert.True(e.Message.Contains("Failed to 'talk' with the agent 'user-info-agent'") ||
-                    e.Message.Contains("Failed to 'talk' with the agent 'recommendation-agent'"));
+                    e.Message.Contains("Failed to 'talk' with the agent 'recommendation-agent'"), e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -618,7 +618,96 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         chat.SetUserPrompt("Can you rate the movie \"Toy Story\" as 4 and change my name from 'Aviv Rachmani' to 'Omer Adam'?");
         r = await chat.RunAsync<MoviesSampleObject>();
         Assert.Equal(AiConversationResult.Done, r.Status);
+        
+        using (var session = store.OpenAsyncSession())
+        {
+            var u = await session.LoadAsync<User>("Users/1");
+            Assert.Equal("Omer Adam", u.Name);
+        }
+        Assert.Equal(Rates.Count + 2, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
+    }
 
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task SubAgent2OpenActionToolsAtOnce(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+        await CreateMoviesDatabase(store);
+
+        var userAgent2 = new AiAgentConfiguration("user-info-agent-2",
+            config.ConnectionStringName,
+            "You are authorized to edit the user's name and to create movie-rating records associated with the user." +
+            "Use exclusively the 'ChangeUserName' tool for changing the user's name. " +
+            "Use exclusively the 'RateMovie' tool for adding a movie-rating record (rating a movie). " +
+            "Do not perform these actions in any other way."
+        )
+        {
+            Actions = new List<AiAgentToolAction>()
+            {
+                new AiAgentToolAction("ChangeUserName",
+                    "Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.")
+                {
+                    ParametersSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance)
+                },
+                new AiAgentToolAction("RateMovie",
+                    "Add movie rate required movie name and rate value between 0 to 5 (can be double, doesn't has to be integer)")
+                {
+                    ParametersSampleObject = JsonConvert.SerializeObject(RateToolSampleRequest.Instance)
+                },
+            }
+        };
+        userAgent2.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+        var userAgent2Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent2, MoviesSampleObject.Instance)).Identifier;
+
+
+        var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
+            config.ConnectionStringName,
+            "You are a User Profile Agent on movies rating system."
+        )
+        {
+            SubAgents =
+            [
+                new AiAgentToolSubAgent
+                {
+                    Identifier = userAgent2Id,
+                    Description = "Provide BOTH the movie rating and the new username together in one call. You can't change name without rating a movie and you cant rate a movie without changing the name. you have to ask for both in the call otherwide the tool call will fail.",
+                }
+            ]
+        };
+        userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+        var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
+
+        var chat = store.AI.Conversation(userAgent1Id, "chats/",
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
+        chat.Handle<ChangeUserNameSampleRequest>("user-info-agent-2/ChangeUserName", async (r) =>
+        {
+            var res = (await ChangeUserNameAsync(store, r)) as ActionToolResult;
+            // Console.WriteLine(res.Answer);
+            return res;
+        });
+        chat.Handle<RateToolSampleRequest>("user-info-agent-2/RateMovie", async (r) =>
+        {
+            var res = await RateMovieAsync(store, "Users/1", r) as ActionToolResult;
+            // Console.WriteLine(res.Answer);
+            return res;
+        });
+
+        chat.SetUserPrompt("Can you rate the movie \"Toy Story\" as 5 and change my name from 'Shahar Hikri' to 'Aviv Rachmani'?");
+        var r = await chat.RunAsync<MoviesSampleObject>();
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var u = await session.LoadAsync<User>("Users/1");
+            Assert.Equal("Aviv Rachmani", u.Name);
+        }
+        Assert.Equal(Rates.Count + 1, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
+
+        chat.SetUserPrompt("Can you rate the movie \"Toy Story\" as 4 and change my name from 'Aviv Rachmani' to 'Omer Adam'?");
+        r = await chat.RunAsync<MoviesSampleObject>();
+        Assert.Equal(AiConversationResult.Done, r.Status);
+        
         using (var session = store.OpenAsyncSession())
         {
             var u = await session.LoadAsync<User>("Users/1");
@@ -763,14 +852,6 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         {
             Actions = new List<AiAgentToolAction>()
             {
-                // new AiAgentToolAction("ChangeUserName",
-                //     "Changes the user's name. You must always provide both the old name and the new name for validation. " +
-                //     "If the user requests multiple consecutive name changes in a single message, DO NOT answer the user between them. " +
-                //     "Instead, execute this tool once for the first change, wait for its tool response, and only then execute this tool again for the next change. " +
-                //     "Never merge multiple name changes into one call, and never reply to the user until ALL name-change operations have completed successfully.")
-                // {
-                //     ParametersSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance)
-                // }
                 new AiAgentToolAction("ChangeUserName",
                     "Changes the user's name. Always provide both OldUserName and NewUserName. " +
                     "This tool MUST be called strictly one time per assistant message. " +
@@ -830,7 +911,6 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         });
 
         var msg = "change my name from Shahar Hikri to Aviv Rahmani, and then change my name to Aviv Rahmani to Omer Adam";
-        // var msg = "change my name from Shahar Hikri to Aviv Rahmani";
         chat.SetUserPrompt(msg);
         var r = await chat.RunAsync<MoviesSampleObject>();
         Assert.Equal(AiConversationResult.Done, r.Status);
@@ -1061,7 +1141,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<MoviesSampleObject>());
         Assert.Contains("Failed to 'talk' with the agent 'movies-agent'", e.Message);
         Assert.True(e.Message.Contains("Failed to 'talk' with the agent 'user-info-agent'") ||
-                    e.Message.Contains("Failed to 'talk' with the agent 'recommendation-agent'"));
+                    e.Message.Contains("Failed to 'talk' with the agent 'recommendation-agent'"), e.Message);
 
         // Resume execution after an error
         throwEx = false;

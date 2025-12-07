@@ -12,8 +12,6 @@ public class AiAgentActionRequest : IDynamicJson
 
     public AiAgentActionRequestType Type;
     public string SubConversation;
-    // one sub-agent call, can have multiple user actions assosiated
-    public int RefUserActions;
 
     public bool IsEqual(AiAgentActionRequest other)
     {
@@ -24,8 +22,7 @@ public class AiAgentActionRequest : IDynamicJson
             Name == other.Name &&
             Arguments == other.Arguments &&
             Type == other.Type &&
-            SubConversation == other.SubConversation &&
-            RefUserActions == other.RefUserActions;
+            SubConversation == other.SubConversation;
     }
 
     public override string ToString()
@@ -42,8 +39,7 @@ public class AiAgentActionRequest : IDynamicJson
             [nameof(ToolId)] = ToolId,
             [nameof(Arguments)] = Arguments,
             [nameof(Type)] = Type,
-            [nameof(SubConversation)] = SubConversation,
-            [nameof(RefUserActions)] = RefUserActions
+            [nameof(SubConversation)] = SubConversation
         };
     }
 }
