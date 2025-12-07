@@ -5,7 +5,7 @@ import buildInfo = require("models/resources/buildInfo");
 interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
     Message: string;
-    RavenVersion: string;
+    RavenVersion: number;
     ConversationId?: string;
     ActionsResponses?: Record<string, any>;
     AdditionalAttachedContext?: Record<string, any>;
@@ -39,11 +39,11 @@ export default class runChatbotAiAssistantCommand extends commandBase {
     }
 
     execute() {
-        const relativeUrl = endpoints.global.aiAssistant.assistantAssist + "?streaming=true";
+        const relativeUrl = endpoints.global.aiAssistant.assistantAssist;
 
         const dto: RunChatbotAssistAiAssistantRequestDto = {
             OperationType: "Chatbot",
-            RavenVersion: buildInfo.serverBuildVersion()?.ProductVersion ?? "latest",
+            RavenVersion: buildInfo.serverBuildVersion().BuildVersion,
             ...this.viewData,
         };
 
