@@ -68,7 +68,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
         this.overrideViaExternalScriptDisableReason = ko.pureComputed(() => {
             const isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode();
 
-            if (!isClusterAdminOrClusterNode && this.serverConfiguration().RestrictOverrideConfigurationViaExternalScriptForNonClusterAdmin) {
+            if (!isClusterAdminOrClusterNode && this.serverConfiguration().RestrictExternalScriptUsageForNonClusterAdmin) {
                 return "Setting up the configuration via an external script is not allowed for non cluster admins.";
             }
 

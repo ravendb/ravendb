@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (authConnectionStatus is null or RavenServer.AuthenticationStatus.ClusterAdmin)
                 return;
 
-            if (serverStore.Configuration.Backup.RestrictOverrideConfigurationViaExternalScriptForNonClusterAdmin == false)
+            if (serverStore.Configuration.Security.RestrictExternalScriptUsageForNonClusterAdmin == false)
                 return;
 
             var backupSettings = new List<BackupSettings>

@@ -36,11 +36,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.AllowedAwsRegions", ConfigurationEntryScope.ServerWideOnly)]
         public string[] AllowedAwsRegions { get; set; }
 
-        [Description("Restrict the usage of an external script when overriding the configuration for non cluster admins.")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Backup.RestrictOverrideConfigurationViaExternalScriptForNonClusterAdmin", ConfigurationEntryScope.ServerWideOnly)]
-        public bool RestrictOverrideConfigurationViaExternalScriptForNonClusterAdmin { get; set; }
-
         [Description("Maximum number of concurrent backup tasks")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.MaxNumberOfConcurrentBackups", ConfigurationEntryScope.ServerWideOnly)]
