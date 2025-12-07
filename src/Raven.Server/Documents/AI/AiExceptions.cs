@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -25,6 +26,7 @@ namespace Raven.Server.Documents.AI
         public string Refusal;
         public string FinishReason;
 
+        [DoesNotReturn]
         public static void Throw(string refusal, string responseContent, string finishReason, string requestId)
         {
             throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}', response content: {responseContent}")
@@ -72,6 +74,7 @@ namespace Raven.Server.Documents.AI
             StatusCode = statusCode;
         }
 
+        [DoesNotReturn]
         public static void Throw(string message, HttpStatusCode statusCode, string requestId)
         {
             throw new UnsuccessfulRequestException($"Status Code: {statusCode}, Message: {message}", statusCode)

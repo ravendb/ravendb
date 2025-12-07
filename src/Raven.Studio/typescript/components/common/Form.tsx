@@ -1,7 +1,16 @@
-import React, { ComponentProps, ReactNode, useRef, useState } from "react";
+import React, { ComponentProps, ReactNode, useEffect, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
-import { Control, ControllerProps, FieldPath, FieldValues, PathValue, useController } from "react-hook-form";
+import {
+    Control,
+    ControllerProps,
+    FieldError,
+    FieldPath,
+    FieldValues,
+    PathValue,
+    useController,
+    useFormState,
+} from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -23,6 +32,7 @@ import useUniqueId from "hooks/useUniqueId";
 import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
 import useBoolean from "components/hooks/useBoolean";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
+import { ConditionalPopover } from "./ConditionalPopover";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -740,3 +750,68 @@ export function FormGroup({ marginClass = "mb-3", ...props }: FormGroupProps) {
 }
 
 export const FormLabel = Form.Label;
+
+interface FormErrorIconProps<TFieldValues extends FieldValues> {
+    control: Control<TFieldValues>;
+    paths: FieldPath<TFieldValues>[];
+    onError?: () => void;
+    errorMessage?: ReactNode;
+}
+
+export function FormErrorIcon<TFieldValues extends FieldValues>({
+    control,
+    paths,
+    onError,
+}: FormErrorIconProps<TFieldValues>) {
+    const { hasErrors, message } = useErrorMessage({ control, paths });
+
+    useEffect(() => {
+        if (hasErrors) {
+            onError?.();
+        }
+    }, [hasErrors]);
+
+    if (!hasErrors) {
+        return null;
+    }
+
+    return (
+        <ConditionalPopover
+            conditions={{
+                isActive: hasErrors,
+                message: message,
+            }}
+        >
+            <Icon icon="warning" color="danger" margin="ms-1" />
+        </ConditionalPopover>
+    );
+}
+
+interface UseErrorMessageProps<TFieldValues extends FieldValues> {
+    control: Control<TFieldValues>;
+    paths: FieldPath<TFieldValues>[];
+}
+
+export function useErrorMessage<TFieldValues extends FieldValues>({
+    control,
+    paths,
+}: UseErrorMessageProps<TFieldValues>) {
+    const formState = useFormState({
+        control,
+        name: paths,
+    });
+
+    let error: FieldError = undefined;
+
+    for (const path of paths) {
+        error = _.get(formState.errors, path);
+        if (error) {
+            break;
+        }
+    }
+
+    return {
+        hasErrors: !!error,
+        message: error?.message,
+    };
+}

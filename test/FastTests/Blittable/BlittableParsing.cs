@@ -24,7 +24,7 @@ namespace FastTests.Blittable
                         blittableJsonReaderObject.TryGet("Type", out s);
                         Assert.Equal("Acknowledge", s);
                     }
-                }   
+                }
             }
         }
 

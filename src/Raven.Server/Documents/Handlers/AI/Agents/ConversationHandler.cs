@@ -495,8 +495,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {
-        var hasActionResponse = _request.ActionResponses is { Length: > 0 };
-        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content);
+        var hasActionResponse = _request.ActionResponses is { Length: > 0 } ;
+        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) || 
+                            _request.ArtificialActions is { Length: > 0 }; // equivalent to user prompt, since it is both tool & response in one shot
 
         if (hasActionResponse && hasUserPrompt)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
@@ -509,14 +510,20 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 if (_document.OpenActionCalls.Remove(t.ToolId) == false)
                     throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{_conversationId}'");
 
-                _document.AddMessage(context, context.ReadObject(
-                    new DynamicJsonValue
-                    {
-                        ["tool_call_id"] = t.ToolId,
-                        ["role"] = "tool",
-                        ["content"] = t.Content
-                    },
-                    "user/tool"), usage: null);
+                _document.AddToolResponse(context, t.ToolId, t.Content);
+            }
+        }
+
+        if (_request.ArtificialActions != null)
+        {
+            foreach (BlittableJsonReaderObject tool in _request.ArtificialActions)
+            {
+                var t = JsonDeserializationClient.AiAgentArtificialAction(tool);
+                t.Validate();
+
+                string id = Guid.NewGuid().ToString("N");
+                _document.AddArtificialToolCall(context, [new AiToolCall(id, t.ToolId, "{}")]);
+                _document.AddToolResponse(context, id, t.Content);
             }
         }
 

@@ -68,6 +68,35 @@ namespace SlowTests.Tests.Linq
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryArrayWithContainsAny_MemoryExtensions(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var doc1 = new TestDoc { StringArray = new[] { "backend", "frontend", "database" } };
+                    var doc2 = new TestDoc { StringArray = new[] { "mobile", "ios", "android" } };
+                    var doc3 = new TestDoc { StringArray = new[] { "devops", "ci", "cd" } };
+
+                    session.Store(doc1);
+                    session.Store(doc2);
+                    session.Store(doc3);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var docs = session.Query<TestDoc>()
+                        .Where(doc => MemoryExtensions.ContainsAny<string>(doc.StringArray, new[] { "frontend", "mobile", "cloud" }))
+                        .ToList();
+
+                    Assert.Equal(2, docs.Count);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryListWithContainsAny(Options options)
         {
             using (var store = GetDocumentStore(options))

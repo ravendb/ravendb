@@ -1,7 +1,12 @@
+import { yupResolver } from "@hookform/resolvers/yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import * as yup from "yup";
 
 export type GenAiStartingPoint = "Beginning of Time" | "Latest Document" | "Change Vector";
+
+export interface EditGenAiTaskValidationContext {
+    allQueryNames: string[];
+}
 
 const attachmentsSchema = yup.array().of(
     yupObjectSchema<Raven.Server.Documents.ETL.Providers.AI.AiAttachment>({
@@ -12,7 +17,7 @@ const attachmentsSchema = yup.array().of(
     }).nullable()
 );
 
-export const editGenAiTaskSchema = yup.object({
+const editGenAiTaskSchema = yup.object({
     // basic step
     name: yup.string().required(),
     identifier: yup.string(),
@@ -60,6 +65,64 @@ export const editGenAiTaskSchema = yup.object({
             }
         ),
     canRegenerateSchema: yup.boolean(),
+    queries: yup.array().of(
+        yup.object({
+            name: yup
+                .string()
+                .required()
+                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
+                .test(
+                    "unique-name",
+                    "Tool name must be unique",
+                    (value: string, ctx: yup.TestContext<EditGenAiTaskValidationContext>) => {
+                        const allQueryNames = ctx.options.context.allQueryNames ?? [];
+
+                        const valuesCount = allQueryNames.filter((name: string) => name === value).length;
+                        return valuesCount <= 1;
+                    }
+                ),
+            description: yup.string().required(),
+            isAllowModelQueries: yup
+                .boolean()
+                .nullable()
+                .when("isAllowModelQueriesOverride", {
+                    is: true,
+                    then: (schema) => schema.required(),
+                }),
+            isAllowModelQueriesOverride: yup.boolean(),
+            isAddToInitialContext: yup
+                .boolean()
+                .nullable()
+                .when("isAddToInitialContextOverride", {
+                    is: true,
+                    then: (schema) => schema.required(),
+                }),
+            isAddToInitialContextOverride: yup.boolean(),
+            query: yup.string().required(),
+            parametersSampleObject: yup.string(),
+            parametersSchema: yup
+                .string()
+                .test(
+                    "sampleObjectOrJsonSchema",
+                    "Either 'Sample response object' or 'JSON schema' must be provided",
+                    function (_, { parent }) {
+                        return !!parent.parametersSampleObject || !!parent.parametersSchema;
+                    }
+                )
+                .test(
+                    "schemaRegenerationRequired",
+                    "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure",
+                    function (_, { parent }) {
+                        return !parent.canRegenerateSchema;
+                    }
+                ),
+            canRegenerateSchema: yup.boolean(),
+            isEditing: yup.boolean(),
+        })
+    ),
+    isEnableTracing: yup.boolean(),
+    isSetTracingExpiration: yup.boolean(),
+    tracingExpirationInSeconds: yup.number().nullable().positive().integer(),
 
     // update step
     updateScript: yup.string().required(),
@@ -90,5 +153,6 @@ export const editGenAiTaskSchema = yup.object({
     isForceSendingCachedObjects: yup.boolean(),
 });
 
+export const editGenAiTaskResolver = yupResolver(editGenAiTaskSchema);
 export type EditGenAiTaskFormData = yup.InferType<typeof editGenAiTaskSchema>;
 export type GenAiAiAttachment = yup.InferType<typeof attachmentsSchema>[number];

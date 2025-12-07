@@ -148,7 +148,8 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             UpdateScript != other.UpdateScript ||
             JsonSchema != other.JsonSchema ||
             SampleObject != other.SampleObject ||
-            MaxConcurrency != other.MaxConcurrency)
+            MaxConcurrency != other.MaxConcurrency ||
+            ExpirationInSec != other.ExpirationInSec)
             differences |= EtlConfigurationCompareDifferences.Other;
 
         return differences;

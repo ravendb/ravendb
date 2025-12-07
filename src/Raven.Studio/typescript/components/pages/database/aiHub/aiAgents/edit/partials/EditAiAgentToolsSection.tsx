@@ -5,11 +5,14 @@ import useEditAiAgentToolsSection from "../hooks/useEditAiAgentToolsSection";
 import EditAiAgentQueryToolItem from "./EditAiAgentQueryToolItem";
 import EditAiAgentActionToolItem from "./EditAiAgentActionToolItem";
 import useBoolean from "components/hooks/useBoolean";
-import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
-import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
+import CollapseButton from "components/common/CollapseButton";
 import Collapse from "react-bootstrap/Collapse";
+import { FormErrorIcon } from "components/common/Form";
+import { useFormContext } from "react-hook-form";
+import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 
 export default function EditAiAgentToolsSection() {
+    const { control } = useFormContext<EditAiAgentFormData>();
     const toolsEditor = useEditAiAgentToolsSection();
 
     const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
@@ -34,8 +37,8 @@ export default function EditAiAgentToolsSection() {
                         <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </h3>
-                <EditAiAgentErrorIcon fieldNames={["queries", "actions"]} openPanel={setIsPanelOpen} />
-                <EditAiAgentCollapseButton isPanelOpen={isPanelOpen} toggleIsPanelOpen={toggleIsPanelOpen} />
+                <FormErrorIcon control={control} paths={["queries", "actions"]} onError={() => setIsPanelOpen(true)} />
+                <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
             </div>
             <div className="mb-1">Tools are a controlled way to pass context to the LLM.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>

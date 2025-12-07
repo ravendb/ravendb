@@ -1404,7 +1404,10 @@ public static partial class CoraxQueryBuilder
         }
 
         int sortIndex = 0;
-        var sortArray = new OrderMetadata[8];
+        var sortArray = new OrderMetadata[16];
+
+        if (orderByFields.Length > sortArray.Length)
+            throw new InvalidOperationException($"Corax does not support ordering by more than {sortArray.Length} properties.");
 
         foreach (var field in orderByFields)
         {

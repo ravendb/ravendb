@@ -30,6 +30,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             AiAgentConfiguration configuration = GetAiAgentConfiguration(agentId);
 
+            if (configuration.Disabled)
+                throw new InvalidOperationException($"The AI Agent '{configuration.Identifier}' is currently disabled. Please enable the agent before starting\\continuing a conversation.");
+
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             var body = await ReadRequestBodyAsync(context, token.Token);
             var handler = new ConversationHandler(RequestHandler.ServerStore, RequestHandler.Database)
@@ -84,6 +87,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
             body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
+            body.TryGet(nameof(ConversionRequestBody.ArtificialActions), out BlittableJsonReaderArray artificialActions);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out object userPrompt);
             body.TryGet(nameof(ConversionRequestBody.CreationOptions), out BlittableJsonReaderObject optionsBlittable);
 
@@ -98,6 +102,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return new RequestBody
             {
                 ActionResponses = actionResponses,
+                ArtificialActions = artificialActions,
                 UserPrompt = userPrompt,
                 Parameters = parameters,
                 CreationOptions = options

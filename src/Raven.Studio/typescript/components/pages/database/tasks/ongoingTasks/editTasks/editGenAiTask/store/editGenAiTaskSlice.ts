@@ -3,7 +3,7 @@ import { RootState } from "components/store";
 import { EditGenAiTaskStepId } from "../hooks/useEditGenAiTaskSteps";
 import { services } from "components/hooks/useServices";
 import { loadableData } from "components/models/common";
-import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
+import { createFailureState, createIdleState, createLoadingState, createSuccessState } from "components/utils/common";
 
 interface ModelUsage {
     totalTokens: number;
@@ -21,7 +21,9 @@ interface EditGenAiTaskState {
     contextTest: loadableData<
         { value: string; attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] }[]
     >;
-    modelInputTest: loadableData<{ value: string }[]>;
+    modelInputTest: loadableData<
+        { value: string; conversationDocument: Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument }[]
+    >;
     modelUsage: loadableData<ModelUsage>;
     updateScriptTest: loadableData<string>;
     updateScriptDocumentInput: loadableData<string>;
@@ -35,6 +37,7 @@ interface EditGenAiTaskState {
     isModelInputInfoVisible: boolean;
     isEditModeWarningVisible: boolean;
     hoverIndex: number;
+    isDocumentExpirationEnabled: boolean;
 }
 
 const initialState: EditGenAiTaskState = {
@@ -57,6 +60,7 @@ const initialState: EditGenAiTaskState = {
     isModelInputInfoVisible: true,
     isEditModeWarningVisible: true,
     hoverIndex: null,
+    isDocumentExpirationEnabled: false,
 };
 
 export const editGenAiTaskSlice = createSlice({
@@ -116,7 +120,7 @@ export const editGenAiTaskSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(testContext.pending, (state) => {
-                state.contextTest.status = "loading";
+                state.contextTest = createLoadingState();
             })
             .addCase(testContext.rejected, (state, action) => {
                 state.contextTest = createFailureState(action.error.message);
@@ -133,8 +137,8 @@ export const editGenAiTaskSlice = createSlice({
                 );
             })
             .addCase(testModelInput.pending, (state) => {
-                state.modelInputTest.status = "loading";
-                state.modelUsage.status = "loading";
+                state.modelInputTest = createLoadingState();
+                state.modelUsage = createLoadingState();
             })
             .addCase(testModelInput.rejected, (state, action) => {
                 state.modelInputTest = createFailureState(action.error.message);
@@ -147,6 +151,7 @@ export const editGenAiTaskSlice = createSlice({
                 state.modelInputTest = createSuccessState(
                     action.payload.Results.map((x) => ({
                         value: x.ModelOutput ? JSON.stringify(x.ModelOutput.Output, null, 4) : null,
+                        conversationDocument: x.ModelOutput?.ConversationDocument ?? null,
                     }))
                 );
 
@@ -173,8 +178,8 @@ export const editGenAiTaskSlice = createSlice({
                 });
             })
             .addCase(testUpdateScript.pending, (state) => {
-                state.updateScriptTest.status = "loading";
-                state.updateScriptDocumentInput.status = "loading";
+                state.updateScriptTest = createLoadingState();
+                state.updateScriptDocumentInput = createLoadingState();
             })
             .addCase(testUpdateScript.rejected, (state, action) => {
                 state.updateScriptTest = createFailureState(action.error.message);
@@ -193,13 +198,16 @@ export const editGenAiTaskSlice = createSlice({
                 );
             })
             .addCase(testConnectionString.pending, (state) => {
-                state.connectionStringTest.status = "loading";
+                state.connectionStringTest = createLoadingState();
             })
             .addCase(testConnectionString.rejected, (state, action) => {
                 state.connectionStringTest = createFailureState(action.error.message);
             })
             .addCase(testConnectionString.fulfilled, (state, action) => {
                 state.connectionStringTest = createSuccessState(action.payload);
+            })
+            .addCase(getIsDocumentExpirationEnabled.fulfilled, (state, action) => {
+                state.isDocumentExpirationEnabled = action.payload;
             });
     },
 });
@@ -251,12 +259,25 @@ const testConnectionString = createAsyncThunk(
     }
 );
 
+const getIsDocumentExpirationEnabled = createAsyncThunk(
+    editGenAiTaskSlice.name + "/getIsDocumentExpirationEnabled",
+    async (databaseName: string): Promise<boolean> => {
+        const result = await services.databasesService.getExpirationConfiguration(databaseName);
+        if (!result) {
+            return false;
+        }
+
+        return !result.Disabled;
+    }
+);
+
 export const editGenAiTaskActions = {
     ...editGenAiTaskSlice.actions,
     testContext,
     testModelInput,
     testUpdateScript,
     testConnectionString,
+    getIsDocumentExpirationEnabled,
 };
 
 export const editGenAiTaskSelectors = {
@@ -281,4 +302,5 @@ export const editGenAiTaskSelectors = {
     isModelInputInfoVisible: (state: RootState) => state.editGenAiTask.isModelInputInfoVisible,
     isEditModeWarningVisible: (state: RootState) => state.editGenAiTask.isEditModeWarningVisible,
     hoverIndex: (state: RootState) => state.editGenAiTask.hoverIndex,
+    isDocumentExpirationEnabled: (state: RootState) => state.editGenAiTask.isDocumentExpirationEnabled,
 };
