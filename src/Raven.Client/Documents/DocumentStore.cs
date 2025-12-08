@@ -18,6 +18,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace Raven.Client.Documents
 {

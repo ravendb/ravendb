@@ -15,6 +15,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using WebSocketStream = Raven.Client.Util.WebSocketStream;
 
 namespace Raven.Client.Documents.Changes;
 
