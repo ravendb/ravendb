@@ -105,14 +105,17 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         else if (GenAiTransformation.ValidateScript(out var error) == false)
             errors.Add(error);
 
-        if (string.IsNullOrEmpty(Prompt))
-            errors.Add($"{nameof(Prompt)} must be provided");
+        if (TestMode == false)
+        {
+            if (string.IsNullOrEmpty(Prompt))
+                errors.Add($"{nameof(Prompt)} must be provided");
 
-        if (string.IsNullOrEmpty(JsonSchema) && string.IsNullOrEmpty(SampleObject))
-            errors.Add("You must provide either a JSON schema or a sample object");
+            if (string.IsNullOrEmpty(JsonSchema) && string.IsNullOrEmpty(SampleObject))
+                errors.Add("You must provide either a JSON schema or a sample object");
 
-        if (TestMode == false && string.IsNullOrEmpty(UpdateScript))
-            errors.Add("You must provide an update function");
+            if (string.IsNullOrEmpty(UpdateScript))
+                errors.Add("You must provide an update function");
+        }
 
         return errors.Count == 0;
     }
@@ -123,7 +126,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
         json[nameof(Identifier)] = Identifier;
         json[nameof(AiConnectorType)] = AiConnectorType;
-        json[nameof(Identifier)] = Identifier;
         json[nameof(Collection)] = Collection;
         json[nameof(Prompt)] = Prompt;
         json[nameof(SampleObject)] = SampleObject;
