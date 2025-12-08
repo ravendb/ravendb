@@ -245,7 +245,20 @@ namespace Voron.Impl.Journal
 
             if ((current->Flags & TransactionPersistenceModeFlags.HasFreePages) == TransactionPersistenceModeFlags.HasFreePages)
             {
-                var freePages = ReadEncodedFreePage(outputPage + totalRead, _allocator);
+                var freePagesPtr = outputPage + totalRead;
+
+                var header = *(FreePagesHeader*)freePagesPtr;
+                
+                var freePagesSpaceToRead = sizeof(FreePagesHeader) + header.EncodedSectionsSize + header.EncodedSectionsCount * sizeof(EncodedFreePagesSection);
+
+                if (totalRead + freePagesSpaceToRead > current->UncompressedSize)
+                {
+                    throw new InvalidDataException(
+                        $"Attempted to read free pages from position {totalRead} to {totalRead + freePagesSpaceToRead} (size: {freePagesSpaceToRead} bytes) from transaction data while " +
+                        $"the transaction uncompressed size is {current->UncompressedSize} bytes");
+                }
+
+                var freePages = ReadEncodedFreePage(freePagesPtr, _allocator);
 
                 foreach (var freedPage in freePages)
                 {

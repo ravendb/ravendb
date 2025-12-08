@@ -352,6 +352,8 @@ namespace Voron.Impl.Journal
                     Pager.PagerTransactionState txState = default;
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
 
+                    allocator.Reset();
+                    
                     List<TransactionHeader> transactionHeaders;
                     var journalReader = new JournalReader(_env, journalNumber, journalPager, journalPagerState, dataPager, recoveryPager, modifiedPages, logInfo, currentFileHeader,
                         transactionHeader, allocator);
@@ -2176,10 +2178,14 @@ namespace Voron.Impl.Journal
                 ++pageSequentialNumber;
             }
 
+            ref var txHeader = ref tx.TransactionHeader;
+            
             if (freedPages is { Count: > 0 })
             {
                 var encodedFreePagesSize = EncodeFreePages(freedPages, write, tx.Allocator);
                 write += encodedFreePagesSize;
+                
+                txHeader.Flags |= TransactionPersistenceModeFlags.HasFreePages;
             }
 
             var totalSizeWritten = write - txPageInfoPtr;
@@ -2267,14 +2273,10 @@ namespace Voron.Impl.Journal
 
             var reportedCompressionLength = performCompression ? compressedLen : -1;
 
-            ref var txHeader = ref tx.TransactionHeader;
             txHeader.CompressedSize = reportedCompressionLength;
             txHeader.UncompressedSize = totalSizeWritten;
             txHeader.PageCount = numberOfPages;
             txHeader.JournalId = _headerAccessor.JournalId;
-            
-            if (freedPages is { Count: > 0 })
-                txHeader.Flags |= TransactionPersistenceModeFlags.HasFreePages;
             
             if (_env.Options.Encryption.IsEnabled == false)
             {
@@ -2499,63 +2501,69 @@ namespace Voron.Impl.Journal
         }
 
         private void RejectCommitsToMerge() => SharedJournalState.SetCancel();
-        
+
         internal static long EncodeFreePages(HashSet<long> freedPages, byte* dst, ByteStringContext allocator)
         {
-            var pages = freedPages.ToArray();
-
             var headerPtr = dst;
             var header = (FreePagesHeader*)headerPtr;
             var output = dst + sizeof(FreePagesHeader);
-            
-            fixed (long* p = pages)
+
+            using var _ = allocator.Allocate(freedPages.Count * sizeof(long), out var pagesBuffer);
+
+            var pages = (long*)pagesBuffer.Ptr;
+
+            var index = 0;
+
+            foreach (long freedPage in freedPages)
             {
-                Sort.Run(p, pages.Length);
+                pages[index++] = freedPage;
+            }
+            
+            Sort.Run(pages, freedPages.Count);
 
-                const int maxEncodingSectionSize = 32 * Constants.Size.Kilobyte;
+            const int maxEncodingSectionSize = 32 * Constants.Size.Kilobyte;
 
-                using var encoder = new FastPForEncoder(allocator);
-                
-                var remainingCount = pages.Length;
-                var processedCount = 0;
-                
-                var encodedSize = 0;
+            using var encoder = new FastPForEncoder(allocator);
 
-                var sectionSizes = new List<EncodedFreePagesSection>(1);
-                
-                while (remainingCount > 0)
-                {
-                    encoder.Encode(p + processedCount, remainingCount);
+            var remainingCount = freedPages.Count;
+            var processedCount = 0;
 
-                    var (count, size) = encoder.Write(output, maxEncodingSectionSize);
-                    
-                    remainingCount -= count;
-                    processedCount += count;
+            var encodedSize = 0;
 
-                    encodedSize += size;
+            var sectionSizes = new List<EncodedFreePagesSection>(1);
 
-                    sectionSizes.Add(new EncodedFreePagesSection { Size = size });
-                    
-                    output += size;
-                }
-                
-                if (processedCount != freedPages.Count)
-                {
-                    throw new InvalidOperationException($"Expected to encode and write {freedPages.Count} freed pages, but wrote {processedCount} instead");
-                }
-                
-                header->NumberOfPages = processedCount;
-                header->EncodedSectionsSize = encodedSize;
-                header->EncodedSectionsCount = sectionSizes.Count;
-                
-                EncodedFreePagesSection* sectionHeaderPtr = (EncodedFreePagesSection*)output;
+            while (remainingCount > 0)
+            {
+                encoder.Encode(pages + processedCount, remainingCount);
 
-                for (int i = 0; i < sectionSizes.Count; i++)
-                {
-                    sectionHeaderPtr[i] = sectionSizes[i];
-                    
-                    output += sizeof(EncodedFreePagesSection);
-                }
+                var (count, size) = encoder.Write(output, maxEncodingSectionSize);
+
+                remainingCount -= count;
+                processedCount += count;
+
+                encodedSize += size;
+
+                sectionSizes.Add(new EncodedFreePagesSection { Size = size });
+
+                output += size;
+            }
+
+            if (processedCount != freedPages.Count)
+            {
+                throw new InvalidOperationException($"Expected to encode and write {freedPages.Count} freed pages, but wrote {processedCount} instead");
+            }
+
+            header->NumberOfPages = processedCount;
+            header->EncodedSectionsSize = encodedSize;
+            header->EncodedSectionsCount = sectionSizes.Count;
+
+            EncodedFreePagesSection* sectionHeaderPtr = (EncodedFreePagesSection*)output;
+
+            for (int i = 0; i < sectionSizes.Count; i++)
+            {
+                sectionHeaderPtr[i] = sectionSizes[i];
+
+                output += sizeof(EncodedFreePagesSection);
             }
 
             return output - dst;
