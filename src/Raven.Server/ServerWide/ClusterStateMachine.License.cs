@@ -62,10 +62,12 @@ public sealed partial class ClusterStateMachine
         nameof(AddElasticSearchEtlCommand),
         nameof(AddQueueSinkCommand),
         nameof(UpdateQueueSinkCommand),
-        nameof(EditDataArchivalCommand),
         nameof(AddEmbeddingsGenerationCommand),
         nameof(UpdateEmbeddingsGenerationCommand),
-        nameof(AddOrUpdateAiAgentCommand)
+        nameof(EditDataArchivalCommand),
+        nameof(UpdateGenAiCommand),
+        nameof(AddGenAiCommand),
+        nameof(AddOrUpdateAiAgentCommand),
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
@@ -180,6 +182,7 @@ public sealed partial class ClusterStateMachine
                 AssertEmbeddingsGeneration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
             case nameof(AddGenAiCommand):
+            case nameof(UpdateGenAiCommand):
                 AssertGenAi(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
             case nameof(AddOrUpdateAiAgentCommand):
@@ -252,9 +255,9 @@ public sealed partial class ClusterStateMachine
             AssertOlapEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertSnowflakeEtl(databaseRecord, newLicenseLimits, context);
             AssertEmbeddingsGeneration(databaseRecord, newLicenseLimits, context);
-            AssertDocumentsCompressionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertGenAi(databaseRecord, newLicenseLimits, context);
             AssertAiAgent(databaseRecord, newLicenseLimits, context);
+            AssertDocumentsCompressionLicenseLimits(databaseRecord, newLicenseLimits, context);
         }
     }
 
@@ -1078,6 +1081,9 @@ public sealed partial class ClusterStateMachine
         if (databaseRecord.GenAis.Count == 0)
             return;
 
+        if (databaseRecord.GenAis.All(x => x.Disabled))
+            return;
+
         throw new LicenseLimitException(LimitType.GenAi, "Your license doesn't support using the AI Generation feature.");
     }
 
@@ -1090,6 +1096,9 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (databaseRecord.AiAgents.All(x => x.Disabled))
+            return;
+
+        if (databaseRecord.AiAgents.All(x => false))
             return;
 
         throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");

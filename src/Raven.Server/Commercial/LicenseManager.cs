@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -1717,7 +1718,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.EmbeddingsGeneration, message);
         }
 
-        public void AssertCanAddGenAiTask()
+        public void AssertCanAddGenAiTask(GenAiConfiguration genAiConfiguration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
@@ -1725,16 +1726,22 @@ namespace Raven.Server.Commercial
             if (LicenseStatus.HasGenAi)
                 return;
 
+            if (genAiConfiguration.Disabled)
+                return;
+
             const string message = "Your current license doesn't include the Gen AI feature";
             throw GenerateLicenseLimit(LimitType.GenAi, message);
         }
 
-        public void AssertCanAddAiAgentTask()
+        public void AssertCanAddAiAgentTask(AiAgentConfiguration  aiAgentConfiguration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
             if (LicenseStatus.HasAiAgent)
+                return;
+
+            if (aiAgentConfiguration.Disabled)
                 return;
 
             const string message = "Your current license doesn't include the AI Agent feature";

@@ -139,9 +139,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         break;
                     }
                 case EtlType.GenAi:
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddGenAiTask();
+                    var genAiConfiguration = Client.Json.Serialization.JsonDeserializationClient.AiGenConfiguration(etlConfiguration);
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddGenAiTask(genAiConfiguration);
                     break;
-
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }

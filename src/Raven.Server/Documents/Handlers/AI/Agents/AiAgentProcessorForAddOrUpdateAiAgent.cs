@@ -21,13 +21,14 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
 
     public override async ValueTask ExecuteAsync()
     {
-        RequestHandler.ServerStore.LicenseManager.AssertCanAddAiAgentTask();
-
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
         using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai/agent", token.Token);
-        
+
         var cfg = JsonDeserializationClient.AiAgentConfiguration(options);
+
+        RequestHandler.ServerStore.LicenseManager.AssertCanAddAiAgentTask(cfg);
+
         if (string.IsNullOrEmpty(cfg.Name))
             throw new ArgumentException("Ai Agent Name cannot be empty", nameof(cfg.Name));
 

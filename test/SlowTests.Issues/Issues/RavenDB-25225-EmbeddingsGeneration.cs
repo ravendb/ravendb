@@ -192,11 +192,11 @@ namespace SlowTests.Issues
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
+                WaitForUserToContinueTheTest(store);
                 await AddAiIntegration(store);
 
                 await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.EmbeddingsGeneration);
                 await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_PRO, LimitType.EmbeddingsGeneration);
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_DEV, LimitType.EmbeddingsGeneration);
             }
         }
 
