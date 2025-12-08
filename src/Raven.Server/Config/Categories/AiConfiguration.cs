@@ -54,4 +54,9 @@ public sealed class AiConfiguration : ConfigurationCategory
     [DefaultValue(10_000)]
     [ConfigurationEntry("Ai.Agent.Tools.TokenUsageThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int ToolsTokenUsageThreshold { get; set; }
+
+    [Description("Disable the AI Assistant features.")]
+    [DefaultValue(false)]
+    [ConfigurationEntry("Ai.Assistant.Disable", ConfigurationEntryScope.ServerWideOnly)]
+    public bool DisableAiAssistant { get; set; }
 }

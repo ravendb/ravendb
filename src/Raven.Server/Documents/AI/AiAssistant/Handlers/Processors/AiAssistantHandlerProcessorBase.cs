@@ -17,10 +17,16 @@ internal abstract class AiAssistantHandlerProcessorBase : AbstractHandlerProcess
 
     protected AiAssistantHandlerProcessorBase([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
+
+        if (ServerStore.Configuration.Ai.DisableAiAssistant)
+            throw new InvalidOperationException("AI Assistant is disabled by the administrator.");
+
         _license = ServerStore.LoadLicense();
 
         if (_license is null)
             throw new InvalidOperationException("AI Assistant is available only for licensed instances of RavenDB. Please register your license.");
+
+        ServerStore.LicenseManager.AssertCanUseAiAssistant();
 
         _certificateThumbprint = RequestHandler.GetCurrentCertificate()?.Thumbprint;
     }

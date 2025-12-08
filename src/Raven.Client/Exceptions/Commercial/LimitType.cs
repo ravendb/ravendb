@@ -61,6 +61,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("AI Agent")]
         AiAgent,
 
+        [Description("AI Assistant")]
+        AiAssistant,
+
         [Description("Cores Limit")]
         Cores,
 

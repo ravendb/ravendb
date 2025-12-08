@@ -242,6 +242,8 @@ namespace Raven.Server.Commercial
 
         public bool HasAiAgent => Enabled(LicenseAttribute.AiAgent);
 
+        public bool HasAiAssistant => true; // TODO fix it
+
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
         public bool HasPostgreSqlIntegration => Enabled(LicenseAttribute.PostgreSqlIntegration);

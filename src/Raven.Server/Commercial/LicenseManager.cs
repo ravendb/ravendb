@@ -1741,6 +1741,18 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.AiAgent, message);
         }
 
+        public void AssertCanUseAiAssistant()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasAiAssistant)
+                return;
+
+            const string message = "Your current license doesn't include the AI Assistant feature";
+            throw GenerateLicenseLimit(LimitType.AiAssistant, message);
+        }
+
         public void AssertCanAddConcurrentDataSubscriptions()
         {
             if (IsValid(out var licenseLimit) == false)
