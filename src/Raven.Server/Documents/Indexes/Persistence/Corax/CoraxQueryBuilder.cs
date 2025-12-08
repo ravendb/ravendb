@@ -334,29 +334,10 @@ public static partial class CoraxQueryBuilder
                         {
                             case (NegatedExpression _, NegatedExpression _):
                                 throw new NotSupportedException($"You cannot negate two negated expressions at the same time. The expression is '{where.ToString()}'.");
-                            case (NegatedExpression _, _):
-                                throw new NotSupportedException($"The negation must be on the right side of the expression. The expression is '{where.ToString()}'.");
-                            case (_, NegatedExpression ne1):
-                                left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
-                                // Corax does support internal negation of some primitives. Let's check if we can use it.
-                                if (TryUseNegatedQuery(builderParameters, ne1, out right, exact) == false)
-                                {
-                                    right = ToCoraxQuery(builderParameters, ne1.Expression, ref builderParameters.StreamingDisabled, exact);
-                                    Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
-                                    return indexSearcher.AndNot(left, right, token: builderParameters.Token);
-                                }
-
-                                // We internally negated the right expression. If we find a pattern true and (NOT EXPR) we can skip the true, since it's noop. 
-                                if (@where.Left is TrueExpression)
-                                    return right; // true and not... optimization
-
-                                // Materialize the query
-                                if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
-                                    return merged;
-
-                                // The right side is already negated, so we are using standard .And() method.
-                                return indexSearcher.And(left, right);
-
+                            case (NegatedExpression leftNegated, _):
+                                return HandleNegatedAnd(builderParameters, where.Right, leftNegated, exact);
+                            case (_, NegatedExpression rightNegated):
+                                return HandleNegatedAnd(builderParameters, where.Left, rightNegated, exact);
 
                             default:
                                 left = ToCoraxQuery(builderParameters, @where.Left, ref leftOnlyOptimization, exact);
@@ -365,7 +346,7 @@ public static partial class CoraxQueryBuilder
                             if (left is CoraxBooleanItem cbi && leftOnlyOptimization.TrySetAsStreamingField(builderParameters, cbi, right))
                                     left = cbi.Materialize(ref leftOnlyOptimization);
 
-                                if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
+                                if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
                                     return merged;
 
                                 // When we do not optimize this node for streaming operation:.
@@ -548,6 +529,30 @@ public static partial class CoraxQueryBuilder
         }
 
         throw new InvalidQueryException("Unable to understand query", metadata.QueryText, queryParameters);
+    }
+
+    private static IQueryMatch HandleNegatedAnd(CoraxQueryBuilder.Parameters builderParameters, QueryExpression leftExpr, NegatedExpression rightExpr, bool exact)
+    {
+        var indexSearcher = builderParameters.IndexSearcher;
+        IQueryMatch left = ToCoraxQuery(builderParameters, leftExpr, ref builderParameters.StreamingDisabled, exact);
+        // Corax does support internal negation of some primitives. Let's check if we can use it.
+        if (TryUseNegatedQuery(builderParameters, rightExpr, out var right, exact) == false)
+        {
+            right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
+            Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
+            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
+        }
+
+        // We internally negated the right expression. If we find a pattern true and (NOT EXPR) we can skip the true, since it's noop. 
+        if (leftExpr is TrueExpression)
+            return right; // true and not... optimization
+
+        // Materialize the query
+        if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
+            return merged;
+
+        // The right side is already negated, so we are using standard .And() method.
+        return indexSearcher.And(left, right);
     }
     
     private static IQueryMatch HandleIn(Parameters builderParameters, InExpression ie, bool exact)
