@@ -25,17 +25,6 @@ namespace Raven.Client.Documents.Attachments;
 /// where and how attachments should be uploaded to Azure Blob Storage.
 /// </para>
 /// </remarks>
-/// <example>
-/// <code>
-/// var azureSettings = new RemoteAttachmentsAzureSettings
-/// {
-///     StorageContainer = "ravendb-attachments",
-///     RemoteFolderName = "production/attachments",
-///     AccountName = "mystorageaccount",
-///     AccountKey = "myaccountkey"
-/// };
-/// </code>
-/// </example>
 public sealed class RemoteAttachmentsAzureSettings : IRemoteAttachmentsSettings, IAzureSettings, IDynamicJson
 {
     /// <summary>

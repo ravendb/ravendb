@@ -973,17 +973,44 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
+        /// <summary>
+        /// Provides a convenient API for bulk inserting attachments for a specific document.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This struct is returned by <see cref="BulkInsertOperation.AttachmentsFor"/> and provides methods
+        /// to store attachments efficiently within a bulk insert operation. Attachments are streamed directly
+        /// to the server for optimal performance.
+        /// </para>
+        /// </remarks>
         public readonly struct AttachmentsBulkInsert
         {
             private readonly BulkInsertOperation _operation;
             private readonly string _id;
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="AttachmentsBulkInsert"/> struct.
+            /// </summary>
+            /// <param name="operation">The parent bulk insert operation.</param>
+            /// <param name="id">The document ID to attach files to.</param>
             public AttachmentsBulkInsert(BulkInsertOperation operation, string id)
             {
                 _operation = operation;
                 _id = id;
             }
 
+            /// <summary>
+            /// Stores an attachment synchronously for the associated document.
+            /// </summary>
+            /// <param name="name">The name of the attachment.</param>
+            /// <param name="stream">The stream containing the attachment data. The stream must support seeking and length queries.</param>
+            /// <param name="contentType">Optional MIME content type of the attachment (e.g., "image/jpeg", "application/pdf").</param>
+            /// <remarks>
+            /// <para>
+            /// The stream must be seekable and have a known length. The stream position will be reset to the beginning
+            /// before uploading. The stream is not disposed by this method.
+            /// </para>
+            /// </remarks>
             public void Store(string name, Stream stream, string contentType = null)
             {
                 Store(new StoreAttachmentParameters(name, stream)
@@ -992,6 +1019,24 @@ namespace Raven.Client.Documents.BulkInsert
                 });
             }
 
+            /// <summary>
+            /// Stores an attachment asynchronously for the associated document.
+            /// </summary>
+            /// <param name="name">The name of the attachment.</param>
+            /// <param name="stream">The stream containing the attachment data. The stream must support seeking and length queries.</param>
+            /// <param name="contentType">Optional MIME content type of the attachment (e.g., "image/jpeg", "application/pdf").</param>
+            /// <param name="token">Optional cancellation token to cancel the operation.</param>
+            /// <returns>A task that represents the asynchronous store operation.</returns>
+            /// <remarks>
+            /// <para>
+            /// The stream must be seekable and have a known length. The stream position will be reset to the beginning
+            /// before uploading. The stream is not disposed by this method.
+            /// </para>
+            /// <para>
+            /// The attachment is streamed directly to the server after writing the metadata, providing efficient
+            /// handling of large files without loading them entirely into memory.
+            /// </para>
+            /// </remarks>
             public Task StoreAsync(string name, Stream stream, string contentType = null, CancellationToken token = default)
             {
                 return StoreAsync(new StoreAttachmentParameters(name, stream)
@@ -1000,11 +1045,51 @@ namespace Raven.Client.Documents.BulkInsert
                 }, token);
             }
 
+            /// <summary>
+            /// Stores an attachment synchronously with advanced parameters for the associated document.
+            /// </summary>
+            /// <param name="parameters">
+            /// The parameters defining the attachment, including name, stream, content type, and optional remote storage settings.
+            /// </param>
+            /// <remarks>
+            /// <para>
+            /// Use this overload when you need to specify remote attachment parameters for cloud storage
+            /// (Amazon S3 or Azure Blob Storage) via <see cref="StoreAttachmentParameters.RemoteParameters"/>.
+            /// </para>
+            /// </remarks>
+            /// <exception cref="ArgumentException">
+            /// Thrown when the stream in parameters is not seekable or does not have a known length.
+            /// </exception>
+            /// <exception cref="BulkInsertAbortedException">
+            /// Thrown when the bulk insert operation is aborted due to server errors.
+            /// </exception>
             public void Store(StoreAttachmentParameters parameters)
             {
                 _operation._attachmentsOperation.Store(_id, parameters);
             }
 
+            /// <summary>
+            /// Stores an attachment asynchronously with advanced parameters for the associated document.
+            /// </summary>
+            /// <param name="parameters">
+            /// The parameters defining the attachment, including name, stream, content type, and optional remote storage settings.
+            /// </param>
+            /// <param name="token">Optional cancellation token to cancel the operation.</param>
+            /// <returns>A task that represents the asynchronous store operation.</returns>
+            /// <remarks>
+            /// <para>
+            /// This method provides full control over attachment storage, including:
+            /// <list type="bullet">
+            /// <item><description>Attachment name and content type</description></item>
+            /// <item><description>Stream containing the attachment data</description></item>
+            /// <item><description>Remote storage configuration for scheduled cloud upload (S3, Azure)</description></item>
+            /// </list>
+            /// </para>
+            /// <para>
+            /// The cancellation token passed to this method is linked with the bulk insert operation's token,
+            /// ensuring cancellation propagates correctly for the local storage phase.
+            /// </para>
+            /// </remarks>
             public Task StoreAsync(StoreAttachmentParameters parameters, CancellationToken token = default)
             {
                 return _operation._attachmentsOperation.StoreAsync(_id, parameters, token);

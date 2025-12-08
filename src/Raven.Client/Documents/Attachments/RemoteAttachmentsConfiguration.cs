@@ -7,16 +7,37 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Attachments
 {
+    /// <summary>
+    /// Configuration for remote attachments functionality, including destinations, frequency, and upload settings.
+    /// </summary>
     public sealed class RemoteAttachmentsConfiguration : IDynamicJson
     {
         internal static readonly StringComparer KeyComparer = StringComparer.OrdinalIgnoreCase;
 
+        /// <summary>
+        /// Gets or sets the dictionary of remote attachment destinations, keyed by destination name (case-insensitive).
+        /// </summary>
         [JsonDeserializationStringDictionary(StringComparison.OrdinalIgnoreCase)]
         public Dictionary<string, RemoteAttachmentsDestinationConfiguration> Destinations { get; set; } = new(KeyComparer);
 
+        /// <summary>
+        /// Gets or sets the frequency (in seconds) at which the remote attachments process checks for new items to upload.
+        /// </summary>
         public long? CheckFrequencyInSec { get; set; }
+            
+        /// <summary>
+        /// Gets or sets the maximum number of items to process in a single batch.
+        /// </summary>
         public long? MaxItemsToProcess { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of concurrent uploads allowed.
+        /// </summary>
         public int? ConcurrentUploads { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether remote attachments functionality is disabled.
+        /// </summary>
         public bool Disabled { get; set; }
 
         public override int GetHashCode()
