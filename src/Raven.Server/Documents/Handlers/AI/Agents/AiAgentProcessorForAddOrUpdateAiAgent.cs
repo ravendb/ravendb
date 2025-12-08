@@ -40,7 +40,7 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, cfg, RequestHandler.GetRaftRequestIdFromQuery()),
             token.Token);
 
-        RequestHandler.LogTaskToAudit($"Add/Update AI Agent '{cfg.Identifier}'", r.Index, options);
+        RequestHandler.LogTaskToAudit(Web.RequestHandler.AiAgentConfiguration, r.Index, options);
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 

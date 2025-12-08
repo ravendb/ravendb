@@ -181,6 +181,11 @@ public class AiAgentConfiguration : IDynamicJson
         };
     }
 
+    public DynamicJsonValue ToAuditJson()
+    {
+        return ToJson();
+    }
+
     internal void AppendCapabilities(StringBuilder sb)
     {
         sb.AppendLine("Capabilities:");

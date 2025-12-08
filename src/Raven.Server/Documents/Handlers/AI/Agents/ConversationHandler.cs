@@ -37,6 +37,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
+    private const string QueryVirtualConversationId = "QueryTools";
 
     protected ConversationDocument _document;
     private string _conversationId;
@@ -488,7 +489,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private void BuildQueryRequest(JsonOperationContext context, ConversationDocument document, Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs, AiAgentToolQuery q, AiToolCall call)
     {
-        reqs.GetOrAdd("QueryTools").Add((call, new DynamicJsonValue
+        reqs.GetOrAdd(QueryVirtualConversationId).Add((call, new DynamicJsonValue
             {
                 [nameof(GetRequest.Url)] = $"/databases/{database.Name}/queries",
                 [nameof(GetRequest.Query)] = null,
@@ -780,7 +781,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private async Task ExecuteMultiAgentRequests(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
-        if (reqs.TryGetValue("QueryTools", out List<(AiToolCall Call, DynamicJsonValue Req)> queryToolReqs))
+        if (reqs.TryGetValue(QueryVirtualConversationId, out List<(AiToolCall Call, DynamicJsonValue Req)> queryToolReqs))
         {
             // Probably need to have the same behavior as in Handle (start without defaults).
             await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(queryToolReqs.Select(x => x.Req))))
@@ -808,7 +809,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             }
         }
 
-        foreach (var (conversationId, conversationReqs) in reqs.Where(kvp => kvp.Key != "QueryTools"))
+        foreach (var (conversationId, conversationReqs) in reqs.Where(kvp => kvp.Key != QueryVirtualConversationId))
         {
             // Probably need to have the same behavior as in Handle (start without defaults).
             await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(conversationReqs.Select(x => x.Req))))
