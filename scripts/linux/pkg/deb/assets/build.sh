@@ -16,14 +16,15 @@ export RAVENDB_VERSION_MINOR=$( egrep -o -e '^[0-9]+.[0-9]+' <<< "$RAVENDB_VERSI
 
 set -e
 
-MS_DEB_NAME="/cache/packages-microsoft-prod_${DISTRO_VERSION}.deb"
-if ! (test -f "${MS_DEB_NAME}" \
-    || wget -O "${MS_DEB_NAME}" "https://packages.microsoft.com/config/ubuntu/${DISTRO_VERSION}/packages-microsoft-prod.deb"); then
-     echo "Could not obtain packages-microsoft-prod.deb"
-     exit 1
-fi
+# MS_DEB_NAME="/cache/packages-microsoft-prod_${DISTRO_VERSION}.deb"
+# if ! (test -f "${MS_DEB_NAME}" \
+#     || wget -O "${MS_DEB_NAME}" "https://packages.microsoft.com/config/ubuntu/${DISTRO_VERSION}/packages-microsoft-prod.deb"); then
+#      echo "Could not obtain packages-microsoft-prod.deb"
+#      exit 1
+# fi
 
-dpkg -i $MS_DEB_NAME
+# dpkg -i $MS_DEB_NAME
+add-apt-repository ppa:dotnet/backports -y
 apt update
 
 DOWNLOAD_URL=${DOWNLOAD_URL:-"https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2"}
@@ -41,7 +42,7 @@ DOTNET_VERSION_MINOR=$(egrep -o -e '^[0-9]+.[0-9]+' <<< $DOTNET_FULL_VERSION)
 export DOTNET_DEPS_VERSION="$DOTNET_FULL_VERSION"
 export DOTNET_RUNTIME_VERSION="$DOTNET_VERSION_MINOR"
 
-if [[ $release -eq 24 && $RAVEN_PLATFORM == "raspberry-pi" ]]; then
+if [[ $release -eq 24 ]]; then
     DOTNET_RUNTIME_DEPS="libicu74, libc6 (>= 2.38), libgcc-s1 (>= 3.0), liblttng-ust1t64 (>= 2.13.0), libssl3t64 (>= 3.0.0), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4)"
 else
     if [[ $release -ge 24 ]]; then
@@ -49,7 +50,7 @@ else
     else
         # Show dependencies for amd64 since that's the only platform Microsoft ships package for,
         # however the dependencies are the same at the moment.
-        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-deps-$DOTNET_RUNTIME_VERSION:amd64"
+        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION:amd64"
     fi
     
     # get depenencies and remove dotnet-host* dependencies
