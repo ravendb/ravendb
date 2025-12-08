@@ -1,13 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Commercial;
@@ -17,6 +22,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.AI;
 using Sparrow;
 using Xunit;
 
@@ -38,6 +44,10 @@ namespace FastTests
             internal const string RL_COMM = "RAVEN_LICENSE_COMMUNITY";
             internal const string RL_PRO = "RAVEN_LICENSE_PROFESSIONAL";
             internal const string RL_DEV = "RAVEN_LICENSE_DEVELOPER";
+
+            internal const string DefaultConnectionStringName = "Local AI connection";
+            internal const string DefaultEmbeddingGenerationTaskName = "localAiTask";
+            internal static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
 
             internal async Task FailToChangeLicense(RavenServer leader, string licenseType, LimitType limitType)
             {
@@ -63,6 +73,27 @@ namespace FastTests
                 Raven.Server.Commercial.LicenseHelper.TryDeserializeLicense(license, out License li);
 
                 await leader.ServerStore.PutLicenseAsync(li, RaftIdGenerator.NewId());
+            }
+
+            internal void RunRestore(DocumentStore store, string backupPath)
+            {
+                var configuration = new RestoreBackupConfiguration { DatabaseName = store.Database + "1" };
+                configuration.BackupLocation = Directory.GetDirectories(backupPath).First();
+                _parent.Backup.RestoreDatabase(store, configuration);
+            }
+
+            internal async Task RunBackup(DocumentStore store, string backupPath)
+            {
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                }));
+
+                _ = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
             }
 
             internal async Task DisableRevisionCompression(RavenServer leader, DocumentStore store)
@@ -227,6 +258,104 @@ namespace FastTests
                 };
 
                 await store.Maintenance.SendAsync(new AddEtlOperation<SqlConnectionString>(config));
+            }
+
+            internal async Task<EmbeddingsGenerationConfiguration> AddAiIntegration(DocumentStore store, RavenServer server, bool disabled = false)
+            {
+                AiConnectionString connectionString = EgConnectionString();
+
+                connectionString.Identifier = connectionString.GenerateIdentifier();
+                EmbeddingsGenerationConfiguration config = EGConfig(disabled, connectionString);
+
+                var putResult = store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString));
+                Assert.NotNull(putResult.RaftCommandIndex);
+
+                var command = new AddEmbeddingsGenerationCommand(config, store.Database, RaftIdGenerator.NewId());
+                await server.ServerStore.SendToLeaderAsync(command);
+
+                return config;
+            }
+
+            internal async Task UpdateAiIntegration(DocumentStore store, RavenServer server, EmbeddingsGenerationConfiguration config)
+            {
+                var op = new GetOngoingTaskInfoOperation(DefaultEmbeddingGenerationTaskName, OngoingTaskType.EmbeddingsGeneration);
+
+                var res = store.Maintenance.Send(op);
+                config.Disabled = false;
+
+                var command = new UpdateEmbeddingsGenerationCommand(res.TaskId, config, store.Database, RaftIdGenerator.NewId());
+                await server.ServerStore.SendToLeaderAsync(command);
+            }
+
+            internal AiConnectionString EgConnectionString()
+            {
+                var connectionString = new AiConnectionString
+                {
+                    Name = DefaultConnectionStringName,
+                    OllamaSettings = new OllamaSettings
+                    {
+                        Uri = "http://localhost:11434",
+                        Model = "test-model"
+                    }
+                };
+                return connectionString;
+            }
+
+            internal EmbeddingsGenerationConfiguration EGConfig(bool disabled, AiConnectionString connectionString)
+            {
+                var config = new EmbeddingsGenerationConfiguration
+                {
+                    Name = DefaultEmbeddingGenerationTaskName,
+                    ConnectionStringName = DefaultConnectionStringName,
+                    EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }],
+                    Collection = "Dtos",
+                    ChunkingOptionsForQuerying = DefaultChunkingOptions,
+                    Disabled = disabled,
+                    Connection = connectionString
+                };
+                config.Identifier = config.GenerateIdentifier();
+                return config;
+            }
+
+            internal SnowflakeConnectionString GetSnowflakeConnectionString()
+            {
+                var connection = new SnowflakeConnectionString { Name = "snowflakeConnectionString", ConnectionString = "connectionString", };
+                return connection;
+            }
+
+            internal async Task<SnowflakeEtlConfiguration> CreateSnowflakeEtlConfiguration(DocumentStore store, bool disabled = false)
+            {
+                var connectionString = GetSnowflakeConnectionString();
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<SnowflakeConnectionString>(connectionString));
+
+                SnowflakeEtlConfiguration config = GetSnowflakeEtlConfiguration(disabled, connectionString);
+
+                await store.Maintenance.SendAsync(new AddEtlOperation<SnowflakeConnectionString>(config));
+                return config;
+            }
+
+            internal SnowflakeEtlConfiguration GetSnowflakeEtlConfiguration(bool disabled, SnowflakeConnectionString connectionString)
+            {
+                var config = new SnowflakeEtlConfiguration()
+                {
+                    Name = "snowflakeEtl",
+                    ConnectionStringName = connectionString.Name,
+                    SnowflakeTables =
+                    {
+                        new SnowflakeEtlTable { TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false },
+                        new SnowflakeEtlTable { TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false },
+                    },
+                    Transforms = { new Transformation() { Name = "OrdersAndLines", Collections = new List<string> { "Orders" }, Script = @"var orderData = {
+Id: id(this),
+City: this.Address.City,
+TotalCost: 0
+};
+loadToOrders(orderData);"
+                    } } ,
+                    Disabled = disabled
+                };
+                return config;
             }
         }
     }

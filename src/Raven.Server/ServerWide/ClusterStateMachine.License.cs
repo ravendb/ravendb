@@ -63,7 +63,8 @@ public sealed partial class ClusterStateMachine
         nameof(UpdateQueueSinkCommand),
         nameof(EditDataArchivalCommand),
         nameof(AddEmbeddingsGenerationCommand),
-        nameof(UpdateEmbeddingsGenerationCommand)
+        nameof(UpdateEmbeddingsGenerationCommand),
+        nameof(AddSnowflakeEtlCommand)
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
@@ -1025,6 +1026,9 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (databaseRecord.SnowflakeEtls.Count == 0)
+            return;
+
+        if (databaseRecord.SnowflakeEtls.All(x => x.Disabled))
             return;
 
         throw new LicenseLimitException(LimitType.SnowflakeEtl, "Your license doesn't support using the Snowflake ETL feature.");

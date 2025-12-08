@@ -17,6 +17,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -1668,14 +1669,17 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.QueueEtl, message);
         }
         
-        public void AssertCanAddSnowflakeEtl()
+        public void AssertCanAddSnowflakeEtl(SnowflakeEtlConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
             if (LicenseStatus.HasSnowflakeEtl)
                 return;
-            
+
+            if (configuration.Disabled)
+                return;
+
             const string message = "Your current license doesn't include the Snowflake ETL feature";
             throw GenerateLicenseLimit(LimitType.SnowflakeEtl, message);
         }
