@@ -200,7 +200,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         return (allHashPassed, id);
     }
 
-    public DirectFileDownloader GetDownloader(Attachment attachment, OperationCancelToken tcs)
+    public DirectFileDownloader GetDownloader(Attachment attachment, OperationCancelToken token)
     {
         if (Configuration == null)
             throw new InvalidOperationException($"Cannot get remote attachment '{attachment.Key}' because {nameof(RemoteAttachmentsConfiguration)} is not configured on {Database.Name}.");
@@ -214,7 +214,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
             throw new InvalidOperationException($"Cannot get remote attachment '{attachment.Key}' because destination for '{attachment.RemoteParameters.Identifier}' is disabled.");
 
         var settings = UploaderSettings.GenerateDirectUploaderSettingsForAttachments(Database, nameof(AttachmentHandlerProcessorForGetAttachment), destination.S3Settings, destination.AzureSettings);
-        return new DirectFileDownloader(settings, tcs);
+        return new DirectFileDownloader(settings, token);
     }
 
     public Task<Stream> StreamForDownloadDestinationInternal(DirectFileDownloader downloader, string objKeyName)

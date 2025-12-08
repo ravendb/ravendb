@@ -21,12 +21,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         }
 
         protected override async ValueTask GetAttachmentsAsync(DocumentsOperationContext context, BlittableJsonReaderArray attachments, AttachmentType type,
-            OperationCancelToken tcs)
+            OperationCancelToken operationCancelToken)
         {
             var tasks = new List<Task<Stream>>();
             bool canDisposeReadTransaction = true;
             var downloaders = new Dictionary<string, DirectFileDownloader>(StringComparer.OrdinalIgnoreCase);
             using DocumentsTransaction tx = context.OpenReadTransaction();
+            var downloadToken = new OperationCancelToken(operationCancelToken.Token);
             try
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -62,8 +63,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (first == false)
                             writer.WriteComma();
                         first = false;
-
-                        (var getAttachmentStreamTask, var isLocal) = strategy.GetAttachmentStream(context, downloaders, attachment, tcs);
+                        (var getAttachmentStreamTask, var isLocal) = strategy.GetAttachmentStream(context, downloaders, attachment, downloadToken);
                         tasks.Add(getAttachmentStreamTask);
                         if (isLocal)
                         {
@@ -72,13 +72,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
                         strategy.WriteAttachmentDetails(writer, attachment, id);
 
-                        await writer.MaybeFlushAsync(tcs.Token);
+                        await writer.MaybeFlushAsync(operationCancelToken.Token);
                     }
 
                     writer.WriteEndArray();
                     writer.WriteEndObject();
 
-                    await writer.MaybeFlushAsync(tcs.Token);
+                    await writer.MaybeFlushAsync(operationCancelToken.Token);
                 }
 
                 if (canDisposeReadTransaction)
@@ -87,14 +87,38 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     tx.Dispose();
                 }
 
-                foreach (Task<Stream> t in tasks)
+                foreach (var t in tasks)
                 {
                     await using Stream stream = await t;
-                    await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
+
+                    await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), operationCancelToken.Token);
+                }
+            }
+            catch
+            {
+                //cancel any ongoing downloads
+                downloadToken.Cancel();
+
+                // Handle exceptions
+                foreach (var streamTask in tasks)
+                {
+                    try
+                    {
+                        if (streamTask.IsCompletedSuccessfully)
+                        {
+                            // dispose stream
+                            await using var stream = await streamTask;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore errors during cleanup
+                    }
                 }
             }
             finally
             {
+                // dispose the s3/azure clients
                 foreach (var kvp in downloaders)
                 {
                     kvp.Value.Dispose();

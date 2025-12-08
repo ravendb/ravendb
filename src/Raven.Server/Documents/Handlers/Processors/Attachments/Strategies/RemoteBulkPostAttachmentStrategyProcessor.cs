@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, nameof(GetAttachmentsOperation));
         }
 
-        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken tcs)
+        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken token)
         {
             var stream = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
             if (stream != null)
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 
             if (downloaders.TryGetValue(attachment.RemoteParameters.Identifier, out DirectFileDownloader downloader) == false)
             {
-                downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.GetDownloader(attachment, tcs);
+                downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.GetDownloader(attachment, token);
                 downloaders[attachment.RemoteParameters.Identifier] = downloader;
             }
 

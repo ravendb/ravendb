@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             _isDocument = isDocument;
         }
 
-        protected abstract ValueTask GetAttachmentAsync(TOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken tcs);
+        protected abstract ValueTask GetAttachmentAsync(TOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {

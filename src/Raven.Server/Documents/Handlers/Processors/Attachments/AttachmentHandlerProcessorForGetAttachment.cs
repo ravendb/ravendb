@@ -19,7 +19,7 @@ internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttac
     {
     }
 
-    protected override async ValueTask GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken tcs)
+    protected override async ValueTask GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken token)
     {
         using (var tx = context.OpenReadTransaction())
         {
@@ -78,7 +78,7 @@ internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttac
                 HttpContext.Response.Headers[Constants.Headers.AttachmentRemoteParametersFlags] = attachment.RemoteParameters.Flags.ToString();
             }
 
-            await strategy.WriteResponseStream(context, tx, attachment, tcs);
+            await strategy.WriteResponseStream(context, tx, attachment, token);
         }
     }
 }

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             }
         }
 
-        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken tcs)
+        public override (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken token)
         {
             return (Task.FromResult(attachment.Stream), true);
         }

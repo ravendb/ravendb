@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             // noop
         }
 
-        public override async Task WriteResponseStream(DocumentsOperationContext context, DocumentsTransaction tx, Attachment attachment, OperationCancelToken tcs)
+        public override async Task WriteResponseStream(DocumentsOperationContext context, DocumentsTransaction tx, Attachment attachment, OperationCancelToken token)
         {
             var (sendBody, start, bytesRemaining) = RangeHelper.SetRangeHeaders(HttpContext, attachment.Size);
             if (!sendBody)
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
                             return;
                         }
 
-                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, read), tcs.Token);
+                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, read), token.Token);
                     }
                 }
             }

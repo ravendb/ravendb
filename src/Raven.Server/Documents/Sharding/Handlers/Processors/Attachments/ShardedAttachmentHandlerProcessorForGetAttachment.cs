@@ -15,11 +15,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask GetAttachmentAsync(TransactionOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken tcs)
+        protected override async ValueTask GetAttachmentAsync(TransactionOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken token)
         {
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
             var cmd = new GetAttachmentOperation.GetAttachmentCommand(RequestHandler.ShardExecutor.Conventions, context, documentId, name, type, changeVector);
-            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<AttachmentResult>(cmd, RequestHandler.HttpContext), shardNumber, tcs.Token);
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<AttachmentResult>(cmd, RequestHandler.HttpContext), shardNumber, token.Token);
         }
     }
 }
