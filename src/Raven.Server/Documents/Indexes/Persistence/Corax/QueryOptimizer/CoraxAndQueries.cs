@@ -1,51 +1,101 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
-using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
 public sealed class CoraxAndQueries : CoraxBooleanQueryBase
 {
-    private readonly List<CoraxBooleanItem> _queryStack;
-
-    public CoraxAndQueries(IndexSearcher indexSearcher, CoraxQueryBuilder.Parameters parameters, CoraxBooleanItem left, CoraxBooleanItem right) :
-        base(indexSearcher, parameters)
+    private CoraxAndQueries(CoraxQueryBuilder.Parameters parameters) : base(parameters)
     {
-        _queryStack = new List<CoraxBooleanItem>() {left, right};
     }
 
-    public bool TryMerge(CoraxAndQueries other)
+    public static CoraxAndQueries And(CoraxQueryBuilder.Parameters parameters, IQueryMatch left, IQueryMatch right)
     {
-        if (EqualsScoreFunctions(other) == false)
-            return false;
-
-        _queryStack.AddRange(other._queryStack);
-        return true;
-    }
-
-    public bool TryAnd(IQueryMatch item)
-    {
-        switch (item)
         {
-            case CoraxBooleanQueryBase cbqb:
-                throw new InvalidOperationException($"CoraxBooleanQueryBase should be merged via {nameof(TryMerge)} method.");
-            case CoraxBooleanItem cbi:
-                _queryStack.Add(cbi);
-                return true;
-            default:
-                return false;
+            if (left is CoraxAndQueries caqLeft && right is CoraxAndQueries caqRight)
+            {
+                parameters.BuildSteps?.Add($"Trying to merge AND queries.");
+                return MergeOrCreateNew(parameters, caqLeft, caqRight);
+            }
         }
+
+        {
+            if (left is CoraxAndQueries { HasBoosting: false } caqLeft)
+                return (CoraxAndQueries)caqLeft.Add(right);
+            
+            if (right is CoraxAndQueries {HasBoosting: false} caqRight)
+                return (CoraxAndQueries)caqRight.Add(left);
+        }
+        
+        return CreateNew(parameters, left, right);
+    }
+
+    private static CoraxAndQueries MergeOrCreateNew(CoraxQueryBuilder.Parameters parameters, CoraxAndQueries left, CoraxAndQueries right)
+    {
+        if (left.EqualsScoreFunctions(right) == false)
+        {
+            parameters.BuildSteps?.Add($"Cannot merge AND queries because they have different score functions.");
+            return CreateNew(parameters, left, right);
+        }
+        
+        return left.Merge(right);
+    }
+
+    private CoraxAndQueries Merge(CoraxAndQueries other)
+    {
+        _parameters.BuildSteps?.Add($"Merging AND queries.");
+        if (other.VectorStack != null)
+        {
+            if (VectorStack == null)
+                VectorStack = other.VectorStack;
+            else
+                VectorStack.AddRange(other.VectorStack);
+        }
+
+        if (other.QueryStack != null)
+        {
+            if (QueryStack == null)
+                QueryStack = other.QueryStack;
+            else
+                QueryStack.AddRange(other.QueryStack);
+        }
+
+        if (other.ComplexMatches != null)
+        {
+            if (ComplexMatches == null)
+                ComplexMatches = other.ComplexMatches;
+            else
+                ComplexMatches.AddRange(other.ComplexMatches);
+        }
+
+        return this;
+    }
+
+    private static CoraxAndQueries CreateNew(CoraxQueryBuilder.Parameters parameters, IQueryMatch left, IQueryMatch right)
+    {
+        var caq = new CoraxAndQueries(parameters);
+        caq.Add(left);
+        caq.Add(right);
+        return caq;
+    }
+
+    protected override void AddCoraxBooleanItem(CoraxBooleanItem item)
+    {
+        _parameters.BuildSteps?.Add($"  Adding CoraxBooleanItem to query.");
+        QueryStack ??= new();
+        QueryStack.Add(item);
     }
 
     public override IQueryMatch Materialize()
     {
-        var stack = CollectionsMarshal.AsSpan(_queryStack);
+        var indexSearcher = _parameters.IndexSearcher;
+        var stack = QueryStack is null ? Span<CoraxBooleanItem>.Empty : CollectionsMarshal.AsSpan(QueryStack);
         var noStreaming = new CoraxQueryBuilder.StreamingOptimization();
-
-        if (ShouldPerformScan(stack, out var queryPosition))
+        IQueryMatch match = null;
+        var shouldScan = ShouldPerformScan(stack, out var queryPosition);
+        if (shouldScan)
         {
             MultiUnaryItem[] listOfMergedUnaries = new MultiUnaryItem[stack.Length - 1];
             int unaryPos = 0;
@@ -61,7 +111,7 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
                     {
                         (long l, long l2) => new MultiUnaryItem(query.Field, l, l2, query.BetweenLeft, query.BetweenRight),
                         (double d, double d2) => new MultiUnaryItem(query.Field, d, d2, query.BetweenLeft, query.BetweenRight),
-                        (string s, string s2) => new MultiUnaryItem(IndexSearcher, query.Field, s, s2, query.BetweenLeft, query.BetweenRight),
+                        (string s, string s2) => new MultiUnaryItem(indexSearcher, query.Field, s, s2, query.BetweenLeft, query.BetweenRight),
                         (long l, double d) => new MultiUnaryItem(query.Field, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
                         (double d, long l) => new MultiUnaryItem(query.Field, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
                         _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
@@ -73,61 +123,43 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
                     {
                         long longTerm => new MultiUnaryItem(query.Field, longTerm, query.Operation),
                         double doubleTerm => new MultiUnaryItem(query.Field, doubleTerm, query.Operation),
-                        _ => new MultiUnaryItem(IndexSearcher, query.Field, query.Term as string, query.Operation),
+                        _ => new MultiUnaryItem(indexSearcher, query.Field, query.Term as string, query.Operation),
                     };
                 }
 
                 unaryPos++;
             }
 
-            return IndexSearcher.CreateMultiUnaryMatch(stack[queryPosition].Materialize(ref noStreaming), listOfMergedUnaries);
+            match = indexSearcher.CreateMultiUnaryMatch(stack[queryPosition].Materialize(ref noStreaming), listOfMergedUnaries);
         }
 
-        IQueryMatch match = null;
-        stack.Sort(PrioritizeSort);
-        //stack.Reverse(); // we want to have BIGGEST at the very beginning to avoid filling big match multiple times
-
-        // Collect negated items (NotEquals) to apply them at the end using AndNot optimization
-        // This transforms And(X, AndNot(AllEntries, term)) into AndNot(X, term) which is much more efficient
-        // because it avoids iterating through AllEntries
-        List<CoraxBooleanItem> negatedItems = null;
-
-        foreach (ref var query in stack)
+        if (shouldScan == false)
         {
-            // RavenDB-22603: Defer NotEquals items to apply with AndNot at the end
-            if (query.IsNegated)
+            stack.Sort(PrioritizeSort);
+            //stack.Reverse(); // we want to have BIGGEST at the very beginning to avoid filling big match multiple times
+
+            foreach (ref var query in stack)
             {
-                negatedItems ??= new List<CoraxBooleanItem>();
-                negatedItems.Add(query);
-                continue;
-            }
+                var materializedQuery = query.Materialize(ref noStreaming);
 
-            var materializedQuery = query.Materialize(ref noStreaming);
-
-            match = match is null
-                ? materializedQuery
-                : IndexSearcher.And(materializedQuery, match);
-        }
-
-        // Apply negated items using AndNot optimization
-        // Instead of And(match, AndNot(AllEntries, term)), we do AndNot(match, term)
-        if (negatedItems != null)
-        {
-            foreach (var negatedItem in negatedItems)
-            {
-                var termMatch = negatedItem.MaterializeNegatedTermMatch();
-                if (match is null)
-                {
-                    // If there are only negated items, we need AllEntries as the base
-                    match = IndexSearcher.AndNot(IndexSearcher.AllEntries(), termMatch);
-                }
-                else
-                {
-                    match = IndexSearcher.AndNot(match, termMatch);
-                }
+                match = match is null
+                    ? materializedQuery
+                    : indexSearcher.And(materializedQuery, match);
             }
         }
 
+        if (ComplexMatches != null)
+        {
+            foreach (var complex in ComplexMatches)
+                match = match is null ? complex : indexSearcher.And(complex, match);
+        }
+
+        if (VectorStack != null)
+        {
+            //todo consider what to do if we've more than two? for now simplify the path
+            foreach (var vector in VectorStack)
+                match = vector.Materialize(match);
+        }
 
         bool ShouldPerformScan(Span<CoraxBooleanItem> queries, out int pos)
         {
@@ -156,7 +188,7 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
             return minimumCount < 32 * 1024; // 32K items seems ok
         }
 
-        return IsBoosting ? IndexSearcher.Boost(match, Boosting.Value) : match;
+        return IsBoosting ? indexSearcher.Boost(match, Boosting.Value) : match;
     }
 
     private static int PrioritizeSort(CoraxBooleanItem firstUnaryItem, CoraxBooleanItem secondUnaryItem)

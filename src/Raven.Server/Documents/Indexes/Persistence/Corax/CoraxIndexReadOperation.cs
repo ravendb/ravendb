@@ -103,9 +103,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
-            IndexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
+            IndexSearcher = new IndexSearcher(readTransaction, _fieldMappings, index._forTestingPurposes?.CoraxConfiguration)
             {
-                MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes) 
+                MaxMemoizationSizeInBytes = index.Configuration.MaxMemoizationSize.GetValue(SizeUnit.Bytes),
             };
             
             var primaryKey = index.Type.IsMap() 

@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Corax.Utils;
 using Microsoft.AspNetCore.Http;
 using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
@@ -5626,6 +5627,8 @@ namespace Raven.Server.Documents.Indexes
 
         internal sealed class TestingStuff
         {
+            internal CoraxTestingConfiguration CoraxConfiguration;
+            
             internal Action ActionToCallInFinallyOfExecuteIndexing;
 
             internal bool ShouldRenewTransaction;

@@ -1,30 +1,60 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Corax.Mappings;
-using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
-using Sparrow.Extensions;
-using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
 public sealed class CoraxOrQueries : CoraxBooleanQueryBase
 {
-    private List<CoraxBooleanItem> _unaryMatchesList;
-    private Dictionary<FieldMetadata, List<string>> _termMatchesList; 
-    private List<IQueryMatch> _complexMatches;
+    private Dictionary<FieldMetadata, List<string>> _termMatchesList;
 
-    public CoraxOrQueries(IndexSearcher indexSearcher, CoraxQueryBuilder.Parameters parameters) : base(indexSearcher, parameters)
+    private CoraxOrQueries(CoraxQueryBuilder.Parameters parameters) : base(parameters)
     {
     }
 
-    private bool TryMerge(CoraxOrQueries other)
+    public static CoraxOrQueries Or(CoraxQueryBuilder.Parameters parameters, IQueryMatch left, IQueryMatch right)
     {
-        bool canMerge = EqualsScoreFunctions(other);
+        {
+            if (left is CoraxOrQueries leftOr && right is CoraxOrQueries rightOr)
+                return MergeOrCreateTwoOrQueries(parameters, leftOr, rightOr);
+        }
 
-        if (canMerge == false)
-            return false;
+        {
+            // It does not have boosting, so we can merge it.
+            if (left is CoraxOrQueries { HasBoosting: false } leftOr)
+                return (CoraxOrQueries)leftOr.Add(right);
 
+            if (right is CoraxOrQueries { HasBoosting: false } rightOr)
+                return (CoraxOrQueries)rightOr.Add(left);
+        }
+        
+        return CreateNew(parameters, left, right);
+    }
+    
+    private static CoraxOrQueries CreateNew(CoraxQueryBuilder.Parameters parameters, IQueryMatch left, IQueryMatch right)
+    {
+        var orClause = new CoraxOrQueries(parameters);
+        orClause.Add(left);
+        orClause.Add(right);
+        return orClause;
+    }
+    
+    private static CoraxOrQueries MergeOrCreateTwoOrQueries(CoraxQueryBuilder.Parameters parameters, CoraxOrQueries left, CoraxOrQueries right)
+    {
+        if (left.EqualsScoreFunctions(right))
+        {
+            left.AddOrQueries(right);
+            return left;
+        }
+
+        return CreateNew(parameters, left, right);
+    }
+
+    private void AddOrQueries(CoraxOrQueries other)
+    {
         _hasBinary |= other.HasBinary;
 
         if (other._termMatchesList != null)
@@ -32,129 +62,110 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
             _termMatchesList ??= new(FieldMetadataComparer.Instance);
             foreach (var (key, value) in other._termMatchesList)
             {
-                if (_termMatchesList.TryGetValue(key, out var list))
-                    list.AddRange(value);
-                else
+                ref var list = ref CollectionsMarshal.GetValueRefOrNullRef(_termMatchesList, key);
+                if (Unsafe.IsNullRef(ref list))
                     _termMatchesList.Add(key, value);
+                else
+                    list.AddRange(value);
             }
         }
-        
-        if (other._complexMatches != null)
+
+        if (other.ComplexMatches != null)
         {
-            _complexMatches ??= new();
-            _complexMatches.AddRange(other._complexMatches);
-        }
-        
-        if (other._unaryMatchesList != null)
-        {
-            _unaryMatchesList ??= new();
-            _unaryMatchesList.AddRange(other._unaryMatchesList);
+            if (ComplexMatches == null)
+                ComplexMatches = other.ComplexMatches;
+            else
+                ComplexMatches.AddRange(other.ComplexMatches);
         }
 
-        return true;
+        if (other.QueryStack != null)
+        {
+            if (QueryStack == null)
+                QueryStack = other.QueryStack;
+            else
+                QueryStack.AddRange(other.QueryStack);
+        }
+
+        if (other.VectorStack != null)
+        {
+            if (VectorStack == null)
+                VectorStack = other.VectorStack;
+            else 
+                VectorStack.AddRange(other.VectorStack);
+        }
     }
-
-    public bool TryAddItem(IQueryMatch itemToAdd)
+    
+    protected override void AddCoraxBooleanItem(CoraxBooleanItem itemToAdd)
     {
-        switch (itemToAdd)
+        if (itemToAdd.Boosting.HasValue == false && itemToAdd.Operation is not UnaryMatchOperation.Equals)
         {
-            case CoraxOrQueries moq:
-                return TryMerge(moq);
-            case CoraxBooleanItem cbi:
-                return TryAddItem(cbi);
-            case CoraxAndQueries mao:
-                // We popup inner boosting to this
-                if (EqualsScoreFunctions(mao) == false)
-                    return false; 
-                mao.Boosting = null;
-                itemToAdd = mao.Materialize();
-                _hasBinary |= mao.HasBinary;
-                break;
-            case BoostingMatch boostingMatch:
-                if (Boosting.HasValue == false || 
-                    Boosting.Value.AlmostEquals(boostingMatch.BoostFactor) == false)
-                    return false;
-                break;
+            QueryStack ??= new();
+            QueryStack.Add(itemToAdd);
         }
-
-        (_complexMatches ??= new List<IQueryMatch>()).Add(itemToAdd);
-        return true;
-    }
-
-    private bool TryAddItem(CoraxBooleanItem itemToAdd)
-    {
-        if (EqualsScoreFunctions(itemToAdd) == false)
-            return false;
-        
-        if (itemToAdd.Operation is not UnaryMatchOperation.Equals)
-        {
-            _unaryMatchesList ??= new();
-            _unaryMatchesList.Add(itemToAdd);
-        }
-        else if (itemToAdd.Operation is UnaryMatchOperation.Equals && itemToAdd.TermAsString != null)
+        else if (itemToAdd.Boosting.HasValue == false && itemToAdd.Operation is UnaryMatchOperation.Equals && itemToAdd.TermAsString != null)
         {
             _termMatchesList ??= new();
 
             if (_termMatchesList.TryGetValue(itemToAdd.Field, out var list) == false)
-                _termMatchesList.Add(itemToAdd.Field, new List<string>() {itemToAdd.TermAsString});
+                _termMatchesList.Add(itemToAdd.Field, new List<string>() { itemToAdd.TermAsString });
             else
                 list.Add(itemToAdd.TermAsString);
         }
         else
         {
-            _complexMatches ??= new();
-            CoraxQueryBuilder.StreamingOptimization disableOptimization = default;
-            _complexMatches.Add(itemToAdd.Materialize(ref disableOptimization));
+            QueryStack ??= new();
+            QueryStack.Add(itemToAdd);
         }
-
-        return true;
     }
 
     public override IQueryMatch Materialize()
     {
         IQueryMatch baseQuery = null;
-        
-        if (_unaryMatchesList != null)
+
+        if (QueryStack != null)
         {
-            foreach (var unaryMatch in _unaryMatchesList)
+            foreach (var unaryMatch in QueryStack)
             {
-                var nextQuery = TransformCoraxBooleanItemIntoQueryMatch(unaryMatch);
+                var nextQuery = unaryMatch.Materialize(ref _parameters.StreamingDisabled);
                 AddToQueryTree(nextQuery);
             }
-        }
-        
-        if (_termMatchesList != null)
-        {
-            foreach (var (field, terms) in _termMatchesList)
-            {
-                if (terms.Count == 1)
-                {
-                   AddToQueryTree(IndexSearcher.TermQuery(field, terms[0])); 
-                }
-                else
-                {
-                    
-                    AddToQueryTree(IndexSearcher.InQuery(field, terms));
-                }
-            }
-        }
-        
-        if (_complexMatches != null)
-        {
-            foreach (var complex in _complexMatches ?? Enumerable.Empty<IQueryMatch>())
-                AddToQueryTree(complex);
+            QueryStack = null;
         }
 
+        foreach (var (field, terms) in _termMatchesList ?? [])
+        {
+            if (terms.Count == 1)
+            {
+                AddToQueryTree(_parameters.IndexSearcher.TermQuery(field, terms[0]));
+            }
+            else
+            {
+                AddToQueryTree(_parameters.IndexSearcher.InQuery(field, terms));
+            }
+        }
+        _termMatchesList = null;
+
+        foreach (var complex in ComplexMatches ?? Enumerable.Empty<IQueryMatch>())
+            AddToQueryTree(complex);
+        ComplexMatches = null;
+        
+        foreach (var vector in VectorStack ?? Enumerable.Empty<CoraxVectorItem>())
+        {
+            AddToQueryTree(vector.Materialize(null));
+        }
+        
+        VectorStack = null;
+
         if (Boosting.HasValue)
-            baseQuery = IndexSearcher.Boost(baseQuery, Boosting.Value);
-        
+            baseQuery = _parameters.IndexSearcher.Boost(baseQuery, Boosting.Value);
+
         return baseQuery;
-        
+
         void AddToQueryTree(IQueryMatch query)
         {
             baseQuery = baseQuery is null
                 ? query
-                : IndexSearcher.Or(baseQuery, query);
+                : _parameters.IndexSearcher.Or(baseQuery, query);
         }
     }
 }

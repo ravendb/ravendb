@@ -55,7 +55,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
     private IQueryMatch _filterQuery;
     private long _filterMatchesCount;
 
-
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
         in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
     {
@@ -264,16 +263,33 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode(nameof(MultiVectorSearchMatch),
+        var mvsInspect =  new QueryInspectionNode(nameof(MultiVectorSearchMatch),
             parameters: new Dictionary<string, string>()
             {
+<<<<<<< HEAD
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },                
                 { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers.FirstOrDefault().SimilarityMethod?.ToString() ?? "Query not initialized." },
+=======
+                { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
+                { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers[0].SimilarityMethod.ToString() },
+>>>>>>> 872a432aa79 (RavenDB-23453: Refactor Corax vector search and query building)
                 { "IsExact", _isExact.ToString() },
                 { "IsScanning", _scanningQuery.ToString() },
                 { "Minimum match", _minimumMatch.ToString(CultureInfo.InvariantCulture) },
                 { "Number of candidates", _numberOfCandidates.ToString() },
             });
+
+        if (_filterQuery is not null)
+        {
+            return new QueryInspectionNode($"{nameof(BinaryMatch)} [And]",
+                children: new List<QueryInspectionNode> { mvsInspect, _filterQuery.Inspect() },
+                parameters: new Dictionary<string, string>()
+                {
+                    {"VectorSearchAndOperation", "true"}
+                });
+        }
+        
+        return mvsInspect;
     }
 
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;

@@ -54,7 +54,8 @@ class configurationItem {
         "Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration",
         "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
         "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
-        "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery"
+        "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",
+        "Indexing.Corax.VectorSearch.VectorSearchScanningThreshold"
         
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*

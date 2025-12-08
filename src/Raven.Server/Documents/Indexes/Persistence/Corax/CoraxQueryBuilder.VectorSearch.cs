@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
+using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public static partial class CoraxQueryBuilder
 {
-    private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
+    private static CoraxVectorItem HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
     {
         var metadata = builderParameters.Metadata;
         IndexField indexField;
@@ -84,18 +85,10 @@ public static partial class CoraxQueryBuilder
             {
                 return (method, methodParameter) switch
                 {
-                    (method: VectorHelpers.MethodVectorValue.ForDocument, string docId) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docId,
-                        minimumMatch, numberOfCandidates, exact,
-                        builderParameters.IsVectorSingleClause),
-                    (method: VectorHelpers.MethodVectorValue.ForDocument, StringSegment docIdSegment) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
-                        docIdSegment.Value, minimumMatch,
-                        numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
-                    (method: VectorHelpers.MethodVectorValue.ForRaw, string vectorAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
-                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64, false), minimumMatch, numberOfCandidates,
-                        exact, builderParameters.IsVectorSingleClause),
-                    (method: VectorHelpers.MethodVectorValue.ForRaw, StringSegment stringSegmentAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
-                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString(), false), minimumMatch,
-                        numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
+                    (method: VectorHelpers.MethodVectorValue.ForDocument, string docId) => CoraxVectorItem.BuildForDocVector(builderParameters, fieldMetadata, docId, numberOfCandidates, minimumMatch, exact),
+                    (method: VectorHelpers.MethodVectorValue.ForDocument, StringSegment docIdSegment) => CoraxVectorItem.BuildForDocVector(builderParameters, fieldMetadata, docIdSegment.Value, numberOfCandidates, minimumMatch, exact),
+                    (method: VectorHelpers.MethodVectorValue.ForRaw, string vectorAsBase64) => CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64, false), numberOfCandidates, minimumMatch, exact),
+                    (method: VectorHelpers.MethodVectorValue.ForRaw, StringSegment stringSegmentAsBase64) => CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString(), false), numberOfCandidates, minimumMatch, exact),
                     (_, BlittableJsonReaderArray { Length: > 0 }) => throw new InvalidDataException("Cannot perform search on empty value."),
                     _ => throw new InvalidQueryException(
                         $"Unknown method in value ({methodValue.Name}. Parameter type: {methodParameter.GetType().FullName}, Value: {methodParameter}")
@@ -123,14 +116,10 @@ public static partial class CoraxQueryBuilder
 
             if (vector.SingleVector != null)
             {
-                return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, vector.SingleVector.Value, minimumMatch, numberOfCandidates, exact,
-                    builderParameters.IsVectorSingleClause);
+                return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, vector.SingleVector.Value, numberOfCandidates, minimumMatch, exact);
             }
 
-            return builderParameters.IndexSearcher.MultiVectorSearch(fieldMetadata, vector.MultiVector, minimumMatch, numberOfCandidates, exact,
-                builderParameters.IsVectorSingleClause);
-
-
+            return CoraxVectorItem.BuildMultiVector(builderParameters, fieldMetadata, vector.MultiVector, numberOfCandidates, minimumMatch, exact);
             // We need to handle embedding generation from embedding.text()
         }
         
@@ -201,7 +190,7 @@ public static partial class CoraxQueryBuilder
         }
 
         if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
-            return builderParameters.IndexSearcher.EmptyMatch(); // no vector indexed
+            return CoraxVectorItem.BuildEmpty(builderParameters); // no vector indexed
 
         if (transformedEmbeddings.SingleVector != null)
         {
@@ -209,9 +198,7 @@ public static partial class CoraxQueryBuilder
 
             if (indexField != null)
                 AssertDimensions(singleVector);
-
-            return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, singleVector, minimumMatch, numberOfCandidates, exact,
-                builderParameters.IsVectorSingleClause);
+            return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, singleVector, numberOfCandidates, minimumMatch, exact);
         }
 
         if (transformedEmbeddings.MultiVector != null)
@@ -223,9 +210,7 @@ public static partial class CoraxQueryBuilder
                 foreach (var vector in multiVector)
                     AssertDimensions(vector);
             }
-
-            return builderParameters.IndexSearcher.MultiVectorSearch(fieldMetadata, multiVector, minimumMatch, numberOfCandidates, exact,
-                builderParameters.IsVectorSingleClause);
+            return CoraxVectorItem.BuildMultiVector(builderParameters, fieldMetadata, multiVector, numberOfCandidates, minimumMatch, exact);
         }
 
         throw new InvalidDataException("Expected to get single or multiple embeddings of VectorValue type but none was provided");

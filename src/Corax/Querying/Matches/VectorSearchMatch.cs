@@ -304,8 +304,7 @@ public struct VectorSearchMatch : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode(nameof(VectorSearchMatch),
-            children: new List<QueryInspectionNode> { _filterQuery?.Inspect() ?? QueryInspectionNode.NotInitializedInspectionNode("Filter") },
+        var vsInspect =  new QueryInspectionNode(nameof(VectorSearchMatch),
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
@@ -316,6 +315,18 @@ public struct VectorSearchMatch : IQueryMatch
                 { "Number of candidates", _numberOfCandidates.ToString() },
                 { "Number of candidates scanned", (_vectorSearchRetriever.CandidatesProcessed).ToString()}
             });
+
+        if (_filterQuery is not null)
+        {
+            return new QueryInspectionNode($"{nameof(BinaryMatch)} [And]",
+                children: new List<QueryInspectionNode> { _filterQuery.Inspect(), vsInspect },
+                parameters: new Dictionary<string, string>()
+                {
+                    {"VectorSearchAndOperation", "true"}
+                });
+        }
+        
+        return vsInspect;
     }
 
     public string DebugView => Inspect().ToString();

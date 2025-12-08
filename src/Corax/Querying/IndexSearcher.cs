@@ -30,6 +30,12 @@ namespace Corax.Querying;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
+    /// <summary>
+    /// Used for testing purposes only.
+    /// </summary>
+    private readonly CoraxTestingConfiguration _testingConfiguration;
+    internal bool VectorSearchScanningDisabled => _testingConfiguration is not null && _testingConfiguration.DisableVectorSearchScanning;
+    
     internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
@@ -49,7 +55,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     /// </summary>
     public bool ForceNonAccelerated { get; set; }
 
-    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && !ForceNonAccelerated;
+    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && (_testingConfiguration?.IsAccelerated ?? ForceNonAccelerated == false);
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
@@ -116,14 +122,14 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
+    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping, CoraxTestingConfiguration testingConfiguration = null) : this(fieldsMapping, testingConfiguration)
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         Init();
     }
 
-    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
+    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping, CoraxTestingConfiguration testingConfiguration = null) : this(fieldsMapping, testingConfiguration)
     {
         _ownsTransaction = false;
         _transaction = tx;
@@ -141,8 +147,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
 
-    private IndexSearcher(IndexFieldsMapping fieldsMapping)
+    private IndexSearcher(IndexFieldsMapping fieldsMapping, CoraxTestingConfiguration testingConfiguration)
     {
+        _testingConfiguration = testingConfiguration;
         if (fieldsMapping is null)
         {
             _ownsIndexMapping = true;
