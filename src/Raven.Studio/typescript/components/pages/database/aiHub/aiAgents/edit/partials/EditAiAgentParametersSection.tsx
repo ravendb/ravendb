@@ -85,11 +85,13 @@ export default function EditAiAgentParametersSection() {
                                                     <PopoverWithHoverWrapper
                                                         message={
                                                             <>
-                                                                When enabled, the parameter is exposed to the model.
+                                                                When enabled, the parameter is exposed to the model. It
+                                                                is included in the prompt sent to the model and in any
+                                                                echo messages.
                                                                 <br />
                                                                 <br />
-                                                                When disabled, the parameter is hidden from the model
-                                                                (it will not be included in prompts/echo messages).
+                                                                When disabled, the parameter is hidden from the model.
+                                                                It is excluded from both the prompt and echo messages.
                                                             </>
                                                         }
                                                     >
