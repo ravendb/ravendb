@@ -66,6 +66,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _scanningThreshold = scanningThreshold;
         IsBoosting = true;
         _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
+        _isEmpty = false;
     }
 
     private void InitializeVectorSearch()
@@ -82,7 +83,18 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold);
         ContextBoundNativeList<long> nodesIdsToScan = default;
         if (_scanningQuery)
-            IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+        {
+            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+            if (hasNodes == false)
+            {
+                _isEmpty = true;
+                nodesIdsToScan.Dispose();
+                _filterResults.Dispose();
+                foreach (var vector in _vectorsToSearch)
+                    vector.Dispose();
+                return;
+            }
+        }
 
         _vectorsRetrievers = new Hnsw.VectorSearchRetriever[_vectorsToSearch.Length];
         var llt = _indexSearcher.Transaction.LowLevelTransaction;
@@ -107,12 +119,12 @@ public struct MultiVectorSearchMatch : IQueryMatch
     {
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
-
-        if (_isEmpty)
-            return 0;
         
         if (_resultsPersisted == false)
             FillAndPersistResults();
+        
+        if (_isEmpty)
+            return 0;
         
         var resultsLeft = _matches.Count - _positionOnPersistedValues;
 
@@ -129,7 +141,9 @@ public struct MultiVectorSearchMatch : IQueryMatch
     {
         Debug.Assert(_resultsPersisted == false, "Results should be persisted only once.");
         _resultsPersisted = true;
-
+        if (_isEmpty)
+            return;
+        
         _matches.Init(_indexSearcher.Allocator, 128);
         _distances.Init(_indexSearcher.Allocator, 128);
         for (var i = 0; i < _vectorsRetrievers.Length; ++i)

@@ -78,7 +78,7 @@ public partial class IndexSearcher
 
             var uniqueCount = Sorting.SortAndRemoveDuplicates(nodesIdsToScan.ToSpan());
             nodesIdsToScan.Count = uniqueCount;
-            return true;
+            return nodesIdsToScan.Count > 0;
         }
     }
 

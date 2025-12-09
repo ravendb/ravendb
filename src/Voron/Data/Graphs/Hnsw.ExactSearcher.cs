@@ -24,7 +24,7 @@ public partial class Hnsw
                 _vector = vector;
                 _hasFilterMatch = hasFilterMatch;
                 //TODO: more than int32 vectors
-                PortableExceptions.ThrowIf<NotSupportedException>(_searchState.Options.CountOfVectors >= int.MaxValue && hasFilterMatch, "Cannot have more than int32 vectors and filter match");
+                PortableExceptions.ThrowIf<NotSupportedException>(_searchState.Options.CountOfVectors >= int.MaxValue && hasFilterMatch, $"Cannot have more than {int.MaxValue} vectors and filter match");
                 
                 NumberOfCandidates = numberOfCandidates;
                 _nodesToScan = nodesToScan;

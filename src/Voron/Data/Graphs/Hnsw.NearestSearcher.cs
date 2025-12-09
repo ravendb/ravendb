@@ -117,7 +117,8 @@ public partial class Hnsw
                             continue; // already checked
                         next.Visited = visitedCounter;
 
-                        var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone;
+                        var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
+                            || _hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex);
 
                         float nextDist = -_searchState.QueryDistance(_vector.Span, nextIndex);
                         if (nearestEdgesQ.Count < _internalNumberOfCandidates)
@@ -187,10 +188,9 @@ public partial class Hnsw
 
                 while (_searchState._nearestEdgesQ.TryDequeue(out var edgeId, out var d))
                 {
+                    if (_hasFilterMatch)
+                        _alreadyReturnedEdges.Add(edgeId);
                     // When filtering is enabled, avoid returning the same edge more than once.
-                    if (_hasFilterMatch && _alreadyReturnedEdges.Add(edgeId) == false)
-                        continue;
-
                     _candidates.AddUnsafe(edgeId);
                 }
 

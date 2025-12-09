@@ -81,6 +81,7 @@ public struct VectorSearchMatch : IQueryMatch
         _vectorToSearch = vectorToSearch;
         _filterQueryLoaded = filterQuery is null;
         _scanningThreshold = scanningThreshold;
+        _isEmpty = false;
     }
 
     /// <summary>
@@ -105,7 +106,16 @@ public struct VectorSearchMatch : IQueryMatch
         
         ContextBoundNativeList<long> nodesIdsToScan = default;
         if (_scanningQuery)
-            _scanningQuery = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+        {
+            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+            if (hasNodes == false)
+            {
+                _isEmpty = true;
+                _vectorToSearch.Dispose();
+                _filterResults.Dispose();
+                return;
+            }
+        }
         
         
         _vectorSearchRetriever = _isExact switch
@@ -126,15 +136,15 @@ public struct VectorSearchMatch : IQueryMatch
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
         
-        if (_isEmpty)
-            return 0;
-        
         if (CanStreamResults) // case when we do not care about scores.
             return FillDiscardSimilarity(matches);
 
         if (_resultsPersisted == false)
             FillAndPersistResults();
 
+        if (_isEmpty)
+            return 0;
+        
         var resultsLeft = _matches.Count - _positionOnPersistedValues;
         if (resultsLeft == 0)
         {
@@ -163,7 +173,7 @@ public struct VectorSearchMatch : IQueryMatch
 
     private int FillDiscardSimilarity(Span<long> matches)
     {
-        if (_returnedAllResults)
+        if (_returnedAllResults || _isEmpty)
             return 0;
         
         if (_distances.Capacity < sizeof(float) * matches.Length)
@@ -238,8 +248,6 @@ public struct VectorSearchMatch : IQueryMatch
         Dispose();
     }
     
-    
-
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         if (_resultsNotPersisted)
