@@ -245,20 +245,7 @@ namespace Voron.Impl.Journal
 
             if ((current->Flags & TransactionPersistenceModeFlags.HasFreePages) == TransactionPersistenceModeFlags.HasFreePages)
             {
-                var freePagesPtr = outputPage + totalRead;
-
-                var header = *(FreePagesHeader*)freePagesPtr;
-                
-                var freePagesSpaceToRead = sizeof(FreePagesHeader) + header.EncodedSectionsSize + header.EncodedSectionsCount * sizeof(EncodedFreePagesSection);
-
-                if (totalRead + freePagesSpaceToRead > current->UncompressedSize)
-                {
-                    throw new InvalidDataException(
-                        $"Attempted to read free pages from position {totalRead} to {totalRead + freePagesSpaceToRead} (size: {freePagesSpaceToRead} bytes) from transaction data while " +
-                        $"the transaction uncompressed size is {current->UncompressedSize} bytes");
-                }
-
-                var freePages = ReadEncodedFreePage(freePagesPtr, _allocator);
+                var freePages = ReadEncodedFreePage(outputPage + totalRead, current->UncompressedSize - totalRead, _allocator);
 
                 foreach (var freedPage in freePages)
                 {
@@ -271,13 +258,23 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        internal static List<long> ReadEncodedFreePage(byte* src, ByteStringContext allocator)
+        internal static List<long> ReadEncodedFreePage(byte* src, long numberOfBytesAvailableToRead, ByteStringContext allocator)
         {
             var readPtr = src;
 
             var headerPtr = readPtr;
 
             var header = *(FreePagesHeader*)headerPtr;
+            var sectionHeadersSize = header.EncodedSectionsCount * sizeof(EncodedFreePagesSection);
+            
+            var freePagesSpaceToRead = sizeof(FreePagesHeader) + header.EncodedSectionsSize + sectionHeadersSize;
+
+            if (freePagesSpaceToRead > numberOfBytesAvailableToRead)
+            {
+                throw new InvalidDataException(
+                    $"Attempted to read free pages requiring {freePagesSpaceToRead} bytes while only {numberOfBytesAvailableToRead} bytes are left to read in transaction data");
+            }
+            
             var sectionHeaders = (EncodedFreePagesSection*)(headerPtr + sizeof(FreePagesHeader) + header.EncodedSectionsSize);
 
             readPtr += sizeof(FreePagesHeader);
@@ -295,6 +292,14 @@ namespace Voron.Impl.Journal
             for (int i = 0; i < header.EncodedSectionsCount; i++)
             {
                 var sectionSize = sectionHeaders[i].Size;
+                
+                var numberOfEncodedBytesLeftToRead = numberOfBytesAvailableToRead - (readPtr - src) - sectionHeadersSize;
+                
+                if (sectionSize < 0 || sectionSize > numberOfEncodedBytesLeftToRead)
+                {
+                    throw new InvalidDataException(
+                        $"Invalid section size {sectionSize} at section {i}. Available space: {numberOfEncodedBytesLeftToRead} bytes");
+                }
                 
                 using var reader = new FastPForBufferedReader(allocator);
 
