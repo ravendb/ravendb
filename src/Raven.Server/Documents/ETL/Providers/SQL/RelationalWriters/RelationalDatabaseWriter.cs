@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using NpgsqlTypes;
 using Oracle.ManagedDataAccess.Client;
@@ -24,6 +25,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
     public sealed class RelationalDatabaseWriter : RelationalDatabaseWriterBase, IDisposable
     {
+        private static readonly Regex _invalidParamChars = new Regex(@"[^\w]", RegexOptions.Compiled);
+        
         private readonly Logger _logger;
 
         private readonly SqlEtl _etl;
@@ -415,20 +418,27 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private string GetParameterName(string paramName)
         {
+            var sanitizedParamName = SanitizeParameterName(paramName);
+            
             switch (_providerFactory.GetType().Name)
             {
                 case "SqlClientFactory":
                 case "MySqlClientFactory":
                 case "MySqlConnectorFactory":
-                    return "@" + paramName;
+                    return "@" + sanitizedParamName;
 
                 case "OracleClientFactory":
                 case "NpgsqlFactory":
-                    return ":" + paramName;
+                    return ":" + sanitizedParamName;
 
                 default:
                     throw new NotSupportedException($"Unhandled provider factory: {_providerFactory.GetType().Name}");
             }
+        }
+        
+        private string SanitizeParameterName(string paramName)
+        {
+            return _invalidParamChars.Replace(paramName, "_");
         }
 
         public SqlWriteStats Write(SqlTableWithRecords table, List<DbCommand> commands, CancellationToken token)
