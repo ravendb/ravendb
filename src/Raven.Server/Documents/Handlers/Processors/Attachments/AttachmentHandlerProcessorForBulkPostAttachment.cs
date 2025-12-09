@@ -102,19 +102,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 // Handle exceptions
                 foreach (var streamTask in tasks)
                 {
-                    try
+                    if (streamTask.IsCompletedSuccessfully)
                     {
-                        if (streamTask.IsCompletedSuccessfully)
-                        {
-                            // dispose stream
-                            await using var stream = await streamTask;
-                        }
+                        // we want to dispose VoronStream immediately, all of those are completed since this is local and comes from Task.FromResult
+                        SafelyDisposeStream(streamTask.Result);
+                        continue;
                     }
-                    catch
+
+                    // dispose all network streams when they complete
+                    _ = streamTask.ContinueWith(t =>
                     {
-                        // Ignore errors during cleanup
-                    }
+
+                        if (t.IsCompletedSuccessfully == false)
+                            return;
+
+                        SafelyDisposeStream(t.Result);
+                    });
                 }
+
+                throw;
             }
             finally
             {
@@ -122,6 +128,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 foreach (var kvp in downloaders)
                 {
                     kvp.Value.Dispose();
+                }
+            }
+
+            static void SafelyDisposeStream(Stream stream)
+            {
+                try
+                {
+                    stream?.Dispose();
+                }
+                catch
+                {
+                    // ignore exceptions on dispose
                 }
             }
         }
