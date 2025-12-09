@@ -631,7 +631,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             {
                 var t = JsonDeserializationClient.ActionResponse(tool);
 
-                var split = t.ToolId.Split('$');
+                var split = SplitByFirstDollar(t.ToolId);
                 var rootToolId = split[0];
 
                 if (_document.OpenActionCalls.TryGetValue(rootToolId, out var action) == false)
@@ -694,6 +694,15 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
         return true;
 
+        static string[] SplitByFirstDollar(string s)
+        {
+            int index = s.IndexOf('$');
+            if (index == -1)
+                return new []{ s };
+
+            return new[] { s.Substring(0, index), s.Substring(index + 1) };
+        }
+
         static ServerAiAgentActionResponse GetOrAdd(Dictionary<string, ServerAiAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
         {
             if (subAgentsActions.TryGetValue(parent.SubConversation, out var subAgent))
@@ -738,6 +747,9 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
 
         await ExecuteMultiAgentRequests(context, reqs);
+
+        if (_childUserCalls.Any())
+            return;
 
         List<AiToolCall> activeToolCalls = [];
         foreach (var action in _document.OpenActionCalls)
@@ -823,9 +835,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                         if (HandleSubAgentResponse(context, requestResult, currentCall) == false)
                             _document.OpenActionCalls.Remove(currentCall.Id); // Parent call
                         else
-                        {
                             cutSubAgentConversation = true;
-                        }
+                        
                         break;
                     default:
                         throw new InvalidOperationException($"'{conversationId}' responses should contain only tool calls of type AiAgentToolSubAgent but contains '{toolCall.GetType().Name}'");
