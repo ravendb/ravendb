@@ -608,7 +608,7 @@ public class RavenDB_24327 : StorageTest
 
         Assert.True(written > ushort.MaxValue);
 
-        var readPages = JournalReader.ReadEncodedFreePage(buffer, allocator);
+        var readPages = JournalReader.ReadEncodedFreePage(buffer, written, allocator);
 
         Assert.Equal(numberOfPages, readPages.Count);
 
