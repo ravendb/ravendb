@@ -2048,6 +2048,26 @@ namespace Voron.Impl.Journal
         }
 
 
+        /// Journal Entry format:
+        /// ┌─────────────────────────────────────────────────────────────┐
+        /// │ TransactionHeader                                           │
+        /// │ - TransactionId, PageCount, Hash, CompressedSize, etc.      │
+        /// ├─────────────────────────────────────────────────────────────┤
+        /// │ TransactionHeaderPageInfo[] (array of page metadata)        │
+        /// │ - PageNumber, Size, DiffSize, IsNewDiff for each page       │
+        /// ├─────────────────────────────────────────────────────────────┤
+        /// │ Modified Pages Data (for each page in transaction)          │
+        /// │ - Page Number (long)                                        │
+        /// │ - Page Data (full page or diff, depending on encryption)    │
+        /// │   * If encrypted: full page content                         │
+        /// │   * If not encrypted: diff against previous version         │
+        /// │ - Repeat for each modified page...                          │
+        /// ├─────────────────────────────────────────────────────────────┤
+        /// │ Free Pages Section (if there were any)                      │
+        /// │ - FreePagesHeader (NumberOfPages, EncodedSectionsCount)     │
+        /// │ - Encoded Data (FastPFor compressed sections)               │
+        /// │ - EncodedFreePagesSection[] (section sizes, at the end)     │
+        /// └─────────────────────────────────────────────────────────────┘
         private Pal.journal_entry PrepareToWriteToJournal(LowLevelTransaction tx, ref Pager.PagerTransactionState txState, out long numberOfUncompressedPages, 
             out int totalNumberOfUsedCompressionBufferPages)
         {
