@@ -442,14 +442,14 @@ function ScriptSyntaxHelp() {
                 "Line1": { "type": "string" },
                 "Line2": { "type": ["string", "null"] },
                 "Location": {
-                    "type": "object",
+                    "type": ["object", "null"],
                     "properties": {
                         "Latitude": { "type": "number" },
                         "Longitude": { "type": "number" }
                     }
                 },
                 "PostalCode": { "type": "string" },
-                "Region": { "type": "string" }
+                "Region": { "type": ["string", "null"] }
             },
             "required": ["City", "Country", "Line1", "PostalCode", "Region"]
         },

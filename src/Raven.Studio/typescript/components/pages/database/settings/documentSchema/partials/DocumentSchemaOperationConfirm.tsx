@@ -175,7 +175,7 @@ function getSchemaGroups(
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-success">enable</strong> following document
+                            You&apos;re about to <strong className="text-success">enable</strong> the following document
                             schemas
                         </>
                     ),
@@ -209,7 +209,7 @@ function getSchemaGroups(
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-danger">disable</strong> following document
+                            You&apos;re about to <strong className="text-danger">disable</strong> the following document
                             schemas
                         </>
                     ),
