@@ -22,7 +22,7 @@ internal class AiAgentProcessorForDeleteAiAgent<TRequestHandler, TOperationConte
         var identifier = RequestHandler.GetStringQueryString("agentId", required: true);
         var r = await ServerStore.SendToLeaderAsync(new DeleteAiAgentCommand(RequestHandler.DatabaseName, identifier, RequestHandler.GetRaftRequestIdFromQuery()), token.Token);
 
-        RequestHandler.LogTaskToAudit($"Delete AI Agent '{identifier}'", r.Index, configuration: null);
+        RequestHandler.LogTaskToAudit(Web.RequestHandler.AiAgentConfiguration, r.Index, configuration: null);
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 

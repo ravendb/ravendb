@@ -37,7 +37,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
-    private const string QueryVirtualConversationId = "QueryTools";
+    private const string QueryVirtualConversationId = "#QueryTools";
 
     protected ConversationDocument _document;
     private string _conversationId;
@@ -411,7 +411,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         if (reqs.Count is 0)
             return;
 
-        await ExecuteMultiAgentRequests(context, reqs);
+        await ExecuteMultiAgentAndQueryRequests(context, reqs);
     }
 
     private bool HandleSubAgentResponse(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall)
@@ -451,7 +451,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 }
             }
 
-            return true;
+            return false;
         }
 
         _document.AddMessage(context, context.ReadObject(
@@ -463,7 +463,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 ["subConversation"] = agentConversationId,
             }, "tool-call/response"), usage: null);
 
-        return false;
+        _document.OpenActionCalls.Remove(currentCall.Id); // Parent call
+        return true;
     }
 
     private static void RemoveNonEssentialFieldsFromMetadata(BlittableJsonReaderArray queryResult)
@@ -724,14 +725,6 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
     }
 
-    public class ServerAiAgentActionResponse
-    {
-        public string Agent;
-        public string ParentId;
-
-        public List<AiAgentActionResponse> Responses;
-    }
-
     private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, ServerAiAgentActionResponse> subAgentsActions)
     {
         if (subAgentsActions?.Count > 0 == false)
@@ -746,7 +739,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             reqs.GetOrAdd(conversationId).Add((call, r));
         }
 
-        await ExecuteMultiAgentRequests(context, reqs);
+        await ExecuteMultiAgentAndQueryRequests(context, reqs);
 
         if (_childUserCalls.Any())
             return;
@@ -791,15 +784,17 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         };
     }
 
-    private async Task ExecuteMultiAgentRequests(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
+    private async Task ExecuteMultiAgentAndQueryRequests(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
         if (reqs.TryGetValue(QueryVirtualConversationId, out List<(AiToolCall Call, DynamicJsonValue Req)> queryToolReqs))
         {
-            // Probably need to have the same behavior as in Handle (start without defaults).
             await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(queryToolReqs.Select(x => x.Req))))
             {
                 AiToolCall currentCall = queryToolReqs[i].Call;
                 var toolCall = FindToolFrom(_configuration, currentCall.Name);
+                if (toolCall == null)
+                    throw new InvalidOperationException($"Ai-Agent has no tool in name '{currentCall.Name}'");
+
                 switch (toolCall)
                 {
                     case AiAgentToolQuery:
@@ -816,33 +811,37 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
                         break;
                     default:
-                        throw new InvalidOperationException($"'QueryTools' responses should contain only tool calls of type AiAgentToolQuery but contains '{toolCall.GetType().Name}'");
+                        throw new InvalidOperationException($"Type mismatch for tool '{currentCall.Name}'. " +
+                                                            $"Expected type: '{nameof(AiAgentToolQuery)}', Actual type: '{toolCall.GetType().Name}'.");
                 }
             }
         }
 
         foreach (var (conversationId, conversationReqs) in reqs.Where(kvp => kvp.Key != QueryVirtualConversationId))
         {
-            // Probably need to have the same behavior as in Handle (start without defaults).
-            await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(conversationReqs.Select(x => x.Req))))
+            await ExecuteSubAgentToolCalls(context, conversationId, conversationReqs);
+        }
+    }
+
+    private async Task ExecuteSubAgentToolCalls(JsonOperationContext context, string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
+    {
+        await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
+        {
+            var currentCall = requests[i].Call;
+            var toolCall = FindToolFrom(_configuration, currentCall.Name);
+            if (toolCall == null)
+                throw new InvalidOperationException($"Ai-Agent has no tool in name '{currentCall.Name}'");
+
+            switch (toolCall)
             {
-                AiToolCall currentCall = conversationReqs[i].Call;
-                var toolCall = FindToolFrom(_configuration, currentCall.Name);
-                var cutSubAgentConversation = false;
-                switch (toolCall)
-                {
-                    case AiAgentToolSubAgent:
-                        if (HandleSubAgentResponse(context, requestResult, currentCall) == false)
-                            _document.OpenActionCalls.Remove(currentCall.Id); // Parent call
-                        else
-                            cutSubAgentConversation = true;
-                        
-                        break;
-                    default:
-                        throw new InvalidOperationException($"'{conversationId}' responses should contain only tool calls of type AiAgentToolSubAgent but contains '{toolCall.GetType().Name}'");
-                }
-                if (cutSubAgentConversation)
+                case AiAgentToolSubAgent:
+                    if (HandleSubAgentResponse(context, requestResult, currentCall) == false)
+                        return;
                     break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Type mismatch for tool '{currentCall.Name}' in sub-conversation '{conversationId}'. " + 
+                        $"Expected type: '{nameof(AiAgentToolSubAgent)}', Actual type: '{toolCall.GetType().Name}'.");
             }
         }
     }

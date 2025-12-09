@@ -144,7 +144,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
-    public async Task SubAgent2OpenActionTools_DepthOf4(Options options, GenAiConfiguration config, bool level1OncePrompt, bool level0OncePrompt)
+    public async Task SubAgent2OpenActionTools_DepthOf3(Options options, GenAiConfiguration config, bool level1OncePrompt, bool level0OncePrompt)
     {
         const string atOncePrompt =
             "Provide BOTH the movie rating and the new username together in one call. You can't change name without rating a movie and you cant rate a movie without changing the name. you have to ask for both in the call otherwide the tool call will fail.";
@@ -483,6 +483,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
             userAgent0.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
             return (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent0, MoviesSampleObject.Instance)).Identifier;
         }
+
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
