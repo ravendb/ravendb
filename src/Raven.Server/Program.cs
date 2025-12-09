@@ -50,6 +50,17 @@ namespace Raven.Server
 
         public static unsafe int Main(string[] args)
         {
+            using var termSignalRegistration =
+                PosixSignalRegistration.Create(
+                    PosixSignal.SIGTERM,
+                    (_) => Environment.Exit(0));
+
+            // Replicates the previous behavior on Windows
+            using var sigHupSignalRegistration =
+                PosixSignalRegistration.Create(
+                    PosixSignal.SIGHUP,
+                    (_) => Environment.Exit(0));
+
             bool useLegacyHttpClientFactory = false;
             var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
             if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)

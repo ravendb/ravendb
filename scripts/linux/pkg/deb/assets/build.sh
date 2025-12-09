@@ -42,20 +42,23 @@ DOTNET_VERSION_MINOR=$(egrep -o -e '^[0-9]+.[0-9]+' <<< $DOTNET_FULL_VERSION)
 export DOTNET_DEPS_VERSION="$DOTNET_FULL_VERSION"
 export DOTNET_RUNTIME_VERSION="$DOTNET_VERSION_MINOR"
 
-if [[ $release -eq 24 ]]; then
-    if [[ $RAVEN_PLATFORM == "raspberry-pi" ]]; then
-        DOTNET_RUNTIME_DEPS="libicu74, libc6 (>= 2.38), libgcc-s1 (>= 3.0), liblttng-ust1t64 (>= 2.13.0), libssl3t64 (>= 3.0.0), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4)"
-    else
-        DOTNET_RUNTIME_DEPS="libicu74, libbrotli1 (>= 0.6.0), libc6 (>= 2.34), libgcc-s1 (>= 3.0), liblttng-ust1 (>= 2.13.0), libssl3 (>= 3.0.0~~alpha1), libstdc++6 (>= 12), libunwind8, zlib1g (>= 1:1.2.3.4)"
-    fi
+
+# Microsoft does not provide deb package for arm32 architecture
+if [[ $RAVEN_PLATFORM == "raspberry-pi" ]]; then
+    case $release in 
+        22) DOTNET_RUNTIME_DEPS="libicu70"
+            ;;
+        24) DOTNET_RUNTIME_DEPS="libicu74"
+            ;;
+    esac
+    DOTNET_RUNTIME_DEPS+=", libc6 (>= 2.38), libgcc-s1 (>= 3.0), liblttng-ust1t64 (>= 2.13.0), libssl3t64 (>= 3.0.0), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4)"
+elif [[ $release -eq 24 ]]; then
+    # package for ubuntu 24 is not yet available in canonical apt repository
+    DOTNET_RUNTIME_DEPS="libicu74, libbrotli1 (>= 0.6.0), libc6 (>= 2.34), libgcc-s1 (>= 3.0), liblttng-ust1 (>= 2.13.0), libssl3 (>= 3.0.0~~alpha1), libstdc++6 (>= 12), libunwind8, zlib1g (>= 1:1.2.3.4)"
 else
-    if [[ $release -ge 24 ]]; then
-        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION"
-    else
-        # Show dependencies for amd64 since that's the only platform Microsoft ships package for,
-        # however the dependencies are the same at the moment.
-        DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION:amd64"
-    fi
+    DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION"
+    # display available packages
+    apt-cache search dotnet-runtime
     
     # get depenencies and remove dotnet-host* dependencies
     DOTNET_RUNTIME_DEPS=$(apt show $DOTNET_RUNTIME_DEPS_PKG 2>/dev/null | sed -n -e 's/Depends: //p' | sed -E 's/(^|, )dotnet-host[^,]*(, |$)/\1/; s/, $//')
