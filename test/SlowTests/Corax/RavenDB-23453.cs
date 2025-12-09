@@ -401,7 +401,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
         var allVectorSearch = from doc in docs
             from vector in vectors
             let distance = 1 - System.Numerics.Tensors.TensorPrimitives.CosineSimilarity(doc.Vector, vector)
-            where booleanClause(doc) && distance <= 2f * (1.0f - minimumSimilarity)
+            where booleanClause(doc) && distance <= 2f * (1.0f - minimumSimilarity) + 0.001f //eps
             orderby distance
             select new VectorSearchResult(doc.Id, distance, doc.Vector);
 

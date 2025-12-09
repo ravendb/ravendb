@@ -90,7 +90,7 @@ public class RavenDB_23453_Integration(ITestOutputHelper output) : RavenTestBase
         }
     }
 
-    [DebuggerDisplay("V: {Vector} C0: {Counter0} C1: {Counter1}")]
+    [DebuggerDisplay("({Id}) V: {Vector} C0: {Counter0} C1: {Counter1}")]
     private class Dto
     {
         public string Id { get; set; }
@@ -120,6 +120,7 @@ public class RavenDB_23453_Integration(ITestOutputHelper output) : RavenTestBase
     [InlineDataWithRandomSeed(true, false)]
     [InlineDataWithRandomSeed(false, true)]
     [InlineDataWithRandomSeed(false, false)]
+    [InlineData(true, true, 1035466315)]
     public void TestAndGenerateRandomQueryVectors(bool disableScanning, bool isExact, int seed)
     {
         var random = new Random(seed);
@@ -240,14 +241,13 @@ public class RavenDB_23453_Integration(ITestOutputHelper output) : RavenTestBase
             }
         }
 
-        var materialized = actualMatches.ToList();
         var serverMaterialized = r.Timings(out QueryTimings timings).ToList();
-        var localVectorSearch = (from doc in materialized
+        var localVectorSearch = (from doc in actualMatches
             let similarity = 1 - TensorPrimitives.CosineSimilarity(doc.Vector, vectorToSearch.AsSpan())
-            where similarity <= 2f * (1.0f - 0.75f) // 0.75 <- minimum match
+            where similarity <= (2f * (1.0f - 0.75f) + 0.001f) // 0.75 <- minimum match, 0.001 is eps
             orderby similarity ascending
             select doc.Id).ToList();
-
+        
         foreach (var docId in serverMaterialized.Select(p => p.Id))
             Assert.Contains(docId, localVectorSearch);
     }
