@@ -43,7 +43,11 @@ export DOTNET_DEPS_VERSION="$DOTNET_FULL_VERSION"
 export DOTNET_RUNTIME_VERSION="$DOTNET_VERSION_MINOR"
 
 if [[ $release -eq 24 ]]; then
-    DOTNET_RUNTIME_DEPS="libicu74, libc6 (>= 2.38), libgcc-s1 (>= 3.0), liblttng-ust1t64 (>= 2.13.0), libssl3t64 (>= 3.0.0), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4)"
+    if [[ $RAVEN_PLATFORM == "raspberry-pi" ]]; then
+        DOTNET_RUNTIME_DEPS="libicu74, libc6 (>= 2.38), libgcc-s1 (>= 3.0), liblttng-ust1t64 (>= 2.13.0), libssl3t64 (>= 3.0.0), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4)"
+    else
+        DOTNET_RUNTIME_DEPS="libicu74, libbrotli1 (>= 0.6.0), libc6 (>= 2.34), libgcc-s1 (>= 3.0), liblttng-ust1 (>= 2.13.0), libssl3 (>= 3.0.0~~alpha1), libstdc++6 (>= 12), libunwind8, zlib1g (>= 1:1.2.3.4)"
+    fi
 else
     if [[ $release -ge 24 ]]; then
         DOTNET_RUNTIME_DEPS_PKG="dotnet-runtime-$DOTNET_RUNTIME_VERSION"
@@ -62,7 +66,7 @@ else
 fi
 
 
-export DEB_DEPS="${DOTNET_RUNTIME_DEPS}, libc6-dev (>= 2.27)"
+export DEB_DEPS="${DOTNET_RUNTIME_DEPS}, libc6-dev (>= 2.27), adduser"
 
 echo ".NET Runtime: $DOTNET_FULL_VERSION"
 echo "Package dependencies: $DEB_DEPS"
