@@ -3,7 +3,60 @@
 @use "Content/scss/sizes";
 
 .validation-schema-view-sheet-panel {
-    .hide-accordion-dropdown .accordion-button::after {
-        display: none;
+    .accordion {
+        border-radius: sizes.$gutter-xxs;
+
+        .accordion-item {
+            &:first-of-type {
+                border-top-left-radius: sizes.$gutter-xxs;
+                border-top-right-radius: sizes.$gutter-xxs;
+
+                .accordion-button,
+                .accordion-header {
+                    border-radius: sizes.$gutter-xxs sizes.$gutter-xxs 0 0;
+                }
+            }
+
+            &:last-of-type {
+                border-bottom-left-radius: sizes.$gutter-xxs;
+                border-bottom-right-radius: sizes.$gutter-xxs;
+
+                .accordion-collapse,
+                .accordion-button,
+                .accordion-header {
+                    border-bottom-left-radius: sizes.$gutter-xxs !important;
+                    border-bottom-right-radius: sizes.$gutter-xxs !important;
+                }
+            }
+
+            &:has(.accordion-collapse) {
+                .accordion-button,
+                .accordion-header {
+                    border-bottom: 0 !important;
+                    border-bottom-left-radius: 0 !important;
+                    border-bottom-right-radius: 0 !important;
+                }
+
+                .accordion-collapse {
+                    border-top: 0 !important;
+                }
+            }
+
+            &:not(:first-of-type) {
+                .accordion-button,
+                .accordion-header {
+                    border-top: 0 !important;
+                }
+            }
+        }
+
+        .accordion-button,
+        .accordion-collapse {
+            background-color: colors.$panel-bg-2-var;
+        }
+
+        .hide-accordion-dropdown .accordion-button::after {
+            display: none;
+        }
     }
 }

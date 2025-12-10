@@ -31,9 +31,7 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import { SelectOption } from "components/common/select/Select";
 import { DocumentSchemaValidatorConfig } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 import DocumentSchemaPlaygroundAboutView from "components/pages/database/settings/documentSchema/partials/DocumentSchemaPlaygroundAboutView";
-import {
-    ValidationSchemaViewSheetPanel
-} from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
+import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 
 export default function DocumentSchemaPlayground() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);

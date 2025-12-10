@@ -48,4 +48,8 @@ const mapToValidateSchemaRequestDto = (
     };
 };
 
-export const documentSchemaUtils = { mapToSchemaValidationConfigurationDto, mapToDocumentSchemaValidatorConfigDto, mapToValidateSchemaRequestDto };
+export const documentSchemaUtils = {
+    mapToSchemaValidationConfigurationDto,
+    mapToDocumentSchemaValidatorConfigDto,
+    mapToValidateSchemaRequestDto,
+};

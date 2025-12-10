@@ -32,17 +32,22 @@ import { isEmpty } from "common/typeUtils";
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import Code from "components/common/Code";
 
 interface ValidationSchemaViewSheetPanelProps {
     validators: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">[];
 }
 
 interface ValidationOperationProgress extends ValidateSchemaResult {
-    completed?: boolean;
+    isCompleted?: boolean;
+    isErrored?: boolean;
+    isLoading?: boolean;
+    error?: unknown;
 }
 
 export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaViewSheetPanelProps) {
     // TODO: At the moment, when i close viewSheet, the entire state is deleted. I need to add the ability to persist this state if, for example, someone runs a test.
+    // In Phase 2 i will rewrite monitorOperationProgress logic into redux.
     const [monitorOperationProgress, setMonitorOperationProgress] = React.useState<
         Record<string, ValidationOperationProgress>
     >({});
@@ -71,34 +76,43 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
 
         const operationResults = await asyncGetOperationIds.execute(formData);
 
-        const monitorPromises = operationResults.map((result, idx) => {
+        operationResults.forEach((result, idx) => {
             const collectionName = dtos[idx].Collection;
 
-            return notificationCenter.instance.monitorOperation<ValidationOperationProgress>(
-                databaseName,
-                result.OperationId,
-                (progress) =>
+            setMonitorOperationProgress((prev) => ({
+                ...prev,
+                [collectionName]: {
+                    Errors: {},
+                    LastEtag: 0,
+                    ErrorCount: 0,
+                    ValidatedCount: 0,
+                    isLoading: true,
+                    isCompleted: false,
+                    isErrored: false,
+                },
+            }));
+
+            notificationCenter.instance
+                .monitorOperation<ValidationOperationProgress>(databaseName, result.OperationId, (progress) =>
                     setMonitorOperationProgress((prev) => ({
                         ...prev,
-                        [collectionName]: progress,
+                        [collectionName]: { ...progress, isLoading: true, isCompleted: false, isErrored: false },
                     }))
-            );
+                )
+                .then((finalResult) => {
+                    setMonitorOperationProgress((prev) => ({
+                        ...prev,
+                        [collectionName]: { ...finalResult, isCompleted: true, isLoading: false },
+                    }));
+                })
+                .catch((error) => {
+                    console.error(`Validation failed for ${collectionName}:`, error);
+                    setMonitorOperationProgress((prev) => ({
+                        ...prev,
+                        [collectionName]: { ...prev[collectionName], isErrored: true, error, isLoading: false },
+                    }));
+                });
         });
-
-        const finalResults = await Promise.all(monitorPromises);
-
-        setMonitorOperationProgress((prev) => {
-            const next = { ...prev };
-
-            finalResults.forEach((result, idx) => {
-                const collectionName = dtos[idx].Collection;
-                next[collectionName] = { ...next[collectionName], ...result, completed: true };
-            });
-
-            return next;
-        });
-
-        return finalResults;
     });
 
     const killOperation = useAsyncCallback(async () => {
@@ -118,7 +132,11 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
         control,
     });
 
-    const isTestSettingsDisabled = !formValues.isTestSettingsEnabled || asyncTestSchema.loading;
+    const isValidating = useMemo(() => {
+        return validators.some((validator) => monitorOperationProgress[validator.Name]?.isLoading);
+    }, [monitorOperationProgress, validators]);
+
+    const isTestSettingsDisabled = !formValues.isTestSettingsEnabled || isValidating;
 
     return (
         <FormProvider {...form}>
@@ -132,7 +150,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                     </ViewSheet.Header>
                     <ViewSheet.Body className="p-4">
                         <h4 className="w-100 text-center">
-                            {asyncTestSchema.loading ? (
+                            {isValidating ? (
                                 <ValidationProgressSummary
                                     validators={validators}
                                     monitorOperationProgress={monitorOperationProgress}
@@ -147,22 +165,21 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                                 />
                             )}
                         </h4>
-                        <Accordion alwaysOpen className="mt-1" defaultActiveKey={[]}>
+                        <Accordion alwaysOpen className="mt-1  panel-bg-2" defaultActiveKey={[]}>
                             {validators.map((validator) => (
                                 <ValidationCollectionAccordionItem
                                     key={validator.Name}
                                     validator={validator}
-                                    monitorOperationProgress={monitorOperationProgress}
+                                    monitorOperationProgress={monitorOperationProgress?.[validator.Name]}
                                     collections={collections}
                                     isTestSettingsEnabled={formValues.isTestSettingsEnabled}
                                     maxDocumentsToValidate={formValues.maxDocumentsToValidate}
-                                    isLoading={asyncTestSchema.loading}
                                 />
                             ))}
                         </Accordion>
                         <div
                             className={classNames("mt-4", {
-                                "item-disabled": asyncTestSchema.loading,
+                                "item-disabled": isValidating,
                             })}
                         >
                             <FormSwitch color="primary" control={control} name="isTestSettingsEnabled">
@@ -200,7 +217,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                         </div>
                     </ViewSheet.Body>
                     <ViewSheet.Footer className="d-flex justify-content-end">
-                        {asyncTestSchema.loading ? (
+                        {isValidating ? (
                             <ButtonWithSpinner
                                 isSpinning={killOperation.loading}
                                 icon="stop"
@@ -212,7 +229,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                             </ButtonWithSpinner>
                         ) : (
                             <ButtonWithSpinner
-                                isSpinning={asyncTestSchema.loading}
+                                isSpinning={isValidating}
                                 icon="start"
                                 variant="primary"
                                 type="submit"
@@ -388,7 +405,14 @@ interface ValidationStatusMessageProps {
 }
 
 function ValidationStatusMessage({ validators, monitorOperationProgress }: ValidationStatusMessageProps) {
-    console.log("maxym monitorOperationProgress", monitorOperationProgress);
+    if (validators.some((v) => monitorOperationProgress[v.Name]?.isErrored)) {
+        return (
+            <div>
+                <Icon icon="danger" color="danger" />
+                An unexpected error occurred during validation.
+            </div>
+        );
+    }
 
     if (isEmpty(monitorOperationProgress)) {
         return <div>You&#39;re about to run the validation schema test on these collections:</div>;
@@ -453,11 +477,10 @@ function ValidationDocumentCountDisplay({
 
 interface ValidationCollectionAccordionItemProps {
     validator: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">;
-    monitorOperationProgress: Record<string, ValidationOperationProgress>;
+    monitorOperationProgress: ValidationOperationProgress;
     collections: { name: string; documentCount: number }[];
     isTestSettingsEnabled: boolean;
     maxDocumentsToValidate: number | null;
-    isLoading: boolean;
 }
 
 function ValidationCollectionAccordionItem({
@@ -466,17 +489,35 @@ function ValidationCollectionAccordionItem({
     collections,
     isTestSettingsEnabled,
     maxDocumentsToValidate,
-    isLoading,
 }: ValidationCollectionAccordionItemProps) {
-    const validationResult = monitorOperationProgress?.[validator.Name];
-    const errorCount = validationResult?.ErrorCount ?? 0;
-    const isCompleted = validationResult?.completed;
+    const errorCount = monitorOperationProgress?.ErrorCount ?? 0;
+    const isCompleted = monitorOperationProgress?.isCompleted;
+    const isLoading = monitorOperationProgress?.isLoading;
+    const isErrored = monitorOperationProgress?.isErrored;
+
+    const errorMessage = isErrored
+        ? ((monitorOperationProgress.error as any)?.Message ?? String(monitorOperationProgress.error))
+        : null;
+    const fullError = isErrored
+        ? ((monitorOperationProgress.error as any)?.Error ?? JSON.stringify(monitorOperationProgress.error, null, 2))
+        : null;
 
     return (
-        <Accordion.Item className="border-light-var" eventKey={validator.Name}>
-            <Accordion.Header as="h5" className={classNames({ "hide-accordion-dropdown": isLoading })}>
+        <Accordion.Item eventKey={validator.Name}>
+            <Accordion.Header
+                as="h5"
+                className={classNames("border border-secondary", {
+                    "hide-accordion-dropdown": !isCompleted || (isCompleted && errorCount === 0 && !isErrored),
+                })}
+            >
                 <span>{validator.Name}</span>{" "}
-                <small className="ms-3 text-muted flex-grow-1">
+                <small className="ms-3 text-muted text-truncate flex-grow-1">
+                    {isErrored && (
+                        <b className="text-danger">
+                            <Icon icon="danger" color="danger" />
+                            {errorMessage}
+                        </b>
+                    )}
                     {isCompleted && errorCount === 0 && (
                         <b className="text-success">
                             <Icon icon="check" />
@@ -491,24 +532,47 @@ function ValidationCollectionAccordionItem({
                         </b>
                     )}
 
-                    <span>
-                        <ValidationDocumentCountDisplay
-                            collectionName={validator.Name}
-                            errorCount={errorCount}
-                            collections={collections}
-                            isTestSettingsEnabled={isTestSettingsEnabled}
-                            maxDocumentsToValidate={maxDocumentsToValidate}
-                        />
-                    </span>
+                    {!isErrored && (
+                        <span>
+                            <ValidationDocumentCountDisplay
+                                collectionName={validator.Name}
+                                errorCount={errorCount}
+                                collections={collections}
+                                isTestSettingsEnabled={isTestSettingsEnabled}
+                                maxDocumentsToValidate={maxDocumentsToValidate}
+                            />
+                        </span>
+                    )}
                 </small>
-                {isLoading && !isCompleted && <Spinner size="sm" className="spinner-gradient" />}
+                {isLoading && <Spinner size="sm" className="spinner-gradient" />}
             </Accordion.Header>
-            {!isLoading && (
-                <Accordion.Collapse unmountOnExit mountOnEnter eventKey={validator.Name}>
+            {isErrored && (
+                <Accordion.Collapse
+                    className="border border-secondary"
+                    unmountOnExit
+                    mountOnEnter
+                    eventKey={validator.Name}
+                >
+                    <Accordion.Body>
+                        <Code code={fullError} language="plaintext" />
+                    </Accordion.Body>
+                </Accordion.Collapse>
+            )}
+            {!isErrored && isCompleted && errorCount > 0 && (
+                <Accordion.Collapse
+                    className="border border-secondary"
+                    unmountOnExit
+                    mountOnEnter
+                    eventKey={validator.Name}
+                >
                     <Accordion.Body>
                         <SizeGetter
                             render={(props) => (
-                                <ValidatedDocumentsTable loading={isLoading} result={validationResult} {...props} />
+                                <ValidatedDocumentsTable
+                                    loading={isLoading}
+                                    result={monitorOperationProgress}
+                                    {...props}
+                                />
                             )}
                         />
                     </Accordion.Body>

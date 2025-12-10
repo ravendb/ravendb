@@ -54,9 +54,7 @@ import DocumentSchemaFilter from "components/pages/database/settings/documentSch
 import Ajv from "ajv";
 import { useViewSheet } from "components/common/splitView/ViewSheet";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import {
-    ValidationSchemaViewSheetPanel
-} from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
+import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 
 const ajv = new Ajv({
     allErrors: true,
@@ -280,7 +278,7 @@ const CollectionSchemaRichPanel = ({
             collection: validator.Name,
             schema,
         },
-        context: { schemaValidatorCollections },
+        context: { schemaValidatorCollections, originalCollectionName: validator.Name },
     });
 
     const { handleSubmit, reset } = form;
@@ -635,14 +633,20 @@ const formSchema = yup.object({
         .test(
             "is-unique-collection",
             "A schema for this collection already exists",
-            function (value, ctx: TestContext<{ schemaValidatorCollections: string[] }>) {
+            function (
+                value,
+                ctx: TestContext<{ schemaValidatorCollections: string[]; originalCollectionName?: string }>
+            ) {
                 if (!value) {
                     return true;
                 }
+                const { schemaValidatorCollections, originalCollectionName } = ctx.options.context;
 
-                return !ctx.options.context.schemaValidatorCollections
-                    .map((x) => x.toLowerCase())
-                    .includes(value.toLowerCase());
+                const collectionsToCheck = originalCollectionName
+                    ? schemaValidatorCollections.filter((x) => x.toLowerCase() !== originalCollectionName.toLowerCase())
+                    : schemaValidatorCollections;
+
+                return !collectionsToCheck.map((x) => x.toLowerCase()).includes(value.toLowerCase());
             }
         ),
     schema: yup
