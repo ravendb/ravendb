@@ -604,7 +604,7 @@ public class RavenDB_24327 : StorageTest
 
         var buffer = bufferAllocation.Ptr;
 
-        var written = WriteAheadJournal.EncodeFreePages(freePages, buffer, allocator);
+        var written = WriteAheadJournal.EncodeFreePages(freePages, buffer, bufferAllocation.Size, allocator);
 
         Assert.True(written > ushort.MaxValue);
 
