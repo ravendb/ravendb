@@ -15,11 +15,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         private Analyzer _defaultExactAnalyzer;
         private Analyzer _defaultSearchAnalyzer;
 
-        private readonly Func<string, Analyzer> _defaultSearchAnalyzerFactory;
+        public readonly Func<string, Analyzer> DefaultSearchAnalyzerFactory;
         private readonly Func<string, Analyzer> _defaultExactAnalyzerFactory;
 
         private readonly Dictionary<string, Analyzer> _analyzerMap = new Dictionary<string, Analyzer>(default(PerFieldAnalyzerComparer));
         private readonly bool _hasDynamicFields;
+
+        public bool IsExplicitField(string fieldName) => _analyzerMap?.ContainsKey(fieldName) ?? false;
 
         public struct PerFieldAnalyzerComparer : IEqualityComparer<string>
         {
@@ -71,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             : this(defaultAnalyzer)
         {
             _hasDynamicFields = true;
-            _defaultSearchAnalyzerFactory = defaultSearchAnalyzerFactory ?? throw new ArgumentNullException(nameof(defaultSearchAnalyzerFactory));
+            DefaultSearchAnalyzerFactory = defaultSearchAnalyzerFactory ?? throw new ArgumentNullException(nameof(defaultSearchAnalyzerFactory));
             _defaultExactAnalyzerFactory = defaultExactAnalyzerFactory ?? throw new ArgumentNullException(nameof(defaultExactAnalyzerFactory));
         }
 
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
                         switch (fieldIndexing.Indexing)
                         {
                             case FieldIndexing.Search:
-                                return _defaultSearchAnalyzer ??= _defaultSearchAnalyzerFactory(fieldName);
+                                return _defaultSearchAnalyzer ??= DefaultSearchAnalyzerFactory(fieldName);
                             case FieldIndexing.Exact:
                                 return _defaultExactAnalyzer ??= _defaultExactAnalyzerFactory(fieldName);
                         }

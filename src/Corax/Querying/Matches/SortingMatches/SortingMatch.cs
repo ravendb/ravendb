@@ -28,7 +28,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
     private readonly IndexSearcher _searcher;
-    private readonly TInner _inner;
+    private TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
@@ -187,6 +187,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             }
 
             var allMatches = memoizer.FillAndRetrieve();
+            
+            memoizer.InnerRetriever(out IQueryMatch inner);
+            if (inner is TInner typedInner)
+                match._inner = typedInner;
+            
             match.TotalResults = allMatches.Length;
             
             if (match.TotalResults == 0)
@@ -206,6 +211,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             {
                 SortUsingIndex<TEntryComparer, TDirection>(ref match, allMatches);
             }
+            
+            memoizer.Dispose();
         }
 
 

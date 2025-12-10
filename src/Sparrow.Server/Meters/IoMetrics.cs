@@ -35,7 +35,7 @@ namespace Sparrow.Server.Meters
 
         public void FileClosed(string filename)
         {
-            if (!_fileMetrics.TryGetValue(filename, out var value))
+            if (_fileMetrics.TryGetValue(filename, out var value) == false)
                 return;
             value.Closed = true;
             _closedFiles.Enqueue(filename);

@@ -333,7 +333,8 @@ export default class DatabasesService {
         return new getRevisionsPreviewCommand(...args).execute();
     }
 
-    async deleteCollection(...args: ConstructorParameters<typeof deleteCollectionCommand>) {
+    // Skip async to use JQueryPromise type
+    deleteCollection(...args: ConstructorParameters<typeof deleteCollectionCommand>) {
         return new deleteCollectionCommand(...args).execute();
     }
 

@@ -3,7 +3,7 @@
     <Description>Voron Recovery Tool</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.21</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.22</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron.Recovery</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -26,6 +26,7 @@
     <PackageReference Include="System.Diagnostics.EventLog" />
     <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Reflection.Metadata" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="ZstdSharp.Port" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />

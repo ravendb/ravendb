@@ -20,7 +20,6 @@ namespace SlowTests.Issues
         public RavenDB_24118(ITestOutputHelper output) : base(output)
         {
         }
-        private const string RL_COMM = "RAVEN_LICENSE_COMMUNITY";
 
         [RavenFact(RavenTestCategory.Licensing)]
         public async Task Prevent_Put_Revision()
@@ -30,12 +29,11 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await DisableRevisionCompression(Server, store);
-                await PutLicense(Server, RL_COMM);
+                await PutLicense(Server, LicenseTestBase.RL_COMM);
 
                 var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 0 } };
                 var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () => await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration)));
                 Assert.Equal(LimitType.RevisionsConfiguration, exception.LimitType);
-
             }
         }
 
@@ -50,7 +48,7 @@ namespace SlowTests.Issues
                 var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 0 } };
                 await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
-                var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () => await PutLicense(Server, RL_COMM));
+                var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () => await PutLicense(Server, LicenseTestBase.RL_COMM));
                 Assert.Equal(LimitType.RevisionsConfiguration, exception.LimitType);
             }
         }
@@ -58,7 +56,7 @@ namespace SlowTests.Issues
         private static async Task PutLicense(RavenServer leader, string licenseType)
         {
             var license = Environment.GetEnvironmentVariable(licenseType);
-            LicenseHelper.TryDeserializeLicense(license, out License li);
+            Raven.Server.Commercial.LicenseHelper.TryDeserializeLicense(license, out License li);
 
             await leader.ServerStore.PutLicenseAsync(li, RaftIdGenerator.NewId());
         }

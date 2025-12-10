@@ -84,7 +84,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueEtl();
                     break;
                 case EtlType.Snowflake:
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
+                    var snowflakeConfiguration = Client.Json.Serialization.JsonDeserializationClient.SnowflakeEtlConfiguration(etlConfiguration);
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl(snowflakeConfiguration);
                     break;
                 case EtlType.EmbeddingsGeneration:
                     using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -106,7 +106,7 @@ namespace Sparrow.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator bool(SharedMultipleUseFlag flag)
         {
-            Debug.Assert(!ReferenceEquals(flag, null));
+            Debug.Assert(ReferenceEquals(flag, null) == false);
             return flag.IsRaised();
         }
     }

@@ -263,7 +263,6 @@ export const statisticsViewSlice = createSlice({
 
                 state.indexDetailsLoadStatus = action.payload.locations.map((location) => ({
                     location,
-                    loadError: null,
                     status: "idle",
                 }));
 

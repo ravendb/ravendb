@@ -58,40 +58,44 @@ export function useTombstonesStateColumns(availableWidth: number) {
     const subscriptionsColumns: ColumnDef<SubscriptionInfoExtended>[] = useMemo(
         () => [
             {
-                header: "Process",
                 accessorKey: "Process",
                 cell: CellValueWrapper,
-                size: getSize(16.66),
+                size: getSize(15),
             },
             {
+                header: "Name",
                 accessorKey: "Identifier",
                 cell: CellValueWrapper,
-                size: getSize(16.66),
+                size: getSize(15),
             },
             {
                 header: "Number of tombstones left",
                 accessorKey: "NumberOfTombstoneLeft",
                 cell: CellValueWrapper,
-                size: getSize(16.66),
+                size: getSize(10),
+            },
+            {
+                header: "Tombstone types",
+                accessorFn: (x) => formatTombstoneTypes(x.Types, x.Process),
+                cell: CellValueWrapper,
+                size: getSize(25),
             },
             {
                 accessorKey: "Collection",
-                accessorFn: (x) => x.Etag,
                 cell: CellValueWrapper,
-                size: getSize(16.66),
+                size: getSize(10),
             },
             {
                 accessorKey: "Etag",
-                accessorFn: (x) => x.Etag,
                 cell: CellEtagWrapper,
-                size: getSize(16.66),
+                size: getSize(10),
             },
             {
                 header: "Cleanup status",
                 id: "CleanupStatus",
                 accessorFn: (x) => (x.NumberOfTombstoneLeft > 0 ? "Blocking" : "Not blocking"),
                 cell: CellValueWrapper,
-                size: getSize(16.66),
+                size: getSize(15),
             },
         ],
         [getSize]
@@ -112,6 +116,20 @@ function formatEtag(value: number) {
     }
 
     return value;
+}
+function formatTombstoneTypes(
+    types: Raven.Server.Documents.TombstoneCleaner.TombstonesState.TombstoneTypes,
+    process: Raven.Server.Documents.ITombstoneAware.TombstoneDeletionBlockerType
+) {
+    if (!types) {
+        return "";
+    }
+
+    if (process === "Index") {
+        return `Documents: ${types.Documents}`;
+    }
+
+    return `Documents: ${types.Documents}, TimeSeries: ${types.TimeSeries}, Counters: ${types.Counters}`;
 }
 
 function getEtagTitle(etagValue: number) {

@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
 {
-    public abstract class ConnectionString : IDynamicJsonValueConvertible
+    public abstract class ConnectionString : IDynamicJson
     {
         public string Name { get; set; }
 

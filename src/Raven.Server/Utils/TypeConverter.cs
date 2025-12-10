@@ -113,7 +113,7 @@ namespace Raven.Server.Utils
             if (value is byte[])
                 return true;
 
-            if (value is IDynamicJsonValueConvertible)
+            if (value is IDynamicJson)
                 return true;
 
             if (value is IEnumerable enumerable)
@@ -259,7 +259,7 @@ namespace Raven.Server.Utils
             
             // We cache the return type.
             var type = value.GetType();
-            if (!_supportedTypeCache.TryGet(type, out BlittableSupportedReturnType returnType))
+            if (_supportedTypeCache.TryGet(type, out BlittableSupportedReturnType returnType) == false)
             {
                 returnType = DoBlittableSupportedTypeInternal(type, value);
                 _supportedTypeCache.Put(type, returnType);

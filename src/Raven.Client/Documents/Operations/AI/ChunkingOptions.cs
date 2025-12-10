@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public class ChunkingOptions : IDynamicJsonValueConvertible
+public class ChunkingOptions : IDynamicJson
 {
     public ChunkingMethod ChunkingMethod { get; set; }
 

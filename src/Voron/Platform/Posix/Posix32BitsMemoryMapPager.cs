@@ -382,10 +382,10 @@ namespace Voron.Platform.Posix
                     if (addr.Usages != 0)
                         continue;
 
-                    if (!_globalMapping.TryGetValue(addr.StartPage, out var set))
+                    if (_globalMapping.TryGetValue(addr.StartPage, out var set) == false)
                         continue;
 
-                    if (!set.TryRemove(addr))
+                    if (set.TryRemove(addr) == false)
                         continue;
 
                     Interlocked.Add(ref _totalMapped, -addr.Size);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -103,7 +103,7 @@ namespace Raven.Server.ServerWide.Commands
         }
         }
 
-        public sealed class ClusterTransactionErrorInfo : IDynamicJsonValueConvertible
+        public sealed class ClusterTransactionErrorInfo : IDynamicJson
         {
             public string Message;
             public ConcurrencyViolation Violation;
@@ -1064,7 +1064,7 @@ namespace Raven.Server.ServerWide.Commands
             var errorInfo = new ClusterTransactionErrorInfo { Violation = current };
             bjro.TryGet(nameof(ClusterTransactionErrorInfo.Message), out errorInfo.Message);
 
-            if (!bjro.TryGet(nameof(ClusterTransactionErrorInfo.Violation), out BlittableJsonReaderObject violation))
+            if (bjro.TryGet(nameof(ClusterTransactionErrorInfo.Violation), out BlittableJsonReaderObject violation) == false)
                 return errorInfo;
 
             if (violation.TryGet(nameof(ConcurrencyViolation.Id), out string id))

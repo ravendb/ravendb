@@ -1525,7 +1525,7 @@ namespace Raven.Client.Documents.Conventions
         internal bool TryConvertValueToObjectForQuery(string fieldName, Type baseType, object value, bool forRange, out object objValue)
         {
             // We try to find this converter in the cache.
-            if (!_listOfQueryValueToObjectConvertersCache.TryGet(baseType, out var objValueFunc))
+            if (_listOfQueryValueToObjectConvertersCache.TryGet(baseType, out var objValueFunc) == false)
             {
                 // Because we haven't find it, we need to do the actual work of trying out every single converter
                 // in order to find the one that matches for this object type.

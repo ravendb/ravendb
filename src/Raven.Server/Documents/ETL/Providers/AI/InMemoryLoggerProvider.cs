@@ -54,7 +54,7 @@ public class InMemoryLoggerProvider : ILoggerProvider
     }
 }
 
-public class LogEntry : IDynamicJsonValueConvertible
+public class LogEntry : IDynamicJson
 {
     public LogLevel LogLevel { get; set; }
     public EventId EventId { get; set; }

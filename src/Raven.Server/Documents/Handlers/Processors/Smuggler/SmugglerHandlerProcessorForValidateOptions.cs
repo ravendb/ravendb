@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 var blittableJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "");
                 var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
 
-                if (!string.IsNullOrEmpty(options.FileName) && options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                if (string.IsNullOrEmpty(options.FileName) == false && options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                     throw new InvalidOperationException($"{options.FileName} is invalid file name");
 
                 if (string.IsNullOrEmpty(options.TransformScript))

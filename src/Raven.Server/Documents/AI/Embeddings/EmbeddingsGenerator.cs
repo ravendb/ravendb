@@ -106,7 +106,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             _embeddingGenerationService = AiHelper.CreateService(connectionString);
             _shutdown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             _cancellationToken = _shutdown.Token;
-            var shutdownTask = new TaskCompletionSource();
+            var shutdownTask = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             _cancellationToken.Register(_ => shutdownTask.TrySetCanceled(), null);
             _tasks = new Task[maxConcurrentBatches + 1];
             Array.Fill(_tasks, Task.CompletedTask);
@@ -387,11 +387,22 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 }
                 _parent.ProcessInBackground(new StoreEmbeddings(works, Configuration.Quantization));
             }
+            catch (HttpOperationException httpEx)
+            {
+                var enrichedException = new HttpOperationException($"{httpEx.Message}{Environment.NewLine}ResponseContent:{Environment.NewLine}{httpEx.ResponseContent}", httpEx);
+                PropagateExceptionToWorks(enrichedException);
+            }
             catch (Exception e)
+            {
+                PropagateExceptionToWorks(e);
+            }
+
+            return;
+            void PropagateExceptionToWorks(Exception exToPropagate)
             {
                 foreach (var work in works)
                 {
-                    work.TaskCompletionSource.TrySetException(e);
+                    work.TaskCompletionSource.TrySetException(exToPropagate);
                     work.Owner.RemoveFromCache(work.CacheKey);
                 }
             }
@@ -921,7 +932,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             void ExtractAllAttachmentsForCurrentTask(Document document, PutDocumentEmbeddings pde, HashSet<string> attachmentsToRemove)
             {
-                if (!document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails))
+                if (document.Data.TryGet(pde.TaskId, out BlittableJsonReaderObject taskDetails) == false)
                     return;
 
                 BlittableJsonReaderObject.PropertyDetails prop = default;

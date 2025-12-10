@@ -157,11 +157,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
     {
-        if (_entryIdToLocation.TryGetValue(id, out var loc) == false)
+        if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
         InitializeSpecialTermsMarkers();
-        
+        ContainerEntryId loc = (ContainerEntryId)locLong;
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
         return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers);
     }
@@ -189,7 +189,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal void ApplyAnalyzerMultiTerms(in FieldMetadata binding, ReadOnlySpan<byte> originalTerm, ref ContextBoundNativeList<Slice> terms)
     {
         Analyzer analyzer = binding.Analyzer;
-        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
+        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No) && analyzer is null)
         {
             analyzer = _fieldMapping.DefaultAnalyzer;
         }

@@ -217,7 +217,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             Result.Files.CurrentFileName = null;
 
-            DisableOngoingTasksIfNeeded(RestoreSettings.DatabaseRecord);
             SmugglerBase.EnsureProcessed(Result, skipped: false, indexesSkipped: Result.Indexes.Skipped);
             Progress.Invoke(Result.Progress);
 
@@ -615,6 +614,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.SnowflakeConnectionStrings = smugglerDatabaseRecord.SnowflakeConnectionStrings;
                     databaseRecord.AiConnectionStrings = smugglerDatabaseRecord.AiConnectionStrings;
                     databaseRecord.EmbeddingsGenerations = smugglerDatabaseRecord.EmbeddingsGenerations;
+
+                    DisableOngoingTasksIfNeeded(databaseRecord);
 
                     ServerStore.Engine.StateMachine.AssertAllLicenseLimitsOnRestore(ServerStore, databaseRecord);
                 };

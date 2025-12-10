@@ -1185,7 +1185,7 @@ namespace Voron.Data.BTrees
 
             using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out Slice nodeKey))
             {
-                if (!SliceComparer.EqualsInline(nodeKey, key))
+                if (SliceComparer.EqualsInline(nodeKey, key) == false)
                     return -1;
             }
 

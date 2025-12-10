@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Queries
             IndexQueryServerSide result = null;
             try
             {
-                var isQueryOverwritten = !string.IsNullOrEmpty(overrideQuery);
+                var isQueryOverwritten = string.IsNullOrEmpty(overrideQuery) == false;
                 if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) && isQueryOverwritten == false)
                     throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 

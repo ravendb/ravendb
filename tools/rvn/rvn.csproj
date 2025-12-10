@@ -4,7 +4,7 @@
     <Authors>RavenDB</Authors>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.21</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.22</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>database;nosql;doc db</PackageTags>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
@@ -156,6 +156,7 @@
     <PackageReference Include="Polly" />
     <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Reflection.Metadata" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
     <PackageReference Include="System.Threading.Channels" />

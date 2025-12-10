@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -175,7 +175,7 @@ namespace Raven.Server.ServerWide.Commands
             return JsonDeserializationCluster.CompareExchangeResult(((BlittableJsonReaderObject)remoteResult).Clone(ContextToWriteResult));
         }
 
-        public sealed class CompareExchangeResult : IDynamicJsonValueConvertible
+        public sealed class CompareExchangeResult : IDynamicJson
         {
             public long Index;
             public object Value;
@@ -245,45 +245,48 @@ namespace Raven.Server.ServerWide.Commands
         {
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
-                if (items.ReadByKey(keySlice, out var reader))
+                if (items.ReadByKey(keySlice, out var reader) == false)
                 {
-                    if (FromBackup)
-                    {
-                        items.Delete(reader.Id);
-                        return new CompareExchangeResult
-                        {
-                            Index = index,
-                            Value = null
-                        };
-                    }
-                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
-                    var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size);
-                    var result = new BlittableJsonReaderObject(storeValue, size, context);
-
-                    if (Index == itemIndex)
-                    {
-                        result = result.Clone(context);
-                        items.Delete(reader.Id);
-                        WriteCompareExchangeTombstone(context, index);
-                        return new CompareExchangeResult
-                        {
-                            Index = index,
-                            Value = result
-                        };
-                    }
                     return new CompareExchangeResult
                     {
-                        Index = itemIndex,
+                        Index = 0,
+                        Value = null
+                    };
+                }
+
+                if (FromBackup)
+                {
+                    items.Delete(reader.Id);
+                    return new CompareExchangeResult
+                    {
+                        Index = index,
+                        Value = null
+                    };
+                }
+
+                var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
+                var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size);
+                var result = new BlittableJsonReaderObject(storeValue, size, context);
+
+                if (Index == itemIndex)
+                {
+                    result = result.Clone(context);
+                    items.Delete(reader.Id);
+                    WriteCompareExchangeTombstone(context, index);
+                    return new CompareExchangeResult
+                    {
+                        Index = index,
                         Value = result
                     };
                 }
+
+                return new CompareExchangeResult
+                {
+                    Index = itemIndex,
+                    Value = result
+                };
                 // if we ever decide to make replication of compare exchange, then we should write the compare exchange tombstones to schema on restore
             }
-            return new CompareExchangeResult
-            {
-                Index = index,
-                Value = null
-            };
         }
 
         private unsafe void WriteCompareExchangeTombstone(ClusterOperationContext context, long index)

@@ -32,8 +32,8 @@ public class RavenDB_24495 : ClusterTestBase
     public async Task CanReplaceServerCertificate_WithBouncyCastleGeneratedCertificate(bool with2Eku)
     {
         var result = await CreateRaftClusterWithSsl(3, with2Eku: with2Eku);
-        
-        var newCertBytes = CertificateUtils.CreateSelfSignedTestCertificate("server-bc", "replace-server-cert-test", with2Eku: with2Eku);
+        var suffix = Guid.NewGuid().ToString().Split('-')[0];
+        var newCertBytes = CertificateUtils.CreateSelfSignedTestCertificate($"server-bc-{suffix}", $"replace-server-cert-test-{suffix}", with2Eku: with2Eku);
         
         var first = result.Certificates.ServerCertificate.Value.Thumbprint;
         var certForCommunication = result.Certificates.ServerCertificateForCommunication.Value;
@@ -54,8 +54,9 @@ public class RavenDB_24495 : ClusterTestBase
     [RavenFact(RavenTestCategory.Certificates)]
     public async Task CreateZipArchive_ShouldHaveTheSameContent()
     {
-        const string certName = "test";
-        var clientCertBytes = CertificateUtils.CreateSelfSignedTestCertificate(certName, "zip-archive-test", with2Eku: true);
+        var suffix = Guid.NewGuid().ToString().Split('-')[0];
+        var certName = $"test-{suffix}";
+        var clientCertBytes = CertificateUtils.CreateSelfSignedTestCertificate(certName, $"zip-archive-test-{suffix}", with2Eku: true);
 
         using var ms = new MemoryStream();
         using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
@@ -193,7 +194,7 @@ public class RavenDB_24495 : ClusterTestBase
     {
         var cn = $"ca-{Guid.NewGuid():N}";
         var bcCa = BouncyCastleCertificateUtils.CreateCertificateAuthorityCertificate(cn, out _, out _);
-        var dnCa = CertificateUtils.CreateCertificateAuthorityCertificate(cn, out _, out _);
+        var dnCa = CertificateUtils.CreateCertificateAuthorityCertificate(cn, out _);
 
         using (bcCa)
         using (dnCa)

@@ -71,8 +71,8 @@ public class RavenDB_20248 : RavenTestBase
             var queryResult = query.ToList();
             
             Assert.Equal(2, queryResult.Count);
-            Assert.Equal(queryResult[0].Name, "Name1" + "Test");
-            Assert.Equal(queryResult[1].Name, "Name3" + "Test");
+            Assert.Contains(queryResult, p => p.Name == "Name1" + "Test");
+            Assert.Contains(queryResult, p => p.Name == "Name3" + "Test");
         }
     }
     

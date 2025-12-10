@@ -325,7 +325,6 @@ namespace Sparrow.Json.Parsing
             BlittableJsonReaderVector, // BlittableJsonReaderVector => goto DynamicJsonArray
 
             IBlittableJsonContainer, // IBlittableJsonContainer => goto BlittableJsonReaderObject
-            IDynamicJsonValueConvertible,  // Convertible => goto DynamicJsonValue
             RawBlob,
         }
 
@@ -540,12 +539,6 @@ namespace Sparrow.Json.Parsing
             {
                 TypeCache.Put(type, KnownJsonObjectType.EnumType);
                 return KnownJsonObjectType.EnumType;
-            }
-
-            if (current is IDynamicJsonValueConvertible)
-            {
-                TypeCache.Put(type, KnownJsonObjectType.IDynamicJsonValueConvertible);
-                return KnownJsonObjectType.IDynamicJsonValueConvertible;
             }
 
             throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
@@ -950,12 +943,6 @@ namespace Sparrow.Json.Parsing
                             continue;
 
                         goto case KnownJsonObjectType.BlittableJsonReaderObject;
-                    }
-
-                    case KnownJsonObjectType.IDynamicJsonValueConvertible:
-                    {
-                        current = ((IDynamicJsonValueConvertible)current).ToJson();
-                        goto case KnownJsonObjectType.DynamicJsonValue;
                     }
 
                     case KnownJsonObjectType.RawBlob:

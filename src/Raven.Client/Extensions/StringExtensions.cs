@@ -49,12 +49,12 @@ namespace Raven.Client.Extensions
             if (length == 0 || length > 256)
                 return false;
 
-            if (!char.IsLetter(token[start+0]) && token[start+0] != '_')
+            if (char.IsLetter(token[start+0]) == false && token[start+0] != '_')
                 return false;
 
             for (int i = 1; i < length; i++)
             {
-                if (!char.IsLetterOrDigit(token[start + i]) && token[start + i] != '_')
+                if (char.IsLetterOrDigit(token[start + i]) == false && token[start + i] != '_')
                     return false;
             }
 

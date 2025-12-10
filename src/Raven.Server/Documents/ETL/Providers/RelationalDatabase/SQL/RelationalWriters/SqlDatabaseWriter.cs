@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using NpgsqlTypes;
 using Oracle.ManagedDataAccess.Client;
@@ -20,6 +21,8 @@ namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.Relational
 
 internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnectionString, SqlEtlConfiguration>
 {
+    private static readonly Regex InvalidParamChars = new(@"[^\w]", RegexOptions.Compiled);
+
     private readonly string SqlEtlTag = "SQL ETL";
     private readonly bool _isSqlServerFactoryType;
 
@@ -115,20 +118,27 @@ internal sealed class SqlDatabaseWriter: RelationalDatabaseWriterBase<SqlConnect
 
     protected override string GetParameterNameForCommandString(string targetParamName, bool parseJson)
     {
+        var sanitizedParamName = SanitizeParameterName(targetParamName);
+
         switch (ProviderFactory.GetType().Name)
         {
             case "SqlClientFactory":
             case "MySqlClientFactory":
             case "MySqlConnectorFactory":
-                return "@" + targetParamName;
+                return "@" + sanitizedParamName;
 
             case "OracleClientFactory":
             case "NpgsqlFactory":
-                return ":" + targetParamName;
+                return ":" + sanitizedParamName;
 
             default:
                 throw new NotSupportedException($"Unhandled provider factory: {ProviderFactory.GetType().Name}");
         }
+    }
+
+    private string SanitizeParameterName(string paramName)
+    {
+        return InvalidParamChars.Replace(paramName, "_");
     }
 
     protected override void EnsureParamTypeSupportedByDbProvider(DbParameter parameter)

@@ -104,12 +104,8 @@ function execute(doc, args){{
 }}";
                 
                 case PatchRequestType.Conflict:
-                    return $@"
-function resolve(docs, hasTombstone, resolveToTombstone){{ 
+                    throw new NotSupportedException($"Use {nameof(ConflictPatchRequest)} to represent a patch request that is a result of a conflict");
 
-{Script}
-
-}}";
                 case PatchRequestType.EtlBehaviorFunctions:
                     return Script;
                 default:

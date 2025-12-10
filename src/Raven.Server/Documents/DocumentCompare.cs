@@ -317,7 +317,7 @@ namespace Raven.Server.Documents
                 return true;
 
             return currentCounters.Length != modifiedCounters.Length ||
-                   !currentCounters.All(modifiedCounters.Contains);
+                   currentCounters.All(modifiedCounters.Contains) == false;
         }
 
         private static bool ShouldResolveTimeSeriesConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata)
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents
                 return true;
 
             return currentTimeSeries.Length != modifiedTimeSeries.Length ||
-                   !currentTimeSeries.All(modifiedTimeSeries.Contains);
+                   currentTimeSeries.All(modifiedTimeSeries.Contains) == false;
         }
     }
 

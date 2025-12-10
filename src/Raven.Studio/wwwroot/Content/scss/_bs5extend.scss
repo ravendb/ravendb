@@ -349,6 +349,11 @@ select {
     }
 }
 
+// Ensure dropdown menus are not clipped by sibling items in virtualized lists
+.virtual-item:has(.dropdown.show) {
+    z-index: 1;
+}
+
 // remove padding top from modal footer
 .modal-footer {
     padding-top: 0;

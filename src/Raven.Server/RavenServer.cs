@@ -47,6 +47,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
@@ -82,7 +83,9 @@ using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
-using Constants = Raven.Server.Monitoring.OpenTelemetry.Constants;
+using Constants = Sparrow.Global.Constants;
+using TelemetryConstants = Raven.Server.Monitoring.OpenTelemetry.Constants;
+using ClientConstants = Raven.Client.Constants;
 
 namespace Raven.Server
 {
@@ -252,6 +255,57 @@ namespace Raven.Server
 
                     if (Configuration.Http.MaxStreamsPerConnection.HasValue)
                         options.Limits.Http2.MaxStreamsPerConnection = Configuration.Http.MaxStreamsPerConnection.Value;
+
+                    // HTTP/2 flow control: start from the profile, stretch for latency, respect overrides, clamp to RFC bounds.
+                    long connectionWindowBytes;
+                    long streamWindowBytes;
+                    long maxFrameSizeBytes;
+                    switch (Configuration.Http.Http2Profile)
+                    {
+                        case Http2Profile.Performance:
+                            connectionWindowBytes = 32L * Constants.Size.Megabyte;
+                            streamWindowBytes = 4L * Constants.Size.Megabyte;
+                            maxFrameSizeBytes = 1L * Constants.Size.Megabyte;
+                            break;
+                        case Http2Profile.Balanced:
+                        default:
+                            connectionWindowBytes = 16L * Constants.Size.Megabyte;
+                            streamWindowBytes = 2L * Constants.Size.Megabyte;
+                            maxFrameSizeBytes = 256L * Constants.Size.Kilobyte;
+                            break;
+                        case Http2Profile.Conservative:
+                            connectionWindowBytes = 4L * Constants.Size.Megabyte;
+                            streamWindowBytes = 1L * Constants.Size.Megabyte;
+                            maxFrameSizeBytes = 16L * Constants.Size.Kilobyte; 
+                            break;
+                    }
+
+                    if (Configuration.Http.Http2Latency == Http2LatencyHint.High)
+                    {
+                        connectionWindowBytes *= 2;
+                        streamWindowBytes *= 2;
+                    }
+
+                    connectionWindowBytes = Configuration.Http.InitialConnectionWindowSize?.GetValue(SizeUnit.Bytes) ?? connectionWindowBytes;
+                    streamWindowBytes = Configuration.Http.InitialStreamWindowSize?.GetValue(SizeUnit.Bytes) ?? streamWindowBytes;
+                    maxFrameSizeBytes = Configuration.Http.MaxFrameSize?.GetValue(SizeUnit.Bytes) ?? maxFrameSizeBytes;
+
+                    // Clamp to RFC 9113 legal ranges: Section 6.5.2 (windows), Section 4.2 (frame size)
+                    connectionWindowBytes = Math.Clamp(connectionWindowBytes, 64L * Constants.Size.Kilobyte, int.MaxValue);
+                    streamWindowBytes = Math.Clamp(streamWindowBytes, 64L * Constants.Size.Kilobyte, int.MaxValue);
+                    maxFrameSizeBytes = Math.Clamp(maxFrameSizeBytes, 16L * Constants.Size.Kilobyte, 16L * Constants.Size.Megabyte - 1);
+
+                    options.Limits.Http2.InitialConnectionWindowSize = (int)connectionWindowBytes;
+                    options.Limits.Http2.InitialStreamWindowSize = (int)streamWindowBytes;
+                    options.Limits.Http2.MaxFrameSize = (int)maxFrameSizeBytes;
+
+                    if (Logger.IsInfoEnabled)
+                    {
+                        var connectionWindow = new Sparrow.Size(connectionWindowBytes, SizeUnit.Bytes);
+                        var streamWindow = new Sparrow.Size(streamWindowBytes, SizeUnit.Bytes);
+                        var maxFrameSize = new Sparrow.Size(maxFrameSizeBytes, SizeUnit.Bytes);
+                        Logger.Info($"HTTP/2: Profile={Configuration.Http.Http2Profile}, ConnWindow={connectionWindow.GetDoubleValue(SizeUnit.Kilobytes):F1}KB, StreamWindow={streamWindow.GetDoubleValue(SizeUnit.Kilobytes):F1}KB, MaxFrame={maxFrameSize.GetDoubleValue(SizeUnit.Kilobytes):F1}KB, MaxStreams={options.Limits.Http2.MaxStreamsPerConnection}");
+                    }
 
                     options.ConfigureEndpointDefaults(listenOptions => listenOptions.Protocols = Configuration.Http.Protocols);
 
@@ -481,25 +535,25 @@ namespace Raven.Server
                     builder.AddRuntimeInstrumentation();
 
                 if (configuration.GeneralEnabled)
-                    builder.AddMeter(Constants.Meters.GeneralMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.GeneralMeter);
 
                 if (configuration.Requests)
-                    builder.AddMeter(Constants.Meters.RequestsMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.RequestsMeter);
 
                 if (configuration.ServerStorage)
-                    builder.AddMeter(Constants.Meters.StorageMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.StorageMeter);
 
                 if (configuration.GcEnabled)
-                    builder.AddMeter(Constants.Meters.GcMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.GcMeter);
 
                 if (configuration.TotalDatabases)
-                    builder.AddMeter(Constants.Meters.TotalDatabasesMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.TotalDatabasesMeter);
 
                 if (configuration.Resources)
-                    builder.AddMeter(Constants.Meters.Resources);
+                    builder.AddMeter(TelemetryConstants.Meters.Resources);
 
                 if (configuration.CPUCredits)
-                    builder.AddMeter(Constants.Meters.CpuCreditsMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.CpuCreditsMeter);
 
                 if (configuration.ConsoleExporter)
                     builder.AddConsoleExporter();
@@ -1881,7 +1935,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, StringBuilder log = null)
         {
             var authenticationStatus = new AuthenticateConnection(TwoFactor)
             {
@@ -1908,13 +1962,14 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
-            else if (CertificateHasWellKnownIssuer(certificate, out var issuer))
+            else if (CertificateHasWellKnownIssuer(certificate, out var issuer, log))
             {
                 string authLogMessage;
 
                 if (Configuration.Security.ValidateSanForCertificateWithWellKnownIssuer)
                 {
-                    if (AreCertificateSansValid(certificate))
+                    log?.AppendLine($"Validating SAN for certificate with {certificate.GetDisplayName()} ({certificate.Thumbprint}) well known issuer '{issuer}'");
+                    if (AreCertificateSansValid(certificate, log))
                     {
                         authLogMessage =
                             $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
@@ -3274,14 +3329,18 @@ namespace Raven.Server
             return serverCertificate != null && certificate.Equals(serverCertificate);
         }
 
-        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer)
+        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer, StringBuilder log = null)
         {
             issuer = null;
             if (WellKnownIssuers == null)
+            {
+                log?.AppendLine("No well known issuers configured");
                 return false;
+            }
 
             foreach (var knownIssuer in WellKnownIssuers)
             {
+                log?.AppendLine($"Checking if {knownIssuer.GetDisplayName()} ({knownIssuer.Thumbprint}) is a well known issuer for {cert.GetDisplayName()} ({cert.Thumbprint})");
                 using var chain = new X509Chain(false);
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 chain.ChainPolicy.DisableCertificateDownloads = true;
@@ -3291,14 +3350,16 @@ namespace Raven.Server
                 if (chain.Build(cert))
                 {
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
+                    log?.AppendLine($"Issuer is a well known issuer: {issuer} for {cert.GetDisplayName()} ({cert.Thumbprint})");
                     return true;
                 }
             }
 
+            log?.AppendLine($"No well known issuer found for {cert.GetDisplayName()} ({cert.Thumbprint})");
             return false;
         }
 
-        private bool AreCertificateSansValid(X509Certificate2 cert)
+        private bool AreCertificateSansValid(X509Certificate2 cert, StringBuilder log = null)
         {
             var serverDomain = new Uri(ServerStore.GetNodeHttpServerUrl()).Host;
             var sans = CertificateUtils.GetCertificateAlternativeNames(cert).ToList();
@@ -3308,12 +3369,14 @@ namespace Raven.Server
                 {
                     _auditLogger.Audit("Certificate does not contain any SAN.");
                 }
+                log?.AppendLine("Certificate does not contain any SAN.");
 
                 return false;
             }
 
             foreach (var san in sans)
             {
+                log?.AppendLine($"Checking if {san} is a valid SAN for domain {serverDomain}");
                 if (san.StartsWith("*."))
                 {
                     var array = san.Split("*.");
@@ -3323,6 +3386,7 @@ namespace Raven.Server
                         {
                             _auditLogger.Audit($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
                         }
+                        log?.AppendLine($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
 
                         continue;
                     }
@@ -3331,16 +3395,21 @@ namespace Raven.Server
                         serverDomain.Length > array[1].Length &&
                         serverDomain[..(serverDomain.Length - array[1].Length - 1)].Contains('.') == false)
                     {
+                        log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) contains valid SAN {san}");
                         return true;
                     }
                 }
                 else
                 {
                     if (string.Compare(serverDomain, san, StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) contains valid SAN {san}");
                         return true;
+                    }
                 }
             }
 
+            log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) does not contain a valid SAN for domain {serverDomain}");
             return false;
         }
 

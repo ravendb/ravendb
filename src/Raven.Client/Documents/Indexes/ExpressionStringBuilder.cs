@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 _ids = new Dictionary<object, int> { { label, 0 } };
             }
-            else if (!_ids.ContainsKey(label))
+            else if (_ids.ContainsKey(label) == false)
             {
                 _ids.Add(label, _ids.Count);
             }
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Indexes
                 _ids = new Dictionary<object, int>();
                 _ids.Add(_ids, 0);
             }
-            else if (!_ids.ContainsKey(p))
+            else if (_ids.ContainsKey(p) == false)
             {
                 _ids.Add(p, _ids.Count);
             }
@@ -71,13 +71,13 @@ namespace Raven.Client.Documents.Indexes
 
         private void DumpLabel(LabelTarget target)
         {
-            if (!string.IsNullOrEmpty(target.Name))
+            if (string.IsNullOrEmpty(target.Name))
             {
-                Out(target.Name);
+                Out("UnnamedLabel_" + GetLabelId(target));
             }
             else
             {
-                Out("UnnamedLabel_" + GetLabelId(target));
+                Out(target.Name);
             }
         }
 
@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Indexes
                 AddParam(p);
                 return 0;
             }
-            if (!_ids.TryGetValue(p, out count))
+            if (_ids.TryGetValue(p, out count) == false)
             {
                 count = _ids.Count;
                 AddParam(p);
@@ -199,7 +199,7 @@ namespace Raven.Client.Documents.Indexes
 
             for (int i = 1; i < name.Length; i++)
             {
-                if (!char.IsLetterOrDigit(name[i]) && name[i] != '_')
+                if (char.IsLetterOrDigit(name[i]) == false && name[i] != '_')
                     return false;
             }
             return true;
@@ -1558,6 +1558,66 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (node.Method.DeclaringType == typeof(MemoryExtensions) &&
+                node.Method.Name is "Contains" or "ContainsAny" &&
+                node.Arguments.Count > 1)
+            {
+                var firstArgument = node.Arguments[0];
+                if (firstArgument is MethodCallExpression { Method.Name: "op_Implicit" } firstCall)
+                    firstArgument = firstCall.Arguments[0];
+
+                var secondArgument = node.Arguments[1];
+                if (secondArgument is MethodCallExpression { Method.Name: "op_Implicit" } secondCall)
+                    secondArgument = secondCall.Arguments[0];
+
+                // T from MemoryExtensions.Contains<T>(ReadOnlySpan<T>, T)
+                Type elementType = null;
+                if (node.Method.IsGenericMethod)
+                    elementType = node.Method.GetGenericArguments().FirstOrDefault();
+
+                switch (node.Method.Name)
+                {
+                    case "Contains": // array.Contains((T)(...expr...))
+                        Visit(firstArgument);
+                        Out(".");
+                        Out("Contains");
+                        Out("(");
+
+                        if (elementType != null && TypeExistsOnServer(elementType))
+                        {
+                            // (T)( <secondArgument> )
+                            Out("(");
+                            Out(ConvertTypeToCSharpKeyword(elementType, out _));
+                            Out(")");
+                            Out("(");
+                            Visit(secondArgument);
+                            Out(")");
+                        }
+                        else
+                        {
+                            // no known T, just emit as is
+                            Visit(secondArgument);
+                        }
+
+                        Out(")");
+                        break;
+                    case "ContainsAny": // array1.Intersect(array2).Any()
+                        Visit(firstArgument);
+                        Out(".");
+                        Out("Intersect");
+                        Out("(");
+                        Visit(secondArgument);
+                        Out(")");
+                        Out(".");
+                        Out("Any");
+                        Out("(");
+                        Out(")");
+                        break;
+                }
+
+                return node;
+            }
+
             if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
             {
                 if (TypeExistsOnServer(node.Type) == false)
@@ -2147,7 +2207,7 @@ namespace Raven.Client.Documents.Indexes
 
         private void OutputAppropriateArrayType(NewArrayExpression node)
         {
-            if (!CheckIfAnonymousType(node.Type.GetElementType()) && TypeExistsOnServer(node.Type.GetElementType()))
+            if (CheckIfAnonymousType(node.Type.GetElementType()) == false && TypeExistsOnServer(node.Type.GetElementType()))
             {
                 Out(ConvertTypeToCSharpKeyword(node.Type.GetElementType(), out _));
             }

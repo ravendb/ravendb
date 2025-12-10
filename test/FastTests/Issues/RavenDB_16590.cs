@@ -85,6 +85,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
                 "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
                 "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
+                "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",
                 
                 "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",
                 "Indexing.Corax.VectorSearch.DefaultNumberOfEdges",

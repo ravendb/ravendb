@@ -1956,6 +1956,10 @@ namespace Raven.Server.Rachis
             }
         }
 
+        /// <summary>
+        /// This method is public via https://docs.ravendb.net/7.1/studio/server/debug/admin-js-console/#methods
+        /// DO NOT RENAME
+        /// </summary>
         public void FoundAboutHigherTerm(long term, string reason)
         {
             if (term <= CurrentTerm)
@@ -2088,6 +2092,10 @@ namespace Raven.Server.Rachis
             return true;
         }
 
+        /// <summary>
+        /// This method is public via https://docs.ravendb.net/7.1/studio/server/debug/admin-js-console/#methods
+        /// DO NOT RENAME
+        /// </summary>
         public string HardResetToNewCluster(string nodeTag = "A")
         {
             return HardResetToNewClusterAsync(nodeTag).GetAwaiter().GetResult();
@@ -2120,6 +2128,15 @@ namespace Raven.Server.Rachis
             // TODO: Run 'LeaderCanCecedeFromClusterAndNewLeaderWillBeElected' 10_000 times
 
             return topologyId;
+        }
+
+        /// <summary>
+        /// This method is public via https://docs.ravendb.net/7.1/studio/server/debug/admin-js-console/#methods
+        /// DO NOT RENAME
+        /// </summary>
+        public void HardResetToPassive(string topologyId = null)
+        {
+            HardResetToPassiveAsync(topologyId).GetAwaiter().GetResult();
         }
 
         public Task HardResetToPassiveAsync(string topologyId = null)

@@ -120,7 +120,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
                 
                 var elapsed = index.GetElapsedTimeFromLastQuery();
                 var lastQueriedTime = index.GetLastQueryingTime();
-                var lastIndexingTime = index.LastIndexingTime;
+                var lastIndexingTime = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(index.LastIndexingTime!.Value), lastQueriedTime!.Value, timeout: Timeout, interval: Interval);
                 
                 Assert.True(lastQueriedTime < lastIndexingTime, $"{lastQueriedTime} < {lastIndexingTime}");
             }

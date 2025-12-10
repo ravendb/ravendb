@@ -1584,9 +1584,11 @@ namespace Raven.Server.Documents
 
         public static Document ParseRawDataSectionDocumentWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize)
         {
-            tvr.Read((int)DocumentsTable.Data, out int size);
+            var datPtr = tvr.Read((int)DocumentsTable.Data, out int size);
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
+            
+            BlittableJsonReaderObject.BlittableValidation(context, datPtr, size);
             
             var doc = new Document();
             return InitializeDocument(context, doc, ref tvr);

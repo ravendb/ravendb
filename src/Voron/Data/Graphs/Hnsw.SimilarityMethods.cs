@@ -53,7 +53,7 @@ public partial class Hnsw
         ref float bufferRef = ref MemoryMarshal.GetReference(scores);
         int N = 0;
 
-        if (AdvInstructionSet.IsAcceleratedVector512 && scores.Length <= Vector512<float>.Count)
+        if (AdvInstructionSet.IsAcceleratedVector512 && scores.Length >= Vector512<float>.Count)
         {
             var divisor = Vector512.Create(8f * vectorSizeInBytes);
             N = Vector512<float>.Count;
@@ -63,12 +63,11 @@ public partial class Hnsw
                 var currentScores = Vector512.LoadUnsafe(ref currentPos);
                 var divide = Vector512.Divide(currentScores, divisor);
                 var result = Vector512.Subtract(Vector512.Create(1F), divide);
-                result = Vector512.Add(result, currentScores);
                 result.StoreUnsafe(ref currentPos);
             }
         }
 
-        if (AdvInstructionSet.IsAcceleratedVector256 && scores.Length - pos <= Vector256<float>.Count)
+        if (AdvInstructionSet.IsAcceleratedVector256 && scores.Length - pos >= Vector256<float>.Count)
         {
             var divisor = Vector256.Create(8f * vectorSizeInBytes);
             N = Vector256<float>.Count;
@@ -78,12 +77,11 @@ public partial class Hnsw
                 var currentScores = Vector256.LoadUnsafe(ref currentPos);
                 var divide = Vector256.Divide(currentScores, divisor);
                 var result = Vector256.Subtract(Vector256.Create(1F), divide);
-                result = Vector256.Add(result, currentScores);
                 result.StoreUnsafe(ref currentPos);
             }
         }
 
-        if (AdvInstructionSet.IsAcceleratedVector128 && scores.Length - pos <= Vector128<float>.Count)
+        if (AdvInstructionSet.IsAcceleratedVector128 && scores.Length - pos >= Vector128<float>.Count)
         {
             var divisor = Vector128.Create(8f * vectorSizeInBytes);
             N = Vector128<float>.Count;
@@ -93,7 +91,6 @@ public partial class Hnsw
                 var currentScores = Vector128.LoadUnsafe(ref currentPos);
                 var divide = Vector128.Divide(currentScores, divisor);
                 var result = Vector128.Subtract(Vector128.Create(1F), divide);
-                result = Vector128.Add(result, currentScores);
                 result.StoreUnsafe(ref currentPos);
             }
         }
@@ -108,7 +105,7 @@ public partial class Hnsw
         ref float bufferRef = ref MemoryMarshal.GetReference(scores);
         int N = 0;
 
-        if (AdvInstructionSet.IsAcceleratedVector512  && scores.Length <= Vector512<float>.Count)
+        if (AdvInstructionSet.IsAcceleratedVector512  && scores.Length >= Vector512<float>.Count)
         {
             N = Vector512<float>.Count;
             for (; pos + N < scores.Length; pos += N)
@@ -116,12 +113,11 @@ public partial class Hnsw
                 ref var currentPos = ref Unsafe.Add(ref bufferRef, pos);
                 var currentScores = Vector512.LoadUnsafe(ref currentPos);
                 var result = Vector512.Subtract(Vector512.Create(1F), currentScores);
-                result = Vector512.Add(result, currentScores);
                 result.StoreUnsafe(ref currentPos);
             }
         }
 
-        if (AdvInstructionSet.IsAcceleratedVector256 && scores.Length - pos <= Vector256<float>.Count)
+        if (AdvInstructionSet.IsAcceleratedVector256 && scores.Length - pos >= Vector256<float>.Count)
         {
             N = Vector256<float>.Count;
             for (; pos + N < scores.Length; pos += N)
@@ -129,12 +125,11 @@ public partial class Hnsw
                 ref var currentPos = ref Unsafe.Add(ref bufferRef, pos);
                 var currentScores = Vector256.LoadUnsafe(ref currentPos);
                 var result = Vector256.Subtract(Vector256.Create(1F), currentScores);
-                result = Vector256.Add(result, currentScores);
                 result.StoreUnsafe(ref currentPos);
             }
         }
 
-        if (AdvInstructionSet.IsAcceleratedVector128 && scores.Length - pos <= Vector128<float>.Count)
+        if (AdvInstructionSet.IsAcceleratedVector128 && scores.Length - pos >= Vector128<float>.Count)
         {
             N = Vector128<float>.Count;
             for (; pos + Vector128<float>.Count < scores.Length; pos += N)
@@ -142,7 +137,6 @@ public partial class Hnsw
                 ref var currentPos = ref Unsafe.Add(ref bufferRef, pos);
                 var currentScores = Vector128.LoadUnsafe(ref currentPos);
                 var result = Vector128.Subtract(Vector128.Create(1F), currentScores);
-                result = Vector128.Add(result, currentScores);
                 result.StoreUnsafe(ref currentPos);
             }
         }

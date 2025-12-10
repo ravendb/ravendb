@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.21</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.22</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win-x64;win-x86;linux-x64;osx-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -40,6 +40,7 @@
     <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Private.Uri" />
     <PackageReference Include="System.Reflection.Metadata" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="System.Text.RegularExpressions" />
     <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="ZstdSharp.Port" />

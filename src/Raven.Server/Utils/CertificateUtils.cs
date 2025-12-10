@@ -188,16 +188,15 @@ namespace Raven.Server.Utils
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null, bool with2Eku = true)
         {
             // Note this is for tests only!
-            CreateCertificateAuthorityCertificate(
+            var caCert = CreateCertificateAuthorityCertificate(
                 $"{commonNameValue} CA",
-                out var caKeyPair,
                 out var caSubjectName,
                 log);
-
+            
             CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue: commonNameValue,
                 issuerCN: caSubjectName,
-                issuerKeyPair: caKeyPair,
+                issuerKeyPair: (caCert.GetExportableRsaPrivateKey(), caCert.GetRSAPublicKey()),
                 isClientCertificate: false,
                 isCaCertificate: false,
                 notAfter: DateTime.UtcNow.Date.AddMonths(3),
@@ -217,7 +216,7 @@ namespace Raven.Server.Utils
             return certBytes;
         }
 
-        private static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
+        internal static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
         {
             // We have the same logic in AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts when the server starts
             // and when we renew a certificate. There we delete certificates only if expired but here in the tests we delete them all and keep
@@ -439,7 +438,6 @@ namespace Raven.Server.Utils
 
         public static X509Certificate2 CreateCertificateAuthorityCertificate(
             string commonNameValue,
-            out (AsymmetricAlgorithm PrivateKey, AsymmetricAlgorithm PublicKey) keyPair,
             out X500DistinguishedName name,
             StringBuilder log = null,
             bool generateNewKeyPair = false)
@@ -447,21 +445,24 @@ namespace Raven.Server.Utils
             log?.AppendLine("CreateCertificateAuthorityCertificate:");
 
             // Generate the RSA key pair for the CA.
-            keyPair = (RSA.Create(),
+            (AsymmetricAlgorithm PrivateKey, AsymmetricAlgorithm PublicKey) keyPair = (RSA.Create(),
                 RSA.Create());
             if (generateNewKeyPair)
             {
                 var newRsaKeyPair = GenerateRsaKey();
                 ((RSA)keyPair.PrivateKey).ImportRSAPrivateKey(newRsaKeyPair.Private, out _);
                 ((RSA)keyPair.PublicKey).ImportRSAPublicKey(newRsaKeyPair.Public, out _);
+                log?.AppendLine("CA key pair generated.");
             }
             else
             {
                 ((RSA)keyPair.PrivateKey).ImportRSAPrivateKey(caKeyPair.Value.Private, out _);
                 ((RSA)keyPair.PublicKey).ImportRSAPublicKey(caKeyPair.Value.Public, out _);
+                log?.AppendLine("Reusing cached CA key pair.");
             }
 
-            log?.AppendLine("CA key pair generated.");
+            log?.AppendLine("PrivateKey = " + ((RSA)keyPair.PrivateKey).ExportRSAPrivateKeyPem());
+            log?.AppendLine("PublicKey = " + ((RSA)keyPair.PrivateKey).ExportRSAPublicKeyPem());
 
             // Define the subject name.
             name = new X500DistinguishedName($"CN={commonNameValue}");
@@ -494,7 +495,9 @@ namespace Raven.Server.Utils
             var cert = request.CreateSelfSigned(notBefore, notAfter);
             log?.AppendLine($"Certificate created. NotBefore: {cert.NotBefore}, NotAfter: {cert.NotAfter}");
 
-            return cert;
+            return CertificateLoaderUtil.CreateCertificate(
+                cert.Export(X509ContentType.Pfx),
+                flags: CertificateLoaderUtil.FlagsForExport);
         }
 
         public static X509Certificate2 CreateClientCertificateFromServerCertificate(X509Certificate2 serverCertificate, out byte[] clientCertBytes)
@@ -592,7 +595,7 @@ namespace Raven.Server.Utils
         // generating this can take a while, so we cache that at the process level, to significantly speed up the tests
 
         private static Lazy<(byte[] Private, byte[] Public)>
-            caKeyPair = new Lazy<(byte[] Private, byte[] Public)>(GenerateRsaKey);
+            caKeyPair = new Lazy<(byte[] Private, byte[] Public)>(GenerateRsaKey, isThreadSafe: true);
 
         private static (byte[] Private, byte[] Public) GenerateRsaKey()
         {

@@ -85,7 +85,7 @@ public static partial class CoraxQueryBuilder
             AllEntries = IndexSearcher.Memoize(IndexSearcher.AllEntries());
             Metadata = query.Metadata;
             HasDynamics = index.Definition.HasDynamicFields;
-            IsVectorSingleClause = Metadata.Query.Where is MethodExpression me && QueryMethod.GetMethodType(me.Name.Value) == MethodType.Vector_Search;
+            IsVectorSingleClause = Metadata.Query.Where is MethodExpression me && QueryMethod.GetMethodType(me.Name.Value) == MethodType.Vector_Search && Metadata.Query.OrderBy is null or {Count: 0};
             DynamicFields = HasDynamics
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
@@ -1116,7 +1116,8 @@ public static partial class CoraxQueryBuilder
         }
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
-            builderParameters.DynamicFields, handleSearch: true, hasBoost: builderParameters.HasBoost);
+            builderParameters.DynamicFields, handleSearch: true, hasBoost: builderParameters.HasBoost
+            , forceDefaultSearchAnalyzer: builderParameters.Index.Configuration.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery);
 
         // Wildcard queries:
         if (searchQueryOptions is IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments && valueAsString.Length >= 1 && (valueAsString[0] == '*' || (valueAsString.Length >= 2 && valueAsString[^1] == '*')))
@@ -1403,7 +1404,10 @@ public static partial class CoraxQueryBuilder
         }
 
         int sortIndex = 0;
-        var sortArray = new OrderMetadata[8];
+        var sortArray = new OrderMetadata[16];
+
+        if (orderByFields.Length > sortArray.Length)
+            throw new InvalidOperationException($"Corax does not support ordering by more than {sortArray.Length} properties.");
 
         foreach (var field in orderByFields)
         {

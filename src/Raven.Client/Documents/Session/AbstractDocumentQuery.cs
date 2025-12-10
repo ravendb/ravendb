@@ -1927,7 +1927,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return objValue;
 
             // This is much faster than doing reflection to get the non-nullable type.
-            if (!AbstractDocumentQueryCache.TransformNonNullableTypeCache.TryGet(baseType, out var type))
+            if (AbstractDocumentQueryCache.TransformNonNullableTypeCache.TryGet(baseType, out var type) == false)
             {
                 type = baseType.GetNonNullableType();
                 AbstractDocumentQueryCache.TransformNonNullableTypeCache.Put(baseType, type);

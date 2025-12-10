@@ -22,6 +22,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
+using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
@@ -1229,7 +1230,7 @@ namespace Voron
                                 }
                                 break;
                             case RootObjectType.Container:
-                                long container = tx.OpenContainer(currentKey);
+                                var container = tx.OpenContainer(currentKey);
                                 RegisterContainer(container, name);
                                 break;
                             case RootObjectType.Set:
@@ -1298,9 +1299,9 @@ namespace Voron
                 }
             }
 
-            void RegisterContainer(long container, string name)
+            void RegisterContainer(ContainerId container, string name)
             {
-                r.Add(container, name);
+                r.Add((long)container, name);
                 var overflowName = $"{name}/OverflowPage";
                 var (allPages, freePages) = Voron.Data.Containers.Container.GetPagesFor(tx.LowLevelTransaction, container);
                 RegisterPages(allPages.AllPages(), name + "/AllPagesSet");
@@ -1323,7 +1324,7 @@ namespace Voron
             void RegisterLookup(Lookup<Int64LookupKey> numeric, string name)
             {
                 RegisterPages(numeric.AllPages(), name);
-                if (numeric.State.TermsContainerId > 0)
+                if (numeric.State.TermsContainerId.IsValid)
                 {
                     RegisterContainer(numeric.State.TermsContainerId, name + "/TermsContainer");
                 }
@@ -1394,7 +1395,7 @@ namespace Voron
                                 detailedReportInput.Tables.Add(table);
                                 break;
                             case RootObjectType.Container:
-                                long container = tx.OpenContainer(currentKey);
+                                var container = tx.OpenContainer(currentKey);
                                 detailedReportInput.Containers[currentKey] = container;
                                 break;
                             case RootObjectType.Set:

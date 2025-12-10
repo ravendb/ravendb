@@ -94,4 +94,13 @@ public class CompareExchangeTests : RavenTestBase
             }, 0, timeout: 15 * 1000);
         }
     }
+
+    [RavenTheory(RavenTestCategory.ClusterTransactions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task DeletingCompareExchangeCommand_WhenNotExist_ShouldReturnFalse(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var result = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>("key", 3));
+        Assert.False(result.Successful);
+    }
 }

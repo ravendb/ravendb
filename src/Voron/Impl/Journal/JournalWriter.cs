@@ -139,7 +139,7 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-            if (!_disposed.Raise())
+            if (_disposed.Raise() == false)
                 return;
 
             GC.SuppressFinalize(this);

@@ -23,7 +23,7 @@ namespace FastTests.Voron
         protected StorageEnvironmentOptions Options;
         protected readonly string DataDir = RavenTestHelper.NewDataPath(nameof(StorageTest), 0);
 
-        protected ByteStringContext Allocator { get; } = new ByteStringContext(SharedMultipleUseFlag.None);
+        protected ByteStringContext Allocator { get; private set; } = new ByteStringContext(SharedMultipleUseFlag.None);
 
         protected StorageTest(StorageEnvironmentOptions options, ITestOutputHelper output) : base(output)
         {
@@ -120,6 +120,12 @@ namespace FastTests.Voron
             aggregator.Execute(() =>
             {
                 IOExtensions.DeleteDirectory(DataDir);
+            });
+            
+            aggregator.Execute(() =>
+            {
+                Allocator?.Dispose();
+                Allocator = null;
             });
 
             aggregator.ThrowIfNeeded();

@@ -58,14 +58,14 @@ function map(name, lambda) {
 
         protected override void OnInitializeEngine(Engine engine)
         {
-            engine.SetValue("getMetadata", new ClrFunction(_engine, "getMetadata", MetadataFor)); // for backward-compatibility only
-            engine.SetValue("metadataFor", new ClrFunction(_engine, "metadataFor", MetadataFor));
-            engine.SetValue("attachmentsFor", new ClrFunction(_engine, "attachmentsFor", AttachmentsFor));
-            engine.SetValue("timeSeriesNamesFor", new ClrFunction(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
-            engine.SetValue("counterNamesFor", new ClrFunction(_engine, "counterNamesFor", CounterNamesFor));
-            engine.SetValue("loadAttachment", new ClrFunction(engine, "loadAttachment", LoadAttachment));
-            engine.SetValue("loadAttachments", new ClrFunction(engine, "loadAttachment", LoadAttachments));
-            engine.SetValue("id", new ClrFunction(_engine, "id", GetDocumentId));
+            engine.SetClrFunc("getMetadata", MetadataFor); // for backward-compatibility only
+            engine.SetClrFunc("metadataFor", MetadataFor);
+            engine.SetClrFunc("attachmentsFor", AttachmentsFor);
+            engine.SetClrFunc("timeSeriesNamesFor", TimeSeriesNamesFor);
+            engine.SetClrFunc("counterNamesFor", CounterNamesFor);
+            engine.SetClrFunc("loadAttachment", LoadAttachment);
+            engine.SetClrFunc("loadAttachments", LoadAttachments);
+            engine.SetClrFunc("id", GetDocumentId);
         }
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -407,9 +407,9 @@ function map(name, lambda) {
             _engine.SetValue(JavaScriptIndex.NoTracking, noTrackingObject);
 
             _engine.SetValue(JavaScriptIndex.Load, loadFunc);
-            _engine.SetValue(JavaScriptIndex.CmpXchg, new ClrFunction(_engine, JavaScriptIndex.CmpXchg, LoadCompareExchangeValue));
-            _engine.SetValue("tryConvertToNumber", new ClrFunction(_engine, "tryConvertToNumber", TryConvertToNumber));
-            _engine.SetValue("recurse", new ClrFunction(_engine, "recurse", Recurse));
+            _engine.SetClrFunc(JavaScriptIndex.CmpXchg, LoadCompareExchangeValue);
+            _engine.SetClrFunc("tryConvertToNumber", TryConvertToNumber);
+            _engine.SetClrFunc("recurse", Recurse);
 
             _engine.ExecuteWithReset(Code);
             _engine.ExecuteWithReset(mapCode);
