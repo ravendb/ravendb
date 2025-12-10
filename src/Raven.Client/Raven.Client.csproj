@@ -5,7 +5,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>Hibernating Rhinos</Authors>
     <Authors>RavenDB</Authors>
-    <TargetFrameworks>net10.0;net8.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net8.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>
@@ -60,20 +60,6 @@
     </Content>
     <Content Include="..\Sparrow\bin\Release\netstandard2.1\Sparrow.pdb">
       <PackagePath>lib/netstandard2.1/</PackagePath>
-      <IncludeInPackage>false</IncludeInPackage>
-      <IncludeInSymbolPackage>true</IncludeInSymbolPackage>
-    </Content>
-    <!-- this is required for the nuget build to properly include the right files -->
-    <Content Include="..\Sparrow\bin\Release\net6.0\Sparrow.dll">
-      <PackagePath>lib/net6.0/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\Sparrow\bin\Release\net6.0\Sparrow.xml">
-      <PackagePath>lib/net6.0/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\Sparrow\bin\Release\net6.0\Sparrow.pdb">
-      <PackagePath>lib/net6.0/</PackagePath>
       <IncludeInPackage>false</IncludeInPackage>
       <IncludeInSymbolPackage>true</IncludeInSymbolPackage>
     </Content>
@@ -172,9 +158,6 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1' OR '$(TargetFramework)' == 'netcoreapp3.1'">
     <PackageReference Include="Microsoft.CSharp" />
