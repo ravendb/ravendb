@@ -34,8 +34,8 @@ export function RemoteAttachmentsInfoHub() {
                         <li>Enable or disable the Remote Attachments feature.</li>
                         <li className="mt-1">
                             Configure remote destinations, including connection details and credentials. Supported
-                            destinations include <strong>Amazon S3</strong> and
-                            <strong>Azure Storage</strong>.
+                            destinations include <strong>Azure Blob Storage</strong>, <strong>Amazon S3</strong>, or any
+                            other <strong>S3-compatible</strong> storage service.
                         </li>
                         <li className="mt-1">
                             Fine-tune background processing behavior by setting:
