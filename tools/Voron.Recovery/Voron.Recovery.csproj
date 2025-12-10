@@ -3,7 +3,7 @@
     <Description>Voron Recovery Tool</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.0</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.1</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron.Recovery</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -23,29 +23,4 @@
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>
-</Project>
-	<PropertyGroup>
-		<Description>Voron Recovery Tool</Description>
-		<Authors>RavenDB</Authors>
-		<TargetFramework>net10.0</TargetFramework>
-		<RuntimeFrameworkVersion>10.0.1</RuntimeFrameworkVersion>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<AssemblyName>Voron.Recovery</AssemblyName>
-		<OutputType>Exe</OutputType>
-		<PackageId>Voron.Recovery</PackageId>
-		<RuntimeIdentifiers>win-x64;win-x86;linux-x64;osx-x64</RuntimeIdentifiers>
-		<GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-		<GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-		<CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
-		<EnablePreviewFeatures>True</EnablePreviewFeatures>
-		<GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
-	</PropertyGroup>
-	<ItemGroup>
-		<Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-		<PackageReference Include="ZstdSharp.Port" />
-		<ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
-		<ProjectReference Include="..\..\src\Voron\Voron.csproj" />
-	</ItemGroup>
 </Project>

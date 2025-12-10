@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.0</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.1</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win-x64;win-x86;linux-x64;osx-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -25,30 +25,4 @@
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
   </ItemGroup>
-	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFramework>net10.0</TargetFramework>
-		<RuntimeFrameworkVersion>10.0.1</RuntimeFrameworkVersion>
-		<RuntimeIdentifiers>win-x64;win-x86;linux-x64;osx-x64</RuntimeIdentifiers>
-		<CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	</PropertyGroup>
-	<ItemGroup>
-		<Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-	</ItemGroup>
-	<ItemGroup>
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
-		<PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
-		<PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
-		<PackageReference Include="Newtonsoft.Json" />
-	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="Properties\" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
-		<ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
-	</ItemGroup>
 </Project>
