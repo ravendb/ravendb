@@ -2202,7 +2202,10 @@ namespace Voron.Impl.Journal
             
             if (freedPages is { Count: > 0 })
             {
-                var encodedFreePagesSize = EncodeFreePages(freedPages, write, tx.Allocator);
+                var totalAllocatedBytes = pagesRequired * Constants.Storage.PageSize;
+                var availableSpace = totalAllocatedBytes - (write - txHeaderPtr);
+                
+                var encodedFreePagesSize = EncodeFreePages(freedPages, write, availableSpace, tx.Allocator);
                 write += encodedFreePagesSize;
                 
                 txHeader.Flags |= TransactionPersistenceModeFlags.HasFreePages;
@@ -2522,12 +2525,14 @@ namespace Voron.Impl.Journal
 
         private void RejectCommitsToMerge() => SharedJournalState.SetCancel();
 
-        internal static long EncodeFreePages(HashSet<long> freedPages, byte* dst, ByteStringContext allocator)
+        internal static long EncodeFreePages(HashSet<long> freedPages, byte* dst, long availableDestinationBytes, ByteStringContext allocator)
         {
             var headerPtr = dst;
             var header = (FreePagesHeader*)headerPtr;
             var output = dst + sizeof(FreePagesHeader);
 
+            var maxPtr = headerPtr + availableDestinationBytes;
+            
             using var _ = allocator.Allocate(freedPages.Count * sizeof(long), out var pagesBuffer);
 
             var pages = (long*)pagesBuffer.Ptr;
@@ -2554,10 +2559,21 @@ namespace Voron.Impl.Journal
 
             while (remainingCount > 0)
             {
-                encoder.Encode(pages + processedCount, remainingCount);
+                var encodingSize = encoder.Encode(pages + processedCount, remainingCount);
 
-                var (count, size) = encoder.Write(output, maxEncodingSectionSize);
+                var toWrite = Math.Min(encodingSize, maxEncodingSectionSize);
+                
+                if (output + toWrite > maxPtr)
+                    throw new InvalidOperationException($"Insufficient space to encode free pages. Required: {maxEncodingSectionSize} bytes, available: {maxPtr - output} bytes.");
+                
+                var (count, size) = encoder.Write(output, toWrite);
 
+                if (count == 0)
+                    throw new InvalidOperationException($"Encoder did not encode any free pages. Processed: {processedCount}, remaining: {remainingCount}.");
+                
+                if (size == 0)
+                    throw new InvalidOperationException($"Encoder did not write any bytes. Processed: {processedCount}, remaining: {remainingCount}.");
+                
                 remainingCount -= count;
                 processedCount += count;
 
