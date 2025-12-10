@@ -235,6 +235,10 @@ namespace Raven.Client.Documents.Indexes
         
         public object LoadVector(string path, string embeddingsGenerationTaskIdentifier) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         
+        public object LoadVector(string path, string embeddingsGenerationTaskIdentifier, string embeddingSourceDocumentId, string sourceDocumentCollectionName) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
+        public object LoadVector<TEmbeddingSourceDocument>(string path, string embeddingsGenerationTaskIdentifier, string embeddingSourceDocumentId) => throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+        
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>

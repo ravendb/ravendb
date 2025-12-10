@@ -40,7 +40,7 @@ public sealed class CoraxDocumentConverter : CoraxDocumentConverterBase
                 object vector;
 
                 if (autoVectorOptions.EmbeddingsGenerationTaskIdentifier != null)
-                    vector = AbstractStaticIndexBase.LoadVectorBase(indexField.Name, autoVectorOptions.SourceFieldName, autoVectorOptions.EmbeddingsGenerationTaskIdentifier);
+                    vector = AbstractStaticIndexBase.LoadVectorBase(indexField.Name, autoVectorOptions.SourceFieldName, autoVectorOptions.EmbeddingsGenerationTaskIdentifier, null, null);
                 else
                 {
                     if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, autoVectorOptions.SourceFieldName, out value) == false)

@@ -641,6 +641,9 @@ namespace Raven.Client
                         
                         public const string VectorPropertyName = "$vector";
                         public const string LoadVectorPropertyName = "$loadvector";
+
+                        internal const string LoadVectorEmbeddingSourceDocumentId = "$embeddingSourceDocumentId";
+                        internal const string LoadVectorEmbeddingSourceDocumentCollectionName = "$embeddingSourceDocumentCollectionName";
                     }
                 }
 
