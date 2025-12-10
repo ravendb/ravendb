@@ -1357,6 +1357,76 @@ loadToOrders(orderData);
             }
         }
 
+        [RequiresMsSqlRetryFact(delayBetweenRetriesMs: 1000)]
+        public async Task CanLoadFieldsWithDot_RavenDB_25526()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString, @"
+CREATE TABLE [dbo].[OrdersWithDot]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [OrderLines.Count] [int]  NULL,
+    [TotalCost] [int] NOT NULL,
+    [City] [nvarchar](50) NULL
+)
+");
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order
+                        {
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine { Cost = 3, Product = "Milk", Quantity = 3 }, new OrderLine { Cost = 4, Product = "Bear", Quantity = 2 },
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
+                    
+                    WaitForUserToContinueTheTest(store);
+                    
+                    var etlDone = Etl.WaitForEtlToComplete(store);
+
+                    SetupSqlEtl(store, connectionString, @"
+var orderData = {
+    Id: id(this),
+    TotalCost: 0
+};
+
+orderData['OrderLines.Count'] = this.OrderLines.length;
+
+for (var i = 0; i < this.OrderLines.length; i++) {
+    var line = this.OrderLines[i];
+    orderData.TotalCost += line.Cost;
+}
+
+loadToOrdersWithDot(orderData);
+", tables: new List<SqlEtlTable> { new SqlEtlTable { TableName = "OrdersWithDot", DocumentIdColumn = "Id" }, });
+
+                    await etlDone.WaitAsync(TimeSpan.FromMinutes(5));
+
+                    using (var con = new SqlConnection())
+                    {
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM OrdersWithDot";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                            
+                            dbCommand.CommandText = "SELECT [OrderLines.Count] FROM [OrdersWithDot]";
+                            var count = Convert.ToInt32(dbCommand.ExecuteScalar());
+                            Assert.Equal(2, count);
+                        }
+                    }
+                }
+            }
+        }
+
         private static void AssertCounts(int ordersCount, int orderLineCounts, string connectionString)
         {
             using (var con = new SqlConnection())
@@ -1374,19 +1444,21 @@ loadToOrders(orderData);
             }
         }
 
-        protected void SetupSqlEtl(DocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null)
+        protected void SetupSqlEtl(DocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null, List<SqlEtlTable> tables = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
 
+            var sqlTables = tables ?? new List<SqlEtlTable> 
+            {
+                new SqlEtlTable { TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly },
+                new SqlEtlTable { TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly },
+            };
+            
             Etl.AddEtl(store, new SqlEtlConfiguration()
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
-                SqlTables =
-                {
-                    new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = insertOnly},
-                    new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly},
-                },
+                SqlTables = sqlTables,
                 Transforms =
                 {
                     new Transformation()

@@ -34,7 +34,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Core)]
         public void ServerUrlShouldOnlyAllowHttpOrHttps()
         {
-            GetConfiguration("http://test.com");
+            GetConfiguration("http://ravendb.net");
             GetConfiguration("https://192.152.23.3:345", certPath: "certPath.pem");
 
             foreach (var serverUrl in new string[]
