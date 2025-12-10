@@ -73,6 +73,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
                         awsSessionToken: s3Config.AwsSessionToken,
                         remoteFolderName: s3Config.RemoteFolderName,
                         bucketName: s3Config.BucketName,
+                        isUseCustomHost: s3Config.CustomServerUrl != null,
                         customServerUrl: s3Config.CustomServerUrl,
                         forcePathStyle: s3Config.ForcePathStyle,
                         storageClass: s3Config.StorageClass,
