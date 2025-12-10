@@ -68,9 +68,7 @@ public sealed partial class ClusterStateMachine
         nameof(UpdateGenAiCommand),
         nameof(AddGenAiCommand),
         nameof(AddOrUpdateAiAgentCommand),
-        nameof(AddSnowflakeEtlCommand)
-        nameof(AddEmbeddingsGenerationCommand),
-        nameof(UpdateEmbeddingsGenerationCommand),
+        nameof(AddSnowflakeEtlCommand),
         nameof(EditRemoteAttachmentsCommand),
     };
 
