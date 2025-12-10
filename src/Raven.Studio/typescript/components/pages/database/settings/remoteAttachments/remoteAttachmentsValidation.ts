@@ -18,7 +18,7 @@ function getIsUniqueIdentifier(value: string, ctx: yup.TestContext<RemoteAttachm
     const { context } = ctx.options;
 
     if (context.destinations != null) {
-        const matches = context.destinations.filter((dest) => dest.identifier === value);
+        const matches = context.destinations.filter((dest) => dest.identifier.toLowerCase() === value.toLowerCase());
 
         if (!context.currentIdentifier) {
             return matches.length === 0;
