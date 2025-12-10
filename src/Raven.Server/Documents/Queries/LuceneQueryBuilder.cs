@@ -327,6 +327,9 @@ namespace Raven.Server.Documents.Queries
 
                 var fieldName = ExtractIndexFieldName(query, parameters, ie.Source, metadata);
                 exact = IsExact(index, exact, fieldName);
+                if (exact && metadata.IsDynamic)
+                    fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+                
                 var termType = LuceneTermType.Null;
                 var hasGotTheRealType = false;
 
@@ -341,10 +344,7 @@ namespace Raven.Server.Documents.Queries
                             termType = GetLuceneField(fieldName, value.Type).LuceneTermType;
                             hasGotTheRealType = true;
                         }
-
-                        if (exact && metadata.IsDynamic)
-                            fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
-
+                        
                         allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value.Value, exact), Occur.MUST);
                     }
 
