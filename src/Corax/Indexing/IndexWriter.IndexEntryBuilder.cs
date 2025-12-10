@@ -284,9 +284,8 @@ public partial class IndexWriter
             if (value.Length <= 0) return; // we don't index missing / empty vectors 
             var field = GetField(fieldId, path);
             
-            PortableExceptions.ThrowIfNot<InvalidOperationException>(field.HasVector, 
-                $"Field '{field.Name} didn't have vector options but tried to write a vector.");
-            
+            PortableExceptions.ThrowIfNot<InvalidOperationException>(field.HasVector, $"Field ({fieldId} , '{field.Name}') didn't have vector options but tried to write a vector. Vector length: {value.Length}");
+
             var vectorWriter = field.GetVectorIndexer(_parent._transaction.LowLevelTransaction, value.Length);
             var vectorHash = vectorWriter.Register(_entryId, value);
             

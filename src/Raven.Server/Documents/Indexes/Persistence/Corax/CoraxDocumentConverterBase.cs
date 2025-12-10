@@ -315,7 +315,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                         builder.WriteNull(fieldId, path);
                         break;
                     }
-                    
+
+                    Debug.Assert(field is not { Vector: null }, "field is not { Vector: null }");
                     var embedding = vectorValue.GetEmbedding();
                     var destinationEmbeddingType = field.Vector.DestinationEmbeddingType;
                     

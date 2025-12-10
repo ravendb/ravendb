@@ -9,6 +9,16 @@ jobs:
     name: Compile Server & Studio
     runs-on: ubuntu-latest
     steps:
+      - name: Cleanup runner
+        run: |
+          echo "Disk usage BEFORE cleanup:"
+          df -h
+          sudo rm -rf /opt/hostedtoolcache || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+          echo "Disk usage AFTER cleanup:"
+          df -h
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
