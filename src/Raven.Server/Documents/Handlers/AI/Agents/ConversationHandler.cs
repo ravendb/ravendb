@@ -37,7 +37,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
-    private const string QueryVirtualConversationId = "#QueryTools";
+    private const string QueryVirtualSubConversationId = "#QueryTools";
 
     protected ConversationDocument _document;
     private string _conversationId;
@@ -411,7 +411,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         if (reqs.Count is 0)
             return;
 
-        await ExecuteMultiAgentAndQueryRequests(context, reqs);
+        await ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
     }
 
     private bool HandleSubAgentResponse(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall)
@@ -490,7 +490,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private void BuildQueryRequest(JsonOperationContext context, ConversationDocument document, Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs, AiAgentToolQuery q, AiToolCall call)
     {
-        reqs.GetOrAdd(QueryVirtualConversationId).Add((call, new DynamicJsonValue
+        reqs.GetOrAdd(QueryVirtualSubConversationId).Add((call, new DynamicJsonValue
             {
                 [nameof(GetRequest.Url)] = $"/databases/{database.Name}/queries",
                 [nameof(GetRequest.Query)] = null,
@@ -659,7 +659,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                     // TODO we might need to change the order here to support nested sub-agents calls
                     // so it would be grand-child / child / parent instead
 
-                    var subAgent = GetOrAdd(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
+                    var subAgent = GetOrAddSubAgentsActionResponses(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
                     subAgent.Responses.Add(new AiAgentActionResponse
                     {
                         ToolId = childToolId, // sub call ID
@@ -703,26 +703,26 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
             return new[] { s.Substring(0, index), s.Substring(index + 1) };
         }
+    }
 
-        static ServerAiAgentActionResponse GetOrAdd(Dictionary<string, ServerAiAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
+    private static ServerAiAgentActionResponse GetOrAddSubAgentsActionResponses(Dictionary<string, ServerAiAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
+    {
+        if (subAgentsActions.TryGetValue(parent.SubConversation, out var subAgent))
         {
-            if (subAgentsActions.TryGetValue(parent.SubConversation, out var subAgent))
-            {
-                Debug.Assert(subAgent.ParentId == parentToolId, $"subAgent.ParentId != rootToolId. subAgent.ParentId is '{subAgent.ParentId}',  rootToolId is '{parentToolId}'");
-                Debug.Assert(subAgent.Agent == parent.Name, $"subAgent.Agent != action.Name. subAgent.Agent is '{subAgent.Agent}', action.Name is '{parent.Name}'");
-            }
-            else
-            {
-                subAgent = subAgentsActions[parent.SubConversation] = new ServerAiAgentActionResponse()
-                {
-                    ParentId = parentToolId,
-                    Agent = parent.Name,
-                    Responses = new()
-                };
-            }
-
-            return subAgent;
+            Debug.Assert(subAgent.ParentId == parentToolId, $"subAgent.ParentId != rootToolId. subAgent.ParentId is '{subAgent.ParentId}',  rootToolId is '{parentToolId}'");
+            Debug.Assert(subAgent.Agent == parent.Name, $"subAgent.Agent != action.Name. subAgent.Agent is '{subAgent.Agent}', action.Name is '{parent.Name}'");
         }
+        else
+        {
+            subAgent = subAgentsActions[parent.SubConversation] = new ServerAiAgentActionResponse()
+            {
+                ParentId = parentToolId,
+                Agent = parent.Name,
+                Responses = new()
+            };
+        }
+
+        return subAgent;
     }
 
     private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, ServerAiAgentActionResponse> subAgentsActions)
@@ -739,9 +739,9 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             reqs.GetOrAdd(conversationId).Add((call, r));
         }
 
-        await ExecuteMultiAgentAndQueryRequests(context, reqs);
+        await ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
 
-        if (_childUserCalls.Any())
+        if (_childUserCalls.Count > 0)
             return;
 
         List<AiToolCall> activeToolCalls = [];
@@ -784,46 +784,19 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         };
     }
 
-    private async Task ExecuteMultiAgentAndQueryRequests(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
+    private async Task ExecuteMultiAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
-        if (reqs.TryGetValue(QueryVirtualConversationId, out List<(AiToolCall Call, DynamicJsonValue Req)> queryToolReqs))
+        if (reqs.TryGetValue(QueryVirtualSubConversationId, out List<(AiToolCall Call, DynamicJsonValue Req)> queryToolReqs))
         {
-            await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(queryToolReqs.Select(x => x.Req))))
-            {
-                AiToolCall currentCall = queryToolReqs[i].Call;
-                var toolCall = FindToolFrom(_configuration, currentCall.Name);
-                if (toolCall == null)
-                    throw new InvalidOperationException($"Ai-Agent has no tool in name '{currentCall.Name}'");
-
-                switch (toolCall)
-                {
-                    case AiAgentToolQuery:
-                        if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
-                            throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-
-                        _document.AddMessage(context, context.ReadObject(
-                            new DynamicJsonValue
-                            {
-                                ["tool_call_id"] = currentCall.Id,
-                                ["role"] = "tool",
-                                ["content"] = GetToolResultContent(queryResult)
-                            }, "tool-call/response"), usage: null);
-
-                        break;
-                    default:
-                        throw new InvalidOperationException($"Type mismatch for tool '{currentCall.Name}'. " +
-                                                            $"Expected type: '{nameof(AiAgentToolQuery)}', Actual type: '{toolCall.GetType().Name}'.");
-                }
-            }
+            await ExecuteSingleSubConversationToolCallsAsync(context, QueryVirtualSubConversationId, queryToolReqs);
         }
-
-        foreach (var (conversationId, conversationReqs) in reqs.Where(kvp => kvp.Key != QueryVirtualConversationId))
+        foreach (var (conversationId, conversationReqs) in reqs.Where(kvp => kvp.Key != QueryVirtualSubConversationId))
         {
-            await ExecuteSubAgentToolCalls(context, conversationId, conversationReqs);
+            await ExecuteSingleSubConversationToolCallsAsync(context, conversationId, conversationReqs);
         }
     }
 
-    private async Task ExecuteSubAgentToolCalls(JsonOperationContext context, string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
+    private async Task ExecuteSingleSubConversationToolCallsAsync(JsonOperationContext context, string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
     {
         await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
         {
@@ -838,10 +811,23 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                     if (HandleSubAgentResponse(context, requestResult, currentCall) == false)
                         return;
                     break;
+                case AiAgentToolQuery:
+                    if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                        throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
+
+                    _document.AddMessage(context, context.ReadObject(
+                        new DynamicJsonValue
+                        {
+                            ["tool_call_id"] = currentCall.Id,
+                            ["role"] = "tool",
+                            ["content"] = GetToolResultContent(queryResult)
+                        }, "tool-call/response"), usage: null);
+
+                    break;
                 default:
                     throw new InvalidOperationException(
                         $"Type mismatch for tool '{currentCall.Name}' in sub-conversation '{conversationId}'. " + 
-                        $"Expected type: '{nameof(AiAgentToolSubAgent)}', Actual type: '{toolCall.GetType().Name}'.");
+                        $"Expected type: '{nameof(AiAgentToolSubAgent)}' or '{nameof(AiAgentToolQuery)}', Actual type: '{toolCall.GetType().Name}'.");
             }
         }
     }
