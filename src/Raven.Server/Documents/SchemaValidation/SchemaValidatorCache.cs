@@ -42,7 +42,7 @@ public class SchemaValidatorCache : IDisposable
 
         Dictionary<string, SchemaValidator> newSchemaValidators = null;
         
-        foreach ((string collection, Client.Documents.Operations.SchemaValidation.SchemaDefinition validator) in configuration.ValidatorsPerCollection)
+        foreach ((string collection, SchemaDefinition validator) in configuration.ValidatorsPerCollection)
         {
             if (_schemaValidatorsPerCollection.TryGetValue(collection, out var existingValidator)
                 && validator.Schema.Equals(existingValidator.SchemaDefinition))
@@ -78,7 +78,7 @@ public class SchemaValidatorCache : IDisposable
         }
 
         if (newSchemaValidators != null)
-            _schemaValidatorsPerCollection = newSchemaValidators.ToFrozenDictionary();
+            _schemaValidatorsPerCollection = newSchemaValidators.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
 
     private void EnsureMetadataIsValid(ref BlittableJsonReaderObject blittable)

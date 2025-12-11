@@ -14,8 +14,10 @@ public class SchemaValidationBasicTests : RavenTestBase
 {
     public SchemaValidationBasicTests(ITestOutputHelper output) : base(output) { }
 
-    [RavenFact(RavenTestCategory.ClientApi)]
-    public async Task Store()
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("Users")]
+    [InlineData("users")]
+    public async Task Store(string collection)
     {
         var schema = JsonSchema.FromType<User>();
         var schemaData = schema.ToJson();
@@ -26,7 +28,7 @@ public class SchemaValidationBasicTests : RavenTestBase
             {
                 ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>()
                 {
-                    {"Users", new SchemaDefinition
+                    {collection, new SchemaDefinition
                     {
                         Schema = schemaData
                     }}
