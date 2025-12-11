@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Authentication;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Voron.Util.Settings;
@@ -190,14 +190,26 @@ namespace Raven.Server.Documents.PeriodicBackup
                 serverStore.Configuration.Backup.AssertRegionAllowed(configuration.GlacierSettings.AwsRegionName);
         }
 
-        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration backupConfiguration, ServerStore serverStore, RavenServer.AuthenticateConnection authConnection)
+        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration backupConfiguration,
+            ServerStore serverStore, string databaseName, RavenServer.AuthenticateConnection authConnection)
         {
             serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
 
             UpdateLocalPathIfNeeded(configuration, serverStore);
             AssertBackupConfiguration(configuration, backupConfiguration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
-            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, authConnection?.Status);
+
+            List<BackupSettings> previousBackupSettings;
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
+                var previousBackup = rawRecord.PeriodicBackups?.FirstOrDefault(x => string.Equals(x.TaskId, configuration.TaskId));
+                previousBackupSettings = GetBackupSettingsList(previousBackup);
+            }
+
+            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, 
+                authConnection?.Status, previousBackupSettings);
 
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
@@ -208,7 +220,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             AssertBackupConfigurationInternal(configuration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
-            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, authConnection?.Status);
+            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, 
+                authConnection?.Status, previousBackupSettings: null);
 
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
@@ -216,7 +229,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private static void AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(
             BackupConfiguration configuration,
             ServerStore serverStore,
-            RavenServer.AuthenticationStatus? authConnectionStatus)
+            RavenServer.AuthenticationStatus? authConnectionStatus,
+            List<BackupSettings> previousBackupSettings)
         {
             if (authConnectionStatus is null or RavenServer.AuthenticationStatus.ClusterAdmin)
                 return;
@@ -224,29 +238,42 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (serverStore.Configuration.Security.RestrictExternalScriptUsageForNonClusterAdmin == false)
                 return;
 
-            var backupSettings = new List<BackupSettings>
+            var backupSettings = GetBackupSettingsList(configuration);
+            
+            for (var i = 0; i < backupSettings.Count; i++)
             {
-                configuration.LocalSettings,
-                configuration.S3Settings,
-                configuration.GlacierSettings,
-                configuration.AzureSettings,
-                configuration.GoogleCloudSettings,
-                configuration.FtpSettings
-            };
+                var currentBackupSetting = backupSettings[i];
+                if (previousBackupSettings == null)
+                {
+                    if (currentBackupSetting?.GetBackupConfigurationScript == null)
+                        continue;
+                }
+                else
+                {
+                    var previousBackupSetting = previousBackupSettings[i];
+                    if (previousBackupSetting == null && currentBackupSetting == null)
+                        continue;
 
-            foreach (var backupSetting in backupSettings)
-            {
-                if (backupSetting?.GetBackupConfigurationScript == null || backupSetting.Disabled)
-                    continue;
+                    var previous = previousBackupSetting?.GetBackupConfigurationScript;
+                    var current = currentBackupSetting?.GetBackupConfigurationScript;
 
-                if (string.IsNullOrEmpty(backupSetting.GetBackupConfigurationScript.Exec))
-                    continue;
+                    if (previous == null && current == null)
+                        continue;
+
+                    if (previous != null && current != null)
+                    {
+                        if (previous.Exec == current.Exec &&
+                            previous.Arguments == current.Arguments &&
+                            previous.TimeoutInMs == current.TimeoutInMs)
+                            continue;
+                    }
+                }
 
                 throw new ArgumentException($"Setting up the configuration for {GetConfigurationName()} via an external script is not allowed for non cluster admins.");
 
                 string GetConfigurationName()
                 {
-                    return backupSetting switch
+                    return backupSettings[i] switch
                     {
                         LocalSettings => "Local",
                         S3Settings => "S3",
@@ -258,6 +285,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                     };
                 }
             }
+        }
+
+        private static List<BackupSettings> GetBackupSettingsList(BackupConfiguration configuration)
+        {
+            if (configuration == null)
+                return null;
+
+            return
+            [
+                configuration.LocalSettings,
+                configuration.S3Settings,
+                configuration.GlacierSettings,
+                configuration.AzureSettings,
+                configuration.GoogleCloudSettings,
+                configuration.FtpSettings
+            ];
         }
 
         public sealed class ActualPathResult
