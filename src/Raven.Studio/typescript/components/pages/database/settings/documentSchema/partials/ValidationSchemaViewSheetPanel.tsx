@@ -39,9 +39,7 @@ interface ValidationSchemaViewSheetPanelProps {
 }
 
 interface ValidationOperationProgress extends ValidateSchemaResult {
-    isCompleted?: boolean;
-    isErrored?: boolean;
-    isLoading?: boolean;
+    status?: "complete" | "loading" | "error";
     error?: unknown;
 }
 
@@ -88,9 +86,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                     LastEtag: 0,
                     ErrorCount: 0,
                     ValidatedCount: 0,
-                    isLoading: true,
-                    isCompleted: false,
-                    isErrored: false,
+                    status: "loading",
                 },
             }));
 
@@ -101,8 +97,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                     ...prev,
                     [collectionName]: {
                         ...prev[collectionName],
-                        isLoading: false,
-                        isErrored: true,
+                        status: "error",
                         error: result.reason,
                     },
                 }));
@@ -116,20 +111,20 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                 .monitorOperation<ValidationOperationProgress>(databaseName, operationId, (progress) =>
                     setMonitorOperationProgress((prev) => ({
                         ...prev,
-                        [collectionName]: { ...progress, isLoading: true, isCompleted: false, isErrored: false },
+                        [collectionName]: { ...progress, status: "loading" },
                     }))
                 )
                 .then((finalResult) => {
                     setMonitorOperationProgress((prev) => ({
                         ...prev,
-                        [collectionName]: { ...finalResult, isCompleted: true, isLoading: false },
+                        [collectionName]: { ...finalResult, status: "complete" },
                     }));
                 })
                 .catch((error) => {
                     console.error(`Validation failed for ${collectionName}:`, error);
                     setMonitorOperationProgress((prev) => ({
                         ...prev,
-                        [collectionName]: { ...prev[collectionName], isErrored: true, error, isLoading: false },
+                        [collectionName]: { ...prev[collectionName], status: "error", error },
                     }));
                 });
         });
@@ -157,7 +152,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
         control,
     });
 
-    const isValidating = validators.some((validator) => monitorOperationProgress[validator.Name]?.isLoading);
+    const isValidating = validators.some((validator) => monitorOperationProgress[validator.Name]?.status === "loading");
 
     const isTestSettingsDisabled = !formValues.isTestSettingsEnabled || isValidating;
 
@@ -305,7 +300,10 @@ const ValidatedDocumentsTable = ({ width, loading, result }: ValidatedDocumentsT
 
 function useValidationInvalidDocumentsColumns(availableWidth: number): { columns: ColumnDef<TableProps>[] } {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
-    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
+    const getSize = React.useCallback(
+        (percentage: number) => virtualTableUtils.getCellSizeProvider(bodyWidth)(percentage),
+        [bodyWidth]
+    );
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const columns: ColumnDef<TableProps>[] = useMemo(() => {
         const cols: ColumnDef<TableProps>[] = [
@@ -428,7 +426,7 @@ interface ValidationStatusMessageProps {
 }
 
 function ValidationStatusMessage({ validators, monitorOperationProgress }: ValidationStatusMessageProps) {
-    if (validators.some((v) => monitorOperationProgress[v.Name]?.isErrored)) {
+    if (validators.some((v) => monitorOperationProgress[v.Name]?.status === "error")) {
         return (
             <div>
                 <Icon icon="danger" color="danger" />
@@ -514,9 +512,9 @@ function ValidationCollectionAccordionItem({
     maxDocumentsToValidate,
 }: ValidationCollectionAccordionItemProps) {
     const errorCount = monitorOperationProgress?.ErrorCount ?? 0;
-    const isCompleted = monitorOperationProgress?.isCompleted;
-    const isLoading = monitorOperationProgress?.isLoading;
-    const isErrored = monitorOperationProgress?.isErrored;
+    const isCompleted = monitorOperationProgress?.status === "complete";
+    const isLoading = monitorOperationProgress?.status === "loading";
+    const isErrored = monitorOperationProgress?.status === "error";
 
     const errorMessage = isErrored
         ? ((monitorOperationProgress.error as any)?.Message ?? String(monitorOperationProgress.error))
