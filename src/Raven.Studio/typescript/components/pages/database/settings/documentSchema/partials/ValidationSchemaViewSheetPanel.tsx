@@ -33,6 +33,7 @@ import { documentSchemaUtils } from "components/pages/database/settings/document
 import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import Code from "components/common/Code";
+import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 
 interface ValidationSchemaViewSheetPanelProps {
     validators: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">[];
@@ -295,7 +296,14 @@ const ValidatedDocumentsTable = ({ width, loading, result }: ValidatedDocumentsT
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
     });
-    return <VirtualTable className="panel-bg-1" isLoading={loading} table={table} heightInPx={400} />;
+    return (
+        <VirtualTable
+            className="panel-bg-1"
+            isLoading={loading}
+            table={table}
+            heightInPx={virtualTableUtils.getHeightInPx(data.length, virtualTableConstants.defaultTableHeightInPx)}
+        />
+    );
 };
 
 function useValidationInvalidDocumentsColumns(availableWidth: number): { columns: ColumnDef<TableProps>[] } {
@@ -305,8 +313,8 @@ function useValidationInvalidDocumentsColumns(availableWidth: number): { columns
         [bodyWidth]
     );
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const columns: ColumnDef<TableProps>[] = useMemo(() => {
-        const cols: ColumnDef<TableProps>[] = [
+    const columns: ColumnDef<TableProps>[] = useMemo(
+        () => [
             {
                 header: "@id",
                 accessorKey: "documentId",
@@ -321,10 +329,9 @@ function useValidationInvalidDocumentsColumns(availableWidth: number): { columns
                 cell: CellWithCopyWrapper,
                 size: getSize(75),
             },
-        ];
-
-        return cols;
-    }, [getSize]);
+        ],
+        [getSize]
+    );
 
     return { columns };
 }
