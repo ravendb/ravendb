@@ -7,6 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
 
@@ -19,6 +20,9 @@ internal class AiAssistantGiveConsentProcessor([NotNull] RequestHandler requestH
         {
             var request = new DynamicJsonValue();
             FulfillRequestMetadata(request);
+
+            if (RavenLogManager.Instance.IsAuditEnabled)
+                RequestHandler.LogAuditForServer("CONSENT", $"Give consent to AI Assistant for license '{RequestHandler.ServerStore.LicenseManager.LicenseStatus.Id}'");
             
             var response = await ApiHttpClient.PostAsync(
                     requestUri: "/api/v1/ai/give-consent",
