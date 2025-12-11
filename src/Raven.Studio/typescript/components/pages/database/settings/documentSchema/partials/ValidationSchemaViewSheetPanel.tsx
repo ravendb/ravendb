@@ -64,7 +64,9 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
             documentSchemaUtils.mapToValidateSchemaRequestDto(validator, formData)
         );
 
-        return await Promise.all(dtos.map(async (dto) => await databasesService.validateSchema(databaseName, dto)));
+        return await Promise.allSettled(
+            dtos.map(async (dto) => await databasesService.validateSchema(databaseName, dto))
+        );
     });
 
     const asyncTestSchema = useAsyncCallback(async (formData: ValidateSchemaFormData) => {
@@ -92,8 +94,26 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                 },
             }));
 
+            if (result.status === "rejected") {
+                console.error(`Validation operation failed to start for ${collectionName}:`, result.reason);
+
+                setMonitorOperationProgress((prev) => ({
+                    ...prev,
+                    [collectionName]: {
+                        ...prev[collectionName],
+                        isLoading: false,
+                        isErrored: true,
+                        error: result.reason,
+                    },
+                }));
+
+                return;
+            }
+
+            const operationId = result.value.OperationId;
+
             notificationCenter.instance
-                .monitorOperation<ValidationOperationProgress>(databaseName, result.OperationId, (progress) =>
+                .monitorOperation<ValidationOperationProgress>(databaseName, operationId, (progress) =>
                     setMonitorOperationProgress((prev) => ({
                         ...prev,
                         [collectionName]: { ...progress, isLoading: true, isCompleted: false, isErrored: false },
@@ -120,21 +140,24 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
             return [];
         }
 
-        return Promise.all(
-            asyncGetOperationIds.result.map(async (result) =>
-                databasesService.killOperation(databaseName, result.OperationId)
-            )
+        const settledResults = asyncGetOperationIds.result;
+
+        return Promise.allSettled(
+            settledResults
+                .filter((r) => r.status === "fulfilled")
+                .map((fulfilledResult) =>
+                    databasesService.killOperation(databaseName, fulfilledResult.value.OperationId)
+                )
         );
     });
+
     const { control, handleSubmit } = form;
 
     const formValues = useWatch({
         control,
     });
 
-    const isValidating = useMemo(() => {
-        return validators.some((validator) => monitorOperationProgress[validator.Name]?.isLoading);
-    }, [monitorOperationProgress, validators]);
+    const isValidating = validators.some((validator) => monitorOperationProgress[validator.Name]?.isLoading);
 
     const isTestSettingsDisabled = !formValues.isTestSettingsEnabled || isValidating;
 
@@ -303,7 +326,7 @@ function useValidationInvalidDocumentsColumns(availableWidth: number): { columns
         ];
 
         return cols;
-    }, []);
+    }, [getSize]);
 
     return { columns };
 }

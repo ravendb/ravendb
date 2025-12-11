@@ -68,7 +68,7 @@ export default function DocumentSchemaPlayground() {
         <div className="content-margin">
             <Row className="gy-sm">
                 <Col>
-                    <form>
+                    <form onSubmit={handleSubmit(handleOpenSheet)}>
                         <AboutViewHeading marginBottom={4} title="Document Schema Playground" icon="rocket" />
                         <span>
                             Quickly create and test schemas against your documents without affecting your saved data.
@@ -80,7 +80,7 @@ export default function DocumentSchemaPlayground() {
                                 <Icon icon="close" />
                                 Cancel
                             </a>
-                            <Button type="submit" onClick={handleSubmit(handleOpenSheet)} className="rounded-pill">
+                            <Button type="submit" className="rounded-pill">
                                 <Icon icon="rocket" />
                                 Run test
                             </Button>

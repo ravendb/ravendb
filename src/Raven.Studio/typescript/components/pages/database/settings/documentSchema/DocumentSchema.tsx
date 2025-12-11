@@ -84,6 +84,8 @@ export default function DocumentSchema() {
         setSelectedStatuses,
     } = useDocumentSchema();
 
+    console.log("maxym hasDatabaseAdminAccess", hasDatabaseAdminAccess);
+
     return (
         <div className="content-margin">
             <Row className="gy-sm">
