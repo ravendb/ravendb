@@ -61,18 +61,18 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent = new AiAgentConfiguration("user-info-agent",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             Queries = new List<AiAgentToolQuery>()
             {
                 new AiAgentToolQuery
                 {
-                    Name = "GetUserProfile",
-                    Description = "Get the profile details of a specific user, including its 'WatchedMovies' list",
+                    Name = "GetUserName",
+                    Description = "Get the user name",
                     Query = "from Users " +
-                            "where id() = $userId",
+                            "where id() = $userId " +
+                            "select Name",
                     ParametersSampleObject = "{}"
                 },
             }
@@ -82,7 +82,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         var recommendationAgent = new AiAgentConfiguration("recommendation-agent",
             config.ConnectionStringName,
             "You are a User Movie Insights Agent in a movie recommendation system. " +
-            "You can retrieve details such as:" + Environment.NewLine +
+            "You can retrieve the following details:" + Environment.NewLine +
             "- The list of movies the user has watched, ordered by their ratings (highest to lowest)." + Environment.NewLine +
             "- The user’s top 3 genre affinities, ranked by score." + Environment.NewLine +
             "Always return results in a concise, structured way that can be used directly by the recommendation engine."
@@ -137,24 +137,24 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
             [
                 new AiAgentToolSubAgent
                 {
-                    Identifier = userAgentId,
+                    Identifier = recommendationAgentId,
                     Description = "Use to ask: " + Environment.NewLine +
                                   "- The list of movies the user has rated, ordered by rating. " + Environment.NewLine +
                                   "- The user’s genre affinities, sorted by preference scores. "
                 },
                 new AiAgentToolSubAgent
                 {
-                    Identifier = recommendationAgentId,
-                    Description = "Use to ask about user profile, such as: user name and watched list."
+                    Identifier = userAgentId,
+                    Description = "Get the user name."
                 }
             ]
         };
-        agent.Parameters.Add(new AiAgentParameter("currentUserId", "the id of the current user that you talk with"));
+        agent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
 
         var identifier = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
 
         var chat = store.AI.Conversation(identifier, "chats/1",
-            new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name and my favorite genres?");
         var r = await chat.RunAsync<MoviesSampleObject>();
         Assert.NotNull(r.Answer);
@@ -172,18 +172,18 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent = new AiAgentConfiguration("user-info-agent",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             Queries = new List<AiAgentToolQuery>()
             {
                 new AiAgentToolQuery
                 {
-                    Name = "GetUserProfile",
-                    Description = "Get the profile details of a specific user, including its 'WatchedMovies' list",
+                    Name = "GetUserName",
+                    Description = "Get the user name",
                     Query = "from Users " +
-                            "where id() = $userId",
+                            "where id() = $userId " +
+                            "select Name",
                     ParametersSampleObject = "{}"
                 },
             }
@@ -260,7 +260,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        agent.Parameters.Add(new AiAgentParameter("currentUserId", "the id of the current user that you talk with"));
+        agent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var identifier = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
 
         var db = await GetDatabase(store.Database);
@@ -278,7 +278,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         };
 
         var chat = store.AI.Conversation(identifier, "chats/1",
-            new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name and my favorite genres?");
         var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<MoviesSampleObject>());
         Assert.Contains("Failed to 'talk' with the agent 'movies-agent'", e.Message);
@@ -296,18 +296,18 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent3 = new AiAgentConfiguration("user-info-agent-3",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             Queries = new List<AiAgentToolQuery>()
             {
                 new AiAgentToolQuery
                 {
-                    Name = "GetUserProfile",
-                    Description = "Get the profile details of a specific user, including its 'WatchedMovies' list",
+                    Name = "GetUserName",
+                    Description = "Get the user name",
                     Query = "from Users " +
-                            "where id() = $userId",
+                            "where id() = $userId " +
+                            "select Name",
                     ParametersSampleObject = "{}"
                 },
             }
@@ -318,8 +318,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent2 = new AiAgentConfiguration("user-info-agent-2",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             SubAgents =
@@ -327,7 +326,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgent3Id,
-                    Description = "Use to ask about user profile, such as: user name and watched list."
+                    Description = "Use to ask about user name."
                 }
             ]
         };
@@ -337,8 +336,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             SubAgents =
@@ -346,15 +344,15 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgent2Id,
-                    Description = "Use to ask about user profile, such as: user name and watched list."
+                    Description = "Use to ask about user name."
                 }
             ]
         };
-        userAgent1.Parameters.Add(new AiAgentParameter("currentUserId", "the id of the current user that you talk with"));
+        userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
 
         var chat = store.AI.Conversation(userAgent1Id, "chats/1",
-            new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name?");
         var r = await chat.RunAsync<MoviesSampleObject>();
         Assert.NotNull(r.Answer);
@@ -364,7 +362,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task ActionToolsOnSubAgent(Options options, GenAiConfiguration config)
+    public async Task ActionToolsOnSubAgentWithDifferentParam(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -372,18 +370,18 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent3 = new AiAgentConfiguration("user-info-agent-3",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested OR change user name."
         )
         {
             Queries = new List<AiAgentToolQuery>()
             {
                 new AiAgentToolQuery
                 {
-                    Name = "GetUserProfile",
-                    Description = "Get the profile details of a specific user, including its 'WatchedMovies' list",
+                    Name = "GetUserName",
+                    Description = "Get the user name",
                     Query = "from Users " +
-                            "where id() = $userId",
+                            "where id() = $userId " +
+                            "select Name",
                     ParametersSampleObject = "{}"
                 },
             },
@@ -396,13 +394,12 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 },
             }
         };
-        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the requested user, not his hold Name (equals to 'currentUserId')"));
         var userAgent3Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent3, MoviesSampleObject.Instance)).Identifier;
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested OR change user name."
         )
         {
             SubAgents =
@@ -410,7 +407,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgent3Id,
-                    Description = "Use to ask about user profile, such as: user name and watched list. also use to change user name."
+                    Description = "Use to get user name and to change user name."
                 }
             ]
         };
@@ -419,7 +416,10 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var chat = store.AI.Conversation(userAgent1Id, "chats/1",
             new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
-        chat.Handle<ChangeUserNameSampleRequest>("user-info-agent-3/ChangeUserName", (r) => ChangeUserNameAsync(store, r));
+        chat.Handle<ChangeUserNameSampleRequest>("user-info-agent-3/ChangeUserName", async (r) =>
+        {
+            return await ChangeUserNameAsync(store, r);
+        });
 
         chat.SetUserPrompt("Can you change my name from 'Shahar Hikri' to 'Aviv Rachmani'?");
         var r = await chat.RunAsync<MoviesSampleObject>();
@@ -430,7 +430,6 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
             var name = (await session.LoadAsync<User>("Users/1")).Name;
             Assert.Equal("Aviv Rachmani", name);
         }
-
     }
 
     private static async Task<object> ChangeUserNameAsync(IDocumentStore store, ChangeUserNameSampleRequest req)
@@ -468,18 +467,18 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent3 = new AiAgentConfiguration("user-info-agent-3",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             Queries = new List<AiAgentToolQuery>()
             {
                 new AiAgentToolQuery
                 {
-                    Name = "GetUserProfile",
-                    Description = "Get the profile details of a specific user, including its 'WatchedMovies' list",
+                    Name = "GetUserName",
+                    Description = "Get the user name",
                     Query = "from Users " +
-                            "where id() = $userId",
+                            "where id() = $userId " +
+                            "select Name",
                     ParametersSampleObject = "{}"
                 },
             }
@@ -490,8 +489,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent2 = new AiAgentConfiguration("user-info-agent-2",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             SubAgents =
@@ -499,9 +497,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgent3Id,
-                    Description = "Use to ask: " + Environment.NewLine +
-                                  "- The list of movies the user has rated, ordered by rating. " + Environment.NewLine +
-                                  "- The user’s genre affinities, sorted by preference scores. "
+                    Description = "Get the user name"
                 }
             ]
         };
@@ -511,8 +507,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             SubAgents =
@@ -520,17 +515,15 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgent2Id,
-                    Description = "Use to ask: " + Environment.NewLine +
-                                  "- The list of movies the user has rated, ordered by rating. " + Environment.NewLine +
-                                  "- The user’s genre affinities, sorted by preference scores. "
+                    Description =  "Get the user name"
                 }
             ]
         };
-        userAgent1.Parameters.Add(new AiAgentParameter("currentUserId", "the id of the current user that you talk with"));
+        userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
 
         var chat = store.AI.Conversation(userAgent1Id, "chats/1",
-            new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name?");
         var r = await chat.RunAsync<MoviesSampleObject>();
         Assert.NotNull(r.Answer);
@@ -1022,18 +1015,18 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent = new AiAgentConfiguration("user-info-agent",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system. you can give the user information about user profile, such as: " +
-            "user name and watched list."
+            "Your role responsibility is to provide the user's name when requested."
         )
         {
             Queries = new List<AiAgentToolQuery>()
             {
                 new AiAgentToolQuery
                 {
-                    Name = "GetUserProfile",
-                    Description = "Get the profile details of a specific user, including its 'WatchedMovies' list",
+                    Name = "GetUserName",
+                    Description = "Get the user name",
                     Query = "from Users " +
-                            "where id() = $userId",
+                            "where id() = $userId " +
+                            "select Name",
                     ParametersSampleObject = "{}"
                 },
             }
@@ -1099,9 +1092,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgentId,
-                    Description = "Use to ask: " + Environment.NewLine +
-                                  "- The list of movies the user has rated, ordered by rating. " + Environment.NewLine +
-                                  "- The user’s genre affinities, sorted by preference scores. "
+                    Description = "Get the user name"
                 },
                 new AiAgentToolSubAgent
                 {
@@ -1110,7 +1101,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        agent.Parameters.Add(new AiAgentParameter("currentUserId", "the id of the current user that you talk with"));
+        agent.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var identifier = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
 
         var db = await GetDatabase(store.Database);
@@ -1130,7 +1121,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         // chat without error
         var chat = store.AI.Conversation(identifier, "chats/1",
-            new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my top 5 movies?");
         var r = await chat.RunAsync<MoviesSampleObject>();
         Assert.Equal(AiConversationResult.Done, r.Status);

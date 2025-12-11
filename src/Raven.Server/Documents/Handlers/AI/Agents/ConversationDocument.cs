@@ -324,21 +324,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             AiAgentConfiguration subAgentConfiguration = handler.GetAiAgentConfiguration(subAgent.Identifier);
             var parameters = new Dictionary<string, string>();
-            foreach (AiAgentParameter parameter in subAgentConfiguration.Parameters ?? [])
+            foreach (AiAgentParameter parameter in configuration.Parameters)
             {
                 parameters[parameter.Name] = parameter.Description;
             }
-
-            foreach (AiAgentParameter parameter in configuration.Parameters)
+            // The child parameter description overrides the parent’s, since the description must match the parameter provided to the child.
+            foreach (AiAgentParameter parameter in subAgentConfiguration.Parameters ?? [])
             {
-                if (parameters.TryAdd(parameter.Name, parameter.Description) == false && parameters[parameter.Name] != parameter.Description)
-                {
-                    throw new InvalidOperationException(
-                        $"Parameter conflict detected for '{parameter.Name}'. " +
-                        $"Parent agent '{configuration.Identifier}' defines this parameter with value '{parameter.Description}', " +
-                        $"but sub-agent '{subAgentConfiguration.Identifier}' provides a different value '{parameters[parameter.Name]}'. " +
-                        $"These values must match to ensure consistent behavior.");
-                }
+                parameters[parameter.Name] = parameter.Description;
             }
 
             var argsSampleObject = DynamicJsonValue.Convert(parameters);

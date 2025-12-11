@@ -37,7 +37,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
-    private const string QueryVirtualSubConversationId = "#QueryTools";
+    private const string QueryVirtualSubConversationId = "_QueryTools_";
 
     protected ConversationDocument _document;
     private string _conversationId;
@@ -414,7 +414,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         await ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
     }
 
-    private bool HandleSubAgentResponse(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall)
+    private bool TryCloseSubAgentCall(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall)
     {
         if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string agentConversationId) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ConversationId)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
@@ -632,7 +632,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             {
                 var t = JsonDeserializationClient.ActionResponse(tool);
 
-                var split = SplitByFirstDollar(t.ToolId);
+                var split = t.ToolId.Split('$', 2); // split by first '$'
                 var rootToolId = split[0];
 
                 if (_document.OpenActionCalls.TryGetValue(rootToolId, out var action) == false)
@@ -671,8 +671,10 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             await HandleSubAgentCalls(context, subAgentsActions);
         }
 
-        if (_document.OpenActionCalls.Any(x => x.Value.Type != AiAgentActionRequestType.SubAgent) || _childUserCalls.Any())
+        if (_document.OpenActionCalls.Any(x => x.Value.Type != AiAgentActionRequestType.SubAgent) || _childUserCalls.Count > 0)
         {
+            Debug.Assert(_document.OpenActionCalls.Any(x => x.Value.Type == AiAgentActionRequestType.SubAgent) == _childUserCalls.Count > 0,
+                "_document.OpenActionCalls.Any(x => x.Value.Type == AiAgentActionRequestType.SubAgent) != _childUserCalls.Count > 0");
             // We have pending tool-call results from the user;
             // skip reduction - persist the document now without history,
             // ensuring we can recover if TalkAsync fails.
@@ -694,15 +696,6 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
 
         return true;
-
-        static string[] SplitByFirstDollar(string s)
-        {
-            int index = s.IndexOf('$');
-            if (index == -1)
-                return new []{ s };
-
-            return new[] { s.Substring(0, index), s.Substring(index + 1) };
-        }
     }
 
     private static ServerAiAgentActionResponse GetOrAddSubAgentsActionResponses(Dictionary<string, ServerAiAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
@@ -786,11 +779,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private async Task ExecuteMultiAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
-        if (reqs.TryGetValue(QueryVirtualSubConversationId, out List<(AiToolCall Call, DynamicJsonValue Req)> queryToolReqs))
-        {
-            await ExecuteSingleSubConversationToolCallsAsync(context, QueryVirtualSubConversationId, queryToolReqs);
-        }
-        foreach (var (conversationId, conversationReqs) in reqs.Where(kvp => kvp.Key != QueryVirtualSubConversationId))
+        // TODO: Execute ExecuteSingleSubConversationToolCallsAsync calls concurrently (use tasks and Task.WhenAll())
+        foreach (var (conversationId, conversationReqs) in reqs)
         {
             await ExecuteSingleSubConversationToolCallsAsync(context, conversationId, conversationReqs);
         }
@@ -808,7 +798,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             switch (toolCall)
             {
                 case AiAgentToolSubAgent:
-                    if (HandleSubAgentResponse(context, requestResult, currentCall) == false)
+                    if (TryCloseSubAgentCall(context, requestResult, currentCall) == false)
                         return;
                     break;
                 case AiAgentToolQuery:
