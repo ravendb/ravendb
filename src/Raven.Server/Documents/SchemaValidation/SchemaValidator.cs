@@ -39,9 +39,3 @@ public class SchemaValidator
         return _root.Validate(obj, errorBuilder);
     }
 }
-
-public class RefSchema
-{
-    public ElementSchemaRuleValidator Validator { get; set; } 
-    public BlittableJsonReaderObject Raw { get; set; }
-}

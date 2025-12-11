@@ -31,7 +31,7 @@ public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFac
                 continue;
                     
             var ifRequiredValidator = new RequiredSchemaRuleValidator(prop.Name);
-            var ifValidator = new ElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
+            var ifValidator = new ElementSchemaRuleValidator([ifRequiredValidator], propertySchemaPath);
             
             var thenValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(dependentSchemas, propertySchemaPath, refSchemas);
 

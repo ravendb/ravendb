@@ -29,10 +29,10 @@ public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFa
                     
             var propertySchemaPath = schemaPath + prop.Name; 
             var ifRequiredValidator = new RequiredSchemaRuleValidator(prop.Name);
-            var ifValidator = new ElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
+            var ifValidator = new ElementSchemaRuleValidator([ifRequiredValidator], propertySchemaPath);
             
             var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredProperties);
-            var thenValidator = new ElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
+            var thenValidator = new ElementSchemaRuleValidator([thenRequiredValidator], propertySchemaPath);
 
             (dependentRequires ??= []).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
         }
