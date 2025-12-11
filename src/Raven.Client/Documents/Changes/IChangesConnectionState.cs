@@ -5,9 +5,9 @@ namespace Raven.Client.Documents.Changes
 {
     internal interface IChangesConnectionState<out T> : IDisposable
     {
-        void Inc();
+        int Inc();
 
-        void Dec();
+        int Dec();
 
         void Error(Exception e);
 

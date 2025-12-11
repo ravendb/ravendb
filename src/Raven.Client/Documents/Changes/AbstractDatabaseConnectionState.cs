@@ -43,17 +43,19 @@ internal abstract class AbstractDatabaseConnectionState
         _connected = connection;
     }
 
-    public void Inc()
+    public int Inc()
     {
-        Interlocked.Increment(ref _value);
+        return Interlocked.Increment(ref _value);
     }
 
-    public void Dec()
+    public int Dec()
     {
-        if (Interlocked.Decrement(ref _value) == 0)
+        var val = Interlocked.Decrement(ref _value);
+        if (val == 0)
         {
             Set(_onDisconnect());
         }
+        return val;
     }
 
     public void Error(Exception e)
