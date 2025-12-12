@@ -17,6 +17,8 @@ import licenseModel = require("models/auth/licenseModel");
 import accessManager = require("common/shell/accessManager");
 import EditPeriodicBackupTaskInfoHub = require("./EditPeriodicBackupTaskInfoHub");
 import EditManualBackupTaskInfoHub = require("./EditManualBackupTaskInfoHub");
+import store = require("components/store");
+import databaseSliceSelectors = require("components/common/shell/databaseSliceSelectors");
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
@@ -67,8 +69,10 @@ class editPeriodicBackupTask extends shardViewModelBase {
 
         this.overrideViaExternalScriptDisableReason = ko.pureComputed(() => {
             const isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode();
+            const storeState = store.default.getState();
+            const isRestricted = databaseSliceSelectors.databaseSelectors.isRestrictExternalScriptUsageForNonClusterAdmin(storeState);
 
-            if (!isClusterAdminOrClusterNode && this.serverConfiguration().RestrictExternalScriptUsageForNonClusterAdmin) {
+            if (!isClusterAdminOrClusterNode && isRestricted) {
                 return "Setting up the configuration via an external script is not allowed for non cluster admins.";
             }
 

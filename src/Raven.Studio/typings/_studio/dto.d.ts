@@ -688,7 +688,6 @@ interface periodicBackupServerLimitsResponse {
     AllowedAwsRegions: Array<string>;
     AllowedDestinations: Array<backupOptions>;
     EnableUnencryptedBackupForEncryptedDatabase: boolean;
-    RestrictExternalScriptUsageForNonClusterAdmin: boolean;
 }
 
 interface serializedColumnDto {
