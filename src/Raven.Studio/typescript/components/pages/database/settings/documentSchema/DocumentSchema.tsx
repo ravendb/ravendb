@@ -377,7 +377,12 @@ const CollectionSchemaRichPanel = ({
                                             "The schema must be saved in order to test it against existing documents.",
                                     }}
                                 >
-                                    <Button disabled={isEditingSchema} onClick={handleOpenSheet} variant="secondary">
+                                    <Button
+                                        disabled={isEditingSchema}
+                                        onClick={handleOpenSheet}
+                                        variant="secondary"
+                                        title="Click to test this schema against existing documents"
+                                    >
                                         <Icon icon="rocket" margin="m-0" />
                                     </Button>
                                 </ConditionalPopover>
@@ -393,6 +398,7 @@ const CollectionSchemaRichPanel = ({
                                         isSpinning={form.formState.isSubmitting}
                                         disabled={!hasSchemaValidation}
                                         icon={isEditingSchema ? "save" : "edit"}
+                                        title={isEditingSchema ? "Save changes to this schema" : "Edit this schema"}
                                     >
                                         {isEditingSchema ? <span className="ms-1">Save</span> : null}
                                     </ButtonWithSpinner>
@@ -405,6 +411,7 @@ const CollectionSchemaRichPanel = ({
                                             reset({ collection: validator.Name, schema });
                                             toggleEditingSchema();
                                         }}
+                                        title="Discard changes to this schema"
                                     >
                                         <Icon icon="close" />
                                         Discard
@@ -422,6 +429,7 @@ const CollectionSchemaRichPanel = ({
                                             onClick={toggleDeleteModal}
                                             disabled={!hasSchemaValidation}
                                             icon="trash"
+                                            title="Delete this schema"
                                         />
                                     </ConditionalPopover>
                                 )}
