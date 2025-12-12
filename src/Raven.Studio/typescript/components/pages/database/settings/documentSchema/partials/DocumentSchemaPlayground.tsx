@@ -109,8 +109,7 @@ function DocumentSchemaPlaygroundBody() {
             />
             <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
                 <span>
-                    Quickly create and test schemas against your documents without affecting saved schema
-                            definitions.
+                    Quickly create and test schemas against your documents without affecting saved schema definitions.
                     <br /> The Schema Playground is a temporary workspace where you can safely try out schemas.
                 </span>
 

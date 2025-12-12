@@ -250,7 +250,7 @@ export default function DocumentSchemaSelectActions() {
                                 disabled: !hasSchemaValidation,
                             })}
                             href={urls.documentSchemaPlayground()}
-                             title="Open the playground to test sample schemas against existing documents"
+                            title="Open the playground to test sample schemas against existing documents"
                         >
                             <Icon icon="rocket" />
                             Schema Playground
