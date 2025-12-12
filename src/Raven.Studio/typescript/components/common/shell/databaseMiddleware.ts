@@ -17,11 +17,7 @@ databaseMiddleware.startListening({
 
         try {
             const result = await services.databasesService.getDatabaseSettings(dbName);
-
-            const settingsEntries = result.Settings.map((x) => {
-                const rawEntry = x as Raven.Server.Config.ConfigurationEntryDatabaseValue;
-                return settingsEntry.getEntry(rawEntry);
-            });
+            const settingsEntries = result.Settings.map(settingsEntry.getEntry);
 
             const settingsRecord: Record<string, string> = {};
             settingsEntries.forEach((entry) => {

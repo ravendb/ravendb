@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             {
                 [nameof(RequestHandler.ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
                 [nameof(RequestHandler.ServerStore.Configuration.Backup.AllowedAwsRegions)] = RequestHandler.ServerStore.Configuration.Backup.AllowedAwsRegions,
-                [nameof(RequestHandler.ServerStore.Configuration.Backup.AllowedDestinations)] = RequestHandler.ServerStore.Configuration.Backup.AllowedDestinations
+                [nameof(RequestHandler.ServerStore.Configuration.Backup.AllowedDestinations)] = RequestHandler.ServerStore.Configuration.Backup.AllowedDestinations,
             };
 
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
