@@ -69,6 +69,7 @@ import getRevisionsBinCleanerConfigurationCommand from "commands/database/settin
 import saveRevisionsBinCleanerConfigurationCommand from "commands/database/settings/saveRevisionsBinCleanerConfigurationCommand";
 import deleteDocumentsCommand from "commands/database/documents/deleteDocumentsCommand";
 import deleteCollectionCommand from "commands/database/documents/deleteCollectionCommand";
+import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -329,5 +330,9 @@ export default class DatabasesService {
     // Skip async to use JQueryPromise type
     deleteCollection(...args: ConstructorParameters<typeof deleteCollectionCommand>) {
         return new deleteCollectionCommand(...args).execute();
+    }
+
+    async getDatabaseSettings(...args: ConstructorParameters<typeof getDatabaseSettingsCommand>) {
+        return new getDatabaseSettingsCommand(...args).execute();
     }
 }

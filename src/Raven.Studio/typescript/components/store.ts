@@ -15,6 +15,7 @@ import { connectionStringsSlice } from "./pages/database/settings/connectionStri
 import { connectionStringsUpdateUrlMiddleware } from "./pages/database/settings/connectionStrings/store/connectionStringsMiddleware";
 import { certificatesSlice } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { splitViewSlice } from "./common/splitView/store/splitViewSlice";
+import { databaseMiddleware } from "components/common/shell/databaseMiddleware";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -43,7 +44,8 @@ export function createStoreConfiguration() {
                 },
             })
                 .prepend(listenerMiddleware.middleware)
-                .prepend(connectionStringsUpdateUrlMiddleware.middleware),
+                .prepend(connectionStringsUpdateUrlMiddleware.middleware)
+                .prepend(databaseMiddleware.middleware),
     });
 }
 
