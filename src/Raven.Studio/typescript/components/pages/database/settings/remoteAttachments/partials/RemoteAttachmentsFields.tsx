@@ -189,7 +189,12 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
         <div className="mt-3">
             <FormGroup>
                 <FormLabel>Destination identifier</FormLabel>
-                <FormInput type="text" name="identifier" placeholder="Enter a unique identifier for this remote destination" control={control} />
+                <FormInput
+                    type="text"
+                    name="identifier"
+                    placeholder="Enter a unique identifier for this remote destination"
+                    control={control}
+                />
             </FormGroup>
 
             <FormGroup>
