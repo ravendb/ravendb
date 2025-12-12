@@ -70,6 +70,7 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.SchemaValidation;
 using Sparrow.Server.Logging;
@@ -446,7 +447,6 @@ namespace Raven.Server.Documents
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
-                SchemaValidatorCache = SchemaValidatorCache.Create(DocumentsStorage.ContextPool, NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
 
                 _addToInitLog(LogLevel.Debug, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
@@ -1746,8 +1746,8 @@ namespace Raven.Server.Documents
 
             try
             {
+                UpdateSchemaValidation(record.SchemaValidation);
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
-                SchemaValidatorCache?.Update(record.SchemaValidation);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
@@ -1763,6 +1763,24 @@ namespace Raven.Server.Documents
             OnDatabaseRecordChanged(record);
         }
 
+        private void UpdateSchemaValidation(SchemaValidationConfiguration configuration)
+        {
+            if (configuration != null
+                && configuration.Disabled == false
+                && configuration.ValidatorsPerCollection != null
+                && configuration.ValidatorsPerCollection.Any(x => x.Value.Disabled == false))
+            {
+                SchemaValidatorCache ??= SchemaValidatorCache.Create(DocumentsStorage.ContextPool, NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
+                SchemaValidatorCache.Update(configuration);
+            }
+            else
+            {
+                // we intentionally don't dispose here since it might be used by a transaction,
+                // clearing the resources will be done by the finalizer.
+                SchemaValidatorCache = null;
+            }
+        }
+        
         private void SetUnusedDatabaseIds(DatabaseRecord record)
         {
             if (record.UnusedDatabaseIds == null && DocumentsStorage.UnusedDatabaseIds == null)
