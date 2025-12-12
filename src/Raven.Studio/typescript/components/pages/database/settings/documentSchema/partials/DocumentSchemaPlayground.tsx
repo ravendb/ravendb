@@ -117,7 +117,8 @@ export default function DocumentSchemaPlayground() {
                     </form>
                 </Col>
                 <Col sm={12} lg={4}>
-                    <DocumentSchemaPlaygroundAboutView />
+                    {/*TODO: remove if about view is finished*/}
+                    {false && <DocumentSchemaPlaygroundAboutView />}
                 </Col>
             </Row>
         </div>
