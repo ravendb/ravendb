@@ -4,6 +4,7 @@ import { FormDestinations } from "components/common/formDestinations/utils/formD
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
+import tasksCommonContent from "models/database/tasks/tasksCommonContent";
 import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 
@@ -25,7 +26,7 @@ export default function OverrideConfigurationViaExternalScriptToggle({
 
     const disabledReason = useMemo(() => {
         if (!isClusterAdminOrClusterNode && isRestrictExternalScriptUsageForNonClusterAdmin) {
-            return "Setting up the configuration via an external script is not allowed for non cluster admins.";
+            return tasksCommonContent.externalScriptNotAllowedForNonClusterAdmins;
         }
 
         return null;

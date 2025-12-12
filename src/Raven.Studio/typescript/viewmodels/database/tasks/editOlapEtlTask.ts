@@ -37,6 +37,7 @@ import typeUtils = require("common/typeUtils");
 import accessManager = require("common/shell/accessManager");
 import store = require("components/store");
 import databaseSliceSelectors = require("components/common/shell/databaseSliceSelectors");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class partitionTable {
     key: string;
@@ -302,7 +303,7 @@ class editOlapEtlTask extends shardViewModelBase {
             const isRestricted = databaseSliceSelectors.databaseSelectors.isRestrictExternalScriptUsageForNonClusterAdmin(storeState);
 
             if (!isClusterAdminOrClusterNode && isRestricted) {
-                return "Setting up the configuration via an external script is not allowed for non cluster admins.";
+                return tasksCommonContent.externalScriptNotAllowedForNonClusterAdmins;
             }
 
             return null;

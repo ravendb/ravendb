@@ -73,7 +73,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
             const isRestricted = databaseSliceSelectors.databaseSelectors.isRestrictExternalScriptUsageForNonClusterAdmin(storeState);
 
             if (!isClusterAdminOrClusterNode && isRestricted) {
-                return "Setting up the configuration via an external script is not allowed for non cluster admins.";
+                return tasksCommonContent.externalScriptNotAllowedForNonClusterAdmins;
             }
 
             return null;
