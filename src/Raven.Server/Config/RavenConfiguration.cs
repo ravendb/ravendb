@@ -147,13 +147,13 @@ namespace Raven.Server.Config
             Logs = new LogsConfiguration();
             Server = new ServerConfiguration();
             Embedded = new EmbeddedConfiguration();
-            Databases = new DatabaseConfiguration(Storage.ForceUsing32BitsPager);
+            Databases = new DatabaseConfiguration(Storage);
             Memory = new MemoryConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
             Tombstones = new TombstoneConfiguration();
             Subscriptions = new SubscriptionsConfiguration();
-            TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage.ForceUsing32BitsPager);
+            TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage);
             Notifications = new NotificationsConfiguration();
             Updates = new UpdatesConfiguration();
             Migration = new MigrationConfiguration();
