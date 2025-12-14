@@ -10,16 +10,12 @@ namespace Raven.Server.Documents.SchemaValidation;
 [DebuggerDisplay("{SchemaDefinition}")]
 public class SchemaValidator
 {
-    public readonly bool Disabled;
-
     private ElementSchemaRuleValidator _root;
+
     public string SchemaDefinition { get; set; }
 
-    public SchemaValidator(bool disabled = false)
-    {
-        Disabled = disabled;
-    }
-    
+    public bool Disabled { get; set; }
+
     // The caller (holder) is responsible for keeping the underlying Blittable / context alive (and disposing it) for as long as this SchemaValidator is used.
     public void Init(BlittableJsonReaderObject schemaDefinition)
     {

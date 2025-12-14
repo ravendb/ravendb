@@ -58,6 +58,105 @@ public class SchemaValidationBasicTests : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.ClientApi, LicenseRequired = true)]
+    public async Task DisableSchemaAfterCreation()
+    {
+        var schema = JsonSchema.FromType<User>();
+        var schemaData = schema.ToJson();
+
+        using (var store = GetDocumentStore())
+        {
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        "Users", new SchemaDefinition
+                        {
+                            Schema = schemaData
+                        }
+                    },
+                    {
+                        "Orders", new SchemaDefinition
+                        {
+                            Schema = schemaData
+                        }
+                    }
+                }
+            };
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 17 }, "users/1");
+                var error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await session.SaveChangesAsync());
+                Assert.Contains("The value '17' at 'Age' should be greater than or equal to 21.0.", error.Message);
+            }
+
+            configuration.ValidatorsPerCollection["Users"].Disabled = true;
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 80 }, "users/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 39 }, "users/1");
+                await session.SaveChangesAsync();
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi, LicenseRequired = true)]
+    public async Task CanStartWithDisabledSchema()
+    {
+        var schema = JsonSchema.FromType<User>();
+        var schemaData = schema.ToJson();
+
+        using (var store = GetDocumentStore())
+        {
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        "Users", new SchemaDefinition
+                        {
+                            Disabled = true,
+                            Schema = schemaData
+                        }
+                    },
+                    {
+                        "Orders", new SchemaDefinition
+                        {
+                            Schema = schemaData
+                        }
+                    }
+                }
+            };
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 17 }, "users/1");
+                await session.SaveChangesAsync();
+            }
+
+            configuration.ValidatorsPerCollection["Users"].Disabled = false;
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 80 }, "users/1");
+                var error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await session.SaveChangesAsync());
+                Assert.Contains("The value '80' at 'Age' should be less than or equal to 67.0.", error.Message);
+            }
+        }
+    }
+
     private class User
     {
         [Range(21, 67)]

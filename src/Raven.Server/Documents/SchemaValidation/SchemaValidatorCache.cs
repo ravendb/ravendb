@@ -57,13 +57,16 @@ public class SchemaValidatorCache : IDisposable
         {
             if (_schemaValidatorsPerCollection.TryGetValue(collection, out var existingValidator)
                 && validator.Schema.Equals(existingValidator.SchemaDefinition))
+            {
+                existingValidator.Disabled = validator.Disabled;
                 continue;
+            }
 
             SchemaValidator schemaValidator;
             try
             {
                 var blittable = _context.Value.Sync.ReadForMemory(validator.Schema, "schema-validation");
-                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context.Value, blittable, validator.Schema);
+                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context.Value, blittable, validator.Schema, validator.Disabled);
             }
             catch (Exception e)
             {

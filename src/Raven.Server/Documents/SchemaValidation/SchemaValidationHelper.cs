@@ -223,9 +223,13 @@ public static class SchemaValidationHelper
         return true;
     }
 
-    public static SchemaValidator InitValidatorForDocument(JsonOperationContext context, BlittableJsonReaderObject definition, string strDefinition)
+    public static SchemaValidator InitValidatorForDocument(JsonOperationContext context, BlittableJsonReaderObject definition, string strDefinition, bool disabled = false)
     {
-        var validator = new SchemaValidator { SchemaDefinition = strDefinition };
+        var validator = new SchemaValidator
+        {
+            SchemaDefinition = strDefinition,
+            Disabled = disabled
+        };
         ValidateSchemaDefinitionForDocument(definition);
         ExcludeMetadata(context, ref definition);
         validator.Init(definition);
