@@ -63,6 +63,7 @@ namespace Raven.Server.Documents
         FromResharding = 0x40000,
         Unarchive = 0x80000,
         FromExternalReplication = 0x100000,
+        SkipSchemaValidation = 0x200000,
     }
 
     public static class EnumExtensions

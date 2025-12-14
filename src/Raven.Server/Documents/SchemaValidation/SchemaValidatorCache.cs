@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
@@ -101,7 +102,9 @@ public class SchemaValidatorCache : IDisposable
 
     public void Validate(string collection, BlittableJsonReaderObject document, NonPersistentDocumentFlags nonPersistentFlags, JsonOperationContext context)
     {
-        // TODO: check if we need to add more flags here
+        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipSchemaValidation))
+            return;
+
         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding))
             return;
 
@@ -154,9 +157,13 @@ public class SchemaValidatorCache : IDisposable
         if (Disabled)
             return false;
 
+        var schemaValidatorsPerCollection = _schemaValidatorsPerCollection;
+        if (collections == null)
+            return schemaValidatorsPerCollection.Count(x => x.Value.Disabled == false) > 0;
+
         foreach (var collection in collections)
         {
-            if (_schemaValidatorsPerCollection.TryGetValue(collection, out var validator) && validator.Disabled == false)
+            if (schemaValidatorsPerCollection.TryGetValue(collection, out var validator) && validator.Disabled == false)
                 return true;
         }
 

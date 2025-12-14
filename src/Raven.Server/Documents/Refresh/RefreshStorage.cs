@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Refresh
                 {
                     try
                     {
-                        Database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                        Database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction), nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
                     }
                     catch (ConcurrencyException)
                     {
