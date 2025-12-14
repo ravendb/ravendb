@@ -15,9 +15,9 @@ using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
 
 namespace SlowTests.SchemaValidation;
 
-public class SchemaValidationExternalReplicationTests : ReplicationTestBase
+public class SchemaValidationFeaturesTests : ReplicationTestBase
 {
-    public SchemaValidationExternalReplicationTests(ITestOutputHelper output) : base(output)
+    public SchemaValidationFeaturesTests(ITestOutputHelper output) : base(output)
     {
     }
 
