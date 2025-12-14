@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client.Documents.Linq.Indexing;
+using NotSupportedException = System.NotSupportedException;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -17,13 +18,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public static InvocationExpressionSyntax UnwrapNode(InvocationExpressionSyntax node)
         {
-            // we are unwrapping here expressions like docs.Method().Method()
-            // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
-            // e.g. docs.WhereEntityIs() or docs.Orders.Select()
-            if (node.Expression is MemberAccessExpressionSyntax mae && mae.Expression is InvocationExpressionSyntax ies)
-                return UnwrapNode(ies);
-
-            return node;
+            while (true)
+            {
+                // we are unwrapping here expressions like docs.Method().Method()
+                // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
+                // e.g. docs.WhereEntityIs() or docs.Orders.Select()
+                if (node.Expression is not MemberAccessExpressionSyntax { Expression: InvocationExpressionSyntax ies }) 
+                    return node;
+                node = ies;
+            }
         }
 
         private sealed class MethodSyntaxRewriter : CollectionNameRetriever
@@ -34,26 +37,46 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return node;
 
                 var nodeToCheck = UnwrapNode(node);
-
-                var nodeAsString = nodeToCheck.Expression.ToString();
-                const string nodePrefix = "docs";
-                if (nodeAsString.StartsWith(nodePrefix) == false)
+                const string docs = "docs";
+                if (GetRootIdentifier(node) != docs)
                     return node;
-
-                string methodName = null;
-                if (nodeToCheck.Expression is MemberAccessExpressionSyntax maes)
-                    methodName = maes.Name.ToString();
-
-                if (methodName == nameof(IndexingLinqExtensions.WhereEntityIs))
+                switch (nodeToCheck.Expression)
                 {
-                    CollectionNames = ExtractCollectionNamesFromWhereEntityIs(nodeToCheck);
-                    return SyntaxFactory.ParseExpression(node.ToString().Replace(nodeToCheck.ToString(), nodePrefix));
-                }
-
-                var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-                if (nodeParts.Length <= 2)
-                {
-                    if (nodeToCheck.Expression is MemberAccessExpressionSyntax expr && expr.Expression is ElementAccessExpressionSyntax indexer)
+                    // docs.WhereEntityIs(...)
+                    case MemberAccessExpressionSyntax
+                    {
+                       Name.Identifier.Text: nameof(IndexingLinqExtensions.WhereEntityIs)
+                    } m:
+                    {
+                        CollectionNames = ExtractCollectionNamesFromWhereEntityIs(nodeToCheck);
+                        return node != nodeToCheck ? 
+                            // so docs.WhereEntityIs().Select() to docs.Select() 
+                            node.ReplaceNode(nodeToCheck, m.Expression) :
+                            // and here is is docs.WhereEntityIs() -> docs
+                            m.Expression;
+                    }
+                    // docs.Select...
+                    case MemberAccessExpressionSyntax
+                    {
+                        Expression: IdentifierNameSyntax
+                        {
+                            Identifier.Text: docs
+                        }
+                    }:
+                    {
+                        // this is already just "docs", nothing to do...
+                        return node;
+                    }
+                    // docs.Users.Select
+                    case MemberAccessExpressionSyntax { Expression: MemberAccessExpressionSyntax mae }:
+                    {
+                        // get the "Users"
+                        CollectionNames = [mae.Name.Identifier.Text];
+                        // docs.Users.Select -> docs.Select
+                        return node.ReplaceNode(mae,mae.Expression);
+                    }
+                    // docs["foo"].Select
+                    case MemberAccessExpressionSyntax { Expression: ElementAccessExpressionSyntax indexer }:
                     {
                         var list = new List<string>();
                         foreach (ArgumentSyntax item in indexer.ArgumentList.Arguments)
@@ -65,31 +88,39 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         }
 
                         CollectionNames = list.ToArray();
-
-                        if (nodeToCheck != node)
-                            nodeAsString = node.Expression.ToString();
-
-                        nodeAsString = nodeAsString.Replace(indexer.ToString(), nodePrefix);
-
-                        return node.WithExpression(SyntaxFactory.ParseExpression(nodeAsString));
+                        // docs["foo"].Select --> docs.Select
+                        return node.ReplaceNode(indexer, indexer.Expression);
                     }
-
-                    return node;
                 }
 
-                var collectionName = nodeParts[1];
-                CollectionNames = new[] { collectionName };
-
-                if (nodeToCheck != node)
-                    nodeAsString = node.Expression.ToString();
-
-                var collectionIndex = nodeAsString.IndexOf(collectionName, nodePrefix.Length, StringComparison.OrdinalIgnoreCase);
-                // removing collection name: "docs.Users.Select" => "docs.Select"
-                nodeAsString = nodeAsString.Remove(collectionIndex - 1, collectionName.Length + 1);
-
-                var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
-                return node.WithExpression(newExpression);
+                return node; // nothing to do
             }
+            
+            
+            private string GetRootIdentifier(ExpressionSyntax nodeToCheck)
+            {
+                while (true)
+                {
+                    switch (nodeToCheck)
+                    {
+                        case IdentifierNameSyntax id:
+                            return id.Identifier.ValueText;
+                        case ElementAccessExpressionSyntax aees: // docs["Foo"]
+                            nodeToCheck = aees.Expression;
+                            break;
+                        case MemberAccessExpressionSyntax maes: // docs.Name
+                            nodeToCheck = maes.Expression;
+                            break;
+                        case InvocationExpressionSyntax invocation: // docs.Users.Select()...
+                            nodeToCheck = invocation.Expression;
+                            break;
+                        default:
+                            return nodeToCheck.ToString();
+                    
+                    }
+                }
+            }
+
 
             private static string[] ExtractCollectionNamesFromWhereEntityIs(InvocationExpressionSyntax node)
             {
