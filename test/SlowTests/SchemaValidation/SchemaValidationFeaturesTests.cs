@@ -2,13 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Utils;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.SchemaValidation;
+using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -24,7 +29,7 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Replication)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task RejectDocumentFromExternalReplication(Options options)
     {
@@ -118,25 +123,7 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
                 expectedChangeVector = session.Advanced.GetChangeVectorFor(user);
             }
 
-            string schemaDefinition;
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            {
-                schemaDefinition =
-                    context.ReadObject(
-                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
-                        "schema-validation-configuration").ToString();
-            }
-
-            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
-            {
-                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
-                {
-                    {"Users", new SchemaDefinition
-                    {
-                        Schema = schemaDefinition
-                    }}
-                }
-            }));
+            await SetupSchemaValidation(store);
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -153,6 +140,75 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             }
 
         }
+    }
+
+    [RavenFact(RavenTestCategory.Core)]
+    public async Task DataArchivalShouldSkipSchemaValidation()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var expiry = SystemTime.UtcNow.AddMinutes(5);
+            var metadata = new Dictionary<string, object>
+            {
+                [Constants.Documents.Metadata.ArchiveAt] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
+            };
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = "Grisha" };
+                await session.StoreAsync(user);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                metadataFromDoc[Constants.Documents.Metadata.ArchiveAt] = metadata[Constants.Documents.Metadata.ArchiveAt];
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count = await session.Query<User>().Where(x => x.Name == "Grisha").CountAsync();
+                Assert.Equal(1, count);
+            }
+
+            await SetupSchemaValidation(store);
+
+            var config = new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 };
+            await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            await Indexes.WaitForIndexingAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var count = await session.Query<User>().Where(x => x.Name == "Grisha").CountAsync();
+                Assert.Equal(0, count);
+            }
+        }
+    }
+
+    private static async Task SetupSchemaValidation(DocumentStore store)
+    {
+        string schemaDefinition;
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            schemaDefinition =
+                context.ReadObject(
+                    new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                    "schema-validation-configuration").ToString();
+        }
+
+        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+        {
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                {"Users", new SchemaDefinition
+                {
+                    Schema = schemaDefinition
+                }}
+            }
+        }));
     }
 
     private class TestObj
