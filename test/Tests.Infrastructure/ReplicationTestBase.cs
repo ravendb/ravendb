@@ -24,6 +24,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -592,6 +593,23 @@ namespace Tests.Infrastructure
             {
                 return new ChangeVector(new ChangeVector(version, throwOnRecursion: true, this), 
                     new ChangeVector(version, throwOnRecursion: true, this));
+            }
+        }
+
+        public class GetReplicationOutgoingsFailureInfoOperation : IMaintenanceOperation<ReplicationOutgoingsFailurePreview>
+        {
+            private readonly string _nodeTag;
+            private readonly int? _shardNumber;
+
+            public GetReplicationOutgoingsFailureInfoOperation(string nodeTag = null, int? shardNumber = null)
+            {
+                _nodeTag = nodeTag;
+                _shardNumber = shardNumber;
+            }
+
+            public RavenCommand<ReplicationOutgoingsFailurePreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetReplicationOutgoingsFailureInfoCommand(_nodeTag, _shardNumber);
             }
         }
     }

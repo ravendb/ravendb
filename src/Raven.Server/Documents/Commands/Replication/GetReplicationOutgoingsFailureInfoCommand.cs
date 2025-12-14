@@ -17,9 +17,10 @@ namespace Raven.Server.Documents.Commands.Replication
         {
         }
 
-        public GetReplicationOutgoingsFailureInfoCommand(string nodeTag)
+        public GetReplicationOutgoingsFailureInfoCommand(string nodeTag, int? sharedNumber = null)
         {
             SelectedNodeTag = nodeTag;
+            SelectedShardNumber = sharedNumber;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
