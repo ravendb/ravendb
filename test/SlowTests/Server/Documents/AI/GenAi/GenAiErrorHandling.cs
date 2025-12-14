@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
@@ -445,7 +446,7 @@ this.Comments[idx].IsSpam = $output.Blocked;";
             if (ctx.Contains("alex"))
             {
                 if (Interlocked.CompareExchange(ref enteredOnce, 1, 0) == 0)
-                    throw new UnsuccessfulRequestException("Unauthorized", HttpStatusCode.Unauthorized) { RequestId = "fake-request-id" };
+                    throw new UnsuccessfulAiRequestException("Unauthorized", HttpStatusCode.Unauthorized) { RequestId = "fake-request-id" };
 
                 return blockEtlMre.WaitAsync(TimeSpan.FromSeconds(60));
             }

@@ -347,42 +347,45 @@ namespace Raven.Server
 
         private static void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
         {
-            if (exception is IndexCompilationException indexCompilationException)
+            switch (exception)
             {
-                djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
-                djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
-                return;
-            }
-
-            if (exception is DocumentConflictException documentConflictException)
-            {
-                djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
-                djv[nameof(DocumentConflictException.LargestEtag)] = documentConflictException.LargestEtag;
-            }
-
-            if (exception is ConcurrencyException concurrencyException)
-            {
-                djv[nameof(ConcurrencyException.Id)] = concurrencyException.Id;
-                djv[nameof(ConcurrencyException.ExpectedChangeVector)] = concurrencyException.ExpectedChangeVector;
-                djv[nameof(ConcurrencyException.ActualChangeVector)] = concurrencyException.ActualChangeVector;
-            }
-
-            if (exception is RavenTimeoutException timeoutException)
-            {
-                djv[nameof(RavenTimeoutException.FailImmediately)] = timeoutException.FailImmediately;
-            }
-
-            if (exception is ClusterTransactionConcurrencyException { ConcurrencyViolations: { } } ctxConcurrencyException)
-                djv[nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations)] = new DynamicJsonArray(ctxConcurrencyException.ConcurrencyViolations.Select(c => c.ToJson()));
-
-            if (exception is BackupAlreadyRunningException backupAlreadyRunningException)
-            {
-                djv[nameof(BackupAlreadyRunningException.OperationId)] = backupAlreadyRunningException.OperationId;
-                djv[nameof(BackupAlreadyRunningException.NodeTag)] = backupAlreadyRunningException.NodeTag;
-            }
-            if (exception is LicenseLimitException licenseLimitException)
-            {
-                djv[nameof(LicenseLimitException.LimitType)] = licenseLimitException.LimitType;
+                case RateLimitException rateLimitException:
+                    rateLimitException.StatusCode = (HttpStatusCode)429;
+                    djv[nameof(RateLimitException.RetryAfter)] = rateLimitException.RetryAfter;
+                    djv[nameof(RateLimitException.StatusCode)] = HttpStatusCode.TooManyRequests;
+                    break;
+                case UnsuccessfulAiRequestException unsuccessfulAiRequestException:
+                    djv[nameof(RateLimitException.StatusCode)] = unsuccessfulAiRequestException.StatusCode;
+                    break;
+                case RefusedToAnswerException refusedToAnswerException:
+                    djv[nameof(RefusedToAnswerException.Refusal)] = refusedToAnswerException.Refusal;
+                    djv[nameof(RefusedToAnswerException.FinishReason)] = refusedToAnswerException.FinishReason;
+                    break;
+                case IndexCompilationException indexCompilationException:
+                    djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
+                    djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
+                    return;
+                case DocumentConflictException documentConflictException:
+                    djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
+                    djv[nameof(DocumentConflictException.LargestEtag)] = documentConflictException.LargestEtag;
+                    break;
+                case ConcurrencyException concurrencyException:
+                    djv[nameof(ConcurrencyException.Id)] = concurrencyException.Id;
+                    djv[nameof(ConcurrencyException.ExpectedChangeVector)] = concurrencyException.ExpectedChangeVector;
+                    djv[nameof(ConcurrencyException.ActualChangeVector)] = concurrencyException.ActualChangeVector;
+                    if (concurrencyException is ClusterTransactionConcurrencyException { ConcurrencyViolations: { } } ctxConcurrencyException)
+                        djv[nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations)] = new DynamicJsonArray(ctxConcurrencyException.ConcurrencyViolations.Select(c => c.ToJson()));
+                    break;
+                case RavenTimeoutException timeoutException:
+                    djv[nameof(RavenTimeoutException.FailImmediately)] = timeoutException.FailImmediately;
+                    break;
+                case BackupAlreadyRunningException backupAlreadyRunningException:
+                    djv[nameof(BackupAlreadyRunningException.OperationId)] = backupAlreadyRunningException.OperationId;
+                    djv[nameof(BackupAlreadyRunningException.NodeTag)] = backupAlreadyRunningException.NodeTag;
+                    break;
+                case LicenseLimitException licenseLimitException:
+                    djv[nameof(LicenseLimitException.LimitType)] = licenseLimitException.LimitType;
+                    break;
             }
         }
 

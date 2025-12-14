@@ -130,6 +130,21 @@ namespace Raven.Client.Exceptions
         {
             switch (exception)
             {
+                case RateLimitException rateLimitException:
+                    rateLimitException.StatusCode = (HttpStatusCode)429;
+                    json.TryGet(nameof(RateLimitException.RetryAfter), out string retryAfter);
+                    if (TimeSpan.TryParse(retryAfter, out var timeSpan))
+                        rateLimitException.RetryAfter = timeSpan;
+                    break;
+                case UnsuccessfulAiRequestException unsuccessfulAiRequestException:
+                    json.TryGet(nameof(UnsuccessfulAiRequestException.StatusCode), out string code);
+                    if (Enum.TryParse<HttpStatusCode>(code, out var status))
+                        unsuccessfulAiRequestException.StatusCode = status;
+                    break;
+                case RefusedToAnswerException refusedToAnswerException:
+                    json.TryGet(nameof(RefusedToAnswerException.Refusal), out refusedToAnswerException.Refusal);
+                    json.TryGet(nameof(RefusedToAnswerException.FinishReason), out refusedToAnswerException.FinishReason);
+                    break;
                 case IndexCompilationException indexCompilationException:
                     json.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty), out indexCompilationException.IndexDefinitionProperty);
                     json.TryGet(nameof(IndexCompilationException.ProblematicText), out indexCompilationException.ProblematicText);
