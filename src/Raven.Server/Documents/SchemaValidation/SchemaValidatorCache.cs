@@ -102,8 +102,11 @@ public class SchemaValidatorCache : IDisposable
     public void Validate(string collection, BlittableJsonReaderObject document, NonPersistentDocumentFlags nonPersistentFlags, JsonOperationContext context)
     {
         // TODO: check if we need to add more flags here
-        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) ||
-            nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding))
+        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding))
+            return;
+
+        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+            nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromExternalReplication) == false)
             return;
 
         if (Validate(context, collection, document, out var error) == false)

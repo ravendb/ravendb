@@ -40,6 +40,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _database = database;
             }
 
+            protected override NonPersistentDocumentFlags GetNonPersistentDocumentFlags()
+            {
+                return base.GetNonPersistentDocumentFlags() | NonPersistentDocumentFlags.FromExternalReplication;
+            }
+
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 switch (item)

@@ -62,6 +62,7 @@ namespace Raven.Server.Documents
         AllowDataAsNull = 0x20000,
         FromResharding = 0x40000,
         Unarchive = 0x80000,
+        FromExternalReplication = 0x100000,
     }
 
     public static class EnumExtensions

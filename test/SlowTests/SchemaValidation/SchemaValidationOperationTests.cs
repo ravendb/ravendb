@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
@@ -12,7 +13,7 @@ using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
 
 namespace SlowTests.SchemaValidation;
 
-public class SchemaValidationOperationTests : ReplicationTestBase
+public class SchemaValidationOperationTests : RavenTestBase
 {
     public SchemaValidationOperationTests(ITestOutputHelper output) : base(output)
     {
