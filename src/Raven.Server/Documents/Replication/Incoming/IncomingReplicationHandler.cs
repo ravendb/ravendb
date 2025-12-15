@@ -876,6 +876,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return new MergedDocumentReplicationCommandDto
                 {
                     LastEtag = _lastEtag,
+                    IsInternal = _isInternal,
                     SupportedFeatures = _replicationInfo.SupportedFeatures,
                     ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => i.Clone(context, context.Allocator)).ToArray(),
                     SourceDatabaseId = _replicationInfo.SourceDatabaseId,
@@ -889,6 +890,7 @@ namespace Raven.Server.Documents.Replication.Incoming
     {
         public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;
+        public bool IsInternal;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         public string SourceDatabaseId;
         public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
@@ -924,7 +926,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 Logger = database.Loggers.GetLogger<MergedDocumentReplicationCommandDto>()
             };
 
-            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);
+            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag, IsInternal);
         }
 
         private AttachmentReplicationItem CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
