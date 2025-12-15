@@ -12,6 +12,7 @@ import { CustomDropdownToggle } from "components/common/Dropdown";
 import { useAsyncCallback } from "react-async-hook";
 import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
+import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstans";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -38,15 +39,23 @@ export default function ChatbotAskAiMessageEndpoints({
 
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
+    const isOnWhitelist = (url: string) => {
+        const urlObject = new URL(url, window.location.origin);
+        const pathname = urlObject.pathname;
+
+        return chatbotConstants.endpointsWhitelistRegex.some((regex) => regex.test(pathname));
+    };
+
     const asyncHandleAllow = useAsyncCallback(
         async () => {
             const actionResponses: Record<string, any> = {};
 
             const endpointPromises = endpoints.map(async ({ toolId, url }): Promise<EndpointResult> => {
-                const baseResult: Omit<EndpointResult, "status" | "resultText"> = {
-                    toolId,
-                    url,
-                };
+                const baseResult: Pick<EndpointResult, "toolId" | "url"> = { toolId, url };
+
+                if (!isOnWhitelist(url)) {
+                    return { ...baseResult, status: "error", resultText: "Endpoint is not whitelisted" };
+                }
 
                 const response = await tryCatch(() => fetch(url));
                 if (response.status === "error") {
