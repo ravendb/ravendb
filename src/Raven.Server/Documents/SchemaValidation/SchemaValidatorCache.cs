@@ -159,7 +159,7 @@ public class SchemaValidatorCache : IDisposable
 
         var schemaValidatorsPerCollection = _schemaValidatorsPerCollection;
         if (collections == null)
-            return schemaValidatorsPerCollection.Count(x => x.Value.Disabled == false) > 0;
+            return schemaValidatorsPerCollection.Any(x => x.Value.Disabled == false);
 
         foreach (var collection in collections)
         {
