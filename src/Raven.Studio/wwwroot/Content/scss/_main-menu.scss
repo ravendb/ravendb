@@ -206,6 +206,7 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                     i {
                         display: inline-block;
                         transition: transform 0.15s ease-out;
+                        line-height: 17px;
                     }
                     &.active {
                         i {
@@ -313,6 +314,7 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
         align-items: center;
         flex-shrink: 0;
         color: $text-muted-var;
+        line-height: 17px;
         &:hover {
             background-color: $base-panel-bg-3;
         }

@@ -118,8 +118,6 @@
             </a>
             <div data-bind="click: menu.handleLevelClick.bind(menu), attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1, class: 'level ' + (item.isOpen() ? 'level-show ' : '') + 'level-' + (item.depth() + 1) }">
                 <h2>
-                    <a class="back" title="back"
-                       data-bind="click: menu.back.bind(menu)"><i class="icon-chevron-left"></i></a>
                     <!-- ko text: item.title --><!-- /ko -->
                 </h2>
                 <ul data-bind="foreach: item.children">
@@ -155,11 +153,11 @@
                 <!-- /ko -->
             </ul>
         </div>
-        <button class="btn-collapse-menu" data-bind="click: $root.toggleMenu">
-            <i class="icon-arrow-left"></i> Collapse Menu
+        <button class="btn-collapse-menu" data-bind="click: $root.toggleMenu" title="Collapse sidebar menu">
+            <i class="icon-sidebar-collapse"></i><span class="m-0">Collapse Menu</span>
         </button>
-        <button class="btn-expand-menu" data-bind="click: $root.toggleMenu">
-            <i class="icon-arrow-right"></i>
+        <button class="btn-expand-menu" data-bind="click: $root.toggleMenu" title="Expand sidebar menu">
+            <i class="icon-sidebar-collapse"></i>
         </button>
     </nav>
     <div id="page-host-root" class="content-container">
