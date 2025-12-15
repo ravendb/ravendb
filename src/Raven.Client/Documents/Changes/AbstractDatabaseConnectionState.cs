@@ -86,6 +86,9 @@ internal abstract class AbstractDatabaseConnectionState
     {
         lock (_eventLock)
         {
+            if (_disposed)
+                return;
+
             onChangeNotification += changeHandler;
             OnError += errorHandler;
         }
@@ -95,15 +98,24 @@ internal abstract class AbstractDatabaseConnectionState
     {
         lock (_eventLock)
         {
+            if (_disposed)  // already disposed
+                return;
+
             onChangeNotification -= changeHandler;
             OnError -= errorHandler;
         }
     }
 
+    private volatile bool _disposed;
+
     public virtual void Dispose()
     {
         lock (_eventLock)
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
             if (_connected?.Exception == null)
                 Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
 
