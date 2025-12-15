@@ -99,8 +99,8 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
     }
 
 
-    [RavenFact(RavenTestCategory.Core)]
-    public async Task RefreshShouldSkipSchemaValiadtion()
+    [RavenFact(RavenTestCategory.ExpirationRefresh)]
+    public async Task RefreshShouldSkipSchemaValidation()
     {
         using (var store = GetDocumentStore())
         {
@@ -143,7 +143,7 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.ExpirationRefresh)]
     public async Task DataArchivalShouldSkipSchemaValidation()
     {
         using (var store = GetDocumentStore())

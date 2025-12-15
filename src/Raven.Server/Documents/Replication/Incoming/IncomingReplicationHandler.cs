@@ -111,9 +111,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External ? 
-                new MergedExternalDocumentReplicationCommand(data, lastDocumentEtag) :
-                new MergedDocumentReplicationCommand(data, lastDocumentEtag);
+            return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
         }
 
         internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
@@ -304,15 +302,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override void OnDocumentsReceived() => DocumentsReceived?.Invoke(this);
 
-        internal class MergedExternalDocumentReplicationCommand : MergedDocumentReplicationCommand
-        {
-            public MergedExternalDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool isInternal = false) : base(replicationInfo, lastEtag, isInternal)
-            {
-            }
-
-            protected override NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication | NonPersistentDocumentFlags.FromExternalReplication;
-        }
-
         internal class MergedDocumentReplicationCommand : DocumentMergedTransactionCommand
         {
             private readonly long _lastEtag;
@@ -359,7 +348,13 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
+            protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags()
+            {
+                var flags = NonPersistentDocumentFlags.FromReplication;
+                if (_isInternal == false)
+                    flags |= NonPersistentDocumentFlags.FromExternalReplication;
+                return flags;
+            }
 
             protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
