@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected virtual DocumentMergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
             DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
+            return new MergedDocumentReplicationCommand(data, lastDocumentEtag, isInternal: ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal);
         }
 
         internal class MergedUpdateDatabaseChangeVectorCommand : DocumentMergedTransactionCommand
@@ -351,8 +351,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags()
             {
                 var flags = NonPersistentDocumentFlags.FromReplication;
-                if (_isInternal == false)
-                    flags |= NonPersistentDocumentFlags.FromExternalReplication;
+                if (_isInternal)
+                    flags |= NonPersistentDocumentFlags.SkipSchemaValidation;
                 return flags;
             }
 
