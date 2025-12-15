@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.SchemaValidation;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
@@ -76,16 +75,18 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             using (var s1 = store1.OpenAsyncSession())
             {
                 await s1.StoreAsync(new TestObj { Prop = "0123456789a" }, invalidDocId);
-                s1.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(5));
-                
-                await Assert.ThrowsAsync<RavenTimeoutException>(async () => await s1.SaveChangesAsync());
+                await s1.SaveChangesAsync();
             }
 
+            var count = await WaitForValueAsync(async () =>
+            {
+                var replicationFailureInfo = await store1.Maintenance.SendAsync(new GetReplicationOutgoingsFailureInfoOperation(nodeTag: "A", shardNumber: 0));
+                return replicationFailureInfo.Stats.Count;
+            }, 1);
+
+            Assert.Equal(1, count);
+
             var replicationFailureInfo = await store1.Maintenance.SendAsync(new GetReplicationOutgoingsFailureInfoOperation(nodeTag: "A", shardNumber: 0));
-
-            Assert.NotNull(replicationFailureInfo.Stats);
-            Assert.Equal(1, replicationFailureInfo.Stats.Count);
-
             var info = replicationFailureInfo.Stats.Single();
             Assert.True(info.Key is ExternalReplication);
 
