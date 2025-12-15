@@ -80,7 +80,7 @@ interface ChatbotState {
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
     lastRunData: ChatbotRunChatData;
-    attachedContexts: EntityState<ChatbotAttachedContext, string>;
+    attachedContexts: EntityState<ChatbotAttachedContext, ChatbotAttachedContextId>;
     isNewContextOpen: boolean;
     newContextTab: ChatbotAttachedContext["type"];
     deniedEndpoints: string[];
@@ -94,7 +94,7 @@ const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
 
 const chatbotMessagesSelectors = chatbotMessagesAdapter.getSelectors();
 
-const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, string>({
+const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, ChatbotAttachedContextId>({
     selectId: (context) => context.id,
 });
 
@@ -409,7 +409,7 @@ export const chatbotSelectors = {
     conversationId: (state: RootState) => state.chatbot.conversationId,
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
-    attachedContextById: (state: RootState, id: string) =>
+    attachedContextById: (state: RootState, id: ChatbotAttachedContextId) =>
         chatbotAttachedContextSelectors.selectById(state.chatbot.attachedContexts, id),
     isNewContextOpen: (state: RootState) => state.chatbot.isNewContextOpen,
     newContextTab: (state: RootState) => state.chatbot.newContextTab,

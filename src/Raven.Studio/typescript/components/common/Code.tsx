@@ -9,7 +9,9 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import queryCriteria from "models/database/query/queryCriteria";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
-import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import { chatbotActions, chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
+import useConfirm from "components/common/ConfirmDialog";
+import databasesManager from "common/shell/databasesManager";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -51,7 +53,12 @@ export default function Code(props: CodeProps) {
     const dispatch = useAppDispatch();
     const { code, className, codeClassName, whiteSpace, isActionsHidden, sourceView } = props;
 
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const chatbotDatabaseContext = useAppSelector((state) =>
+        chatbotSelectors.attachedContextById(state, "DatabaseName")
+    );
+
+    const hasDatabase = activeDatabaseName || chatbotDatabaseContext?.state === "included";
 
     const languageTitle = languageTitles[props.language];
     const languageToHighlight = getLanguageToHighlight(props.language);
@@ -61,17 +68,57 @@ export default function Code(props: CodeProps) {
         [code, languageToHighlight]
     );
 
-    const handleRunQuery = () => {
-        if (sourceView === "chatbot") {
-            dispatch(chatbotActions.isRunQueryFromChatbotSet(true));
-        }
+    const confirm = useConfirm();
 
+    const executeQuery = () => {
         const query = queryCriteria.empty();
         query.queryText(code);
         query.recentQuery(true);
         const queryDto = query.toStorageDto();
-        savedQueriesStorage.saveAndNavigate(databaseName, queryDto, {
+        savedQueriesStorage.saveAndNavigate(activeDatabaseName, queryDto, {
             newWindow: false,
+        });
+    };
+
+    const handleRunQuery = async () => {
+        if (sourceView !== "chatbot") {
+            executeQuery();
+            return;
+        }
+
+        if (
+            !chatbotDatabaseContext ||
+            chatbotDatabaseContext.state === "excluded" ||
+            chatbotDatabaseContext.value === activeDatabaseName
+        ) {
+            dispatch(chatbotActions.isRunQueryFromChatbotSet(true));
+            executeQuery();
+            return;
+        }
+
+        const isConfirmed = await confirm({
+            title: "Change active database",
+            message: (
+                <div>
+                    This query is intended for the <strong>{chatbotDatabaseContext.value}</strong> database.
+                    <br />
+                    <br />
+                    Clicking &quot;Change and run&quot; will switch the active database to{" "}
+                    <strong>{chatbotDatabaseContext.value}</strong> and execute the query.
+                </div>
+            ),
+            confirmText: "Change and run",
+            confirmIcon: "rocket",
+        });
+
+        if (!isConfirmed) {
+            return;
+        }
+
+        const db = databasesManager.default.getDatabaseByName(chatbotDatabaseContext.value);
+        databasesManager.default.activate(db).then(() => {
+            dispatch(chatbotActions.isRunQueryFromChatbotSet(true));
+            executeQuery();
         });
     };
 
@@ -80,17 +127,8 @@ export default function Code(props: CodeProps) {
             {!isActionsHidden && (
                 <div className="code-actions">
                     {languageTitle && <div className="fs-6">{languageTitle}</div>}
-                    <div className="hstack gap-1">
-                        <Button
-                            variant="link"
-                            className="text-emphasis fs-6"
-                            title="Copy to clipboard"
-                            onClick={() => copyToClipboard.copy(`${code}`, `Copied to clipboard`)}
-                        >
-                            <Icon icon="copy" />
-                            Copy
-                        </Button>
-                        {props.language === "rql" && (
+                    <div className="hstack">
+                        {hasDatabase && props.language === "rql" && (
                             <Button
                                 variant="link"
                                 className="text-emphasis fs-6"
@@ -101,6 +139,15 @@ export default function Code(props: CodeProps) {
                                 Run query
                             </Button>
                         )}
+                        <Button
+                            variant="link"
+                            className="text-emphasis fs-6"
+                            title="Copy to clipboard"
+                            onClick={() => copyToClipboard.copy(`${code}`, `Copied to clipboard`)}
+                        >
+                            <Icon icon="copy" />
+                            Copy
+                        </Button>
                     </div>
                 </div>
             )}
