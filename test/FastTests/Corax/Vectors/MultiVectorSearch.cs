@@ -126,7 +126,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         using var _ = GetMappings(out var bsc, out var mapping, out var getVector);
 
         float[][] vectors = [[1f, 1.8f], [1.2f, 1.2f], [0.3f, 0.7f]];
-        float[] sourceIds = [-1L, -1L, -1L];
+        DocumentEntryId[] sourceIds = [DocumentEntryId.Invalid, DocumentEntryId.Invalid, DocumentEntryId.Invalid];
 
         using (var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All))
         {
@@ -135,7 +135,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.Write(0, "vectors/1"u8);
                 entry.WriteVector(1, "Vector", MemoryMarshal.Cast<float, byte>(vectors[0]));
                 entry.EndWriting();
-                sourceIds[0] = (long)entry.EntryId;
+                sourceIds[0] = entry.EntryId;
             }
 
             using (var entry = indexWriter.Index("vectors/2"))
@@ -143,7 +143,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.Write(0, "vectors/2"u8);
                 entry.WriteVector(1, "Vector", MemoryMarshal.Cast<float, byte>(vectors[1]));
                 entry.EndWriting();
-                sourceIds[1] = (long)entry.EntryId;
+                sourceIds[1] = entry.EntryId;
             }
 
             using (var entry = indexWriter.Index("vectors/3"))
@@ -151,7 +151,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.Write(0, "vectors/3"u8);
                 entry.WriteVector(1, "Vector", MemoryMarshal.Cast<float, byte>(vectors[2]));
                 entry.EndWriting();
-                sourceIds[2] = (long)entry.EntryId;
+                sourceIds[2] = entry.EntryId;
             }
 
             indexWriter.Commit();
@@ -177,7 +177,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, true);
             read = query.Fill(ids);
             Assert.Equal(3, read);
-            Assert.Equal(sourceIds[1], ids[0]);
+            Assert.Equal((long)sourceIds[1], ids[0]);
             query.Score(ids[..3], scores[..3], 0f);
             Assert.True(scores[0] > scores[1]);
             Assert.True(scores[1] > scores[2]);
