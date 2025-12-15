@@ -59,4 +59,9 @@ public sealed class AiConfiguration : ConfigurationCategory
     [DefaultValue(false)]
     [ConfigurationEntry("Ai.Assistant.Disable", ConfigurationEntryScope.ServerWideOnly)]
     public bool DisableAiAssistant { get; set; }
+
+    [Description("Prevents sending any user data, such as documents or query results, to the AI assistant.")]
+    [DefaultValue(false)]
+    [ConfigurationEntry("Ai.Assistant.DisableDataSubmission", ConfigurationEntryScope.ServerWideOnly)]
+    public bool DisableDataSubmission { get; set; }
 }
