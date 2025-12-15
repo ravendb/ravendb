@@ -1199,25 +1199,24 @@ class query extends shardViewModelBase {
 
                         // Attach query first page result to chatbot context
                         if (skip === 0) {
-                            const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id" | "state"> = {
+                            const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
                                 query: criteriaForFetcher.queryText(),
                                 value: queryResults.items?.map(doc => doc?.toDto(true)) ?? [],
+                                state: "excluded",
                             };
                             
                             if (store.default.getState().chatbot.isRunQueryFromChatbot) {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
                                     id: `QueryResult-from-chatbot-${_.uniqueId()}}`,
-                                    state: "included",
                                 }));
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.isRunQueryFromChatbotSet(false));
                             } else {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
                                     id: "QueryResult-regular",
-                                    state: "excluded",
                                 }));
                             }
                         }
