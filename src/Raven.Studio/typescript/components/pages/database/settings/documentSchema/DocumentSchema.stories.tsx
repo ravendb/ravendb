@@ -30,10 +30,11 @@ interface DefaultDocumentSchemaArgs {
 export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
     name: "Document Schema",
     render: (args) => {
-        const { databases, accessManager } = mockStore;
+        const { databases, accessManager, collectionsTracker } = mockStore;
         const { databasesService } = mockServices;
-        const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
+        collectionsTracker.with_Collections();
         databasesService.withSchemaValidations();
         accessManager.with_databaseAccess({
             [db.name]: args.databaseAccess,
@@ -46,9 +47,10 @@ export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
 export const DefaultDocumentSchemaPlayground: StoryObj<DefaultDocumentSchemaArgs> = {
     name: "Document Schema Playground",
     render: () => {
-        const { databases, accessManager } = mockStore;
-        const db = databases.withActiveDatabase_NonSharded_SingleNode();
+        const { databases, accessManager, collectionsTracker } = mockStore;
 
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
+        collectionsTracker.with_Collections();
         accessManager.with_databaseAccess({
             [db.name]: "DatabaseAdmin",
         });

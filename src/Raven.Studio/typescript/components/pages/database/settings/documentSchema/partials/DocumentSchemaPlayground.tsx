@@ -20,7 +20,7 @@ import ReactAce from "react-ace/lib/ace";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
-import { FormProvider, useFieldArray, UseFieldArrayRemove, useForm, useFormContext } from "react-hook-form";
+import { FormProvider, useFieldArray, UseFieldArrayRemove, useForm, useFormContext, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { FieldArrayWithId } from "react-hook-form/dist/types/fieldArray";
@@ -70,6 +70,19 @@ function DocumentSchemaPlaygroundBody() {
         append({ collection: "", schema: "" });
     };
 
+    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.userCollectionNames);
+
+    const getCollectionOptions = (currentIndex: number): SelectOption[] => {
+        const selectedCollections = fields.filter((_, idx) => idx !== currentIndex).map((schema) => schema.collection);
+
+        return allCollectionNames
+            .filter((collection) => !selectedCollections.includes(collection))
+            .map((x) => ({
+                label: x,
+                value: x,
+            }));
+    };
+
     const handleOpenSheet = (formData: DocumentSchemaFormData) => {
         const validators: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">[] = formData.documentSchemas.map(
             (ds) => ({
@@ -104,7 +117,7 @@ function DocumentSchemaPlaygroundBody() {
 
             <div className="mt-4">
                 <HrHeader
-                    count={3}
+                    count={fields.length}
                     right={
                         <Button onClick={handleAppendTestField} size="xs" variant="info" className="rounded-pill">
                             <Icon icon="plus" />
@@ -121,7 +134,13 @@ function DocumentSchemaPlaygroundBody() {
 
                 <FormProvider {...form}>
                     {fields.map((field, index) => (
-                        <TestDocumentSchema remove={remove} key={field.id} {...field} index={index} />
+                        <TestDocumentSchema
+                            collectionOptions={getCollectionOptions(index)}
+                            remove={remove}
+                            key={field.id}
+                            {...field}
+                            index={index}
+                        />
                     ))}
                 </FormProvider>
             </div>
@@ -129,28 +148,27 @@ function DocumentSchemaPlaygroundBody() {
     );
 }
 
-type ExtendedFieldArrayWithId = FieldArrayWithId<DocumentSchemaFormData["documentSchemas"]> & {
+type TestDocumentSchemaProps = FieldArrayWithId<DocumentSchemaFormData, "documentSchemas", "id"> & {
     index: number;
     remove: UseFieldArrayRemove;
+    collectionOptions: SelectOption[];
 };
 
-function TestDocumentSchema({ index, remove }: ExtendedFieldArrayWithId) {
+function TestDocumentSchema({ index, remove, collectionOptions }: TestDocumentSchemaProps) {
     const { value: isPanelCollapsed, toggle: togglePanelCollapse } = useBoolean(false);
-    const { control, setValue } = useFormContext();
+    const { control, setValue } = useFormContext<DocumentSchemaFormData>();
     const aceRef = useRef<ReactAce>(null);
 
-    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.userCollectionNames);
-
-    const collectionOptions: SelectOption[] = allCollectionNames.map((x) => ({
-        label: x,
-        value: x,
-    }));
+    const field = useWatch({
+        control,
+        name: `documentSchemas.${index}`,
+    });
 
     return (
         <RichPanel>
             <RichPanelHeader>
                 <RichPanelInfo>
-                    <RichPanelName>Document schema {index + 1}</RichPanelName>
+                    <RichPanelName>{field?.collection || `Document schema ${index + 1}`}</RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
                     <Button onClick={() => remove(index)} variant="danger">
@@ -191,7 +209,7 @@ function TestDocumentSchema({ index, remove }: ExtendedFieldArrayWithId) {
                                         component: (
                                             <AceEditor.LoadFileAction
                                                 onLoad={(value) => {
-                                                    setValue("documentSchemas." + index + ".schema", value, {
+                                                    setValue(`documentSchemas.${index}.schema`, value, {
                                                         shouldValidate: true,
                                                     });
                                                 }}
