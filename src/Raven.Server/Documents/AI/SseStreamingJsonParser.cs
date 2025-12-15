@@ -53,11 +53,11 @@ public unsafe class SseStreamingJsonParser : IDisposable
     {
         token?.ThrowIfCancellationRequested();
 
-        _totalSize += dataChunk.Length;
+        _totalSize += dataChunk.Size;
         if (_totalSize > _maxSize)
             throw new ArgumentException($"The maximum size allowed ({_maxSize}) has been exceeded, aborting");
 
-        _parser.SetBuffer(dataChunk.Buffer, dataChunk.Length);
+        _parser.SetBuffer(dataChunk.Buffer, dataChunk.Size);
         if (_builder.Read())
         {
             _builder.FinalizeDocument();
