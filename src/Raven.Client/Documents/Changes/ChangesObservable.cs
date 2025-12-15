@@ -38,8 +38,7 @@ namespace Raven.Client.Documents.Changes
             {
                 _connectionState.Inc();
                 // first subscriber, register to the connection state events
-                _connectionState.OnChangeNotification += Send;
-                _connectionState.OnError += Error;
+                _connectionState.RegisterEvents(Send, Error);
             }
             else if (_subscribers.TryAdd(observer))
             {
@@ -60,8 +59,7 @@ namespace Raven.Client.Documents.Changes
             if (count == 0)
             {
                 // last subscriber gone, unregister from the connection state events
-                _connectionState.OnChangeNotification -= Send;
-                _connectionState.OnError -= Error;
+                _connectionState.UnregisterEvents(Send, Error);
             }
         }
 

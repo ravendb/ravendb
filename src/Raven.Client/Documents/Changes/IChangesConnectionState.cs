@@ -13,7 +13,9 @@ namespace Raven.Client.Documents.Changes
 
         Task EnsureSubscribedNow();
 
-        event Action<T> OnChangeNotification;
+        void RegisterEvents(Action<T> onChangeNotification, Action<Exception> onError);
+
+        void UnregisterEvents(Action<T> onChangeNotification, Action<Exception> onError);
 
         event Action<Exception> OnError;
     }

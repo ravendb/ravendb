@@ -16,6 +16,7 @@ internal abstract class AbstractDatabaseConnectionState
 
     private readonly TaskCompletionSource<object> _firstSet = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task _connected;
+    protected readonly object _eventLock = new object();
 
     protected AbstractDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
     {
@@ -70,10 +71,43 @@ internal abstract class AbstractDatabaseConnectionState
         return _connected ?? _firstSet.Task;
     }
 
+    protected void CallEventInternal<T>(Action<T> changeHandler, T change)
+    {
+        Action<T> handler;
+        lock (_eventLock)
+        {
+            handler = changeHandler;
+        }
+
+        handler?.Invoke(change);
+    }
+
+    protected void RegisterEventsInternal<T>(ref Action<T> onChangeNotification, Action<T> changeHandler, Action<Exception> errorHandler)
+    {
+        lock (_eventLock)
+        {
+            onChangeNotification += changeHandler;
+            OnError += errorHandler;
+        }
+    }
+
+    protected void UnregisterEventsInternal<T>(ref Action<T> onChangeNotification, Action<T> changeHandler, Action<Exception> errorHandler)
+    {
+        lock (_eventLock)
+        {
+            onChangeNotification -= changeHandler;
+            OnError -= errorHandler;
+        }
+    }
+
     public virtual void Dispose()
     {
-        if(_connected?.Exception == null)
-            Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
-        OnError = null;
+        lock (_eventLock)
+        {
+            if (_connected?.Exception == null)
+                Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
+
+            OnError = null;
+        }
     }
 }
