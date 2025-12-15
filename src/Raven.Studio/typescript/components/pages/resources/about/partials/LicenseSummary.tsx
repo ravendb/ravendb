@@ -61,13 +61,6 @@ export function LicenseSummary(props: LicenseSummaryProps) {
         }
     }, [aiAssistantUsage.status]);
 
-    // Check AI Assistant consent if not checked yet
-    useEffect(() => {
-        if (aiAssistantConsentStatus.status === "idle") {
-            dispatch(aiAssistantActions.checkConsent());
-        }
-    }, [aiAssistantConsentStatus.status]);
-
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
     const refreshConnectivity = async () => {
@@ -144,6 +137,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                         >
                             <ConsentStatusItem consentStatus={aiAssistantConsentStatus} />
                         </OverallInfoItem>
+                        {aiAssistantConsentStatus.data === "Success" && <AiAssistantReviewConsentButton />}
                         {aiAssistantConsentStatus.data === "ConsentRequired" && <AiAssistantGiveConsentButton />}
                         {aiAssistantConsentStatus.status === "failure" && <AiAssistantRetryCheckConsentButton />}
                     </Row>
@@ -457,6 +451,17 @@ function LicenseExpirationInfoPopover({ date, children }: { date: moment.Moment;
         >
             {children}
         </PopoverWithHoverWrapper>
+    );
+}
+
+function AiAssistantReviewConsentButton() {
+    return (
+        <Col className="d-flex align-items-center justify-content-end">
+            <a href="#TODO" target="_blank" className="btn btn-outline-secondary rounded-pill">
+                Review the consent
+                <Icon icon="newtab" margin="ms-1" />
+            </a>
+        </Col>
     );
 }
 

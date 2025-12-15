@@ -50,8 +50,9 @@ interface AboutPageStoryProps {
 
 function commonInit(props: AboutPageStoryProps) {
     const { licenseService, aiAssistantService } = mockServices;
-    const { license, accessManager, cluster } = mockStore;
+    const { license, accessManager, cluster, aiAssistant } = mockStore;
 
+    aiAssistant.with_consent(props.consentStatus);
     aiAssistantService.withCheckConsent((dto) => (dto.Status = props.consentStatus));
     aiAssistantService.withCheckUsage({ Status: props.usageStatus, UsagePercentage: props.usagePercentage });
 
