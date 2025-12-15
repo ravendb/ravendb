@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -133,7 +134,7 @@ namespace Raven.Client.Exceptions
                 case RateLimitException rateLimitException:
                     rateLimitException.StatusCode = (HttpStatusCode)429;
                     json.TryGet(nameof(RateLimitException.RetryAfter), out string retryAfter);
-                    if (TimeSpan.TryParse(retryAfter, out var timeSpan))
+                    if (TimeSpan.TryParse(retryAfter, formatProvider: CultureInfo.InvariantCulture, out var timeSpan))
                         rateLimitException.RetryAfter = timeSpan;
                     break;
                 case UnsuccessfulAiRequestException unsuccessfulAiRequestException:
