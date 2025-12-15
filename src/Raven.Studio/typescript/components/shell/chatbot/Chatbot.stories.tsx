@@ -14,6 +14,7 @@ function commonInit() {
 
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
+    chatbot.with_isAlwaysAllowEndpointCalls(false);
     chatbot.with_attachedContextUpserted({
         id: "View",
         type: "View",

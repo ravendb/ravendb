@@ -134,46 +134,40 @@ export default function ChatbotAskAiMessageEndpoints({
         }
     );
 
+    const createActionResponsesWithSingleValue = (value: string): Record<string, any> => {
+        const actionResponses: Record<string, any> = {};
+
+        for (const endpoint of endpoints) {
+            if (!actionResponses[endpoint.toolId]) {
+                actionResponses[endpoint.toolId] = {
+                    [endpoint.url]: value,
+                };
+            } else {
+                actionResponses[endpoint.toolId][endpoint.url] = value;
+            }
+        }
+
+        return actionResponses;
+    };
+
     const handleAlwaysAllow = async () => {
         dispatch(chatbotActions.isAlwaysAllowEndpointCallsSet(true));
         asyncHandleAllow.execute();
     };
 
     const handleSkip = () => {
-        const actionResponses: Record<string, any> = {};
-
-        for (const endpoint of endpoints) {
-            if (!actionResponses[endpoint.toolId]) {
-                actionResponses[endpoint.toolId] = {
-                    [endpoint.url]: "Skipped",
-                };
-            } else {
-                actionResponses[endpoint.toolId][endpoint.url] = "Skipped";
-            }
-        }
-
         dispatch(
             chatbotActions.messageUpdated({
                 id,
                 changes: { userActionState: "skipped", endpoints: endpoints.map((x) => ({ ...x, state: "skipped" })) },
             })
         );
+
+        const actionResponses = createActionResponsesWithSingleValue("Skipped");
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
     const handleDeny = () => {
-        const actionResponses: Record<string, any> = {};
-
-        for (const endpoint of endpoints) {
-            if (!actionResponses[endpoint.toolId]) {
-                actionResponses[endpoint.toolId] = {
-                    [endpoint.url]: "Denied",
-                };
-            } else {
-                actionResponses[endpoint.toolId][endpoint.url] = "Denied";
-            }
-        }
-
         dispatch(
             chatbotActions.messageUpdated({
                 id,
@@ -181,6 +175,8 @@ export default function ChatbotAskAiMessageEndpoints({
             })
         );
         dispatch(chatbotActions.deniedEndpointsAdded(endpoints.map((x) => x.url)));
+
+        const actionResponses = createActionResponsesWithSingleValue("Denied");
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
@@ -282,20 +278,41 @@ interface EndpointItemProps {
 }
 
 function EndpointItem({ endpoint }: EndpointItemProps) {
+    const urlObject = new URL(endpoint.url, window.location.origin);
+    const isDatabasesDocs = /^\/databases\/[\w.-]+\/docs/.test(urlObject.pathname);
+
     return (
-        <div className="hstack w-100">
-            <span className="text-nowrap">
-                {endpoint.state === "waiting" && <span className="me-1">-</span>}
-                {endpoint.state === "allowed" ||
-                    (endpoint.state === "alwaysAllowed" && <Icon icon="check" color="success" />)}
-                {endpoint.state === "error" && <Icon icon="warning" color="danger" />}
-                {endpoint.state === "skipped" && <Icon icon="skip" />}
-                {endpoint.state === "denied" && <Icon icon="cancel" />}
-                GET
-            </span>
-            <a href={endpoint.url} target="_blank" className="ms-1 text-emphasis text-truncate" title={endpoint.url}>
-                {endpoint.url}
-            </a>
+        <div>
+            <div className="hstack w-100">
+                <span className="text-nowrap">
+                    {endpoint.state === "waiting" && <span className="me-1">-</span>}
+                    {endpoint.state === "allowed" ||
+                        (endpoint.state === "alwaysAllowed" && <Icon icon="check" color="success" />)}
+                    {endpoint.state === "error" && <Icon icon="warning" color="danger" />}
+                    {endpoint.state === "skipped" && <Icon icon="skip" />}
+                    {endpoint.state === "denied" && <Icon icon="cancel" />}
+                    GET
+                </span>
+                <a
+                    href={endpoint.url}
+                    target="_blank"
+                    className="ms-1 text-emphasis text-truncate"
+                    title={endpoint.url}
+                >
+                    {isDatabasesDocs ? urlObject.pathname : endpoint.url}
+                </a>
+            </div>
+            {isDatabasesDocs && (
+                <ul>
+                    {urlObject.searchParams.getAll("id").map((id) => (
+                        <li key={id}>
+                            <span className="d-block text-truncate" title={id}>
+                                {id}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 }

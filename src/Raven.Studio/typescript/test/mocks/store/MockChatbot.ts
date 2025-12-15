@@ -13,4 +13,8 @@ export class MockChatbot {
     with_attachedContextUpserted(context: ChatbotAttachedContext) {
         globalDispatch(chatbotActions.attachedContextUpserted(context));
     }
+
+    with_isAlwaysAllowEndpointCalls(isAlwaysAllow: boolean) {
+        globalDispatch(chatbotActions.isAlwaysAllowEndpointCallsSet(isAlwaysAllow));
+    }
 }
