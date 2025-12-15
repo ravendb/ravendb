@@ -287,7 +287,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             }
         }
 
-        public class User
+        internal class User
         { 
             public string Id { get; set; }
 

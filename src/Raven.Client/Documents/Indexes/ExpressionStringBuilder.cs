@@ -9,6 +9,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -647,9 +648,14 @@ namespace Raven.Client.Documents.Indexes
                         }
                         else
                         {
-                            right = _conventions.SaveEnumsAsIntegers
-                                ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
-                                : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+                            if (_conventions.SaveEnumsAsIntegers)
+                                right = Expression.Constant(Convert.ToInt32(constantExpression.Value));
+                            else
+                            {
+                                right = TypeExistsOnServer(enumType)
+                                    ? Expression.Constant(Enum.ToObject(enumType, constantExpression.Value), enumType)
+                                    : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+                            }
                         }
                     }
                     else
@@ -1059,6 +1065,9 @@ namespace Raven.Client.Documents.Indexes
                 return true;
 
             if (type.Assembly == typeof(Regex).Assembly) // System.Text.RegularExpressions
+                return true;
+
+            if (type == typeof(RemoteAttachmentFlags)) // Current type is RemoteAttachmentFlags enum
                 return true;
 
             if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
