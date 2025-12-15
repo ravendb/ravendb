@@ -14,8 +14,8 @@ import { RootState } from "components/store";
 import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
 import moment from "moment";
 
-type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
-type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
+type ChatbotTab = "askAi" | "resources";
+type ChatbotResourcesTab = "helpAndResources" | "joinTheCommunity" | "contactSupport" | "submitFeedback";
 export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
 
 interface ChatbotRunChatData {
@@ -103,8 +103,8 @@ const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelecto
 const initialState: ChatbotState = {
     isOpen: false,
     isPinned: true,
-    chatbotTab: "Ask AI",
-    chatbotResourcesTab: "Help and resources",
+    chatbotTab: "askAi",
+    chatbotResourcesTab: "helpAndResources",
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
     lastRunData: null,

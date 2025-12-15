@@ -14,14 +14,14 @@ export default function ChatbotFooter() {
             <FooterItem
                 icon="ask-ai"
                 title="Ask AI"
-                isActive={chatbotTab === "Ask AI"}
-                handleClick={() => dispatch(chatbotActions.chatbotTabSet("Ask AI"))}
+                isActive={chatbotTab === "askAi"}
+                handleClick={() => dispatch(chatbotActions.chatbotTabSet("askAi"))}
             />
             <FooterItem
                 icon="resources"
                 title="Resources"
-                isActive={chatbotTab === "Resources"}
-                handleClick={() => dispatch(chatbotActions.chatbotTabSet("Resources"))}
+                isActive={chatbotTab === "resources"}
+                handleClick={() => dispatch(chatbotActions.chatbotTabSet("resources"))}
             />
         </div>
     );

@@ -10,8 +10,9 @@ export default {
 } satisfies Meta;
 
 function commonInit() {
-    const { chatbot, aiAssistant } = mockStore;
+    const { chatbot, aiAssistant, cluster } = mockStore;
 
+    cluster.with_ClientVersion("7.2");
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
     chatbot.with_isAlwaysAllowEndpointCalls(false);

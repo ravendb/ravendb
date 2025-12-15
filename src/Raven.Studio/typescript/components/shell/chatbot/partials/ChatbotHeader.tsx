@@ -19,7 +19,7 @@ export default function ChatbotHeader() {
                 <HeaderTitle />
             </h4>
             <div className="hstack">
-                {chatbotTab === "Ask AI" && <AskAiActions />}
+                {chatbotTab === "askAi" && <AskAiActions />}
                 <Button
                     variant="link"
                     size="sm"
@@ -91,10 +91,10 @@ function HeaderTitle() {
     const resourcesTab = useAppSelector(chatbotSelectors.chatbotResourcesTab);
 
     const handleResourcesGoBack = () => {
-        dispatch(chatbotActions.chatbotResourcesTabSet("Help and resources"));
+        dispatch(chatbotActions.chatbotResourcesTabSet("helpAndResources"));
     };
 
-    if (chatbotTab === "Ask AI") {
+    if (chatbotTab === "askAi") {
         return (
             <div className="d-flex align-items-center gap-2">
                 <div>
@@ -106,8 +106,8 @@ function HeaderTitle() {
         );
     }
 
-    if (chatbotTab === "Resources") {
-        if (resourcesTab === "Help and resources") {
+    if (chatbotTab === "resources") {
+        if (resourcesTab === "helpAndResources") {
             return (
                 <div>
                     <Icon icon="resources" />
