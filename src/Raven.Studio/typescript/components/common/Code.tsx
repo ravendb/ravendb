@@ -12,6 +12,8 @@ import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
 import useConfirm from "components/common/ConfirmDialog";
 import databasesManager from "common/shell/databasesManager";
+import { Switch } from "components/common/Checkbox";
+import useBoolean from "components/hooks/useBoolean";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -56,6 +58,7 @@ export default function Code(props: CodeProps) {
     const chatbotDatabaseContext = useAppSelector((state) =>
         chatbotSelectors.attachedContextById(state, "DatabaseName")
     );
+    const { value: isDisableAutoIndexCreation, toggle: toggleIsDisableAutoIndexCreation } = useBoolean(true);
 
     const hasDatabase = activeDatabaseName || chatbotDatabaseContext?.state === "included";
 
@@ -74,9 +77,19 @@ export default function Code(props: CodeProps) {
         query.queryText(code);
         query.recentQuery(true);
         const queryDto = query.toStorageDto();
+
+        let extraParameters = "";
+
+        if (sourceView === "chatbot") {
+            extraParameters += "&sourceView=chatbot";
+        }
+        if (isDisableAutoIndexCreation) {
+            extraParameters += `&isDisableAutoIndexCreation=true`;
+        }
+
         savedQueriesStorage.saveAndNavigate(activeDatabaseName, queryDto, {
             newWindow: false,
-            extraParameters: sourceView === "chatbot" ? "&sourceView=chatbot" : undefined,
+            extraParameters,
         });
     };
 
@@ -121,15 +134,26 @@ export default function Code(props: CodeProps) {
                     {languageTitle && <div className="fs-6">{languageTitle}</div>}
                     <div className="hstack">
                         {hasDatabase && props.language === "rql" && (
-                            <Button
-                                variant="link"
-                                className="text-emphasis fs-6"
-                                title="Run query"
-                                onClick={handleRunQuery}
-                            >
-                                <Icon icon="rocket" />
-                                Run query
-                            </Button>
+                            <>
+                                <Switch
+                                    color="primary"
+                                    selected={isDisableAutoIndexCreation}
+                                    toggleSelection={toggleIsDisableAutoIndexCreation}
+                                    className="text-emphasis fs-6 px-1"
+                                    title="Don't create a new Auto-Index"
+                                >
+                                    Skip Auto-Index
+                                </Switch>
+                                <Button
+                                    variant="link"
+                                    className="text-emphasis fs-6"
+                                    title="Run query"
+                                    onClick={handleRunQuery}
+                                >
+                                    <Icon icon="rocket" />
+                                    Run query
+                                </Button>
+                            </>
                         )}
                         <Button
                             variant="link"
