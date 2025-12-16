@@ -12,8 +12,9 @@ import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
 import useConfirm from "components/common/ConfirmDialog";
 import databasesManager from "common/shell/databasesManager";
-import { Switch } from "components/common/Checkbox";
-import useBoolean from "components/hooks/useBoolean";
+import Dropdown from "react-bootstrap/Dropdown";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -58,9 +59,7 @@ export default function Code(props: CodeProps) {
     const chatbotDatabaseContext = useAppSelector((state) =>
         chatbotSelectors.attachedContextById(state, "DatabaseName")
     );
-    const { value: isDisableAutoIndexCreation, toggle: toggleIsDisableAutoIndexCreation } = useBoolean(true);
-
-    const hasDatabase = activeDatabaseName || chatbotDatabaseContext?.state === "included";
+    const hasDatabase = !!activeDatabaseName || chatbotDatabaseContext?.state === "included";
 
     const languageTitle = languageTitles[props.language];
     const languageToHighlight = getLanguageToHighlight(props.language);
@@ -72,7 +71,7 @@ export default function Code(props: CodeProps) {
 
     const confirm = useConfirm();
 
-    const executeQuery = () => {
+    const executeQuery = (isDisableAutoIndexCreation: boolean) => {
         const query = queryCriteria.empty();
         query.queryText(code);
         query.recentQuery(true);
@@ -93,7 +92,7 @@ export default function Code(props: CodeProps) {
         });
     };
 
-    const handleRunQuery = async () => {
+    const handleRunQuery = async (isDisableAutoIndexCreation: boolean) => {
         if (
             sourceView === "chatbot" &&
             chatbotDatabaseContext?.state === "included" &&
@@ -120,10 +119,10 @@ export default function Code(props: CodeProps) {
 
             const db = databasesManager.default.getDatabaseByName(chatbotDatabaseContext.value);
             databasesManager.default.activate(db).then(() => {
-                executeQuery();
+                executeQuery(isDisableAutoIndexCreation);
             });
         } else {
-            executeQuery();
+            executeQuery(isDisableAutoIndexCreation);
         }
     };
 
@@ -133,28 +132,6 @@ export default function Code(props: CodeProps) {
                 <div className="code-actions">
                     {languageTitle && <div className="fs-6">{languageTitle}</div>}
                     <div className="hstack">
-                        {hasDatabase && props.language === "rql" && (
-                            <>
-                                <Switch
-                                    color="primary"
-                                    selected={isDisableAutoIndexCreation}
-                                    toggleSelection={toggleIsDisableAutoIndexCreation}
-                                    className="text-emphasis fs-6 px-1"
-                                    title="Don't create a new Auto-Index"
-                                >
-                                    Skip Auto-Index
-                                </Switch>
-                                <Button
-                                    variant="link"
-                                    className="text-emphasis fs-6"
-                                    title="Run query"
-                                    onClick={handleRunQuery}
-                                >
-                                    <Icon icon="rocket" />
-                                    Run query
-                                </Button>
-                            </>
-                        )}
                         <Button
                             variant="link"
                             className="text-emphasis fs-6"
@@ -164,6 +141,33 @@ export default function Code(props: CodeProps) {
                             <Icon icon="copy" />
                             Copy
                         </Button>
+                        {hasDatabase && props.language === "rql" && (
+                            <Dropdown as={ButtonGroup}>
+                                <Button
+                                    variant="link"
+                                    className="text-emphasis fs-6 border-0 border-end border-secondary"
+                                    onClick={() => handleRunQuery(false)}
+                                >
+                                    <Icon icon="rocket" />
+                                    Run query
+                                </Button>
+                                <Dropdown.Toggle
+                                    as={CustomDropdownToggle}
+                                    isCaretHidden
+                                    split
+                                    variant="link"
+                                    className="text-emphasis p-0 ps-1 fs-5"
+                                >
+                                    <Icon icon="chevron-down" margin="m-0" className="fs-5" />
+                                </Dropdown.Toggle>
+                                <Dropdown.Menu>
+                                    <Dropdown.Item onClick={() => handleRunQuery(true)} className="fs-5">
+                                        <Icon icon="query" />
+                                        Run query without creating auto-index
+                                    </Dropdown.Item>
+                                </Dropdown.Menu>
+                            </Dropdown>
+                        )}
                     </div>
                 </div>
             )}
