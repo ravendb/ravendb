@@ -193,12 +193,10 @@ export const chatbotSlice = createSlice({
             );
         },
         isNewContextOpenToggled: (state) => {
-            const newState = !state.isNewContextOpen;
-            state.isNewContextOpen = newState;
-
-            if (!newState) {
-                state.newContextTab = null;
-            }
+            state.isNewContextOpen = !state.isNewContextOpen;
+        },
+        isNewContextOpenSet: (state, action: PayloadAction<boolean>) => {
+            state.isNewContextOpen = action.payload;
         },
         newContextTabSet: (state, action: PayloadAction<ChatbotAttachedContext["type"]>) => {
             state.newContextTab = action.payload;

@@ -6,11 +6,12 @@ import ChatbotFooter from "./partials/ChatbotFooter";
 import ChatbotHeader from "./partials/ChatbotHeader";
 import { useEffect } from "react";
 import studioSettings from "common/settings/studioSettings";
-import { useAppDispatch } from "components/store";
-import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { chatbotActions, chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
 
 export default function Chatbot() {
     const dispatch = useAppDispatch();
+    const isNewContextOpen = useAppSelector(chatbotSelectors.isNewContextOpen);
 
     const resizable = useResizableWidth({
         initialWidth: 400,
@@ -39,7 +40,15 @@ export default function Chatbot() {
                 width: resizable.width,
             }}
         >
-            <ColumnResize handleMouseDown={resizable.handleMouseDown} />
+            <ColumnResize
+                handleMouseDown={(e) => {
+                    resizable.handleMouseDown(e);
+
+                    if (isNewContextOpen) {
+                        dispatch(chatbotActions.isNewContextOpenSet(false));
+                    }
+                }}
+            />
             <ChatbotHeader />
             <ChatbotBody />
             <ChatbotFooter />
