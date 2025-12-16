@@ -1,6 +1,6 @@
 import { ViewSheet } from "components/common/splitView/ViewSheet";
 import { Icon } from "components/common/Icon";
-import React, { useMemo } from "react";
+import React, { ChangeEvent, useMemo } from "react";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import {
     ColumnDef,
@@ -34,9 +34,11 @@ import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWi
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import Code from "components/common/Code";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
+import { Checkbox } from "components/common/Checkbox";
 
 interface ValidationSchemaViewSheetPanelProps {
     validators: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">[];
+    isPlayground?: boolean;
 }
 
 interface ValidationOperationProgress extends ValidateSchemaResult {
@@ -44,12 +46,13 @@ interface ValidationOperationProgress extends ValidateSchemaResult {
     error?: unknown;
 }
 
-export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaViewSheetPanelProps) {
+export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: ValidationSchemaViewSheetPanelProps) {
     // TODO: At the moment, when i close viewSheet, the entire state is deleted. I need to add the ability to persist this state if, for example, someone runs a test.
     // In Phase 2 i will rewrite monitorOperationProgress logic into redux.
     const [monitorOperationProgress, setMonitorOperationProgress] = React.useState<
         Record<string, ValidationOperationProgress>
     >({});
+    const [selectedCollections, setSelectedCollections] = React.useState<Record<string, boolean>>({});
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
     const collections = useAppSelector(collectionsTrackerSelectors.collections);
@@ -59,7 +62,9 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
     });
 
     const asyncGetOperationIds = useAsyncCallback(async (formData: ValidateSchemaFormData) => {
-        const dtos: ValidateSchemaRequestDto[] = validators.map((validator) =>
+        const activeValidators = isPlayground ? getSelectedValidators(validators, selectedCollections) : validators;
+
+        const dtos: ValidateSchemaRequestDto[] = activeValidators.map((validator) =>
             documentSchemaUtils.mapToValidateSchemaRequestDto(validator, formData)
         );
 
@@ -69,9 +74,15 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
     });
 
     const asyncTestSchema = useAsyncCallback(async (formData: ValidateSchemaFormData) => {
+        const activeValidators = isPlayground ? getSelectedValidators(validators, selectedCollections) : validators;
+
+        if (activeValidators.length === 0) {
+            return;
+        }
+
         setMonitorOperationProgress({});
 
-        const dtos: ValidateSchemaRequestDto[] = validators.map((validator) =>
+        const dtos: ValidateSchemaRequestDto[] = activeValidators.map((validator) =>
             documentSchemaUtils.mapToValidateSchemaRequestDto(validator, formData)
         );
 
@@ -157,6 +168,17 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
 
     const isTestSettingsDisabled = !formValues.isTestSettingsEnabled || isValidating;
 
+    const activeValidators = isPlayground ? getSelectedValidators(validators, selectedCollections) : validators;
+
+    const isDisabledRunTest = isPlayground && isEmpty(activeValidators);
+
+    const handleSelectCollections = (validator: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">) => {
+        setSelectedCollections((prev) => ({
+            ...prev,
+            [validator.Name]: !getIsCollectionSelected(validator.Name, prev),
+        }));
+    };
+
     return (
         <FormProvider {...form}>
             <form className="h-100" onSubmit={handleSubmit(asyncTestSchema.execute)}>
@@ -171,7 +193,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                         <h4 className="w-100 text-center">
                             {isValidating ? (
                                 <ValidationProgressSummary
-                                    validators={validators}
+                                    validators={activeValidators}
                                     monitorOperationProgress={monitorOperationProgress}
                                     collections={collections}
                                     isTestSettingsEnabled={formValues.isTestSettingsEnabled}
@@ -193,6 +215,9 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                                     collections={collections}
                                     isTestSettingsEnabled={formValues.isTestSettingsEnabled}
                                     maxDocumentsToValidate={formValues.maxDocumentsToValidate}
+                                    selected={getIsCollectionSelected(validator.Name, selectedCollections)}
+                                    toggleSelection={() => handleSelectCollections(validator)}
+                                    hideSelection={isPlayground}
                                 />
                             ))}
                         </Accordion>
@@ -252,6 +277,7 @@ export function ValidationSchemaViewSheetPanel({ validators }: ValidationSchemaV
                                 icon="start"
                                 variant="primary"
                                 type="submit"
+                                disabled={isDisabledRunTest}
                                 className="rounded-pill"
                             >
                                 Run test
@@ -509,6 +535,9 @@ interface ValidationCollectionAccordionItemProps {
     collections: { name: string; documentCount: number }[];
     isTestSettingsEnabled: boolean;
     maxDocumentsToValidate: number | null;
+    selected: boolean;
+    toggleSelection: (x: ChangeEvent<HTMLInputElement>) => void;
+    hideSelection?: boolean;
 }
 
 function ValidationCollectionAccordionItem({
@@ -517,6 +546,9 @@ function ValidationCollectionAccordionItem({
     collections,
     isTestSettingsEnabled,
     maxDocumentsToValidate,
+    selected,
+    toggleSelection,
+    hideSelection,
 }: ValidationCollectionAccordionItemProps) {
     const errorCount = monitorOperationProgress?.ErrorCount ?? 0;
     const isCompleted = monitorOperationProgress?.status === "complete";
@@ -530,6 +562,10 @@ function ValidationCollectionAccordionItem({
         ? ((monitorOperationProgress.error as any)?.Error ?? JSON.stringify(monitorOperationProgress.error, null, 2))
         : null;
 
+    const handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
+        toggleSelection(e);
+    };
+
     return (
         <Accordion.Item eventKey={validator.Name}>
             <Accordion.Header
@@ -538,7 +574,19 @@ function ValidationCollectionAccordionItem({
                     "hide-accordion-dropdown": !isCompleted || (isCompleted && errorCount === 0 && !isErrored),
                 })}
             >
-                <span>{validator.Name}</span>{" "}
+                <div className="hstack gap-2">
+                    {hideSelection && (
+                        <Checkbox
+                            color="primary"
+                            className="mb-0"
+                            selected={selected}
+                            toggleSelection={handleCheckboxChange}
+                            disabled={isLoading}
+                            onClick={(e) => e.stopPropagation()} // Prevent checkbox click from propagating to accordion header
+                        />
+                    )}
+                    <span>{validator.Name}</span>{" "}
+                </div>
                 <small className="ms-3 text-muted text-truncate flex-grow-1">
                     {isErrored && (
                         <b className="text-danger">
@@ -608,4 +656,20 @@ function ValidationCollectionAccordionItem({
             )}
         </Accordion.Item>
     );
+}
+
+function getIsCollectionSelected(name: string, selectedCollections: Record<string, boolean>): boolean {
+    const explicit = selectedCollections[name];
+    if (typeof explicit === "boolean") {
+        return explicit;
+    }
+
+    return true;
+}
+
+function getSelectedValidators(
+    validators: Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">[],
+    selectedCollections: Record<string, boolean>
+): Pick<DocumentSchemaValidatorConfig, "Name" | "Schema">[] {
+    return validators.filter((v) => getIsCollectionSelected(v.Name, selectedCollections));
 }
