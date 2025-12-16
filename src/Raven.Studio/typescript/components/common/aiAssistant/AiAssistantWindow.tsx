@@ -45,7 +45,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
         setAssistResult(createLoadingState());
 
         const result = await processStreamingResponse<RefinePromptAiAssistantResultDto>({
-            promiseFn: () => aiAssistantService.refinePrompt(data, abortController),
+            promiseFn: () => aiAssistantService.refinePrompt(data, abortController.signal),
             streamPropertyPath: "RefinedPrompt",
             onChunksCombined: (text) => {
                 setAssistResult((prev) => {
@@ -63,6 +63,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     }
                 });
             },
+            abortSignal: abortController.signal,
         });
 
         if (result.status === "Error") {

@@ -46,6 +46,7 @@ function AskAiActions() {
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
 
     const resetConversation = () => {
+        dispatch(chatbotActions.abortChat());
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
         dispatch(chatbotActions.attachedContextUnrelatedRemoved());

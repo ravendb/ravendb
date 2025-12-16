@@ -14,6 +14,8 @@ import { RootState } from "components/store";
 import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
 import moment from "moment";
 
+let chatAbortController: AbortController = null;
+
 type ChatbotTab = "askAi" | "resources";
 type ChatbotResourcesTab = "helpAndResources" | "joinTheCommunity" | "contactSupport" | "submitFeedback";
 export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
@@ -223,6 +225,8 @@ const runChat = createAsyncThunk(
     async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
         const { aiAssistant, chatbot } = getState() as RootState;
 
+        chatAbortController = new AbortController();
+
         dispatch(chatbotActions.lastRunDataSet(payload));
 
         if (aiAssistant.consentStatus.data !== "Success") {
@@ -268,12 +272,15 @@ const runChat = createAsyncThunk(
 
         const result = await processStreamingResponse<RunChatbotAiAssistantResultDto>({
             promiseFn: () =>
-                services.aiAssistantService.runChatbot({
-                    Message: payload.message,
-                    ConversationId: chatbot.conversationId,
-                    ActionsResponses: payload.actionResponses,
-                    AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),
-                }),
+                services.aiAssistantService.runChatbot(
+                    {
+                        Message: payload.message,
+                        ConversationId: chatbot.conversationId,
+                        ActionsResponses: payload.actionResponses,
+                        AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),
+                    },
+                    chatAbortController.signal
+                ),
             streamPropertyPath: "Response.Answer",
             onChunksCombined(text) {
                 dispatch(
@@ -283,7 +290,16 @@ const runChat = createAsyncThunk(
                     })
                 );
             },
+            abortSignal: chatAbortController.signal,
         });
+
+        if (result.status === "Aborted") {
+            return {
+                ...assistantMessage,
+                state: "Error",
+                errorMessage: "Request was aborted",
+            };
+        }
 
         if (result.status !== "Success") {
             return {
@@ -379,10 +395,18 @@ const retryRunChat = createAsyncThunk(chatbotSlice.name + "/retryRunChat", async
     return await dispatch(runChat(lastRunData));
 });
 
+const abortChat = createAsyncThunk(chatbotSlice.name + "/abortChat", async () => {
+    if (chatAbortController) {
+        chatAbortController.abort();
+        chatAbortController = null;
+    }
+});
+
 export const chatbotActions = {
     ...chatbotSlice.actions,
     runChat,
     retryRunChat,
+    abortChat,
     exportConversation,
 };
 

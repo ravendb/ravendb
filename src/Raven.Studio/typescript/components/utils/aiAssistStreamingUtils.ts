@@ -5,6 +5,7 @@ interface ProcessStreamingResponseOptions<T extends object> {
     streamPropertyPath: Path<T>;
     onChunk?: (text: string) => void;
     onChunksCombined?: (text: string) => void;
+    abortSignal?: AbortSignal;
 }
 
 type ProcessStreamingResult<T extends object> =
@@ -16,6 +17,7 @@ export async function processStreamingResponse<T extends object>({
     onChunk,
     onChunksCombined,
     streamPropertyPath,
+    abortSignal,
 }: ProcessStreamingResponseOptions<T>): Promise<ProcessStreamingResult<T>> {
     try {
         const response = await promiseFn();
@@ -52,6 +54,11 @@ export async function processStreamingResponse<T extends object>({
         let streamText = "";
 
         while (true) {
+            if (abortSignal?.aborted) {
+                await reader.cancel();
+                return { status: "Aborted", error: "Request was aborted" };
+            }
+
             const { done, value } = await reader.read();
             if (done) {
                 break;
@@ -88,6 +95,9 @@ export async function processStreamingResponse<T extends object>({
 
         return { status: "Error", error: "Failed to get the final response" };
     } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+            return { status: "Aborted", error: "Request was aborted" };
+        }
         return { status: "Error", error: error instanceof Error ? error.message : "Unknown error" };
     }
 }
