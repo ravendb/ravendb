@@ -7,8 +7,8 @@ INSTALLING THIS SOFTWARE. BY INSTALLING, COPYING, OR
 OTHERWISE USING THE SOFTWARE, YOU AGREE TO BE BOUND BY
 THE TERMS OF THIS EULA.
 
-The RavenDB software, and any files that are delivered to you by Hibernating
-Rhinos Ltd (via on-line transmission or otherwise) to "patch," update, or
+The RavenDB software, and any files that are delivered to you by RavenDB Ltd 
+(via on-line transmission or otherwise) to "patch," update, or
 otherwise modify the Software, as well as any printed materials and any online
 or electronic documentation (the "Manual"), and any and all copies and
 derivative works of such software program and materials (collectively the
@@ -210,7 +210,7 @@ RavenDB Ltd reserves the right, at its sole discretion, to change,
 modify, add to, supplement or delete any of the terms and conditions of this
 EULA when RavenDB Ltd upgrades the Software, effective upon
 prior notice as follows: RavenDB Ltd will post notification of any
-such changes to this EULA on the HibernateRhinos.com website and will post
+such changes to this EULA on the RavenDB.net website and will post
 the revised version of this EULA in this location, and may provide such other
 notice as RavenDB Ltd may elect in its sole discretion, which may
 include by email, postal mail or pop-up screen. If any future changes to this
