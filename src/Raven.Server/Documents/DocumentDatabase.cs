@@ -1767,10 +1767,7 @@ namespace Raven.Server.Documents
 
         private void UpdateSchemaValidation(SchemaValidationConfiguration configuration)
         {
-            if (configuration != null
-                && configuration.Disabled == false
-                && configuration.ValidatorsPerCollection != null
-                && configuration.ValidatorsPerCollection.Any(x => x.Value.Disabled == false))
+            if (configuration != null && configuration.HasEnabledConfiguration())
             {
                 SchemaValidatorCache ??= SchemaValidatorCache.Create(DocumentsStorage.ContextPool, NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
                 SchemaValidatorCache.Update(configuration);

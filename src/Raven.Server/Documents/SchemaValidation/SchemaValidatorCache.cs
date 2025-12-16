@@ -18,20 +18,20 @@ public class SchemaValidatorCache : IDisposable
 {
     private static readonly FrozenDictionary<string, SchemaValidator> EmptyCache = Array.Empty<KeyValuePair<string, SchemaValidator>>().ToFrozenDictionary();
 
-    private readonly DatabaseNotificationCenter _notificationCenter;
+    private readonly AbstractDatabaseNotificationCenter _notificationCenter;
     private readonly RavenLogger _logger;
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
     public bool Disabled { get; private set; } = true;
 
-    public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, DatabaseNotificationCenter notificationCenter, RavenLogger logger)
+    public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, AbstractDatabaseNotificationCenter notificationCenter, RavenLogger logger)
         where T : JsonOperationContext
     {
         var returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
         return new SchemaValidatorCache(returnContext, context, notificationCenter, logger);
     }
     
-    private SchemaValidatorCache(IDisposable returnCtx, JsonOperationContext ctx, DatabaseNotificationCenter notificationCenter, RavenLogger logger)
+    private SchemaValidatorCache(IDisposable returnCtx, JsonOperationContext ctx, AbstractDatabaseNotificationCenter notificationCenter, RavenLogger logger)
     {
         _context.Return = returnCtx;
         _context.Value = ctx;

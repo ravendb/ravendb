@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.SchemaValidation;
@@ -14,6 +15,17 @@ public sealed class SchemaValidationConfiguration
     {
         get => _validatorsPerCollection;
         set => _validatorsPerCollection = new Dictionary<string, SchemaDefinition>(value, StringComparer.OrdinalIgnoreCase);
+    }
+
+    internal bool HasEnabledConfiguration()
+    {
+        if (Disabled)
+            return false;
+
+        if (ValidatorsPerCollection == null || ValidatorsPerCollection.Count == 0)
+            return false;
+
+        return ValidatorsPerCollection.Any(x => x.Value.Disabled == false);
     }
 
     public DynamicJsonValue ToJson()

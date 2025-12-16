@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
@@ -27,6 +28,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Batches
         protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(MergedBatchCommand command) => command.ParsedCommands;
 
         protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.Database.Configuration.Cluster;
+
+        protected override SchemaValidatorCache SchemaValidatorCache => RequestHandler.Database.SchemaValidatorCache;
 
         public override async Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
         {
