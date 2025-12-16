@@ -53,6 +53,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
     const licenseType = useAppSelector(licenseSelectors.statusValue("Type"));
     const aiAssistantConsentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const aiAssistantUsage = useAppSelector(aiAssistantSelectors.usage);
+    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.settings).isDisabled;
 
     // Check AI Assistant usage if not checked yet
     useEffect(() => {
@@ -103,45 +104,53 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                         <LicenseActions asyncGetConfigurationSettings={asyncGetConfigurationSettings} />
                     </Row>
                 </div>
-                <hr />
-                <h4>AI Assistant</h4>
-                <div className="vstack gap-4">
-                    <Row>
-                        <OverallInfoItem
-                            icon="ai"
-                            isFullWidth={aiAssistantUsage.status !== "failure"}
-                            label={
-                                <>
-                                    Tokens usage
-                                    <PopoverWithHoverWrapper message="Each month, your token balance resets. The number of tokens available depends on your license and powers the AI Assistant.">
-                                        <Icon icon="info-new" margin="ms-1" />
-                                    </PopoverWithHoverWrapper>
-                                </>
-                            }
-                        >
-                            <TokensUsageItem usage={aiAssistantUsage} />
-                        </OverallInfoItem>
-                        {aiAssistantUsage.status === "failure" && <AiAssistantRetryCheckUsageButton />}
-                    </Row>
-                    <Row>
-                        <OverallInfoItem
-                            icon="document"
-                            label={
-                                <>
-                                    Consent
-                                    <PopoverWithHoverWrapper message="To use our built-in AI features, such as AI Assistant, you need to provide consent. If you do not accept, the feature will remain unavailable until you do.">
-                                        <Icon icon="info-new" margin="ms-1" />
-                                    </PopoverWithHoverWrapper>
-                                </>
-                            }
-                        >
-                            <ConsentStatusItem consentStatus={aiAssistantConsentStatus} />
-                        </OverallInfoItem>
-                        {aiAssistantConsentStatus.data === "Success" && <AiAssistantReviewConsentButton />}
-                        {aiAssistantConsentStatus.data === "ConsentRequired" && <AiAssistantGiveConsentButton />}
-                        {aiAssistantConsentStatus.status === "failure" && <AiAssistantRetryCheckConsentButton />}
-                    </Row>
-                </div>
+                {!isAiAssistantDisabled && (
+                    <>
+                        <hr />
+                        <h4>AI Assistant</h4>
+                        <div className="vstack gap-4">
+                            <Row>
+                                <OverallInfoItem
+                                    icon="ai"
+                                    isFullWidth={aiAssistantUsage.status !== "failure"}
+                                    label={
+                                        <>
+                                            Tokens usage
+                                            <PopoverWithHoverWrapper message="Each month, your token balance resets. The number of tokens available depends on your license and powers the AI Assistant.">
+                                                <Icon icon="info-new" margin="ms-1" />
+                                            </PopoverWithHoverWrapper>
+                                        </>
+                                    }
+                                >
+                                    <TokensUsageItem usage={aiAssistantUsage} />
+                                </OverallInfoItem>
+                                {aiAssistantUsage.status === "failure" && <AiAssistantRetryCheckUsageButton />}
+                            </Row>
+                            <Row>
+                                <OverallInfoItem
+                                    icon="document"
+                                    label={
+                                        <>
+                                            Consent
+                                            <PopoverWithHoverWrapper message="To use our built-in AI features, such as AI Assistant, you need to provide consent. If you do not accept, the feature will remain unavailable until you do.">
+                                                <Icon icon="info-new" margin="ms-1" />
+                                            </PopoverWithHoverWrapper>
+                                        </>
+                                    }
+                                >
+                                    <ConsentStatusItem consentStatus={aiAssistantConsentStatus} />
+                                </OverallInfoItem>
+                                {aiAssistantConsentStatus.data === "Success" && <AiAssistantReviewConsentButton />}
+                                {aiAssistantConsentStatus.data === "ConsentRequired" && (
+                                    <AiAssistantGiveConsentButton />
+                                )}
+                                {aiAssistantConsentStatus.status === "failure" && (
+                                    <AiAssistantRetryCheckConsentButton />
+                                )}
+                            </Row>
+                        </div>
+                    </>
+                )}
             </Card.Body>
         </Card>
     );

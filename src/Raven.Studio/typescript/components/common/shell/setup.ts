@@ -165,6 +165,10 @@ function initRedux() {
                 isDataSubmissionDisabled: settings.DisableDataSubmission,
             })
         );
+
+        if (settings.DisableDataSubmission) {
+            globalDispatch(chatbotActions.chatbotTabSet("resources"));
+        }
     });
 }
 

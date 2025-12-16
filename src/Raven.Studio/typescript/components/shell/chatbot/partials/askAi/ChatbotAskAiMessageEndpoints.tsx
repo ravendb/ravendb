@@ -14,6 +14,7 @@ import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
 import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstans";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
+import { aiAssistantConstants } from "components/common/aiAssistant/aiAssistantConstants";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -63,8 +64,7 @@ export default function ChatbotAskAiMessageEndpoints({
                     return {
                         ...baseResult,
                         status: "error",
-                        resultText:
-                            "Data submission is disabled (Ai.Assistant.DisableDataSubmission). It can be edited from the settings.json file.",
+                        resultText: aiAssistantConstants.disabledInSettings,
                     };
                 }
 
