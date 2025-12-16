@@ -13,6 +13,7 @@ import { useAsyncCallback } from "react-async-hook";
 import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
 import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstans";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -36,6 +37,7 @@ export default function ChatbotAskAiMessageEndpoints({
 
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
+    const isDataSubmissionDisabled = useAppSelector(aiAssistantSelectors.settings).isDataSubmissionDisabled;
 
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
@@ -55,6 +57,15 @@ export default function ChatbotAskAiMessageEndpoints({
 
                 if (!isOnWhitelist(url)) {
                     return { ...baseResult, status: "error", resultText: "Endpoint is not whitelisted" };
+                }
+
+                if (isDataSubmissionDisabled && isDatabaseDocsEndpoint(url)) {
+                    return {
+                        ...baseResult,
+                        status: "error",
+                        resultText:
+                            "Data submission is disabled (Ai.Assistant.DisableDataSubmission). It can be edited from the settings.json file.",
+                    };
                 }
 
                 const response = await tryCatch(() => fetch(url));
@@ -288,7 +299,7 @@ interface EndpointItemProps {
 
 function EndpointItem({ endpoint }: EndpointItemProps) {
     const urlObject = new URL(endpoint.url, window.location.origin);
-    const isDatabasesDocs = /^\/databases\/[\w.-]+\/docs/.test(urlObject.pathname);
+    const isDatabasesDocs = isDatabaseDocsEndpoint(endpoint.url);
 
     return (
         <div>
@@ -324,4 +335,9 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
             )}
         </div>
     );
+}
+
+function isDatabaseDocsEndpoint(url: string): boolean {
+    const urlObject = new URL(url, window.location.origin);
+    return /^\/databases\/[\w.-]+\/docs/.test(urlObject.pathname);
 }
