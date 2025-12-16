@@ -129,6 +129,12 @@ class includedRevisions {
     items: Array<includedRevisionItem> = [];
 }
 
+interface AdditionalParameters {
+    database: string;
+    openGraph: boolean;
+    sourceView?: "chatbot" | "regular";
+}
+
 class query extends shardViewModelBase {
 
     static readonly clientQueryId = "studio_" + new Date().getTime();
@@ -151,7 +157,7 @@ class query extends shardViewModelBase {
 
     static readonly maxSpatialResultsToFetch = 5000;
     
-    autoOpenGraph = false;
+    additionalParameters?: AdditionalParameters;
 
     saveQueryFocus = ko.observable<boolean>(false);
 
@@ -578,12 +584,10 @@ class query extends shardViewModelBase {
             }); 
     }
 
-    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: { database: string; openGraph: boolean; sourceView?: "chatbot" }) {
+    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: AdditionalParameters) {
         super.activate(indexNameOrRecentQueryHash, additionalParameters);
-        
-        if (additionalParameters && additionalParameters.openGraph) {
-            this.autoOpenGraph = true;
-        }
+
+        this.additionalParameters = additionalParameters;
         
         this.updateHelpLink('KCIMJK');
 
@@ -1186,15 +1190,15 @@ class query extends shardViewModelBase {
                         this.saveRecentQueryToStorage(criteriaDto, optionalSavedQueryName);
                         
                         this.setupDisableReasons(); 
-                        
-                        if (this.autoOpenGraph) {
+
+                        if (this.additionalParameters?.openGraph) {
                             const firstItem = this.gridController().findItem(() => true);
                             if (firstItem) {
                                 this.gridController().setSelectedItems([firstItem]);
                                 this.plotTimeSeries();
                             }
                             
-                            this.autoOpenGraph = false;
+                            this.additionalParameters.openGraph = false;
                         }
 
                         // Attach query first page result to chatbot context
@@ -1207,12 +1211,14 @@ class query extends shardViewModelBase {
                                 state: "excluded",
                             };
                             
-                            if (store.default.getState().chatbot.isRunQueryFromChatbot) {
+                            if (this.additionalParameters?.sourceView === "chatbot") {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
                                     id: `QueryResult-from-chatbot-${_.uniqueId()}}`,
                                 }));
-                                storeCompat.globalDispatch(chatbotSlice.chatbotActions.isRunQueryFromChatbotSet(false));
+
+                                // Reset source view to avoid duplications on next queries
+                                this.additionalParameters.sourceView = "regular";
                             } else {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,

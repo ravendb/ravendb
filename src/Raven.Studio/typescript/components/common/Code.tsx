@@ -5,11 +5,11 @@ import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
 import Button from "react-bootstrap/Button";
-import { useAppDispatch, useAppSelector } from "components/store";
+import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import queryCriteria from "models/database/query/queryCriteria";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
-import { chatbotActions, chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
+import { chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
 import useConfirm from "components/common/ConfirmDialog";
 import databasesManager from "common/shell/databasesManager";
 
@@ -50,7 +50,6 @@ interface CodeProps {
 }
 
 export default function Code(props: CodeProps) {
-    const dispatch = useAppDispatch();
     const { code, className, codeClassName, whiteSpace, isActionsHidden, sourceView } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -77,49 +76,42 @@ export default function Code(props: CodeProps) {
         const queryDto = query.toStorageDto();
         savedQueriesStorage.saveAndNavigate(activeDatabaseName, queryDto, {
             newWindow: false,
+            extraParameters: sourceView === "chatbot" ? "&sourceView=chatbot" : undefined,
         });
     };
 
     const handleRunQuery = async () => {
-        if (sourceView !== "chatbot") {
-            executeQuery();
-            return;
-        }
-
         if (
-            !chatbotDatabaseContext ||
-            chatbotDatabaseContext.state === "excluded" ||
-            chatbotDatabaseContext.value === activeDatabaseName
+            sourceView === "chatbot" &&
+            chatbotDatabaseContext?.state === "included" &&
+            chatbotDatabaseContext.value !== activeDatabaseName
         ) {
-            dispatch(chatbotActions.isRunQueryFromChatbotSet(true));
+            const isConfirmed = await confirm({
+                title: "Change active database",
+                message: (
+                    <div>
+                        This query is intended for the <strong>{chatbotDatabaseContext.value}</strong> database.
+                        <br />
+                        <br />
+                        Clicking &quot;Change and run&quot; will switch the active database to{" "}
+                        <strong>{chatbotDatabaseContext.value}</strong> and execute the query.
+                    </div>
+                ),
+                confirmText: "Change and run",
+                confirmIcon: "rocket",
+            });
+
+            if (!isConfirmed) {
+                return;
+            }
+
+            const db = databasesManager.default.getDatabaseByName(chatbotDatabaseContext.value);
+            databasesManager.default.activate(db).then(() => {
+                executeQuery();
+            });
+        } else {
             executeQuery();
-            return;
         }
-
-        const isConfirmed = await confirm({
-            title: "Change active database",
-            message: (
-                <div>
-                    This query is intended for the <strong>{chatbotDatabaseContext.value}</strong> database.
-                    <br />
-                    <br />
-                    Clicking &quot;Change and run&quot; will switch the active database to{" "}
-                    <strong>{chatbotDatabaseContext.value}</strong> and execute the query.
-                </div>
-            ),
-            confirmText: "Change and run",
-            confirmIcon: "rocket",
-        });
-
-        if (!isConfirmed) {
-            return;
-        }
-
-        const db = databasesManager.default.getDatabaseByName(chatbotDatabaseContext.value);
-        databasesManager.default.activate(db).then(() => {
-            dispatch(chatbotActions.isRunQueryFromChatbotSet(true));
-            executeQuery();
-        });
     };
 
     return (
