@@ -5,6 +5,8 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import collectionsStats = require("models/database/documents/collectionsStats");
 import generalUtils = require("common/generalUtils");
 import getRevisionsPreviewCommand = require("commands/database/documents/getRevisionsPreviewCommand");
+import storeCompat = require("components/storeCompat");
+import collectionsTrackerSlice = require("components/common/shell/collectionsTrackerSlice");
 
 class collectionsTracker {
 
@@ -60,6 +62,7 @@ class collectionsTracker {
         this.collections([allDocsCollection].concat(collections));
 
         this.conflictsCount(collectionsStats.numberOfConflicts);
+        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded(this.collections().map((x) => x.toCollectionState())));
     }
 
     getCollectionCount(collectionName: string) {
@@ -109,6 +112,7 @@ class collectionsTracker {
         });
         
         this.conflictsCount(notification.CountOfConflicts);
+        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded(this.collections().map((x) => x.toCollectionState())));
     }
 
     getCollectionNames() {
