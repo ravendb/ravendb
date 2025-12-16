@@ -34,6 +34,22 @@ import DocumentSchemaPlaygroundAboutView from "components/pages/database/setting
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 
 export default function DocumentSchemaPlayground() {
+    return (
+        <div className="content-margin">
+            <Row className="gy-sm">
+                <Col>
+                    <DocumentSchemaPlaygroundBody />
+                </Col>
+                <Col sm={12} lg={4}>
+                    {/*TODO: remove if about view is finished*/}
+                    {false && <DocumentSchemaPlaygroundAboutView />}
+                </Col>
+            </Row>
+        </div>
+    );
+}
+
+function DocumentSchemaPlaygroundBody() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
     const { open } = useViewSheet();
@@ -64,64 +80,50 @@ export default function DocumentSchemaPlayground() {
             component: <ValidationSchemaViewSheetPanel validators={validators} />,
         });
     };
+
     return (
-        <div className="content-margin">
-            <Row className="gy-sm">
-                <Col>
-                    <form onSubmit={handleSubmit(handleOpenSheet)}>
-                        <AboutViewHeading marginBottom={4} title="Document Schema Playground" icon="rocket" />
-                        <span>
-                            Quickly create and test schemas against your documents without affecting your saved data.
-                            The Schema Playground is a temporary workspace designed for safe experimentation.
-                        </span>
+        <form onSubmit={handleSubmit(handleOpenSheet)}>
+            <AboutViewHeading marginBottom={4} title="Document Schema Playground" icon="rocket" />
+            <span>
+                Quickly create and test schemas against your documents without affecting your saved data. The Schema
+                Playground is a temporary workspace designed for safe experimentation.
+            </span>
 
-                        <div className="mt-5 d-flex align-items-center justify-content-between">
-                            <a href={appUrl.forDocumentSchema(databaseName)} className="btn btn-secondary">
-                                <Icon icon="close" />
-                                Cancel
-                            </a>
-                            <Button type="submit" className="rounded-pill">
-                                <Icon icon="rocket" />
-                                Run test
-                            </Button>
-                        </div>
+            <div className="mt-5 d-flex align-items-center justify-content-between">
+                <a href={appUrl.forDocumentSchema(databaseName)} className="btn btn-secondary">
+                    <Icon icon="close" />
+                    Cancel
+                </a>
+                <Button type="submit" className="rounded-pill">
+                    <Icon icon="rocket" />
+                    Run test
+                </Button>
+            </div>
 
-                        <div className="mt-4">
-                            <HrHeader
-                                count={3}
-                                right={
-                                    <Button
-                                        onClick={handleAppendTestField}
-                                        size="xs"
-                                        variant="info"
-                                        className="rounded-pill"
-                                    >
-                                        <Icon icon="plus" />
-                                        Add new
-                                    </Button>
-                                }
-                            >
-                                <Icon icon="documents" />
-                                <span>Collection specific document schemas</span>
-                                <PopoverWithHoverWrapper message="info">
-                                    <Icon icon="info" color="info" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </HrHeader>
+            <div className="mt-4">
+                <HrHeader
+                    count={3}
+                    right={
+                        <Button onClick={handleAppendTestField} size="xs" variant="info" className="rounded-pill">
+                            <Icon icon="plus" />
+                            Add new
+                        </Button>
+                    }
+                >
+                    <Icon icon="documents" />
+                    <span>Collection specific document schemas</span>
+                    <PopoverWithHoverWrapper message="info">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </HrHeader>
 
-                            <FormProvider {...form}>
-                                {fields.map((field, index) => (
-                                    <TestDocumentSchema remove={remove} key={field.id} {...field} index={index} />
-                                ))}
-                            </FormProvider>
-                        </div>
-                    </form>
-                </Col>
-                <Col sm={12} lg={4}>
-                    {/*TODO: remove if about view is finished*/}
-                    {false && <DocumentSchemaPlaygroundAboutView />}
-                </Col>
-            </Row>
-        </div>
+                <FormProvider {...form}>
+                    {fields.map((field, index) => (
+                        <TestDocumentSchema remove={remove} key={field.id} {...field} index={index} />
+                    ))}
+                </FormProvider>
+            </div>
+        </form>
     );
 }
 
