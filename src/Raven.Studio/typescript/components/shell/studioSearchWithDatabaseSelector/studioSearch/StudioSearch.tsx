@@ -18,7 +18,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
     const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem, handleAskAi } =
         useStudioSearch(props.menuItems);
 
-    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.settings).isDisabled;
+    const aiAssistantSettings = useAppSelector(aiAssistantSelectors.settings);
     const operatingSystem = useOS();
 
     return (
@@ -42,7 +42,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                 </Dropdown.Toggle>
                 <Dropdown.Menu className="studio-search__results">
                     <Row className="m-0">
-                        {!isAiAssistantDisabled && searchQuery && (
+                        {!aiAssistantSettings.isDisabled && searchQuery && (
                             <>
                                 <Dropdown.Header className="studio-search__database-col__header--sticky">
                                     <span className="small-label">Knowledge center</span>

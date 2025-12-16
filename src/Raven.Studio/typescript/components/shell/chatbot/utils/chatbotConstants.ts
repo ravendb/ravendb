@@ -141,7 +141,7 @@ const endpointsWhitelist = [
     "/databases/{database}/timeseries",
     "/databases/{database}/counters",
     "/databases/{database}/task",
-    "/databases/{database}/task",
+    "/databases/{database}/docs",
 ] as const;
 
 const endpointsWhitelistRegex = endpointsWhitelist.map((endpoint) => {
