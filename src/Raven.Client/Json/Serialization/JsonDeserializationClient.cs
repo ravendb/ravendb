@@ -310,7 +310,7 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseSettings> DatabaseSettings = GenerateJsonDeserializationRoutine<DatabaseSettings>();
 
-        internal static readonly Func<BlittableJsonReaderObject, GetSchemaValidationConfigurationResult> GetSchemaValidationConfiguration = GenerateJsonDeserializationRoutine<GetSchemaValidationConfigurationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, SchemaValidationConfiguration> SchemaValidationConfiguration = GenerateJsonDeserializationRoutine<SchemaValidationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> GetTrafficWatchConfigurationResult = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
 
