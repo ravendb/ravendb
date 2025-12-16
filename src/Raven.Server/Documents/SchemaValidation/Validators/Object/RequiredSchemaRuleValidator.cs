@@ -17,14 +17,14 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
         _requiredProperties = [required];
     }
     
-    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
         var isValid = true;
         foreach (var required in _requiredProperties)
         {
             if(value.Contains(required))
                 continue;
-            errorBuilder?.AddError($"The required property '{required}' is missing at '{errorBuilder.Path}'.");
+            context.ErrorBuilder?.AddError($"The required property '{required}' is missing at '{context.ErrorBuilder.Path}'.");
             isValid = false;
         }
         return isValid;
@@ -35,7 +35,7 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
 // ReSharper disable once UnusedType.Global
 public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<RequiredSchemaRuleValidator>
 {
-    public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override RequiredSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         if (SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath + Rule, out var blittableRequired) == false)
             return null;

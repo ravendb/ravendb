@@ -17,13 +17,16 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
         _maxContains = maxContains;
     }
 
-    public override bool Validate(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, BlittableJsonReaderArray value)
     {
         var count = 0;
         for (var i = 0; i < value.Length; i++)
         {
-            if (_containsValidator.Validate(value[i], null) == false) 
-                continue;
+            using (context.WithoutCollectingErrors())
+            {
+                if (_containsValidator.Validate(context, value[i]) == false) 
+                    continue;
+            }
             
             if (++count >= _minContains && _maxContains > (value.Length - i + count))
                 return true;
@@ -32,14 +35,14 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
         var isValid = true;
         if (count > _maxContains)
         {
-            errorBuilder?.AddError(
-                $"The array at '{errorBuilder.Path}' must not contain more than {_maxContains} items matching the required schema, but {count} matching items were found. schema : {_containsValidator.SchemaDefinition}");
+            context.ErrorBuilder?.AddError(
+                $"The array at '{context.ErrorBuilder.Path}' must not contain more than {_maxContains} items matching the required schema, but {count} matching items were found. schema : {_containsValidator.SchemaDefinition}");
             isValid = false;
         }
         if (count < _minContains)
         {
-            errorBuilder?.AddError(
-                $"The array at '{errorBuilder.Path}' must contain at least {_minContains} items matching the required schema, but {(count==0?"no items where": $"only {count} matching item{(count>1?"s":"")} were")} found. Schema : {_containsValidator.SchemaDefinition}");
+            context.ErrorBuilder?.AddError(
+                $"The array at '{context.ErrorBuilder.Path}' must contain at least {_minContains} items matching the required schema, but {(count==0?"no items where": $"only {count} matching item{(count>1?"s":"")} were")} found. Schema : {_containsValidator.SchemaDefinition}");
             isValid = false;
         }
 
@@ -51,7 +54,7 @@ public class ContainsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArra
 // ReSharper disable once UnusedType.Global
 public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFactory<ContainsRuleValidator>
 {
-    public override ContainsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override ContainsRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var containsSchema) == false)
@@ -63,7 +66,7 @@ public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFact
         if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.MaxContains, schemaPath, out var maxContains) == false)
             maxContains = long.MaxValue;
         
-        var containsValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(containsSchema, schemaPath + Rule, refSchemas);
+        var containsValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, containsSchema, schemaPath + Rule);
         return new ContainsRuleValidator(containsValidator, minContains, maxContains);
     }
 }

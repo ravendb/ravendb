@@ -13,12 +13,12 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
         _maxLength = maxLength;
     }
 
-    public override bool Validate(LazyStringValue value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, LazyStringValue value)
     {
         if (value.Length <= _maxLength) 
             return true;
         
-        errorBuilder?.AddError($"The length of the {Target} '{value}' at '{errorBuilder.Path}' should not exceed {_maxLength}, but its actual length is {value.Length}.");
+        context.ErrorBuilder?.AddError($"The length of the {Target} '{value}' at '{context.ErrorBuilder.Path}' should not exceed {_maxLength}, but its actual length is {value.Length}.");
         return false;
     }
 }
@@ -27,7 +27,7 @@ public class MaximumLengthSchemaRuleValidator : StringSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MaximumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumLengthSchemaRuleValidator>
 {
-    public override MaximumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override MaximumLengthSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath + Rule, out var maximumLength) 
             ? new MaximumLengthSchemaRuleValidator(maximumLength)

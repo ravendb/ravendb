@@ -12,14 +12,18 @@ public class AnyOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
     {
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, object value)
     {
         foreach (var validator in Validators)
         {
-            if (validator.Validate(value, null))
-                return true;
+            using (context.WithoutCollectingErrors())
+            {
+                if (validator.Validate(context, value))
+                    return true;
+            }
         }
-        errorBuilder?.AddError($"The value at '{errorBuilder.Path}' does not match any of the schema restrictions.");
+            
+        context.ErrorBuilder?.AddError($"The value at '{context.ErrorBuilder.Path}' does not match any of the schema restrictions.");
         return false;
     }
 }
@@ -28,9 +32,9 @@ public class AnyOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
 // ReSharper disable once UnusedType.Global
 public class AnyOfSchemaRuleValidatorFactory : MultiSubschemaAggregatorValidatorFactory<AnyOfSchemaRuleValidator>
 {
-    public override AnyOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override AnyOfSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        var validators = Read(schemaDefinition, schemaPath, refSchemas);
+        var validators = Read(context, schemaDefinition, schemaPath);
         return new AnyOfSchemaRuleValidator(validators);
     }
 }

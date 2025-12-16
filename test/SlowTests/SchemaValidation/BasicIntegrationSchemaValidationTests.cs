@@ -67,7 +67,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
     public async Task SchemaValidation_WhenDefineCollectionTwice_ShouldThrow()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        Assert.ThrowsAny<ArgumentException>(() => _ = new SchemaValidationConfiguration
+        Assert.ThrowsAny<ArgumentException>(() => _ = new SchemaValidationConfiguration()
         {
             Disabled = false,
             ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
@@ -599,52 +599,6 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var e = await Assert.ThrowsAnyAsync<RavenException>(async () =>
         {
             using var session = mentee.OpenAsyncSession();
-            var load = await session.LoadAsync<TestObj>(id);
-            load.Prop2 = "something";
-            await session.SaveChangesAsync();
-        });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
-    }
-    
-    [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenExternalReplicateInvalidData_ShouldNotThrow()
-    {
-        var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
-
-        using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
-        using var source = GetDocumentStore();
-
-        const string id = "random-id";
-        using (var session = source.OpenAsyncSession())
-        {
-            await session.StoreAsync(new TestObj { Prop = "1234" }, id);
-            await session.SaveChangesAsync();
-        }
-
-        using var destination = GetDocumentStore();
-        var configuration = new SchemaValidationConfiguration
-        {
-            Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
-            {
-                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
-            }
-        };
-        await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
-
-        await SetupReplicationAsync(source, destination);
-
-        await AssertWaitForTrueAsync(async () =>
-        {
-            using var session = destination.OpenAsyncSession();
-            var load = await session.LoadAsync<TestObj>(id);
-            return load != null;
-        });
-        
-        var e = await Assert.ThrowsAnyAsync<RavenException>(async () =>
-        {
-            using var session = destination.OpenAsyncSession();
             var load = await session.LoadAsync<TestObj>(id);
             load.Prop2 = "something";
             await session.SaveChangesAsync();

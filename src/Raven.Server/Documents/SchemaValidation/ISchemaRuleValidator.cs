@@ -4,16 +4,16 @@ namespace Raven.Server.Documents.SchemaValidation;
 
 public interface ISchemaRuleValidator
 {
-    bool Validate(object value, ErrorBuilder errorBuilder);
+    bool Validate(SchemaValidationContext context, object value);
 }
 
 public abstract class SchemaRuleValidator<T> : ISchemaRuleValidator
 {
-    public abstract bool Validate(T value, ErrorBuilder errorBuilder);
+    public abstract bool Validate(SchemaValidationContext context, T value);
     
-    bool ISchemaRuleValidator.Validate(object value, ErrorBuilder errorBuilder)
+    bool ISchemaRuleValidator.Validate(SchemaValidationContext context, object value)
     {
-        return CheckTypeAndGetValue(value, out T tValue) == false || Validate(tValue, errorBuilder);
+        return CheckTypeAndGetValue(value, out T tValue) == false || Validate(context, tValue);
     }
 
     protected virtual bool CheckTypeAndGetValue(object value, out T tValue)

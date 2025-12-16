@@ -33,7 +33,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         }
 
         using var _ = ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition);
-        schemaValidator.Init(schemaDefinition);
+        schemaValidator.Init(schemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -75,7 +75,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         }
 
         using var _ = ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition);
-        schemaValidator.Init(schemaDefinition);
+        schemaValidator.Init(schemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {

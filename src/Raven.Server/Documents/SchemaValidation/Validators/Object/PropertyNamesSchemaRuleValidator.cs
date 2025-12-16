@@ -15,7 +15,7 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
         _propertyNameValidators = propertyNameValidators;
     }
 
-    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
         if (_propertyNameValidators == null)
             return true;
@@ -26,8 +26,8 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
             var propName = value.GetPropertyNameByIndex(i);
             foreach (var validator in _propertyNameValidators)
             {
-                isValid &= validator.Validate(propName, errorBuilder);
-                if (errorBuilder == null && isValid == false)
+                isValid &= validator.Validate(context, propName);
+                if (context.ErrorBuilder == null && isValid == false)
                     return false;
             }
         }
@@ -40,7 +40,7 @@ public class PropertyNamesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
 // ReSharper disable once UnusedType.Global
 public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<PropertyNamesSchemaRuleValidator>
 {
-    public override PropertyNamesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override PropertyNamesSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var propertyNames) == false)
@@ -50,7 +50,7 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
         for (int i = 0; i < propertyNames.Count; i++)
         {
             var propName = propertyNames.GetPropertyNameByIndex(i);
-            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(propName, propertyNames, schemaPath, refSchemas, out var ruleValidator) == false)
+            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(context, propName, propertyNames, schemaPath, out var ruleValidator) == false)
                 continue;
             var ruleSchemaPath = schemaPath + propName;
             if (ruleValidator is not StringSchemaRuleValidator stringValidator)

@@ -36,15 +36,15 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         }
     }
 
-    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
         var isValid = true;
         if (_namedPropertyValidators != null)
         {
             foreach (var (prop, validator) in _namedPropertyValidators)
             {
-                isValid &= ValidateProperty(validator, value, prop, errorBuilder);
-                if (errorBuilder == null && isValid == false)
+                isValid &= ValidateProperty(context, validator, value, prop);
+                if (context.ErrorBuilder == null && isValid == false)
                     return false;
             }
         }
@@ -75,8 +75,8 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                         hasValidator = true;
                         var prop = default(BlittableJsonReaderObject.PropertyDetails);
                         value.GetPropertyByIndex(i, ref prop);
-                        isValid &= ValidateProperty(validator, propName, prop.Value, errorBuilder);
-                        if (errorBuilder == null && isValid == false)
+                        isValid &= ValidateProperty(context, validator, propName, prop.Value);
+                        if (context.ErrorBuilder == null && isValid == false)
                             return false;
                     }
                 }
@@ -87,15 +87,15 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                 var (allowed, additionalPropertiesValidator) = _additionalPropertiesValidator;
                 if (allowed == false)
                 {
-                    errorBuilder?.AddError($"The property '{propName}' at '{errorBuilder.Path}' is not defined and additional properties are not allowed.");
+                    context.ErrorBuilder?.AddError($"The property '{propName}' at '{context.ErrorBuilder.Path}' is not defined and additional properties are not allowed.");
                     isValid = false;
                 }
                 else if (additionalPropertiesValidator != null)
                 {
                     var prop = default(BlittableJsonReaderObject.PropertyDetails);
                     value.GetPropertyByIndex(i, ref prop);
-                    isValid &= ValidateProperty(additionalPropertiesValidator, propName, prop.Value, errorBuilder);
-                    if (errorBuilder == null && isValid == false)
+                    isValid &= ValidateProperty(context, additionalPropertiesValidator, propName, prop.Value);
+                    if (context.ErrorBuilder == null && isValid == false)
                         return false;
                 }
             }
@@ -108,31 +108,30 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
         return isValid;
     }
 
-    private static bool ValidateProperty(ElementSchemaRuleValidator validator, BlittableJsonReaderObject value, LazyStringValue prop,
-        ErrorBuilder errorBuilder)
+    private static bool ValidateProperty(SchemaValidationContext context, ElementSchemaRuleValidator validator, BlittableJsonReaderObject value, LazyStringValue prop)
     {
-        return value.TryGetMember((string)prop, out object propValue) == false || ValidateProperty(validator, prop, propValue, errorBuilder);
+        return value.TryGetMember((string)prop, out object propValue) == false || ValidateProperty(context, validator, prop, propValue);
     }
 
-    private static bool ValidateProperty(ElementSchemaRuleValidator validator, LazyStringValue prop, object propValue, ErrorBuilder errorBuilder)
+    private static bool ValidateProperty(SchemaValidationContext context, ElementSchemaRuleValidator validator, LazyStringValue prop, object propValue)
     {
-        errorBuilder?.Path.StepIn(prop);
-        var isValid = validator.Validate(propValue, errorBuilder);
-        errorBuilder?.Path.StepOut();
+        context.StepIn(prop);
+        var isValid = validator.Validate(context, propValue);
+        context.StepOut();
         return isValid;
     }
 }
 
 public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ObjectSchemaRuleValidator>
 {
-    public override ObjectSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override ObjectSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        var named = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.Properties, refSchemas)?
+        var named = ReadPropertyValidators(context, schemaDefinition, schemaPath + SchemaValidatorConstants.Properties)?
             .ToDictionary(x => x.property, x => x.validator);
-        var pattern = ReadPropertyValidators(schemaDefinition, schemaPath + SchemaValidatorConstants.PatternProperties, refSchemas)?
+        var pattern = ReadPropertyValidators(context, schemaDefinition, schemaPath + SchemaValidatorConstants.PatternProperties)?
             .Select(x => (new Regex(x.property), x.validator)).ToArray();
 
-        var additional = ReadAdditionalProperties(schemaDefinition, schemaPath, refSchemas);
+        var additional = ReadAdditionalProperties(context, schemaDefinition, schemaPath);
 
         if (named == null && pattern == null && additional is { IsAllowed: true, Validator: null })
             return null;
@@ -142,8 +141,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         return new ObjectSchemaRuleValidator(named, pattern, additional, schemaPath, exclude);
     }
     
-    private static (bool IsAllowed, ElementSchemaRuleValidator Validator) ReadAdditionalProperties(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas)
+    private static (bool IsAllowed, ElementSchemaRuleValidator Validator) ReadAdditionalProperties(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         const string rule = SchemaValidatorConstants.AdditionalProperties;
         if (schemaDefinition.TryGet(rule, out object additionalProperties) == false)
@@ -158,7 +156,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 return (isAdditionalPropertiesAllowed, null);
             case BlittableJsonReaderObject additionalPropertiesSchema:
             {
-                var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(additionalPropertiesSchema, schemaPath, refSchemas);
+                var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, additionalPropertiesSchema, schemaPath);
                 return (true, validator);
             }
             default:
@@ -191,8 +189,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
         return excluded;
     }
 
-    private static List<(LazyStringValue property, ElementSchemaRuleValidator validator)> ReadPropertyValidators(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas)
+    private static List<(LazyStringValue property, ElementSchemaRuleValidator validator)> ReadPropertyValidators(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         if(SchemaValidationHelper.TryGetObject(schemaDefinition, schemaPath.Property, schemaPath, out var propertySchema) == false)
             return null;
@@ -206,7 +203,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
 
             var propertySchemaDefinition = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Value, schemaPath);
 
-            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(propertySchemaDefinition, propertySchemaPath, refSchemas);
+            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, propertySchemaDefinition, propertySchemaPath);
             if(validator != null)
                 (validators ??= []).Add((prop.Name, validator));
         }

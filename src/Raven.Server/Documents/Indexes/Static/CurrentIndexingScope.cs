@@ -11,6 +11,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -305,9 +306,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 return schemaValidatorCache.Validate(collection, doc, errorBuilder);
             }
+
+            if (validators.TryGet(collection, out var validator) == false)
+                return true;
             
-            return validators.TryGet(collection, out var validator) == false
-                   || validator.Validate(doc, errorBuilder);
+            return validator.Validate(doc, errorBuilder);
         }
 
         private Slice GetIdSlice(LazyStringValue id)

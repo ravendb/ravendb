@@ -27,7 +27,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -62,7 +62,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -106,7 +106,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {

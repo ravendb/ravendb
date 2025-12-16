@@ -13,14 +13,14 @@ public class ErrorBuilder : IDisposable
     private static readonly string NewErrorDelimiter = Environment.NewLine;
     
     private readonly AbstractBuffer<int> _errorOffsets;
-    public readonly IErrorBuffer ErrorBuffer;
+    private readonly IErrorBuffer _errorBuffer;
         
     public ValidationPath Path { get; }
 
     public ErrorBuilder()
     {
         var innerBuffer = new RentedBuffer<char>();
-        ErrorBuffer = new ErrorBuffer(innerBuffer);
+        _errorBuffer = new ErrorBuffer(innerBuffer);
         _errorOffsets = new RentedBuffer<int>();
         Path = new ValidationPath();
     }
@@ -28,7 +28,7 @@ public class ErrorBuilder : IDisposable
     public ErrorBuilder(ByteStringContext allocator)
     {
         var innerBuffer = new ByteStringContextBuffer<char>(allocator);
-        ErrorBuffer = new ErrorBuffer(innerBuffer);
+        _errorBuffer = new ErrorBuffer(innerBuffer);
         _errorOffsets = new ByteStringContextBuffer<int>(allocator);
         Path = new ValidationPath(allocator);
     }
@@ -36,16 +36,16 @@ public class ErrorBuilder : IDisposable
     public ErrorBuilder(JsonOperationContext context)
     {
         var innerBuffer = new JsonOperationContextBuffer<char>(context);
-        ErrorBuffer = new ErrorBuffer(innerBuffer);
+        _errorBuffer = new ErrorBuffer(innerBuffer);
         _errorOffsets = new JsonOperationContextBuffer<int>(context);
         Path = new ValidationPath(context);
     }
 
-    public ReadOnlySpan<char> GetError() => ErrorBuffer.AsSpan();
+    public ReadOnlySpan<char> GetError() => _errorBuffer.AsSpan();
     
     public IEnumerable<string> GetErrors()
     {
-        var span = ErrorBuffer.AsSpan();
+        var span = _errorBuffer.AsSpan();
         if (span.IsEmpty)
             yield break;
 
@@ -53,55 +53,55 @@ public class ErrorBuilder : IDisposable
         for(var i = 0; i < _errorOffsets.Length; i++)
         {
             var offset = _errorOffsets[i];
-            Debug.Assert(offset < ErrorBuffer.Length);
+            Debug.Assert(offset < _errorBuffer.Length);
 
-            yield return ErrorBuffer.AsSpan().Slice(startIndex, offset - startIndex).ToString();
+            yield return _errorBuffer.AsSpan().Slice(startIndex, offset - startIndex).ToString();
             startIndex = offset + NewErrorDelimiter.Length;
         }
         
-        if(startIndex < ErrorBuffer.Length)
-            yield return ErrorBuffer.AsSpan()[startIndex..].ToString();
+        if(startIndex < _errorBuffer.Length)
+            yield return _errorBuffer.AsSpan()[startIndex..].ToString();
     }
 
     public void FinishErrorMessage()
     {
-        _errorOffsets.Append(ErrorBuffer.Length);
+        _errorOffsets.Append(_errorBuffer.Length);
         Append(NewErrorDelimiter);
     }
 
     public ErrorBuilder Append(string value)
     {
-        ErrorBuffer.Append(value);
+        _errorBuffer.Append(value);
         return this;
     }
     public ErrorBuilder Append(BlittableJsonReaderObject value)
     {
-        ErrorBuffer.Append(value);
+        _errorBuffer.Append(value);
         return this;
     }
     public ErrorBuilder Append(LazyStringValue value)
     {
-        ErrorBuffer.AppendUtf8(value.AsSpan());
+        _errorBuffer.AppendUtf8(value.AsSpan());
         return this;
     }
     public ErrorBuilder Append(ValidationPath value)
     {
-        ErrorBuffer.Append(value.AsSpan());
+        _errorBuffer.Append(value.AsSpan());
         return this;
     }
     public ErrorBuilder Append(Regex value)
     {
-        ErrorBuffer.Append(value.ToString());
+        _errorBuffer.Append(value.ToString());
         return this;
     }
     public ErrorBuilder Append(bool value)
     {
-        ErrorBuffer.Append(value.ToString());
+        _errorBuffer.Append(value.ToString());
         return this;
     }
     public ErrorBuilder Append(ISpanFormattable value)
     {
-        ErrorBuffer.Append(value);
+        _errorBuffer.Append(value);
         return this;
     }
     public ErrorBuilder Append(IEnumerable<string> value, string format)
@@ -110,9 +110,9 @@ public class ErrorBuilder : IDisposable
         foreach (var v in value)
         {
             if (first == false)
-                ErrorBuffer.Append(format);
+                _errorBuffer.Append(format);
             first = false;
-            ErrorBuffer.Append(v);
+            _errorBuffer.Append(v);
         }
         return this;
     } 
@@ -122,7 +122,7 @@ public class ErrorBuilder : IDisposable
         foreach (var v in value)
         {
             if (first == false)
-                ErrorBuffer.Append(format);
+                _errorBuffer.Append(format);
             first = false;
             switch (v)
             {
@@ -163,10 +163,10 @@ public class ErrorBuilder : IDisposable
                 break;
             case string:
             case null:
-                ErrorBuffer.Append((string)value);
+                _errorBuffer.Append((string)value);
                 break;
             default:
-                ErrorBuffer.Append(value);
+                _errorBuffer.Append(value);
                 break;
         }
 
@@ -175,14 +175,14 @@ public class ErrorBuilder : IDisposable
 
     public void Reset()
     {
-        ErrorBuffer.Reset();
+        _errorBuffer.Reset();
         _errorOffsets.Reset();
         Path.Reset();
     }
 
     public LazyStringValue ToLazyStringValue(JsonOperationContext context) => context.GetLazyString(GetError(), null, false);
     
-    public override string ToString() => ErrorBuffer?.ToString();
+    public override string ToString() => _errorBuffer?.ToString();
     
     [InterpolatedStringHandler]
     public readonly ref struct ErrorInterpolatedStringHandler
@@ -209,7 +209,7 @@ public class ErrorBuilder : IDisposable
 
     public void Dispose()
     {
-        ErrorBuffer?.Dispose();
+        _errorBuffer?.Dispose();
         _errorOffsets.Dispose();
         Path.Dispose();
     }

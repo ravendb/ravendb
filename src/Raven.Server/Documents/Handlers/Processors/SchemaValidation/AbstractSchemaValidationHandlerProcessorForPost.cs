@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.SchemaValidation;
 
@@ -17,6 +18,10 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForPost<TRequest
     protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
     {
         RequestHandler.ServerStore.LicenseManager.AssertCanAddSchemaValidation();
+        
+        if(RavenLogManager.Instance.IsAuditEnabled)
+            RequestHandler.LogAuditForDatabase("PUT", "Update schema validation configuration.");
+        
         base.OnBeforeUpdateConfiguration(ref configuration, context);
     }
 

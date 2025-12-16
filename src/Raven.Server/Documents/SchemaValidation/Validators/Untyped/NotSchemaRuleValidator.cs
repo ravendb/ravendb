@@ -14,12 +14,15 @@ public class NotSchemaRuleValidator : SchemaRuleValidator<object>
         _not = not;
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, object value)
     {
-        if (_not.Validate(value, null) == false)
-            return true;
+        using (context.WithoutCollectingErrors())
+        {
+            if (_not.Validate(context, value) == false)
+                return true;
+        }
         
-        errorBuilder?.AddError($"The value at '{errorBuilder.Path}' is invalid because it matches a `not` schema.");
+        context.ErrorBuilder?.AddError($"The value at '{context.ErrorBuilder.Path}' is invalid because it matches a `not` schema.");
         return false;
     }
 }
@@ -28,13 +31,13 @@ public class NotSchemaRuleValidator : SchemaRuleValidator<object>
 // ReSharper disable once UnusedType.Global
 public class NotSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<NotSchemaRuleValidator>
 {
-    public override NotSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override NotSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var not) == false)
             return null;
         
-        var notSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(not, schemaPath, refSchemas);
+        var notSchemaValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, not, schemaPath);
 
         return new NotSchemaRuleValidator(notSchemaValidator);
     }

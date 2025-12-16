@@ -12,13 +12,13 @@ public class AllOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
     {
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, object value)
     {
         var validate = true;
         foreach (var validator in Validators)
         {
-            validate &= validator.Validate(value, errorBuilder);
-            if(errorBuilder == null && validate == false)
+            validate &= validator.Validate(context, value);
+            if(context.ErrorBuilder == null && validate == false)
                return false;
         }
         return validate;
@@ -29,9 +29,9 @@ public class AllOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
 // ReSharper disable once UnusedType.Global
 public class AllOfSchemaRuleValidatorFactory : MultiSubschemaAggregatorValidatorFactory<AllOfSchemaRuleValidator>
 {
-    public override AllOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override AllOfSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        var validators = Read(schemaDefinition, schemaPath, refSchemas);
+        var validators = Read(context, schemaDefinition, schemaPath);
         return new AllOfSchemaRuleValidator(validators);
     }
 }

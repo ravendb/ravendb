@@ -27,11 +27,35 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
             OperationType.ValidateSchema,
             $"Schema validation for collection '{Parameters.Collection}' '{RequestHandler.Database.Name}'",
             detailedDescription: null,
-            StartValidation,
+            onProgress => StartValidation(operationId, onProgress),
             token: token).ContinueWith(_ => token.Dispose());
     }
 
-    private Task<IOperationResult> StartValidation(Action<IOperationProgress> onProgress)
+    private async Task<IOperationResult> StartValidation(long operationId, Action<IOperationProgress> onProgress)
+    {
+        try
+        {
+            if(Logger.IsDebugEnabled)
+                Logger.Debug($"Starting schema validation for collection '{Parameters.Collection}' in database '{RequestHandler.Database.Name}'. Operation ID: {operationId}");
+            
+            var result = await ValidateDocuments(onProgress);
+            var schemaResult = (ValidateSchemaResult)result;
+            
+            if(Logger.IsDebugEnabled)
+                Logger.Debug($"Finished schema validation for collection '{Parameters.Collection}' in database '{RequestHandler.Database.Name}'. Operation ID: {operationId}. Validated: {schemaResult.ValidatedCount}, Errors: {schemaResult.ErrorCount}");
+            
+            return result;
+        }
+        catch (Exception e)
+        {
+            if(Logger.IsErrorEnabled)
+                Logger.Error($"Failed to validate schema for collection '{Parameters.Collection}' in database '{RequestHandler.Database.Name}'. Operation ID: {operationId}", e);
+            throw;
+        }
+    }
+    
+
+    private Task<IOperationResult> ValidateDocuments(Action<IOperationProgress> onProgress)
     {
         var maxErrorsMsg = Parameters.MaxErrorMessages ?? 1024;
         var maxToValidate = Parameters.MaxDocumentsToValidate ?? long.MaxValue;
@@ -52,7 +76,8 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
             var totalValidated = 0L;
             
             using var blittable = context.Sync.ReadForMemory(Parameters.SchemaDefinition, "schema-validation");
-            var schemaValidator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, Parameters.SchemaDefinition);
+            var configuration = RequestHandler.Configuration.SchemaValidation;
+            var schemaValidator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, Parameters.SchemaDefinition, configuration);
 
             using var errorBuilder = new ErrorBuilder(context);
             

@@ -19,7 +19,7 @@ public class SchemaValidationOperationTests : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.JavaScript)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ValidateSchema_WhenDone_ShouldAbleToFetchResult(Options options)
     {
@@ -57,7 +57,7 @@ public class SchemaValidationOperationTests : RavenTestBase
         Assert.Contains("The length of the value '0123456789a' at 'Prop' should not exceed 10, but its actual length is 11.", error);
     }
     
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.JavaScript)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ValidateSchema_WhenLimitErrors_ShouldGetOnlyTheRequiredLimit(Options options)
     {
@@ -110,7 +110,7 @@ public class SchemaValidationOperationTests : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task ValidateSchemaOperation_WhenSettingEtagOnNonSharded_ShouldStartFromTheEtag()
     {
         const string id1 = "user/1";
@@ -158,7 +158,7 @@ public class SchemaValidationOperationTests : RavenTestBase
         Assert.StartsWith("The length of the value '0123456789ab' at 'Prop' should not exceed 10, but its actual length is 12.", result2.Errors.First().Value);
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task ValidateSchemaOperation_WhenSettingEtagOnSharded_ShouldFail()
     {
         const int maxLength = 10;

@@ -11,6 +11,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Logging;
+using SchemaValidationSettings = Raven.Server.Config.Categories.SchemaValidationConfiguration;
 
 namespace Raven.Server.Documents.SchemaValidation;
 
@@ -19,15 +20,17 @@ public class SchemaValidatorCache : IDisposable
     private static readonly FrozenDictionary<string, SchemaValidator> EmptyCache = Array.Empty<KeyValuePair<string, SchemaValidator>>().ToFrozenDictionary();
 
     private readonly AbstractDatabaseNotificationCenter _notificationCenter;
+    private readonly SchemaValidationSettings _configuration;
     private readonly RavenLogger _logger;
     private readonly JsonOperationContext _context;
     private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
     public bool Disabled { get; private set; } = true;
 
-    public SchemaValidatorCache(AbstractDatabaseNotificationCenter notificationCenter, RavenLogger logger)
+    public SchemaValidatorCache(AbstractDatabaseNotificationCenter notificationCenter, SchemaValidationSettings configuration, RavenLogger logger)
     {
         _context = JsonOperationContext.ShortTermSingleUse();
         _notificationCenter = notificationCenter;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -59,7 +62,7 @@ public class SchemaValidatorCache : IDisposable
             try
             {
                 var blittable = _context.Sync.ReadForMemory(validator.Schema, "schema-validation");
-                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context, blittable, validator.Schema, validator.Disabled);
+                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context, blittable, validator.Schema, _configuration, validator.Disabled);
             }
             catch (Exception e)
             {

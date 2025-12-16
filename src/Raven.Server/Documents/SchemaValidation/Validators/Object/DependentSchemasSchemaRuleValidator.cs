@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.SchemaValidation.Validators.Object;
 // ReSharper disable once UnusedType.Global
 public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<GroupedIfThenElseSchemaRuleValidator>
 {
-    public override GroupedIfThenElseSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override GroupedIfThenElseSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var dependentRequiredSchema) == false)
@@ -33,7 +33,7 @@ public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFac
             var ifRequiredValidator = new RequiredSchemaRuleValidator(prop.Name);
             var ifValidator = new ElementSchemaRuleValidator([ifRequiredValidator], propertySchemaPath);
             
-            var thenValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(dependentSchemas, propertySchemaPath, refSchemas);
+            var thenValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, dependentSchemas, propertySchemaPath);
 
             (dependentRequires ??= []).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
         }

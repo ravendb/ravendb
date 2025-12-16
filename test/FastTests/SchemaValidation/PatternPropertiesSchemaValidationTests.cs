@@ -29,7 +29,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
         
         using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
         {
@@ -55,7 +55,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
         
         using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
         {
@@ -82,7 +82,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
         
         using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue
         {

@@ -13,12 +13,12 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
         _minLength = minLength;
     }
 
-    public override bool Validate(LazyStringValue value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, LazyStringValue value)
     {
         if (value.Length >= _minLength) 
             return true;
         
-        errorBuilder?.AddError($"The length of the {Target} '{value}' at '{errorBuilder.Path}' should be at least {_minLength}, but its actual length is {value.Length}.");
+        context.ErrorBuilder?.AddError($"The length of the {Target} '{value}' at '{context.ErrorBuilder.Path}' should be at least {_minLength}, but its actual length is {value.Length}.");
         return false;
     }
 }
@@ -27,7 +27,7 @@ public class MinimumLengthSchemaRuleValidator : StringSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MinimumLengthSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumLengthSchemaRuleValidator>
 {
-    public override MinimumLengthSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override MinimumLengthSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath + Rule, out var minimumLength) 
             ? new MinimumLengthSchemaRuleValidator(minimumLength)

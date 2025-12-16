@@ -45,6 +45,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
@@ -105,6 +106,7 @@ using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
 using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
+using SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.ServerWide
@@ -2091,17 +2093,15 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editSchemaValidation);
         }
 
-        private static void ValidateSchemaConfiguration(JsonOperationContext context, SchemaValidationConfiguration configurationJson)
+        private void ValidateSchemaConfiguration(JsonOperationContext context, SchemaValidationConfiguration definitions)
         {
-            if (configurationJson.ValidatorsPerCollection == null)
+            if (definitions.ValidatorsPerCollection == null)
                 throw new InvalidOperationException($"'{nameof(SchemaValidationConfiguration.ValidatorsPerCollection)}' cannot be null");
 
-            foreach (var item in configurationJson.ValidatorsPerCollection)
+            foreach (var item in definitions.ValidatorsPerCollection)
             {
                 using var schema = context.Sync.ReadForMemory(item.Value.Schema, "schema-validation");
-                //To make sure the schema is valid, we run Init on an instance of SchemaValidator, but it is not used
-                var validator = new SchemaValidator();
-                validator.Init(schema);
+                SchemaValidator.ValidateInit(schema);
                 SchemaValidationHelper.ValidateSchemaDefinitionForDocument(schema);
             }
         }

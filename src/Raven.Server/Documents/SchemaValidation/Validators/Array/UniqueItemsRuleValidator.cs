@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.SchemaValidation.Validators.Array;
 public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderArray>
 {
     // ReSharper disable once ConvertToPrimaryConstructor
-    public override bool Validate(BlittableJsonReaderArray value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, BlittableJsonReaderArray value)
     {
         HashSet<object> duplicates = null;
         var hashSet = new HashSet<object>();
@@ -20,7 +20,7 @@ public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
         if (duplicates == null)
             return true;
         
-        errorBuilder?.AddError($"The array at '{errorBuilder.Path}' contains duplicate value{(duplicates.Count == 1?"":"s")}: '{duplicates: \"', '\"}'. Each item must be unique.");
+        context.ErrorBuilder?.AddError($"The array at '{context.ErrorBuilder.Path}' contains duplicate value{(duplicates.Count == 1?"":"s")}: '{duplicates: \"', '\"}'. Each item must be unique.");
         return false;
     }
 }
@@ -29,7 +29,7 @@ public class UniqueItemsRuleValidator : SchemaRuleValidator<BlittableJsonReaderA
 // ReSharper disable once UnusedType.Global
 public class UniqueItemsRuleValidatorFactory : SchemaRuleValidatorFactory<UniqueItemsRuleValidator>
 {
-    public override UniqueItemsRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override UniqueItemsRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         if (SchemaValidationHelper.TryGetBoolean(schemaDefinition, Rule, schemaPath + Rule, out bool uniqueItems) == false) 
             return null;

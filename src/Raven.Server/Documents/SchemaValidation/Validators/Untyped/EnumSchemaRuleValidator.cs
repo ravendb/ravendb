@@ -15,14 +15,14 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
         _enums = enums.Select(ConvertTypeForComparison).ToArray();
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, object value)
     {
         //The order here is extremely important since when comparing between blittable objects the function uses the first object context and _constantValue is used concurrently 
         if (_enums.Any(x => Equals(value, x))) 
             return true;
         
         var quoteIfString = IsString(value) ? "\"" : "";
-        errorBuilder?.AddError($"The value '{quoteIfString}{value}{quoteIfString}' at '{errorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
+        context.ErrorBuilder?.AddError($"The value '{quoteIfString}{value}{quoteIfString}' at '{context.ErrorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
         return false;
     }
     
@@ -37,7 +37,7 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class EnumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<EnumSchemaRuleValidator>
 {
-    public override EnumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override EnumSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath + Rule, out var enums) 
             ? new EnumSchemaRuleValidator(enums)

@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Client;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
+using Raven.Server.Documents.SchemaValidation.Validators.String;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -223,7 +226,7 @@ public static class SchemaValidationHelper
         return true;
     }
 
-    public static SchemaValidator InitValidatorForDocument(JsonOperationContext context, BlittableJsonReaderObject definition, string strDefinition, bool disabled = false)
+    public static SchemaValidator InitValidatorForDocument(JsonOperationContext context, BlittableJsonReaderObject definition, string strDefinition, SchemaValidationConfiguration config, bool disabled = false)
     {
         var validator = new SchemaValidator
         {
@@ -232,8 +235,27 @@ public static class SchemaValidationHelper
         };
         ValidateSchemaDefinitionForDocument(definition);
         ExcludeMetadata(context, ref definition);
-        validator.Init(definition);
+        var validatorConfig = SchemaValidationConfigurationToSchemaValidatorSettings(config);
+        validator.Init(definition, validatorConfig);
         return validator;
+    }
+
+    private static SchemaValidatorSettings SchemaValidationConfigurationToSchemaValidatorSettings(SchemaValidationConfiguration config)
+    {
+        var regexTimeout = config.RegexTimeout.AsTimeSpan;
+        // We have to respect the Regex limit. We can't allow the schema building to fail due to configuration.
+        if (regexTimeout <= TimeSpan.Zero)
+            regexTimeout = TimeSpan.FromSeconds(1);
+
+        if (regexTimeout.TotalMilliseconds > PatternSchemaRuleValidator.MaxTimeoutInMilliseconds)
+            regexTimeout = Regex.InfiniteMatchTimeout;
+        
+        return new SchemaValidatorSettings
+        {
+            RegexTimeout = regexTimeout, 
+            ValidationTimeout = config.ValidationTimeout.AsTimeSpan, 
+            MaxDepth = config.MaxDepth
+        };
     }
     
     private static void ExcludeMetadata(JsonOperationContext context, ref BlittableJsonReaderObject blittable)

@@ -41,7 +41,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -101,7 +101,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -152,7 +152,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -203,7 +203,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -250,7 +250,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -298,7 +298,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -353,7 +353,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
-            var exception = Assert.ThrowsAny<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
+            var exception = Assert.ThrowsAny<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings));
             AssertError("A circular reference was detected at '#/$defs/firstSchema/properties/prop1/$ref/properties/prop1/$ref/properties/prop1/$ref'.", exception.Message);
         }
     }
@@ -394,7 +394,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -453,7 +453,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -529,7 +529,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {

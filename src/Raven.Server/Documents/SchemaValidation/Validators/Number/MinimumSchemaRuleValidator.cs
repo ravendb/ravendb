@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.SchemaValidation.Validators.Number;
 public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _minimum;
-    private readonly Func<decimal, ErrorBuilder, bool> _validatePredicate;
+    private readonly Func<SchemaValidationContext, decimal, bool> _validatePredicate;
 
     // ReSharper disable once IntroduceOptionalParameters.Global
     public MinimumSchemaRuleValidator(decimal minimum, bool exclusiveMinimum)
@@ -16,23 +16,23 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
     }
 
-    public override bool Validate(decimal value, ErrorBuilder errorBuilder) => _validatePredicate(value, errorBuilder);
+    public override bool Validate(SchemaValidationContext context, decimal value) => _validatePredicate(context, value);
 
-    private bool NonExclusiveValidate(decimal value, ErrorBuilder errorBuilder)
+    private bool NonExclusiveValidate(SchemaValidationContext context, decimal value)
     {
         if (value.CompareTo(_minimum) >= 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be greater than or equal to {_minimum}.");
+        context.ErrorBuilder?.AddError($"The value '{value}' at '{context.ErrorBuilder.Path}' should be greater than or equal to {_minimum}.");
         return false;
     }
 
-    private bool ExclusiveValidate(decimal value, ErrorBuilder errorBuilder)
+    private bool ExclusiveValidate(SchemaValidationContext context, decimal value)
     {
         if (value.CompareTo(_minimum) > 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be greater than {_minimum}.");
+        context.ErrorBuilder?.AddError($"The value '{value}' at '{context.ErrorBuilder.Path}' should be greater than {_minimum}.");
         return false;
     }
 }
@@ -41,7 +41,7 @@ public class MinimumSchemaRuleValidator : NumberSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MinimumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MinimumSchemaRuleValidator>
 {
-    public override MinimumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override MinimumSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if (SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var minimum) == false)

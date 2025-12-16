@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Sync;
@@ -19,7 +20,7 @@ public sealed class IndexSchemaValidatorsByCollection : IDisposable
         _validators = validators;
     }
 
-    public static IndexSchemaValidatorsByCollection Create(TransactionContextPool ctxPool, IndexSchemaDefinitions definitions)
+    public static IndexSchemaValidatorsByCollection Create(TransactionContextPool ctxPool, IndexSchemaDefinitions definitions, SchemaValidationConfiguration config)
     {
         var returnContext = ctxPool.AllocateOperationContext(out TransactionOperationContext context);
         var validators = new Dictionary<string, SchemaValidator>(StringComparer.OrdinalIgnoreCase);
@@ -28,7 +29,7 @@ public sealed class IndexSchemaValidatorsByCollection : IDisposable
             foreach (var (collection, definition) in definitions)
             {
                 var blittable = context.Sync.ReadForMemory(definition, "schema-validation");
-                var validator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, definition);
+                var validator = SchemaValidationHelper.InitValidatorForDocument(context, blittable, definition, config);
                 validators[collection] = validator;
             }
 

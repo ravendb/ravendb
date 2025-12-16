@@ -20,7 +20,8 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
     {
     }
 
-
+    protected static SchemaValidatorSettings SchemaValidatorSettings { get;  } = new SchemaValidatorSettings{ValidationTimeout = TimeSpan.FromSeconds(1), RegexTimeout = TimeSpan.FromSeconds(1), MaxDepth = 10};
+    
     protected static void AssertError(string expected, string actual)
     {
         Assert.True(actual.StartsWith(expected), $"expected: '{expected}', \nactual: '{actual}'.");
@@ -59,7 +60,7 @@ public static class SchemaValidationTestsHelper
                 return true;
             }
 
-            errors = new string(errorBuilder.ToString());
+            errors = errorBuilder.ToString();
             return false;
         }
     }

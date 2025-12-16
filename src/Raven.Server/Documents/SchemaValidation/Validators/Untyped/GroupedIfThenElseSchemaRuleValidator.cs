@@ -12,13 +12,13 @@ public class GroupedIfThenElseSchemaRuleValidator : SchemaRuleValidator<object>
         _ifThenElseSchemaRuleValidators = ifThenElseSchemaRuleValidators;
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, object value)
     {
         var isValid = true;
         foreach (var dependentRequire in _ifThenElseSchemaRuleValidators)
         {
-            isValid = dependentRequire.Validate(value, errorBuilder);
-            if (isValid == false && errorBuilder == null)
+            isValid = dependentRequire.Validate(context, value);
+            if (isValid == false && context.ErrorBuilder == null)
                 return false;
         }
 

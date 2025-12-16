@@ -21,7 +21,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SchemaValidatorConstants.Properties] = new DynamicJsonValue { ["prop1"] = new DynamicJsonValue { [SchemaValidatorConstants.UniqueItems] = true } } };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -64,7 +64,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -127,7 +127,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -155,7 +155,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Items] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" } } }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -183,7 +183,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SchemaValidatorConstants.Contains] = new DynamicJsonValue { [SchemaValidatorConstants.Type] = "string" } } }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -216,7 +216,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {
@@ -259,7 +259,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         await AssertMultipleParallel(() =>
             {

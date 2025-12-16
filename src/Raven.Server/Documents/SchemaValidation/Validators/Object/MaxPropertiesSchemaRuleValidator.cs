@@ -12,11 +12,11 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     {
         _maxProperties = maxProperties;
     }
-    public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
         if(value.Count <= _maxProperties)
             return true;
-        errorBuilder?.AddError($"The object at '{errorBuilder.Path}' must have no more than {_maxProperties} properties, but it has {value.Count}.");
+        context.ErrorBuilder?.AddError($"The object at '{context.ErrorBuilder.Path}' must have no more than {_maxProperties} properties, but it has {value.Count}.");
         return false;
     }
 }
@@ -25,7 +25,7 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
 // ReSharper disable once UnusedType.Global
 public class MaxPropertiesSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaxPropertiesSchemaRuleValidator>
 {
-    public override MaxPropertiesSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override MaxPropertiesSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return SchemaValidationHelper.TryGetInteger(schemaDefinition, Rule, schemaPath + Rule, out var maxProperties) 
             ? new MaxPropertiesSchemaRuleValidator(maxProperties)

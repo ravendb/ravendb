@@ -6,6 +6,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.SchemaValidation;
 
@@ -27,9 +28,11 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
 
             var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "SchemaValidation/Validate");
             Parameters = JsonDeserializationServer.Parameters.ValidateSchemaOperationParameters(json);
-
             ValidateParameters();
 
+            if(RavenLogManager.Instance.IsAuditEnabled)
+                RequestHandler.LogAuditForDatabase("VALIDATE", $"Start schema validation operation for collection '{Parameters.Collection}'");
+            
             var token = RequestHandler.CreateBackgroundOperationToken();
 
             StartValidationOperation(operationId, token);

@@ -23,7 +23,7 @@ public class RefSchemas
         return false;
     }
     
-    public void Init(BlittableJsonReaderObject schemaDefinition)
+    public void Init(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition)
     {
         var root = new SchemaPath();
         ReadAllDefinitions(schemaDefinition, root);
@@ -31,7 +31,7 @@ public class RefSchemas
 
         foreach (var (fullPath, refSchema) in _data)
         {
-            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(refSchema.Raw, root + fullPath, this);
+            var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, refSchema.Raw, root + fullPath);
             refSchema.Validator = validator;
         }
     }

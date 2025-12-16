@@ -12,17 +12,20 @@ public class OneOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
     {
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, object value)
     {
         var alreadyHasOneValid = false;
         foreach (var validator in Validators)
         {
-            if(validator.Validate(value, null) == false)
-                continue;
+            using (context.WithoutCollectingErrors())
+            {
+                if(validator.Validate(context, value) == false)
+                    continue;
+            }
             
             if(alreadyHasOneValid)
             {                
-                errorBuilder?.AddError($"The value at '{errorBuilder.Path}' matches more than one schema, but it must match exactly one.");
+                context.ErrorBuilder?.AddError($"The value at '{context.ErrorBuilder.Path}' matches more than one schema, but it must match exactly one.");
                 return false;
             }
 
@@ -31,7 +34,7 @@ public class OneOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
 
         if (alreadyHasOneValid == false)
         {
-            errorBuilder?.AddError($"The value at '{errorBuilder.Path}' does not match any of the schema restrictions, and it must match exactly one.");
+            context.ErrorBuilder?.AddError($"The value at '{context.ErrorBuilder.Path}' does not match any of the schema restrictions, and it must match exactly one.");
             return false;
         }
 
@@ -43,9 +46,9 @@ public class OneOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
 // ReSharper disable once UnusedType.Global
 public class OneOfSchemaRuleValidatorFactory : MultiSubschemaAggregatorValidatorFactory<OneOfSchemaRuleValidator>
 {
-    public override OneOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override OneOfSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        var validators = Read(schemaDefinition, schemaPath, refSchemas);
+        var validators = Read(context, schemaDefinition, schemaPath);
         return new OneOfSchemaRuleValidator(validators);
     }
 }

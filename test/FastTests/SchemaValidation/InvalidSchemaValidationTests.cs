@@ -89,7 +89,7 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
 
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
-            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
+            var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings));
             AssertError(error, exception.Message);
         }
     }

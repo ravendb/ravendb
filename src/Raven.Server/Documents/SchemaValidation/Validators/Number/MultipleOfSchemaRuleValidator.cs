@@ -13,12 +13,12 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
         _multipleOf = multipleOf;
     }
 
-    public override bool Validate(decimal value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, decimal value)
     {
         if (value % _multipleOf == 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be a multiple of {_multipleOf}.");
+        context.ErrorBuilder?.AddError($"The value '{value}' at '{context.ErrorBuilder.Path}' should be a multiple of {_multipleOf}.");
         return false;
     }
 }
@@ -27,7 +27,7 @@ public class MultipleOfSchemaRuleValidator : NumberSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MultipleOfSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MultipleOfSchemaRuleValidator>
 {
-    public override MultipleOfSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override MultipleOfSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath + Rule, out var multipleOf)
             ? new MultipleOfSchemaRuleValidator(multipleOf) 

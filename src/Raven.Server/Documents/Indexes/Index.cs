@@ -875,7 +875,7 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
                 if (Definition.SchemaValidation != null)
-                    _schemaValidators = IndexSchemaValidatorsByCollection.Create(_contextPool, Definition.SchemaValidation);
+                    _schemaValidators = IndexSchemaValidatorsByCollection.Create(_contextPool, Definition.SchemaValidation, DocumentDatabase.Configuration.SchemaValidation);
                 
                 OnInitialization();
 

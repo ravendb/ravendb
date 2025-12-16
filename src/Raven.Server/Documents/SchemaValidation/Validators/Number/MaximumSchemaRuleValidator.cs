@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.SchemaValidation.Validators.Number;
 public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
 {
     private readonly decimal _maximum;
-    private readonly Func<decimal, ErrorBuilder, bool> _validatePredicate;
+    private readonly Func<SchemaValidationContext, decimal, bool> _validatePredicate;
 
     // ReSharper disable once IntroduceOptionalParameters.Global
     public MaximumSchemaRuleValidator(decimal maximum, bool exclusiveMinimum)
@@ -16,26 +16,26 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
         _validatePredicate = exclusiveMinimum ? ExclusiveValidate : NonExclusiveValidate;
     }
 
-    public override bool Validate(decimal value, ErrorBuilder errorBuilder)
+    public override bool Validate(SchemaValidationContext context, decimal value)
     {
-        return _validatePredicate(value, errorBuilder);
+        return _validatePredicate(context, value);
     }
 
-    private bool NonExclusiveValidate(decimal value, ErrorBuilder errorBuilder)
+    private bool NonExclusiveValidate(SchemaValidationContext context, decimal value)
     {
         if (value.CompareTo(_maximum) <= 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be less than or equal to {_maximum}.");
+        context.ErrorBuilder?.AddError($"The value '{value}' at '{context.ErrorBuilder.Path}' should be less than or equal to {_maximum}.");
         return false;
     }
 
-    private bool ExclusiveValidate(decimal value, ErrorBuilder errorBuilder)
+    private bool ExclusiveValidate(SchemaValidationContext context, decimal value)
     {
         if (value.CompareTo(_maximum) < 0) 
             return true;
         
-        errorBuilder?.AddError($"The value '{value}' at '{errorBuilder.Path}' should be less than {_maximum}.");
+        context.ErrorBuilder?.AddError($"The value '{value}' at '{context.ErrorBuilder.Path}' should be less than {_maximum}.");
         return false;
     }
 }
@@ -44,7 +44,7 @@ public class MaximumSchemaRuleValidator : NumberSchemaRuleValidator
 // ReSharper disable once UnusedType.Global
 public class MaximumSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<MaximumSchemaRuleValidator>
 {
-    public override MaximumSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override MaximumSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if(SchemaValidationHelper.TryGetNumber(schemaDefinition, Rule, schemaPath, out var maximum) == false)

@@ -19,7 +19,7 @@ public abstract class MultiSubschemaAggregatorValidator : SchemaRuleValidator<ob
 
 public abstract class MultiSubschemaAggregatorValidatorFactory<T> : SchemaRuleValidatorFactory<T> where T : MultiSubschemaAggregatorValidator
 {
-    public ElementSchemaRuleValidator[] Read(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public ElementSchemaRuleValidator[] Read(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if (SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath, out var validatorsSchema) == false)
@@ -30,7 +30,7 @@ public abstract class MultiSubschemaAggregatorValidatorFactory<T> : SchemaRuleVa
         {
             var itemPath = schemaPath + i;
             var itemSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(validatorsSchema[i], itemPath);
-            (validators ??= []).Add(ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(itemSchema, itemPath, refSchemas));
+            (validators ??= []).Add(ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, itemSchema, itemPath));
         }
         if(validators == null)
             return null;

@@ -31,18 +31,20 @@ public class ElementSchemaRuleValidator
         SchemaPath = schemaPath;
     }
     
-    public bool Validate(object value, ErrorBuilder errorBuilder)
+    public bool Validate(SchemaValidationContext context, object value)
     {
+        context.CheckTimeoutAndThrow();
+
         if (IsOfRequiredType(value) == false)
         {
-            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(value?.GetType())}'.");
+            context.ErrorBuilder?.AddError($"'{context.ErrorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(value?.GetType())}'.");
             return false;
         }
         
-        return CheckAllValidators(value, errorBuilder);
+        return CheckAllValidators(context, value);
     }
 
-    private bool CheckAllValidators(object value, ErrorBuilder errorBuilder)
+    private bool CheckAllValidators(SchemaValidationContext context, object value)
     {
         if (_ruleValidators == null)
             return true;
@@ -50,8 +52,8 @@ public class ElementSchemaRuleValidator
         var isValid = true;
         foreach (var ruleValidator in _ruleValidators)
         {
-            isValid &= ruleValidator.Validate(value, errorBuilder);
-            if (errorBuilder == null && isValid == false)
+            isValid &= ruleValidator.Validate(context, value);
+            if (context.ErrorBuilder == null && isValid == false)
                 return false;
         }
         return isValid;

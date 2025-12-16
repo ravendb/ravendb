@@ -39,25 +39,25 @@ public abstract class SchemaRuleValidatorFactoryHelper
             .ToFrozenDictionary(x => x.Rule, x => x!.FactoryInstance);
     }
 
-    public static bool TryCreateValidator(string rule, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas,
+    public static bool TryCreateValidator(SchemaBuilderContext context, string rule, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         out ISchemaRuleValidator validator)
     {
         if (SchemaRuleValidatorFactories.TryGetValue(rule, out ISchemaRuleValidatorFactory factory))
         {
-            validator = factory.Create(schemaDefinition, schemaPath, refSchemas);
+            validator = factory.Create(context, schemaDefinition, schemaPath);
             return validator != null;
         }
         validator = null;
         return false;
     }
 
-    public static ObjectSchemaRuleValidator CreateObjectValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public static ObjectSchemaRuleValidator CreateObjectValidator(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return ObjectSchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath, refSchemas);
+        return ObjectSchemaRuleValidatorFactory.Create(context, schemaDefinition, schemaPath);
     }
-    public static ArraySchemaRuleValidator CreateArrayValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public static ArraySchemaRuleValidator CreateArrayValidator(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return ArraySchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath, refSchemas);
+        return ArraySchemaRuleValidatorFactory.Create(context, schemaDefinition, schemaPath);
     }
 
     internal static class TestingStuff

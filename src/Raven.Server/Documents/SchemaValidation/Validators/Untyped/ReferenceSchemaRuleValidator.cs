@@ -14,20 +14,20 @@ public class ReferenceSchemaRuleValidator : SchemaRuleValidator<object>
         _reference = reference;
     }
 
-    public override bool Validate(object value, ErrorBuilder errorBuilder) => _reference.Validate(value, errorBuilder);
+    public override bool Validate(SchemaValidationContext context, object value) => _reference.Validate(context, value);
 }
 
 [SchemaRule(SchemaValidatorConstants.Ref)]
 // ReSharper disable once UnusedType.Global
 public class ReferenceSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ReferenceSchemaRuleValidator>
 {
-    public override ReferenceSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
+    public override ReferenceSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
         if (SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath, out var reference) == false)
             return null;
         
-        if(refSchemas.TryGet(reference, out var validator) == false)
+        if(context.RefSchemas.TryGet(reference, out var validator) == false)
             throw new InvalidSchemaValidationDefinitionException(
                 $"The reference '{reference}' at '{schemaPath.FullPath}' does not match any defined subschema.");
                 

@@ -113,6 +113,8 @@ namespace Raven.Server.Config
         public ExportImportConfiguration ExportImport { get; }
 
         public ShardingConfiguration Sharding { get; set; }
+        
+        public SchemaValidationConfiguration SchemaValidation { get; set; }
 
         internal string ConfigPath => _customConfigPath
                        ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
@@ -180,6 +182,7 @@ namespace Raven.Server.Config
             ExportImport = new ExportImportConfiguration();
             QueueSink = new QueueSinkConfiguration();
             Sharding = new ShardingConfiguration();
+            SchemaValidation = new SchemaValidationConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -246,6 +249,7 @@ namespace Raven.Server.Config
             ExportImport.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             QueueSink.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Sharding.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            SchemaValidation.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
             PostInit();
 

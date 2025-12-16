@@ -7,16 +7,14 @@ namespace Raven.Server.Documents.SchemaValidation.Validators;
 
 public static class ElementSchemaRuleValidatorFactory
 {
-    public static ElementSchemaRuleValidator CreateElementSchemaRuleValidator(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas)
+    public static ElementSchemaRuleValidator CreateElementSchemaRuleValidator(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        return TryReadSchema(schemaDefinition, schemaPath, refSchemas, out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
+        return TryReadSchema(context, schemaDefinition, schemaPath, out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
             ? new ElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) {SchemaDefinition = schemaDefinition} : 
             null;
     }
     
-    private static bool TryReadSchema(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas,
+    private static bool TryReadSchema(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath,
         out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
     {
         if (schemaDefinition == null)
@@ -26,7 +24,7 @@ public static class ElementSchemaRuleValidatorFactory
             return false;
         }
         typesRestriction = ReadTypeRestrictionsRule(schemaDefinition, schemaPath);
-        ruleValidators = ReadValueSchemaRuleValidators(schemaDefinition, schemaPath, refSchemas);
+        ruleValidators = ReadValueSchemaRuleValidators(context, schemaDefinition, schemaPath);
 
         return true;
     }
@@ -75,8 +73,7 @@ public static class ElementSchemaRuleValidatorFactory
         };
     }
     
-    private static ISchemaRuleValidator[] ReadValueSchemaRuleValidators(BlittableJsonReaderObject propertySchemaDefinition, SchemaPath schemaPath,
-        RefSchemas refSchemas)
+    private static ISchemaRuleValidator[] ReadValueSchemaRuleValidators(SchemaBuilderContext context, BlittableJsonReaderObject propertySchemaDefinition, SchemaPath schemaPath)
     {
         List<ISchemaRuleValidator> ruleValidators = null;
         var alreadyHasObjectRestrictions = false;
@@ -93,7 +90,7 @@ public static class ElementSchemaRuleValidatorFactory
                 {
                     if (alreadyHasObjectRestrictions)
                         continue;
-                    validator = SchemaRuleValidatorFactoryHelper.CreateObjectValidator(propertySchemaDefinition, schemaPath, refSchemas);
+                    validator = SchemaRuleValidatorFactoryHelper.CreateObjectValidator(context, propertySchemaDefinition, schemaPath);
                     alreadyHasObjectRestrictions = true;
                     break;
                 }
@@ -101,13 +98,13 @@ public static class ElementSchemaRuleValidatorFactory
                 {
                     if (alreadyHasArrayRestrictions)
                         continue;
-                    validator = SchemaRuleValidatorFactoryHelper.CreateArrayValidator(propertySchemaDefinition, schemaPath, refSchemas);
+                    validator = SchemaRuleValidatorFactoryHelper.CreateArrayValidator(context, propertySchemaDefinition, schemaPath);
                     alreadyHasArrayRestrictions = true;
                     break;
                 }
                 default:
                 {
-                    if (SchemaRuleValidatorFactoryHelper.TryCreateValidator(rule, propertySchemaDefinition, schemaPath, refSchemas, out validator) == false)
+                    if (SchemaRuleValidatorFactoryHelper.TryCreateValidator(context, rule, propertySchemaDefinition, schemaPath, out validator) == false)
                         continue;
                     break;
                 }
