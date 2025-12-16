@@ -8,7 +8,7 @@
     right: 10px;
     bottom: 10px;
     transform: translateY(150%);
-    z-index: var(--zindex-notification-center);
+    z-index: var(--zindex-chatbot);
     transition: transform variables.$menu-transition-ease;
     display: flex;
     flex-direction: column;
