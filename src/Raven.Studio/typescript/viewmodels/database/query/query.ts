@@ -50,6 +50,7 @@ import queryPlan = require("viewmodels/database/query/queryPlan");
 import store = require("components/store");
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import aiAssistantSlice = require("components/common/shell/aiAssistantSlice");
 
 type queryResultTab = "results" | "explanations" | "queryPlan" | "timings" | "revisions";
 
@@ -159,6 +160,8 @@ class query extends shardViewModelBase {
     static readonly maxSpatialResultsToFetch = 5000;
     
     additionalParameters?: AdditionalParameters;
+
+    isAiAssistantDataSubmissionDisabled?: boolean = false;
 
     saveQueryFocus = ko.observable<boolean>(false);
 
@@ -597,6 +600,9 @@ class query extends shardViewModelBase {
             this.disableAutoIndexCreation(isDisableAutoIndexCreation)
         });
         
+        const storeState = store.default.getState();
+        this.isAiAssistantDataSubmissionDisabled = aiAssistantSlice.aiAssistantSelectors.settings(storeState).isDataSubmissionDisabled;
+
         const db = this.db;
         
         return this.fetchAllIndexes(db)
@@ -1206,7 +1212,7 @@ class query extends shardViewModelBase {
                         }
 
                         // Attach query first page result to chatbot context
-                        if (skip === 0) {
+                        if (skip === 0 && !this.isAiAssistantDataSubmissionDisabled) {
                             const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),

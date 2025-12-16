@@ -157,6 +157,15 @@ function initRedux() {
             })
         );
     });
+
+    services.aiAssistantService.getSettings().then((settings) => {
+        globalDispatch(
+            aiAssistantActions.settingsSet({
+                isDisabled: settings.DisableAiAssistant,
+                isDataSubmissionDisabled: settings.DisableDataSubmission,
+            })
+        );
+    });
 }
 
 declare module "yup" {

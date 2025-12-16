@@ -3,6 +3,7 @@ import checkConsentAiAssistantCommand from "commands/aiAssistant/checkConsentAiA
 import checkUsageAiAssistantCommand from "commands/aiAssistant/checkUsageAiAssistantCommand";
 import giveConsentAiAssistantCommand from "commands/aiAssistant/giveConsentAiAssistantCommand";
 import runChatbotAiAssistantCommand from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import getSettingsAiAssistantCommand from "commands/aiAssistant/getSettingsAiAssistantCommand";
 
 export default class AiAssistantService {
     async refinePrompt(...args: ConstructorParameters<typeof refinePromptAiAssistantCommand>) {
@@ -23,5 +24,9 @@ export default class AiAssistantService {
 
     async checkUsage(...args: ConstructorParameters<typeof checkUsageAiAssistantCommand>) {
         return new checkUsageAiAssistantCommand(...args).execute();
+    }
+
+    async getSettings(...args: ConstructorParameters<typeof getSettingsAiAssistantCommand>) {
+        return new getSettingsAiAssistantCommand(...args).execute();
     }
 }
