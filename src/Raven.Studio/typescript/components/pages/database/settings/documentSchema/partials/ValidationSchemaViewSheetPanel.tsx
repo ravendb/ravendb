@@ -52,7 +52,13 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
     const [monitorOperationProgress, setMonitorOperationProgress] = React.useState<
         Record<string, ValidationOperationProgress>
     >({});
-    const [selectedCollections, setSelectedCollections] = React.useState<Record<string, boolean>>({});
+    const [selectedCollections, setSelectedCollections] = React.useState<Record<string, boolean>>(() => {
+        const initialState: Record<string, boolean> = {};
+        validators.forEach((validator) => {
+            initialState[validator.Name] = true;
+        });
+        return initialState;
+    });
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
     const collections = useAppSelector(collectionsTrackerSelectors.collections);
@@ -61,9 +67,12 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
         resolver: yupResolver(schema),
     });
 
-    const asyncGetOperationIds = useAsyncCallback(async (formData: ValidateSchemaFormData) => {
-        const activeValidators = isPlayground ? getSelectedValidators(validators, selectedCollections) : validators;
+    const activeValidators = useMemo(
+        () => (isPlayground ? getSelectedValidators(validators, selectedCollections) : validators),
+        [isPlayground, validators, selectedCollections]
+    );
 
+    const asyncGetOperationIds = useAsyncCallback(async (formData: ValidateSchemaFormData) => {
         const dtos: ValidateSchemaRequestDto[] = activeValidators.map((validator) =>
             documentSchemaUtils.mapToValidateSchemaRequestDto(validator, formData)
         );
@@ -74,8 +83,6 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
     });
 
     const asyncTestSchema = useAsyncCallback(async (formData: ValidateSchemaFormData) => {
-        const activeValidators = isPlayground ? getSelectedValidators(validators, selectedCollections) : validators;
-
         if (activeValidators.length === 0) {
             return;
         }
@@ -167,8 +174,6 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
     const isValidating = validators.some((validator) => monitorOperationProgress[validator.Name]?.status === "loading");
 
     const isTestSettingsDisabled = !formValues.isTestSettingsEnabled || isValidating;
-
-    const activeValidators = isPlayground ? getSelectedValidators(validators, selectedCollections) : validators;
 
     const isDisabledRunTest = isPlayground && isEmpty(activeValidators);
 
@@ -658,12 +663,8 @@ function ValidationCollectionAccordionItem({
     );
 }
 
-function getIsCollectionSelected(name: string, selectedCollections: Record<string, boolean>): boolean {
-    if (selectedCollections[name] != null) {
-        return selectedCollections[name];
-    }
-
-    return true;
+function getIsCollectionSelected(name: string, selectedCollections: Record<string, boolean>) {
+    return selectedCollections[name];
 }
 
 function getSelectedValidators(
