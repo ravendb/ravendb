@@ -42,10 +42,15 @@ export default function ChatbotAskAiMessageEndpoints({
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
     const isOnWhitelist = (url: string) => {
-        const urlObject = new URL(url, window.location.origin);
-        const pathname = urlObject.pathname;
+        return chatbotConstants.whitelistRegexEndpoints.some(({ regex }) =>
+            regex.test(new URL(url, window.location.origin).pathname)
+        );
+    };
 
-        return chatbotConstants.endpointsWhitelistRegex.some((regex) => regex.test(pathname));
+    const isWithDataSubmission = (url: string) => {
+        return chatbotConstants.dataSubmissionRegexEndpoints.some(({ regex }) =>
+            regex.test(new URL(url, window.location.origin).pathname)
+        );
     };
 
     const asyncHandleAllow = useAsyncCallback(
@@ -59,7 +64,7 @@ export default function ChatbotAskAiMessageEndpoints({
                     return { ...baseResult, status: "error", resultText: "Endpoint is not whitelisted" };
                 }
 
-                if (isDataSubmissionDisabled && isDatabaseDocsEndpoint(url)) {
+                if (isDataSubmissionDisabled && isWithDataSubmission(url)) {
                     return {
                         ...baseResult,
                         status: "error",
@@ -299,7 +304,9 @@ interface EndpointItemProps {
 
 function EndpointItem({ endpoint }: EndpointItemProps) {
     const urlObject = new URL(endpoint.url, window.location.origin);
-    const isDatabasesDocs = isDatabaseDocsEndpoint(endpoint.url);
+    const urlWithParamToDisplay = chatbotConstants.paramToDisplayRegexEndpoints.find(({ regex }) =>
+        regex.test(urlObject.pathname)
+    );
 
     return (
         <div>
@@ -319,12 +326,12 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
                     className="ms-1 text-emphasis text-truncate"
                     title={endpoint.url}
                 >
-                    {isDatabasesDocs ? urlObject.pathname : endpoint.url}
+                    {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
                 </a>
             </div>
-            {isDatabasesDocs && (
+            {urlWithParamToDisplay?.paramToDisplay && (
                 <ul>
-                    {urlObject.searchParams.getAll("id").map((id) => (
+                    {urlObject.searchParams.getAll(urlWithParamToDisplay.paramToDisplay).map((id) => (
                         <li key={id}>
                             <span className="d-block text-truncate" title={id}>
                                 {id}
@@ -335,9 +342,4 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
             )}
         </div>
     );
-}
-
-function isDatabaseDocsEndpoint(url: string): boolean {
-    const urlObject = new URL(url, window.location.origin);
-    return /^\/databases\/[\w.-]+\/docs/.test(urlObject.pathname);
 }

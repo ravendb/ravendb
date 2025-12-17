@@ -14,4 +14,8 @@
         background-color: var(--bs-gray-500) !important;
         color: var(--text-emphasis) !important;
     }
+
+    &:disabled {
+        opacity: 0.75 !important;
+    }
 }
