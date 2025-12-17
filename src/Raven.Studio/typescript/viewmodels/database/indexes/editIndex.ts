@@ -1281,11 +1281,7 @@ class editIndex extends shardViewModelBase {
     }
 
     formatSchemaDefinition(schemaItem: schemaDefinitionModel) {
-        try {
-            schemaItem.schemaText(generalUtils.prettifyContent(schemaItem.schemaText()));
-        } catch (e) {
-            console.error("Failed to format schema definition", e);
-        }
+        schemaItem.schemaText(generalUtils.prettifyJson(schemaItem.schemaText()));
     }
 
     private setFormattedText(textToFormat: KnockoutObservable<string>) {

@@ -38,13 +38,6 @@ class schemaDefinitionModel {
     static empty(): schemaDefinitionModel {
         return new schemaDefinitionModel();
     }
-
-    toDto(): { collectionName: string; schemaText: string } {
-        return {
-            collectionName: this.collectionName(),
-            schemaText: this.schemaText()
-        };
-    }
 }
 
 export = schemaDefinitionModel;

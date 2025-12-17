@@ -815,10 +815,10 @@ class genUtils {
         return Number(tokens).toLocaleString();
     }
 
-    static prettifyContent(content: string, spacing: number = 2) {
+    static prettifyJson(content: string, spacing: number = 2) {
         try {
             return JSON.stringify(JSON.parse(content), null, spacing);
-        } catch (e) {
+        } catch {
             return content;
         }
     }

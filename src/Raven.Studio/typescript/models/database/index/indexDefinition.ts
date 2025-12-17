@@ -48,7 +48,7 @@ class indexDefinition {
     additionalSources = ko.observableArray<additionalSource>();
     additionalAssemblies = ko.observableArray<additionalAssembly>();
     
-    schemaDefinitions = ko.observableArray<schemaDefinitionModel>();
+    schemaDefinitions = ko.observableArray<schemaDefinitionModel>([]);
 
     defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
@@ -138,11 +138,9 @@ class indexDefinition {
         if (dto.SchemaDefinitions) {
             this.schemaDefinitions(
                 Object.entries(dto.SchemaDefinitions).map(([collectionName, schemaText]) =>
-                    new schemaDefinitionModel(collectionName, generalUtils.prettifyContent(schemaText))
+                    new schemaDefinitionModel(collectionName, generalUtils.prettifyJson(schemaText))
                 )
             );
-        } else {
-            this.schemaDefinitions([]);
         }
 
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
