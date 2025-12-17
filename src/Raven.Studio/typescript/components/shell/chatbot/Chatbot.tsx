@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import studioSettings from "common/settings/studioSettings";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotActions, chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
+import classNames from "classnames";
 
 export default function Chatbot() {
     const dispatch = useAppDispatch();
@@ -36,9 +37,9 @@ export default function Chatbot() {
         <div
             id="chatbot"
             style={{
-                borderLeft: `1px solid ${resizable.isDragging ? "#ccc" : "#4c4c63"}`,
                 width: resizable.width,
             }}
+            className={classNames({ "is-dragging": resizable.isDragging })}
         >
             <ColumnResize
                 handleMouseDown={(e) => {

@@ -133,7 +133,7 @@ interface TooltipContentProps {
 function TooltipContent({ type, sizeInBytes }: TooltipContentProps) {
     return (
         <>
-            <div className="small-label mb-1">{tooltipTitles[type]}</div>
+            <div className="fs-6 text-uppercase mb-1">{tooltipTitles[type]}</div>
             <div>Size: {genUtils.formatBytesToSize(sizeInBytes)}</div>
         </>
     );

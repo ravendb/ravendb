@@ -16,6 +16,10 @@
     background-color: colors.$panel-bg-1-var;
     border-radius: sizes.$gutter-xs;
 
+    &.is-dragging {
+        border-left-color: colors.$border-color-var !important;
+    }
+
     .prompt-wrapper {
         display: flex;
         flex-direction: column;
