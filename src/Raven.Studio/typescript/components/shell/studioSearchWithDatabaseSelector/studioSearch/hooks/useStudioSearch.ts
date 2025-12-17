@@ -26,6 +26,10 @@ export function useStudioSearch(menuItems: menuItem[]) {
     const dispatch = useAppDispatch();
 
     const handleAskAi = useCallback(() => {
+        if (!searchQuery?.trim()) {
+            return;
+        }
+
         dispatch(chatbotActions.isOpenSet(true));
         dispatch(chatbotActions.runChat({ message: searchQuery }));
         setSearchQuery("");
