@@ -273,6 +273,9 @@ public class RavenDB_24327 : StorageTest
         {
             var p = tx.LowLevelTransaction.AllocatePage(10); // this will allocate pages from the sparse region 
             
+            p.Flags |= PageFlags.Overflow;
+            p.OverflowSize = 9 * Constants.Storage.PageSize;
+
             Assert.True(p.PageNumber >= firstFreedPage); // so let's assert that
             
             Memory.Set(p.DataPointer, 13, 10 * Constants.Storage.PageSize - PageHeader.SizeOf);
