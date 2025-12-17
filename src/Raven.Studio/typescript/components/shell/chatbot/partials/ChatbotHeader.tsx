@@ -28,14 +28,6 @@ export default function ChatbotHeader() {
                 >
                     <Icon icon={isPinned ? "pinned" : "pin"} margin="m-0" />
                 </Button>
-                <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => dispatch(chatbotActions.isOpenToggled())}
-                    className="text-reset"
-                >
-                    <Icon icon="cancel" margin="m-0" />
-                </Button>
             </div>
         </div>
     );
