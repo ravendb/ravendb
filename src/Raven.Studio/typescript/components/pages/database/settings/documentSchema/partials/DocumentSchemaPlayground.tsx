@@ -32,6 +32,7 @@ import { SelectOption } from "components/common/select/Select";
 import { DocumentSchemaValidatorConfig } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 import DocumentSchemaPlaygroundAboutView from "components/pages/database/settings/documentSchema/partials/DocumentSchemaPlaygroundAboutView";
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
+import { ScriptSyntaxHelp } from "components/pages/database/settings/documentSchema/partials/ScriptSyntaxHelp";
 
 export default function DocumentSchemaPlayground() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -194,6 +195,10 @@ function TestDocumentSchema({ index, remove }: ExtendedFieldArrayWithId) {
                                                 }}
                                             />
                                         ),
+                                    },
+                                    {
+                                        component: <AceEditor.HelpAction message={<ScriptSyntaxHelp />} />,
+                                        position: "bottom",
                                     },
                                 ]}
                                 mode="json"

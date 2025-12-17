@@ -217,7 +217,7 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
                                     maxDocumentsToValidate={formValues.maxDocumentsToValidate}
                                     selected={getIsCollectionSelected(validator.Name, selectedCollections)}
                                     toggleSelection={() => handleSelectCollections(validator)}
-                                    hideSelection={isPlayground}
+                                    showSelection={isPlayground}
                                 />
                             ))}
                         </Accordion>
@@ -537,7 +537,7 @@ interface ValidationCollectionAccordionItemProps {
     maxDocumentsToValidate: number | null;
     selected: boolean;
     toggleSelection: (x: ChangeEvent<HTMLInputElement>) => void;
-    hideSelection?: boolean;
+    showSelection?: boolean;
 }
 
 function ValidationCollectionAccordionItem({
@@ -548,7 +548,7 @@ function ValidationCollectionAccordionItem({
     maxDocumentsToValidate,
     selected,
     toggleSelection,
-    hideSelection,
+    showSelection,
 }: ValidationCollectionAccordionItemProps) {
     const errorCount = monitorOperationProgress?.ErrorCount ?? 0;
     const isCompleted = monitorOperationProgress?.status === "complete";
@@ -575,7 +575,7 @@ function ValidationCollectionAccordionItem({
                 })}
             >
                 <div className="hstack gap-2">
-                    {hideSelection && (
+                    {showSelection && (
                         <Checkbox
                             color="primary"
                             className="mb-0"
@@ -659,9 +659,8 @@ function ValidationCollectionAccordionItem({
 }
 
 function getIsCollectionSelected(name: string, selectedCollections: Record<string, boolean>): boolean {
-    const explicit = selectedCollections[name];
-    if (typeof explicit === "boolean") {
-        return explicit;
+    if (selectedCollections[name] != null) {
+        return selectedCollections[name];
     }
 
     return true;
