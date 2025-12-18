@@ -160,9 +160,6 @@ class query extends shardViewModelBase {
     
     additionalParameters?: AdditionalParameters;
 
-    isAiAssistantDisabled?: boolean = false;
-    isChatbotDataSubmissionEnabled?: boolean = false;
-
     saveQueryFocus = ko.observable<boolean>(false);
 
     clientVersion = viewModelBase.clientVersion;
@@ -596,10 +593,6 @@ class query extends shardViewModelBase {
         this.updateHelpLink('KCIMJK');
 
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
-        
-        const storeState = store.default.getState();
-        this.isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
-        this.isChatbotDataSubmissionEnabled = chatbotSlice.chatbotSelectors.isDataSubmissionEnabled(storeState);
 
         const db = this.db;
         
@@ -1209,8 +1202,12 @@ class query extends shardViewModelBase {
                             this.additionalParameters.openGraph = false;
                         }
 
+                        const storeState = store.default.getState();
+                        const isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
+                        const isChatbotDataSubmissionEnabled = chatbotSlice.chatbotSelectors.isDataSubmissionEnabled(storeState);
+
                         // Attach query first page result to chatbot context
-                        if (skip === 0 && !this.isAiAssistantDisabled && this.isChatbotDataSubmissionEnabled) {
+                        if (skip === 0 && !isAiAssistantDisabled && isChatbotDataSubmissionEnabled) {
                             const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
@@ -1243,10 +1240,11 @@ class query extends shardViewModelBase {
                         this.queryStats(null);
                         this.totalResultsForUi(0);
 
-                        if (!this.isAiAssistantDisabled) {
-                            const errorMessage = request.responseJSON?.Message;
-                            const storeState = store.default.getState();
+                        const storeState = store.default.getState();
+                        const isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
 
+                        if (!isAiAssistantDisabled) {
+                            const errorMessage = request.responseJSON?.Message;
                             const isQueryErrorInContext = chatbotSlice.chatbotSelectors.attachedContexts(storeState)
                                 .find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
                             
