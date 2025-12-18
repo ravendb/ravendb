@@ -12,6 +12,7 @@ import { useOS } from "hooks/useOS";
 import { Icon } from "components/common/Icon";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 import { useAppSelector } from "components/store";
+import Row from "react-bootstrap/Row";
 
 export default function StudioSearch(props: { menuItems?: menuItem[] }) {
     const { refs, isSearchDropdownOpen, searchQuery, setSearchQuery, matchStatus, results, activeItem, handleAskAi } =
@@ -40,55 +41,57 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                     />
                 </Dropdown.Toggle>
                 <Dropdown.Menu className="studio-search__results">
-                    {!isAiAssistantDisabled && !!searchQuery && (
-                        <>
-                            <Dropdown.Header className="studio-search__database-col__header--sticky">
-                                <span className="small-label">Knowledge center</span>
-                            </Dropdown.Header>
-                            <div className="p-2">
-                                <Dropdown.Item
-                                    onClick={handleAskAi}
-                                    className="d-flex align-items-center studio-search__dropdown-item bg-body border border-secondary"
-                                    active={false}
-                                    id="ask-ai"
-                                >
-                                    <Icon icon="ask-ai" className="ai-gradient" />
-                                    <span>
-                                        Ask AI &#8226; <span className="text-muted">{searchQuery}</span>
-                                    </span>
-                                </Dropdown.Item>
-                            </div>
-                        </>
-                    )}
-                    <div
-                        className={classNames(
-                            "col-sm-12 studio-search__database-col p-0",
-                            `col-md-${matchStatus.hasServerMatch ? 7 : 12}`
+                    <Row className="m-0">
+                        {!isAiAssistantDisabled && !!searchQuery && (
+                            <>
+                                <Dropdown.Header className="studio-search__database-col__header--sticky">
+                                    <span className="small-label">Knowledge center</span>
+                                </Dropdown.Header>
+                                <div className="p-2">
+                                    <Dropdown.Item
+                                        onClick={handleAskAi}
+                                        className="d-flex align-items-center studio-search__dropdown-item bg-body border border-secondary"
+                                        active={false}
+                                        id="ask-ai"
+                                    >
+                                        <Icon icon="ask-ai" className="ai-gradient" />
+                                        <span>
+                                            Ask AI &#8226; <span className="text-muted">{searchQuery}</span>
+                                        </span>
+                                    </Dropdown.Item>
+                                </div>
+                            </>
                         )}
-                        ref={refs.databaseColumnRef}
-                    >
-                        <Dropdown.Header className="studio-search__database-col__header--sticky">
-                            <span className="small-label">Active database</span>
-                        </Dropdown.Header>
+                        <div
+                            className={classNames(
+                                "col-sm-12 studio-search__database-col p-0",
+                                `col-md-${matchStatus.hasServerMatch ? 7 : 12}`
+                            )}
+                            ref={refs.databaseColumnRef}
+                        >
+                            <Dropdown.Header className="studio-search__database-col__header--sticky">
+                                <span className="small-label">Active database</span>
+                            </Dropdown.Header>
 
-                        <StudioSearchDatabaseResults
-                            hasDatabaseMatch={matchStatus.hasDatabaseMatch}
-                            databaseResults={results.database}
+                            <StudioSearchDatabaseResults
+                                hasDatabaseMatch={matchStatus.hasDatabaseMatch}
+                                databaseResults={results.database}
+                                activeItem={activeItem}
+                            />
+                            <StudioSearchSwitchToDatabaseResults
+                                hasSwitchToDatabaseMatch={matchStatus.hasSwitchToDatabaseMatch}
+                                switchToDatabaseResults={results.switchToDatabase}
+                                activeItem={activeItem}
+                            />
+                        </div>
+                        <StudioSearchServerResults
+                            serverColumnRef={refs.serverColumnRef}
+                            hasServerMatch={matchStatus.hasServerMatch}
+                            serverResults={results.server}
                             activeItem={activeItem}
                         />
-                        <StudioSearchSwitchToDatabaseResults
-                            hasSwitchToDatabaseMatch={matchStatus.hasSwitchToDatabaseMatch}
-                            switchToDatabaseResults={results.switchToDatabase}
-                            activeItem={activeItem}
-                        />
-                    </div>
-                    <StudioSearchServerResults
-                        serverColumnRef={refs.serverColumnRef}
-                        hasServerMatch={matchStatus.hasServerMatch}
-                        serverResults={results.server}
-                        activeItem={activeItem}
-                    />
-                    <StudioSearchLegend />
+                        <StudioSearchLegend />
+                    </Row>
                 </Dropdown.Menu>
             </Dropdown>
             {isSearchDropdownOpen && (
