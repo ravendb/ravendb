@@ -27,6 +27,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
+        [RavenShardedAction("/databases/*/docs/validate-schema", "POST")]
+        public async Task ValidateSchema()
+        {
+            using (var processor = new ShardedDocumentHandlerProcessorForValidateDocument(this))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
+
         [RavenShardedAction("/databases/*/docs", "GET")]
         public Task Get()
         {

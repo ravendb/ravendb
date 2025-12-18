@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Http;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Documents;
@@ -8,7 +7,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
 
@@ -29,6 +27,13 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetDocSize()
         {
             using (var processor = new DocumentHandlerProcessorForGetDocSize(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/docs/validate-schema", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task ValidateSchema()
+        {
+            using (var processor = new DocumentHandlerProcessorForValidateDocument(this))
                 await processor.ExecuteAsync();
         }
 
