@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Sharding
         {
             if (configuration != null && configuration.HasEnabledConfiguration())
             {
-                SchemaValidationCache ??= SchemaValidatorCache.Create(ServerStore.ContextPool, NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
+                SchemaValidationCache ??= new SchemaValidatorCache(NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
                 SchemaValidationCache.Update(configuration);
             }
             else

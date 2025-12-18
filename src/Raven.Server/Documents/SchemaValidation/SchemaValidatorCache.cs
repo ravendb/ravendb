@@ -20,21 +20,13 @@ public class SchemaValidatorCache : IDisposable
 
     private readonly AbstractDatabaseNotificationCenter _notificationCenter;
     private readonly RavenLogger _logger;
-    private readonly (IDisposable Return, JsonOperationContext Value) _context;
+    private readonly JsonOperationContext _context;
     private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
     public bool Disabled { get; private set; } = true;
 
-    public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, AbstractDatabaseNotificationCenter notificationCenter, RavenLogger logger)
-        where T : JsonOperationContext
+    public SchemaValidatorCache(AbstractDatabaseNotificationCenter notificationCenter, RavenLogger logger)
     {
-        var returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
-        return new SchemaValidatorCache(returnContext, context, notificationCenter, logger);
-    }
-    
-    private SchemaValidatorCache(IDisposable returnCtx, JsonOperationContext ctx, AbstractDatabaseNotificationCenter notificationCenter, RavenLogger logger)
-    {
-        _context.Return = returnCtx;
-        _context.Value = ctx;
+        _context = JsonOperationContext.ShortTermSingleUse();
         _notificationCenter = notificationCenter;
         _logger = logger;
     }
@@ -66,8 +58,8 @@ public class SchemaValidatorCache : IDisposable
             SchemaValidator schemaValidator;
             try
             {
-                var blittable = _context.Value.Sync.ReadForMemory(validator.Schema, "schema-validation");
-                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context.Value, blittable, validator.Schema, validator.Disabled);
+                var blittable = _context.Sync.ReadForMemory(validator.Schema, "schema-validation");
+                schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context, blittable, validator.Schema, validator.Disabled);
             }
             catch (Exception e)
             {
@@ -170,7 +162,7 @@ public class SchemaValidatorCache : IDisposable
     {
         GC.SuppressFinalize(this);
 
-        using (_context.Return)
+        using (_context)
         {
         }
     }

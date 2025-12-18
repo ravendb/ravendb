@@ -1769,7 +1769,7 @@ namespace Raven.Server.Documents
         {
             if (configuration != null && configuration.HasEnabledConfiguration())
             {
-                SchemaValidatorCache ??= SchemaValidatorCache.Create(DocumentsStorage.ContextPool, NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
+                SchemaValidatorCache ??= new SchemaValidatorCache(NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
                 SchemaValidatorCache.Update(configuration);
             }
             else
