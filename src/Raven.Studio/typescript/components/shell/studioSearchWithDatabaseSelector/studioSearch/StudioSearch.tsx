@@ -50,7 +50,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                                 <div className="p-2">
                                     <Dropdown.Item
                                         onClick={handleAskAi}
-                                        className="d-flex align-items-center studio-search__dropdown-item bg-body border border-secondary"
+                                        className="d-flex align-items-center studio-search__dropdown-item bg-faded-secondary border border-secondary"
                                         active={false}
                                         id="ask-ai"
                                     >
