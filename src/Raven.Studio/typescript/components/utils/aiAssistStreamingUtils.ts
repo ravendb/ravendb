@@ -34,7 +34,7 @@ export async function processStreamingResponse<T extends object>({
         if (!response.ok && contentType.includes("text/plain")) {
             const responseText = await response.text();
             return {
-                status: "Error",
+                status: "InternalError",
                 error: responseText,
             };
         }

@@ -296,14 +296,6 @@ const runChat = createAsyncThunk(
             abortSignal: chatAbortController.signal,
         });
 
-        if (result.status === "Aborted") {
-            return {
-                ...assistantMessage,
-                state: "Error",
-                errorMessage: "Request was aborted",
-            };
-        }
-
         if (result.status !== "Success") {
             return {
                 ...assistantMessage,
