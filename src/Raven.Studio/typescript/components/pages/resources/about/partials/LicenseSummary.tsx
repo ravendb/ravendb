@@ -53,7 +53,7 @@ export function LicenseSummary(props: LicenseSummaryProps) {
     const licenseType = useAppSelector(licenseSelectors.statusValue("Type"));
     const aiAssistantConsentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const aiAssistantUsage = useAppSelector(aiAssistantSelectors.usage);
-    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.settings).isDisabled;
+    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
 
     // Check AI Assistant usage if not checked yet
     useEffect(() => {

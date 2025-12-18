@@ -37,7 +37,7 @@ export default function ChatbotAskAiMessageEndpoints({
 
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
-    const isDataSubmissionDisabled = useAppSelector(aiAssistantSelectors.settings).isDataSubmissionDisabled;
+    const isDataSubmissionDisabled = useAppSelector(aiAssistantSelectors.isDataSubmissionDisabled);
 
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
@@ -68,8 +68,7 @@ export default function ChatbotAskAiMessageEndpoints({
                     return {
                         ...baseResult,
                         status: "error",
-                        resultText:
-                            "Data submission is disabled (Ai.Assistant.DisableDataSubmission). It can be edited from the settings.json file.",
+                        resultText: "Data submission is disabled",
                     };
                 }
 

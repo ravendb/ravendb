@@ -160,6 +160,7 @@ class query extends shardViewModelBase {
     
     additionalParameters?: AdditionalParameters;
 
+    isAiAssistantDisabled?: boolean = false;
     isAiAssistantDataSubmissionDisabled?: boolean = false;
 
     saveQueryFocus = ko.observable<boolean>(false);
@@ -597,7 +598,8 @@ class query extends shardViewModelBase {
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
         
         const storeState = store.default.getState();
-        this.isAiAssistantDataSubmissionDisabled = aiAssistantSlice.aiAssistantSelectors.settings(storeState).isDataSubmissionDisabled;
+        this.isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
+        this.isAiAssistantDataSubmissionDisabled = aiAssistantSlice.aiAssistantSelectors.isDataSubmissionDisabled(storeState);
 
         const db = this.db;
         
@@ -1208,7 +1210,7 @@ class query extends shardViewModelBase {
                         }
 
                         // Attach query first page result to chatbot context
-                        if (skip === 0 && !this.isAiAssistantDataSubmissionDisabled) {
+                        if (skip === 0 && !this.isAiAssistantDisabled && !this.isAiAssistantDataSubmissionDisabled) {
                             const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
@@ -1242,22 +1244,25 @@ class query extends shardViewModelBase {
                         this.totalResultsForUi(0);
                         resultsTask.reject(request);
 
-                        const errorMessage = request.responseJSON?.Message;
-                        const isQueryErrorInContext = !!Object.values(
-                            store.default.getState().chatbot.attachedContexts.entities
-                        ).find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
+                        if (!this.isAiAssistantDisabled) {
+                            const errorMessage = request.responseJSON?.Message;
+                            const storeState = store.default.getState();
 
-                        if (errorMessage && !isQueryErrorInContext) {
-                            storeCompat.globalDispatch(
-                                chatbotSlice.chatbotActions.attachedContextUpserted({
-                                    id: `QueryError-${_.uniqueId()}}`,
-                                    type: "QueryError",
-                                    label: errorMessage.replaceAll("\r\n", " "),
-                                    value: errorMessage,
-                                    state: "included",
-                                    query: criteriaForFetcher.queryText(),
-                                })
-                            );
+                            const isQueryErrorInContext = chatbotSlice.chatbotSelectors.attachedContexts(storeState)
+                                .find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
+                            
+                            if (errorMessage && !isQueryErrorInContext) {
+                                storeCompat.globalDispatch(
+                                    chatbotSlice.chatbotActions.attachedContextUpserted({
+                                        id: `QueryError-${_.uniqueId()}}`,
+                                        type: "QueryError",
+                                        label: errorMessage.replaceAll("\r\n", " "),
+                                        value: errorMessage,
+                                        state: "included",
+                                        query: criteriaForFetcher.queryText(),
+                                    })
+                                );
+                            }
                         }
                     });
                 

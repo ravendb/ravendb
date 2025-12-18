@@ -1,4 +1,4 @@
-export default function AiAssistantDisabledMessage() {
+export default function AiAssistantDisabledInSettingsMessage() {
     return (
         <div>
             AI Assistant is disabled (Ai.Assistant.Disable).

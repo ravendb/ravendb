@@ -5,21 +5,30 @@ import IconName from "typings/server/icons";
 import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
-import AiAssistantDisabledMessage from "components/common/aiAssistant/AiAssistantDisabledMessage";
+import AiAssistantDisabledInSettingsMessage from "components/common/aiAssistant/AiAssistantDisabledInSettingsMessage";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 
 export default function ChatbotFooter() {
     const dispatch = useAppDispatch();
 
     const chatbotTab = useAppSelector(chatbotSelectors.chatbotTab);
-    const aiAssistantSettings = useAppSelector(aiAssistantSelectors.settings);
+    const isAiAssistantSettingsDisabled = useAppSelector(aiAssistantSelectors.settings).isDisabled;
+    const hasAiAssistant = useAppSelector(licenseSelectors.statusValue("HasAiAssistant"));
 
     return (
         <div className="chatbot-footer panel-bg-2 border-top border-secondary p-2 hstack">
             <ConditionalPopover
-                conditions={{
-                    isActive: aiAssistantSettings.isDisabled,
-                    message: <AiAssistantDisabledMessage />,
-                }}
+                conditions={[
+                    {
+                        isActive: isAiAssistantSettingsDisabled,
+                        message: <AiAssistantDisabledInSettingsMessage />,
+                    },
+                    {
+                        isActive: !hasAiAssistant,
+                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                    },
+                ]}
                 className="flex-grow-1"
             >
                 <FooterItem
@@ -27,7 +36,7 @@ export default function ChatbotFooter() {
                     title="Ask AI"
                     isActive={chatbotTab === "askAi"}
                     handleClick={() => dispatch(chatbotActions.chatbotTabSet("askAi"))}
-                    isDisabled={aiAssistantSettings.isDisabled}
+                    isDisabled={isAiAssistantSettingsDisabled || !hasAiAssistant}
                 />
             </ConditionalPopover>
             <FooterItem

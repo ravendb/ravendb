@@ -96,6 +96,11 @@ function initRedux() {
 
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
+
+        if (!licenseStatus.HasAiAssistant) {
+            globalDispatch(chatbotActions.chatbotTabSet("resources"));
+        }
+
         throttledUpdateLicenseLimitsUsage();
     });
     licenseModel.supportCoverage.subscribe((supportCoverage) => {
