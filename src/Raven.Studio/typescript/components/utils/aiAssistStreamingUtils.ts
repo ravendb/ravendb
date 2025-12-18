@@ -22,14 +22,24 @@ export async function processStreamingResponse<T extends object>({
     try {
         const response = await promiseFn();
 
-        if (!response.ok && response.status === 413) {
+        if (response.status === 500) {
             return {
-                status: "RequestTooLarge",
-                error: "The request exceeds the maximum allowed size. Please reduce your attached context and try again.",
+                status: "Error",
+                error: "Server is not responding. Please try again later.",
             };
         }
 
-        if (response.headers.get("content-type").includes("application/json")) {
+        const contentType = response.headers.get("content-type");
+
+        if (!response.ok && contentType.includes("text/plain")) {
+            const responseText = await response.text();
+            return {
+                status: "Error",
+                error: responseText,
+            };
+        }
+
+        if (contentType.includes("application/json")) {
             if (!response.ok) {
                 try {
                     const data = await response.json();
