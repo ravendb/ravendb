@@ -104,6 +104,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
 
     const contentTypewriter = useTypewriter({
         text: message.content,
+        isDone: message.thinkingTimeInMs != null,
     });
 
     if (message.state === "Loading") {
