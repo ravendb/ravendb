@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
         private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
 
-        public SchemaValidatorCache SchemaValidationCache { get; private set; }
+        public SchemaValidatorCache SchemaValidatorCache { get; private set; }
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
@@ -110,14 +110,22 @@ namespace Raven.Server.Documents.Sharding
         {
             if (configuration != null && configuration.HasEnabledConfiguration())
             {
-                SchemaValidationCache ??= new SchemaValidatorCache(NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
-                SchemaValidationCache.Update(configuration);
+                if (SchemaValidatorCache != null)
+                {
+                    SchemaValidatorCache.Update(configuration);
+                }
+                else
+                {
+                    var cache = new SchemaValidatorCache(NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
+                    cache.Update(configuration);
+                    SchemaValidatorCache = cache;
+                }
             }
             else
             {
                 // we intentionally don't dispose here since it might be currently being used for validation,
                 // clearing the resources will be done by the finalizer.
-                SchemaValidationCache = null;
+                SchemaValidatorCache = null;
             }
         }
 

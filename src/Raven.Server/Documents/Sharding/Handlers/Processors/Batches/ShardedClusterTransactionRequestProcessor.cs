@@ -23,7 +23,7 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
 
     protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
 
-    protected override SchemaValidatorCache SchemaValidatorCache => RequestHandler.DatabaseContext.SchemaValidationCache;
+    protected override SchemaValidatorCache SchemaValidatorCache => RequestHandler.DatabaseContext.SchemaValidatorCache;
 
     public override Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
     {

@@ -1769,8 +1769,16 @@ namespace Raven.Server.Documents
         {
             if (configuration != null && configuration.HasEnabledConfiguration())
             {
-                SchemaValidatorCache ??= new SchemaValidatorCache(NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
-                SchemaValidatorCache.Update(configuration);
+                if (SchemaValidatorCache != null)
+                {
+                    SchemaValidatorCache.Update(configuration);
+                }
+                else
+                {
+                    var cache = new SchemaValidatorCache(NotificationCenter, Loggers.GetLogger<SchemaValidatorCache>());
+                    cache.Update(configuration);
+                    SchemaValidatorCache = cache;
+                }
             }
             else
             {
