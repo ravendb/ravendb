@@ -108,8 +108,8 @@ export default function AiAssistantWindow({
         <div
             className="ai-assistant-window position-absolute rounded-2 text-reset"
             style={{
-                right: right,
-                bottom: bottom,
+                right,
+                bottom,
                 zIndex: 10,
                 width: "500px",
             }}

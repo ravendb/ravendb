@@ -311,12 +311,7 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
         <div>
             <div className="hstack w-100">
                 <span className="text-nowrap">
-                    {endpoint.state === "waiting" && <span className="me-1">-</span>}
-                    {endpoint.state === "allowed" ||
-                        (endpoint.state === "alwaysAllowed" && <Icon icon="check" color="success" />)}
-                    {endpoint.state === "error" && <Icon icon="warning" color="danger" />}
-                    {endpoint.state === "skipped" && <Icon icon="skip" />}
-                    {endpoint.state === "denied" && <Icon icon="cancel" />}
+                    <EndpointItemStateIcon state={endpoint.state} />
                     GET
                 </span>
                 <a
@@ -341,4 +336,21 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
             )}
         </div>
     );
+}
+
+function EndpointItemStateIcon({ state }: Pick<ChatbotEndpointItem, "state">) {
+    switch (state) {
+        case "allowed":
+        case "alwaysAllowed":
+            return <Icon icon="check" color="success" />;
+        case "error":
+            return <Icon icon="warning" color="danger" />;
+        case "skipped":
+            return <Icon icon="skip" />;
+        case "denied":
+            return <Icon icon="cancel" />;
+        case "waiting":
+        default:
+            return <span className="me-1">-</span>;
+    }
 }
