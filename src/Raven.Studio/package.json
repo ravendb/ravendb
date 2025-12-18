@@ -94,7 +94,7 @@
         "resolve-url-loader": "^5.0.0",
         "sass": "^1.93.2",
         "sass-loader": "^16.0.5",
-        "storybook": "^9.1.7",
+        "storybook": "^9.1.17",
         "swc-loader": "^0.2.6",
         "terser-webpack-plugin": "^5.3.10",
         "thread-loader": "^4.0.4",
