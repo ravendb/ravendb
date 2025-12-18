@@ -25,8 +25,4 @@ export default class AiAssistantService {
     async checkUsage(...args: ConstructorParameters<typeof checkUsageAiAssistantCommand>) {
         return new checkUsageAiAssistantCommand(...args).execute();
     }
-
-    async getSettings(...args: ConstructorParameters<typeof getSettingsAiAssistantCommand>) {
-        return new getSettingsAiAssistantCommand(...args).execute();
-    }
 }

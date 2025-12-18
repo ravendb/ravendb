@@ -162,21 +162,6 @@ function initRedux() {
             })
         );
     });
-
-    services.aiAssistantService.getSettings().then((settings) => {
-        globalDispatch(
-            aiAssistantActions.settingsSet({
-                isDisabled: settings.DisableAiAssistant,
-                isDataSubmissionDisabled: settings.DisableDataSubmission,
-            })
-        );
-
-        globalDispatch(globalDispatch(chatbotActions.isDataSubmissionEnabledSet(!settings.DisableDataSubmission)));
-
-        if (settings.DisableAiAssistant) {
-            globalDispatch(chatbotActions.chatbotTabSet("resources"));
-        }
-    });
 }
 
 declare module "yup" {
