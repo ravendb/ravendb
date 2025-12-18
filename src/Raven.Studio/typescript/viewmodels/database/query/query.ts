@@ -161,7 +161,7 @@ class query extends shardViewModelBase {
     additionalParameters?: AdditionalParameters;
 
     isAiAssistantDisabled?: boolean = false;
-    isAiAssistantDataSubmissionDisabled?: boolean = false;
+    isChatbotDataSubmissionEnabled?: boolean = false;
 
     saveQueryFocus = ko.observable<boolean>(false);
 
@@ -599,7 +599,7 @@ class query extends shardViewModelBase {
         
         const storeState = store.default.getState();
         this.isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
-        this.isAiAssistantDataSubmissionDisabled = aiAssistantSlice.aiAssistantSelectors.isDataSubmissionDisabled(storeState);
+        this.isChatbotDataSubmissionEnabled = chatbotSlice.chatbotSelectors.isDataSubmissionEnabled(storeState);
 
         const db = this.db;
         
@@ -1210,7 +1210,7 @@ class query extends shardViewModelBase {
                         }
 
                         // Attach query first page result to chatbot context
-                        if (skip === 0 && !this.isAiAssistantDisabled && !this.isAiAssistantDataSubmissionDisabled) {
+                        if (skip === 0 && !this.isAiAssistantDisabled && this.isChatbotDataSubmissionEnabled) {
                             const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
@@ -1242,7 +1242,6 @@ class query extends shardViewModelBase {
                         this.rawJsonUrl(null);
                         this.queryStats(null);
                         this.totalResultsForUi(0);
-                        resultsTask.reject(request);
 
                         if (!this.isAiAssistantDisabled) {
                             const errorMessage = request.responseJSON?.Message;
@@ -1264,6 +1263,8 @@ class query extends shardViewModelBase {
                                 );
                             }
                         }
+
+                        resultsTask.reject(request);
                     });
                 
                 return resultsTask;

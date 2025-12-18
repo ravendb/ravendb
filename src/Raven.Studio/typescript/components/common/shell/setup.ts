@@ -171,6 +171,8 @@ function initRedux() {
             })
         );
 
+        globalDispatch(globalDispatch(chatbotActions.isDataSubmissionEnabledSet(!settings.DisableDataSubmission)));
+
         if (settings.DisableAiAssistant) {
             globalDispatch(chatbotActions.chatbotTabSet("resources"));
         }

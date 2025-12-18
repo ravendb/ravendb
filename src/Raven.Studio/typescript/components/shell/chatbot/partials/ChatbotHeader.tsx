@@ -7,6 +7,9 @@ import AiAssistantUsagePercentageCircle from "components/common/aiAssistant/AiAs
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { Switch } from "components/common/Checkbox";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import AiAssistantDisabledInSettingsMessage from "components/common/aiAssistant/AiAssistantDisabledInSettingsMessage";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
@@ -36,6 +39,8 @@ export default function ChatbotHeader() {
 function AskAiActions() {
     const dispatch = useAppDispatch();
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
+    const isChatbotDataSubmissionEnabled = useAppSelector(chatbotSelectors.isDataSubmissionEnabled);
+    const aiAssistantSettings = useAppSelector(aiAssistantSelectors.settings);
 
     const resetConversation = () => {
         dispatch(chatbotActions.abortChat());
@@ -63,6 +68,25 @@ function AskAiActions() {
                     >
                         Always allow endpoints calls
                     </Switch>
+                    <ConditionalPopover
+                        conditions={[
+                            {
+                                isActive: aiAssistantSettings.isDataSubmissionDisabled,
+                                message: <AiAssistantDisabledInSettingsMessage />,
+                            },
+                        ]}
+                    >
+                        <Switch
+                            color="primary"
+                            selected={isChatbotDataSubmissionEnabled}
+                            toggleSelection={() =>
+                                dispatch(chatbotActions.isDataSubmissionEnabledSet(!isChatbotDataSubmissionEnabled))
+                            }
+                            disabled={aiAssistantSettings.isDataSubmissionDisabled}
+                        >
+                            Allow data submission
+                        </Switch>
+                    </ConditionalPopover>
                     <Button
                         variant="outline-secondary"
                         onClick={() => dispatch(chatbotActions.exportConversation())}

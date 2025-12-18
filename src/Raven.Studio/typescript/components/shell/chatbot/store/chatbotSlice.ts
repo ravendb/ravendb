@@ -87,6 +87,7 @@ interface ChatbotState {
     newContextTab: ChatbotAttachedContext["type"];
     deniedEndpoints: string[];
     isAlwaysAllowEndpointCalls: boolean;
+    isDataSubmissionEnabled: boolean;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -114,6 +115,7 @@ const initialState: ChatbotState = {
     isNewContextOpen: false,
     newContextTab: null,
     isAlwaysAllowEndpointCalls: true,
+    isDataSubmissionEnabled: true,
 };
 
 export const chatbotSlice = createSlice({
@@ -206,6 +208,9 @@ export const chatbotSlice = createSlice({
         },
         isAlwaysAllowEndpointCallsSet: (state, action: PayloadAction<boolean>) => {
             state.isAlwaysAllowEndpointCalls = action.payload;
+        },
+        isDataSubmissionEnabledSet: (state, action: PayloadAction<boolean>) => {
+            state.isDataSubmissionEnabled = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -432,4 +437,5 @@ export const chatbotSelectors = {
     newContextTab: (state: RootState) => state.chatbot.newContextTab,
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
     isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
+    isDataSubmissionEnabled: (state: RootState) => state.chatbot.isDataSubmissionEnabled,
 };

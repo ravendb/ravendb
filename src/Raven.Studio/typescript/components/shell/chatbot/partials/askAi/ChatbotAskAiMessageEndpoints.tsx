@@ -37,7 +37,7 @@ export default function ChatbotAskAiMessageEndpoints({
 
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
-    const isDataSubmissionDisabled = useAppSelector(aiAssistantSelectors.isDataSubmissionDisabled);
+    const isDataSubmissionEnabled = useAppSelector(chatbotSelectors.isDataSubmissionEnabled);
 
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
 
@@ -64,7 +64,7 @@ export default function ChatbotAskAiMessageEndpoints({
                     return { ...baseResult, status: "error", resultText: "Endpoint is not whitelisted" };
                 }
 
-                if (isDataSubmissionDisabled && isWithDataSubmission(url)) {
+                if (!isDataSubmissionEnabled && isWithDataSubmission(url)) {
                     return {
                         ...baseResult,
                         status: "error",
