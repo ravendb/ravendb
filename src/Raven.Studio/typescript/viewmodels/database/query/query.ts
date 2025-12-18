@@ -134,7 +134,6 @@ interface AdditionalParameters {
     database: string;
     openGraph: boolean;
     sourceView?: "chatbot" | "regular";
-    isDisableAutoIndexCreation?: boolean;
 }
 
 class query extends shardViewModelBase {
@@ -595,10 +594,7 @@ class query extends shardViewModelBase {
         
         this.updateHelpLink('KCIMJK');
 
-        this.fetchStudioConfiguration().done((settings) => {
-            const isDisableAutoIndexCreation = additionalParameters.isDisableAutoIndexCreation ? true : settings.disableAutoIndexCreation.getValue();
-            this.disableAutoIndexCreation(isDisableAutoIndexCreation)
-        });
+        this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
         
         const storeState = store.default.getState();
         this.isAiAssistantDataSubmissionDisabled = aiAssistantSlice.aiAssistantSelectors.settings(storeState).isDataSubmissionDisabled;

@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
-import Prism from "prismjs";
 import "./Code.scss";
+import { useMemo } from "react";
+import Prism from "prismjs";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
@@ -11,10 +11,6 @@ import queryCriteria from "models/database/query/queryCriteria";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
 import useConfirm from "components/common/ConfirmDialog";
-import databasesManager from "common/shell/databasesManager";
-import Dropdown from "react-bootstrap/Dropdown";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { CustomDropdownToggle } from "components/common/Dropdown";
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -71,28 +67,19 @@ export default function Code(props: CodeProps) {
 
     const confirm = useConfirm();
 
-    const executeQuery = (isDisableAutoIndexCreation: boolean) => {
+    const executeQuery = async (dbName: string) => {
         const query = queryCriteria.empty();
         query.queryText(code);
         query.recentQuery(true);
         const queryDto = query.toStorageDto();
 
-        let extraParameters = "";
-
-        if (sourceView === "chatbot") {
-            extraParameters += "&sourceView=chatbot";
-        }
-        if (isDisableAutoIndexCreation) {
-            extraParameters += `&isDisableAutoIndexCreation=true`;
-        }
-
-        savedQueriesStorage.saveAndNavigate(activeDatabaseName, queryDto, {
+        savedQueriesStorage.saveAndNavigate(dbName, queryDto, {
             newWindow: false,
-            extraParameters,
+            extraParameters: sourceView === "chatbot" ? "&sourceView=chatbot" : "",
         });
     };
 
-    const handleRunQuery = async (isDisableAutoIndexCreation: boolean) => {
+    const handleRunQuery = async () => {
         if (
             sourceView === "chatbot" &&
             chatbotDatabaseContext?.state === "included" &&
@@ -117,12 +104,9 @@ export default function Code(props: CodeProps) {
                 return;
             }
 
-            const db = databasesManager.default.getDatabaseByName(chatbotDatabaseContext.value);
-            databasesManager.default.activate(db).then(() => {
-                executeQuery(isDisableAutoIndexCreation);
-            });
+            executeQuery(chatbotDatabaseContext.value);
         } else {
-            executeQuery(isDisableAutoIndexCreation);
+            executeQuery(activeDatabaseName);
         }
     };
 
@@ -142,31 +126,10 @@ export default function Code(props: CodeProps) {
                             Copy
                         </Button>
                         {hasDatabase && props.language === "rql" && (
-                            <Dropdown as={ButtonGroup}>
-                                <Button
-                                    variant="link"
-                                    className="text-emphasis fs-6 border-0 border-end border-secondary"
-                                    onClick={() => handleRunQuery(false)}
-                                >
-                                    <Icon icon="rocket" />
-                                    Run query
-                                </Button>
-                                <Dropdown.Toggle
-                                    as={CustomDropdownToggle}
-                                    isCaretHidden
-                                    split
-                                    variant="link"
-                                    className="text-emphasis p-0 ps-1 fs-5"
-                                >
-                                    <Icon icon="chevron-down" margin="m-0" className="fs-5" />
-                                </Dropdown.Toggle>
-                                <Dropdown.Menu>
-                                    <Dropdown.Item onClick={() => handleRunQuery(true)} className="fs-5">
-                                        <Icon icon="query" />
-                                        Run query without creating auto-index
-                                    </Dropdown.Item>
-                                </Dropdown.Menu>
-                            </Dropdown>
+                            <Button variant="link" className="text-emphasis fs-6" onClick={handleRunQuery}>
+                                <Icon icon="rocket" />
+                                Run query
+                            </Button>
                         )}
                     </div>
                 </div>
