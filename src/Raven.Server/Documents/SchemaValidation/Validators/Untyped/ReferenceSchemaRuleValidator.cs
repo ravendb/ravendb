@@ -26,11 +26,11 @@ public class ReferenceSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Re
         schemaPath += Rule;
         if (SchemaValidationHelper.TryGetString(schemaDefinition, Rule, schemaPath, out var reference) == false)
             return null;
-        
-        if(context.RefSchemas.TryGet(reference, out var validator) == false)
+
+        if (context.RefSchemas.TryGet(reference, out var validator) == false)
             throw new InvalidSchemaValidationDefinitionException(
                 $"The reference '{reference}' at '{schemaPath.FullPath}' does not match any defined subschema.");
-                
+
         return new ReferenceSchemaRuleValidator(validator);
     }
 }

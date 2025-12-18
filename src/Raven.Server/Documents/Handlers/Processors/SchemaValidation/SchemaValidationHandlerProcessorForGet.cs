@@ -13,9 +13,6 @@ internal sealed class SchemaValidationHandlerProcessorForGet : AbstractSchemaVal
 
     protected override SchemaValidationConfiguration GetSchemaValidationConfiguration()
     {
-        if(RavenLogManager.Instance.IsAuditEnabled)
-            RequestHandler.LogAuditForDatabase("GET", "Get schema validation configuration.");
-        
         using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {

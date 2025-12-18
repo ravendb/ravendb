@@ -79,9 +79,9 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
 
         await AssertMultipleParallel(() =>
             {
-                if(withDefinedProp == false)
+                if (withDefinedProp == false)
                     return;
-                
+
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["definedProp"] = 1 }, out var obj);
 
                 Assert.True(schemaValidator.Validate(obj, out var errors), errors);

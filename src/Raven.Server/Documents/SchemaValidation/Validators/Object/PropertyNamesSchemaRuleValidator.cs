@@ -43,14 +43,14 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
     public override PropertyNamesSchemaRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var propertyNames) == false)
+        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var propertyNames) == false)
             return null;
-        
+
         List<SchemaRuleValidator<LazyStringValue>> propertyNameValidators = null;
         for (int i = 0; i < propertyNames.Count; i++)
         {
             var propName = propertyNames.GetPropertyNameByIndex(i);
-            if(SchemaRuleValidatorFactoryHelper.TryCreateValidator(context, propName, propertyNames, schemaPath, out var ruleValidator) == false)
+            if (SchemaRuleValidatorFactoryHelper.TryCreateValidator(context, propName, propertyNames, schemaPath, out var ruleValidator) == false)
                 continue;
             var ruleSchemaPath = schemaPath + propName;
             if (ruleValidator is not StringSchemaRuleValidator stringValidator)
@@ -63,7 +63,7 @@ public class PropertyNamesSchemaRuleValidatorFactory : SchemaRuleValidatorFactor
 
         if (propertyNameValidators == null)
             return null;
-        
+
         return new PropertyNamesSchemaRuleValidator(propertyNameValidators.ToArray());
     }
 }

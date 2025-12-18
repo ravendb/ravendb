@@ -14,7 +14,7 @@ public class MaxPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
     public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
-        if(value.Count <= _maxProperties)
+        if (value.Count <= _maxProperties)
             return true;
         context.ErrorBuilder?.AddError($"The object at '{context.ErrorBuilder.Path}' must have no more than {_maxProperties} properties, but it has {value.Count}.");
         return false;

@@ -32,7 +32,7 @@ public abstract class MultiSubschemaAggregatorValidatorFactory<T> : SchemaRuleVa
             var itemSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(validatorsSchema[i], itemPath);
             (validators ??= []).Add(ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, itemSchema, itemPath));
         }
-        if(validators == null)
+        if (validators == null)
             return null;
 
         return validators.ToArray();

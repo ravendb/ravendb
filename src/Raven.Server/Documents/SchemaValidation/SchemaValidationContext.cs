@@ -51,13 +51,13 @@ public class SchemaValidationContext
         ErrorBuilder?.Path.StepOut();
         --_currentDepth;
     }
-    
+
     private void CheckMaxDepthAndThrow()
     {
-        if(_currentDepth >= _maxDepth)
+        if (_currentDepth >= _maxDepth)
             throw new SchemaValidationException($"Maximum validation path depth of {_maxDepth} exceeded.");
     }
-    
+
     public void CheckTimeoutAndThrow()
     {
         if (Stopwatch.GetTimestamp() > _timeoutAt)

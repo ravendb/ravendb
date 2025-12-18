@@ -11,18 +11,18 @@ public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonRead
     {
         _requiredProperties = required;
     }
-    
+
     public RequiredSchemaRuleValidator(LazyStringValue required)
     {
         _requiredProperties = [required];
     }
-    
+
     public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
         var isValid = true;
         foreach (var required in _requiredProperties)
         {
-            if(value.Contains(required))
+            if (value.Contains(required))
                 continue;
             context.ErrorBuilder?.AddError($"The required property '{required}' is missing at '{context.ErrorBuilder.Path}'.");
             isValid = false;

@@ -19,12 +19,12 @@ public class OneOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
         {
             using (context.WithoutCollectingErrors())
             {
-                if(validator.Validate(context, value) == false)
+                if (validator.Validate(context, value) == false)
                     continue;
             }
-            
-            if(alreadyHasOneValid)
-            {                
+
+            if (alreadyHasOneValid)
+            {
                 context.ErrorBuilder?.AddError($"The value at '{context.ErrorBuilder.Path}' matches more than one schema, but it must match exactly one.");
                 return false;
             }

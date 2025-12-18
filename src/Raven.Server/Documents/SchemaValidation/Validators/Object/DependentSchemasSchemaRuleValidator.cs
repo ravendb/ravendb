@@ -24,15 +24,15 @@ public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFac
         {
             dependentRequiredSchema.GetPropertyByIndex(i, ref prop);
             var dependentSchemas = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderObject>(prop.Value, schemaPath);
-            
+
             var propertySchemaPath = schemaPath + prop.Name;
-            
-            if(dependentSchemas.Count == 0)
+
+            if (dependentSchemas.Count == 0)
                 continue;
-                    
+
             var ifRequiredValidator = new RequiredSchemaRuleValidator(prop.Name);
             var ifValidator = new ElementSchemaRuleValidator([ifRequiredValidator], propertySchemaPath);
-            
+
             var thenValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, dependentSchemas, propertySchemaPath);
 
             (dependentRequires ??= []).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));
@@ -40,6 +40,7 @@ public class DependentSchemasSchemaRuleValidatorFactory : SchemaRuleValidatorFac
 
         if (dependentRequires == null)
             return null;
-        
+
         return new GroupedIfThenElseSchemaRuleValidator(dependentRequires.ToArray());
-    }}
+    }
+}

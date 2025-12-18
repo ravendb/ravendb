@@ -42,7 +42,7 @@ public class ErrorBuilder : IDisposable
     }
 
     public ReadOnlySpan<char> GetError() => _errorBuffer.AsSpan();
-    
+
     public IEnumerable<string> GetErrors()
     {
         var span = _errorBuffer.AsSpan();
@@ -50,7 +50,7 @@ public class ErrorBuilder : IDisposable
             yield break;
 
         var startIndex = 0;
-        for(var i = 0; i < _errorOffsets.Length; i++)
+        for (var i = 0; i < _errorOffsets.Length; i++)
         {
             var offset = _errorOffsets[i];
             Debug.Assert(offset < _errorBuffer.Length);
@@ -58,8 +58,8 @@ public class ErrorBuilder : IDisposable
             yield return _errorBuffer.AsSpan().Slice(startIndex, offset - startIndex).ToString();
             startIndex = offset + NewErrorDelimiter.Length;
         }
-        
-        if(startIndex < _errorBuffer.Length)
+
+        if (startIndex < _errorBuffer.Length)
             yield return _errorBuffer.AsSpan()[startIndex..].ToString();
     }
 

@@ -40,10 +40,10 @@ public class JsonOperationContextBuffer<T> : AbstractBuffer<T>
         _context.ReturnMemory(_buffer);
         _buffer = newBuffer;
     }
-    
+
     public override void Dispose()
     {
-        if(_buffer != null)
+        if (_buffer != null)
             _context.ReturnMemory(_buffer);
     }
 }

@@ -77,12 +77,12 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
         var itemsValidators = ReadItemsSchema(context, schemaDefinition, schemaPath);
         return new ArraySchemaRuleValidator(prefixValidators, itemsValidators, schemaPath);
     }
-    
+
     private static ElementSchemaRuleValidator[] ReadPrefixItemsSchema(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
-        const string rule =  SchemaValidatorConstants.PrefixItems;
+        const string rule = SchemaValidatorConstants.PrefixItems;
         schemaPath += rule;
-        if(SchemaValidationHelper.TryGetArray(schemaDefinition, rule, schemaPath, out var prefixItemsSchema) == false)
+        if (SchemaValidationHelper.TryGetArray(schemaDefinition, rule, schemaPath, out var prefixItemsSchema) == false)
             return null;
 
         List<ElementSchemaRuleValidator> validators = null;
@@ -92,16 +92,15 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
             if (item is not BlittableJsonReaderObject blittableItem)
             {
                 SchemaValidationHelper.ThrowRuleTypeError(item, typeof(BlittableJsonReaderObject), schemaPath);
-                return null;// Required to satisfy compiler flow analysis; method above always throws
+                return null; // Required to satisfy compiler flow analysis; method above always throws
             }
-                    
+
             var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, blittableItem, schemaPath + i);
             (validators ??= []).Add(validator);
         }
         return validators?.ToArray();
     }
-    
-    
+
     private static (bool Allowed, ElementSchemaRuleValidator Validator) ReadItemsSchema(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         const string rule = SchemaValidatorConstants.Items;

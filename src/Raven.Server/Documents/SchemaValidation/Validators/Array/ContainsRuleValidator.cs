@@ -57,15 +57,15 @@ public class ContainsRuleValidatorRuleValidatorFactory : SchemaRuleValidatorFact
     public override ContainsRuleValidator Create(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         schemaPath += Rule;
-        if(SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var containsSchema) == false)
+        if (SchemaValidationHelper.TryGetObject(schemaDefinition, Rule, schemaPath, out var containsSchema) == false)
             return null;
 
         if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.MinContains, schemaPath, out var minContains) == false)
             minContains = 1L;
-        
+
         if (SchemaValidationHelper.TryGetInteger(schemaDefinition, SchemaValidatorConstants.MaxContains, schemaPath, out var maxContains) == false)
             maxContains = long.MaxValue;
-        
+
         var containsValidator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(context, containsSchema, schemaPath + Rule);
         return new ContainsRuleValidator(containsValidator, minContains, maxContains);
     }

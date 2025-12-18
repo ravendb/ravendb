@@ -14,9 +14,9 @@ public class MinPropertiesSchemaRuleValidator : SchemaRuleValidator<BlittableJso
     }
     public override bool Validate(SchemaValidationContext context, BlittableJsonReaderObject value)
     {
-        if(value.Count >= _minProperties)
+        if (value.Count >= _minProperties)
             return true;
-        context.ErrorBuilder?.AddError($"The object at '{context.ErrorBuilder.Path}' must have at least {_minProperties} {(_minProperties == 1 ? "property": "properties")}, but it has only {value.Count}.");
+        context.ErrorBuilder?.AddError($"The object at '{context.ErrorBuilder.Path}' must have at least {_minProperties} {(_minProperties == 1 ? "property" : "properties")}, but it has only {value.Count}.");
         return false;
     }
 }

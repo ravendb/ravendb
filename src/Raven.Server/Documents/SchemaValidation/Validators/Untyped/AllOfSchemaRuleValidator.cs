@@ -8,7 +8,7 @@ public class AllOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
 {
     // ReSharper disable once ConvertToPrimaryConstructor
     public AllOfSchemaRuleValidator([NotNull] ElementSchemaRuleValidator[] validators)
-        :base(validators)
+        : base(validators)
     {
     }
 
@@ -18,8 +18,8 @@ public class AllOfSchemaRuleValidator : MultiSubschemaAggregatorValidator
         foreach (var validator in Validators)
         {
             validate &= validator.Validate(context, value);
-            if(context.ErrorBuilder == null && validate == false)
-               return false;
+            if (context.ErrorBuilder == null && validate == false)
+                return false;
         }
         return validate;
     }

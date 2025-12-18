@@ -30,9 +30,9 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForValidate<TReq
             Parameters = JsonDeserializationServer.Parameters.ValidateSchemaOperationParameters(json);
             ValidateParameters();
 
-            if(RavenLogManager.Instance.IsAuditEnabled)
+            if (RavenLogManager.Instance.IsAuditEnabled)
                 RequestHandler.LogAuditForDatabase("VALIDATE", $"Start schema validation operation for collection '{Parameters.Collection}'");
-            
+
             var token = RequestHandler.CreateBackgroundOperationToken();
 
             StartValidationOperation(operationId, token);

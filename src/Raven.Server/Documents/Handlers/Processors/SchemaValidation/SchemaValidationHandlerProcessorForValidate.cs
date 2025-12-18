@@ -35,25 +35,25 @@ internal sealed class SchemaValidationHandlerProcessorForValidate : AbstractSche
     {
         try
         {
-            if(Logger.IsDebugEnabled)
+            if (Logger.IsDebugEnabled)
                 Logger.Debug($"Starting schema validation for collection '{Parameters.Collection}' in database '{RequestHandler.Database.Name}'. Operation ID: {operationId}");
-            
+
             var result = await ValidateDocuments(onProgress);
             var schemaResult = (ValidateSchemaResult)result;
-            
-            if(Logger.IsDebugEnabled)
+
+            if (Logger.IsDebugEnabled)
                 Logger.Debug($"Finished schema validation for collection '{Parameters.Collection}' in database '{RequestHandler.Database.Name}'. Operation ID: {operationId}. Validated: {schemaResult.ValidatedCount}, Errors: {schemaResult.ErrorCount}");
-            
+
             return result;
         }
         catch (Exception e)
         {
-            if(Logger.IsErrorEnabled)
+            if (Logger.IsErrorEnabled)
                 Logger.Error($"Failed to validate schema for collection '{Parameters.Collection}' in database '{RequestHandler.Database.Name}'. Operation ID: {operationId}", e);
             throw;
         }
     }
-    
+
 
     private Task<IOperationResult> ValidateDocuments(Action<IOperationProgress> onProgress)
     {

@@ -15,15 +15,7 @@ public class PatternSchemaRuleValidator : StringSchemaRuleValidator
     // ReSharper disable once ConvertToPrimaryConstructor
     public PatternSchemaRuleValidator(string pattern, TimeSpan timeout)
     {
-        try
-        {
-            _regex = new Regex(pattern, RegexOptions.Compiled, timeout);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        _regex = new Regex(pattern, RegexOptions.Compiled, timeout);
     }
 
     public override bool Validate(SchemaValidationContext context, LazyStringValue value)

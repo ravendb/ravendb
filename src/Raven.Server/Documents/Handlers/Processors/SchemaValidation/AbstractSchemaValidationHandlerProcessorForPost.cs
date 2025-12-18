@@ -18,10 +18,10 @@ internal abstract class AbstractSchemaValidationHandlerProcessorForPost<TRequest
     protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
     {
         RequestHandler.ServerStore.LicenseManager.AssertCanAddSchemaValidation();
-        
-        if(RavenLogManager.Instance.IsAuditEnabled)
+
+        if (RavenLogManager.Instance.IsAuditEnabled)
             RequestHandler.LogAuditForDatabase("PUT", "Update schema validation configuration.");
-        
+
         base.OnBeforeUpdateConfiguration(ref configuration, context);
     }
 

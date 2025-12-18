@@ -50,11 +50,11 @@ public static class ElementSchemaRuleValidatorFactory
 
         return allowedTypes.ToArray();
     }
-    
+
     private static Type[] ConvertToTypes(object type, SchemaPath schemaPath)
     {
         var stringType = GetLazyString(type, schemaPath);
-        if(SchemaValidationHelper.TryGetTypesForPublicType(stringType, out Type[] tokens) == false)
+        if (SchemaValidationHelper.TryGetTypesForPublicType(stringType, out Type[] tokens) == false)
         {
             throw new InvalidSchemaValidationDefinitionException(
                 $"The '{SchemaValidatorConstants.Type}' restriction must be one of the allowed types ('{string.Join("', '", SchemaValidationHelper.PublicTypes)}'), but found '{type}'. " +
@@ -62,7 +62,7 @@ public static class ElementSchemaRuleValidatorFactory
         }
         return tokens;
     }
-    
+
     private static LazyStringValue GetLazyString(object type, SchemaPath schemaPath)
     {
         return type switch

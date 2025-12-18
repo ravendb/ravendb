@@ -38,17 +38,17 @@ public class RefSchemas
 
     private void ReadAllDefinitions(BlittableJsonReaderObject schema, SchemaPath schemaPath)
     {
-        if(schema == null)
+        if (schema == null)
             return;
-        
+
         var property = default(BlittableJsonReaderObject.PropertyDetails);
         for (int i = 0; i < schema.Count; i++)
         {
             schema.GetPropertyByIndex(i, ref property);
-            var propertyPath =  schemaPath + property.Name;
+            var propertyPath = schemaPath + property.Name;
             if (property.Name.Equals(SchemaValidatorConstants.Defs))
                 ReadDefs(property, propertyPath);
-            
+
             if (schema.TryGetWithoutThrowingOnError(property.Name, out BlittableJsonReaderObject propSchema))
                 ReadAllDefinitions(propSchema, propertyPath);
         }
@@ -80,8 +80,8 @@ public class RefSchemas
                 if (refStack.Contains(@ref))
                     throw new InvalidSchemaValidationDefinitionException(
                         $"A circular reference was detected at '{propPath.FullPath}'.");
-                        
-                if(_data.TryGetValue(@ref, out var refSchema) == false)
+
+                if (_data.TryGetValue(@ref, out var refSchema) == false)
                     throw new InvalidSchemaValidationDefinitionException(
                         $"The reference '{@ref}' does not match any defined subschema.");
 
@@ -90,7 +90,7 @@ public class RefSchemas
                 refStack.Pop();
                 continue;
             }
-                    
+
             if (schema.TryGetWithoutThrowingOnError(property.Name, out BlittableJsonReaderObject propSchema) == false || propSchema == null)
                 continue;
 
