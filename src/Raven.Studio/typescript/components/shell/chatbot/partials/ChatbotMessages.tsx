@@ -158,14 +158,14 @@ function AgentMessageBody({ message }: AgentMessageProps) {
 
     return (
         <div>
-            {message.thinkingTimeInMs != null ? (
-                <div className="text-muted">
-                    Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s
-                </div>
-            ) : (
-                <div className="text-muted">Thinking</div>
-            )}
-            <div className="mt-1">
+            <div className="text-muted pb-1">
+                {message.thinkingTimeInMs != null ? (
+                    <span>Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s</span>
+                ) : (
+                    <span>Thinking</span>
+                )}
+            </div>
+            <div className="pb-1">
                 <ChatbotAskAiMarkdown content={contentTypewriter} />
             </div>
             <ChatbotAskAiMessageRelevantLinks links={message.relevantLinks} />

@@ -13,7 +13,7 @@ export default function ChatbotAskAiMessageFollowUpQuestions({ questions }: Chat
     }
 
     return (
-        <div className="mt-2">
+        <div className="pb-2">
             <span className="small-label">Follow up questions</span>
             <div className="vstack gap-1">
                 {questions.filter(Boolean).map((question) => (

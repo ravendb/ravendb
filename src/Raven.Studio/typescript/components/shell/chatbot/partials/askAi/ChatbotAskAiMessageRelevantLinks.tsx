@@ -11,7 +11,7 @@ export default function ChatbotAskAiMessageRelevantLinks({ links }: ChatbotAskAi
     }
 
     return (
-        <div className="hstack gap-1 flex-wrap mt-1">
+        <div className="hstack gap-1 flex-wrap pb-2">
             {links.filter(Boolean).map((link) => (
                 <a
                     key={link.Url}
