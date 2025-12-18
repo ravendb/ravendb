@@ -36,7 +36,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                         placeholder={operatingSystem === "MacOS" ? "Use ⌘ + K to search" : "Use Ctrl + K to search"}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-grow-1 studio-search__input align-self-stretch"
+                        className="flex-grow-1 studio-search__input align-self-stretch pe-2"
                         autoComplete="off"
                     />
                 </Dropdown.Toggle>
