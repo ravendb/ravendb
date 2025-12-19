@@ -533,6 +533,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(BucketName) == false;
         }
 
