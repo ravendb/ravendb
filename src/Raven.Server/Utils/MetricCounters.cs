@@ -36,7 +36,6 @@ namespace Raven.Server.Utils
         private void CreateNew()
         {
             Requests.RequestsPerSec = new MeterMetric();
-            Requests.AverageDuration = new Ewma(1 - Math.Exp(-1.0 / 60 / 5), 1);
 
             MapIndexes.IndexedPerSec = new MeterMetric();
             MapReduceIndexes.MappedPerSec = new MeterMetric();
@@ -52,16 +51,17 @@ namespace Raven.Server.Utils
         public sealed class RequestCounters
         {
             public MeterMetric RequestsPerSec { get; internal set; }
-            
-            public Ewma AverageDuration { get; internal set; }
 
             public long ConcurrentRequestsCount;
 
-            public void UpdateDuration(long value)
+            public void RecordRequest(long durationMilliseconds)
             {
-                AverageDuration.Update(value);
-                AverageDuration.Tick();
+                RequestsPerSec.Mark(1, durationMilliseconds);
             }
+
+            public double AverageDuration => RequestsPerSec.GetAverageDuration();
+
+            public double GetAverageDuration(TimeSpan window) => RequestsPerSec.GetAverageDuration(window);
         }
 
         public abstract class MetricsWritesBase : IDynamicJson
@@ -126,7 +126,7 @@ namespace Raven.Server.Utils
                 {
                     [nameof(Requests.RequestsPerSec)] = Requests.RequestsPerSec.CreateMeterData(),
                     [nameof(Requests.ConcurrentRequestsCount)] = Requests.ConcurrentRequestsCount,
-                    [nameof(Requests.AverageDuration)] = Requests.AverageDuration.GetRate()
+                    [nameof(Requests.AverageDuration)] = Math.Round(Requests.AverageDuration, 2)
                 },
                 [nameof(Docs)] = Docs,
                 [nameof(Attachments)] = Attachments,

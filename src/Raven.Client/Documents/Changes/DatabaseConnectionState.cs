@@ -18,87 +18,114 @@ namespace Raven.Client.Documents.Changes
 
         private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
 
-        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect) 
+        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
             : base(onConnect, onDisconnect)
         {
         }
 
         public void Send(DocumentChange documentChange)
         {
-            OnDocumentChangeNotification?.Invoke(documentChange);
+            CallEventInternal(OnDocumentChangeNotification, documentChange);
         }
 
         public void Send(CounterChange counterChange)
         {
-            OnCounterChangeNotification?.Invoke(counterChange);
+            CallEventInternal(OnCounterChangeNotification, counterChange);
         }
 
         public void Send(TimeSeriesChange timeSeriesChange)
         {
-            OnTimeSeriesChangeNotification?.Invoke(timeSeriesChange);
+            CallEventInternal(OnTimeSeriesChangeNotification, timeSeriesChange);
         }
 
         public void Send(IndexChange indexChange)
         {
-            OnIndexChangeNotification?.Invoke(indexChange);
+            CallEventInternal(OnIndexChangeNotification, indexChange);
         }
 
         public void Send(OperationStatusChange operationStatusChange)
         {
-            OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
+            CallEventInternal(OnOperationStatusChangeNotification, operationStatusChange);
         }
 
         public void Send(AggressiveCacheChange aggressiveCacheChange)
         {
-            OnAggressiveCacheChangeNotification?.Invoke(aggressiveCacheChange);
+            CallEventInternal(OnAggressiveCacheChangeNotification, aggressiveCacheChange);
         }
 
-        event Action<TimeSeriesChange> IChangesConnectionState<TimeSeriesChange>.OnChangeNotification
+        void IChangesConnectionState<TimeSeriesChange>.RegisterEvents(Action<TimeSeriesChange> onChangeNotification, Action<Exception> onError)
         {
-            add => OnTimeSeriesChangeNotification += value;
-            remove => OnTimeSeriesChangeNotification -= value;
+            RegisterEventsInternal(ref OnTimeSeriesChangeNotification, onChangeNotification, onError);
         }
 
-        event Action<CounterChange> IChangesConnectionState<CounterChange>.OnChangeNotification
+        void IChangesConnectionState<TimeSeriesChange>.UnregisterEvents(Action<TimeSeriesChange> onChangeNotification, Action<Exception> onError)
         {
-            add => OnCounterChangeNotification += value;
-            remove => OnCounterChangeNotification -= value;
+            UnregisterEventsInternal(ref OnTimeSeriesChangeNotification, onChangeNotification, onError);
         }
 
-        event Action<OperationStatusChange> IChangesConnectionState<OperationStatusChange>.OnChangeNotification
+        void IChangesConnectionState<CounterChange>.RegisterEvents(Action<CounterChange> onChangeNotification, Action<Exception> onError)
         {
-            add => OnOperationStatusChangeNotification += value;
-            remove => OnOperationStatusChangeNotification -= value;
+            RegisterEventsInternal(ref OnCounterChangeNotification, onChangeNotification, onError);
         }
 
-        event Action<IndexChange> IChangesConnectionState<IndexChange>.OnChangeNotification
+        void IChangesConnectionState<CounterChange>.UnregisterEvents(Action<CounterChange> onChangeNotification, Action<Exception> onError)
         {
-            add => OnIndexChangeNotification += value;
-            remove => OnIndexChangeNotification -= value;
+            UnregisterEventsInternal(ref OnCounterChangeNotification, onChangeNotification, onError);
         }
 
-        event Action<DocumentChange> IChangesConnectionState<DocumentChange>.OnChangeNotification
+        void IChangesConnectionState<OperationStatusChange>.RegisterEvents(Action<OperationStatusChange> onChangeNotification, Action<Exception> onError)
         {
-            add => OnDocumentChangeNotification += value;
-            remove => OnDocumentChangeNotification -= value;
+            RegisterEventsInternal(ref OnOperationStatusChangeNotification, onChangeNotification, onError);
         }
 
-        event Action<AggressiveCacheChange> IChangesConnectionState<AggressiveCacheChange>.OnChangeNotification
+        void IChangesConnectionState<OperationStatusChange>.UnregisterEvents(Action<OperationStatusChange> onChangeNotification, Action<Exception> onError)
         {
-            add => OnAggressiveCacheChangeNotification += value;
-            remove => OnAggressiveCacheChangeNotification -= value;
+            UnregisterEventsInternal(ref OnOperationStatusChangeNotification, onChangeNotification, onError);
+        }
+
+        void IChangesConnectionState<IndexChange>.RegisterEvents(Action<IndexChange> onChangeNotification, Action<Exception> onError)
+        {
+            RegisterEventsInternal(ref OnIndexChangeNotification, onChangeNotification, onError);
+        }
+
+        void IChangesConnectionState<IndexChange>.UnregisterEvents(Action<IndexChange> onChangeNotification, Action<Exception> onError)
+        {
+            UnregisterEventsInternal(ref OnIndexChangeNotification, onChangeNotification, onError);
+        }
+
+        void IChangesConnectionState<DocumentChange>.RegisterEvents(Action<DocumentChange> onChangeNotification, Action<Exception> onError)
+        {
+            RegisterEventsInternal(ref OnDocumentChangeNotification, onChangeNotification, onError);
+        }
+
+        void IChangesConnectionState<DocumentChange>.UnregisterEvents(Action<DocumentChange> onChangeNotification, Action<Exception> onError)
+        {
+            UnregisterEventsInternal(ref OnDocumentChangeNotification, onChangeNotification, onError);
+        }
+
+        void IChangesConnectionState<AggressiveCacheChange>.RegisterEvents(Action<AggressiveCacheChange> onChangeNotification, Action<Exception> onError)
+        {
+            RegisterEventsInternal(ref OnAggressiveCacheChangeNotification, onChangeNotification, onError);
+        }
+
+        void IChangesConnectionState<AggressiveCacheChange>.UnregisterEvents(Action<AggressiveCacheChange> onChangeNotification, Action<Exception> onError)
+        {
+            UnregisterEventsInternal(ref OnAggressiveCacheChangeNotification, onChangeNotification, onError);
         }
 
         public override void Dispose()
         {
-            base.Dispose();
+            lock (_eventLock)
+            {
+                base.Dispose();
 
-            OnDocumentChangeNotification = null;
-            OnCounterChangeNotification = null;
-            OnTimeSeriesChangeNotification = null;
-            OnIndexChangeNotification = null;
-            OnAggressiveCacheChangeNotification = null;
-            OnOperationStatusChangeNotification = null;
+                OnDocumentChangeNotification = null;
+                OnCounterChangeNotification = null;
+                OnTimeSeriesChangeNotification = null;
+                OnIndexChangeNotification = null;
+                OnAggressiveCacheChangeNotification = null;
+                OnOperationStatusChangeNotification = null;
+            }
         }
     }
 }

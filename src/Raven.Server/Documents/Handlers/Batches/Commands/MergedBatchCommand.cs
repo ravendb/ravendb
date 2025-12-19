@@ -10,6 +10,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -155,15 +156,30 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentPUT:
-                    attachmentIterator.MoveNext();
-                    var attachmentStream = attachmentIterator.Current;
-                    var stream = attachmentStream.Stream;
-                    _toDispose.Add(stream);
-
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
-                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                        cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                    Stream stream = null;
+
+                    if (cmd.RemoteParameters.IsLocalStorageAttachment())
+                    {
+                        var attachmentStream = GetAttachmentStream(attachmentIterator, out stream);
+
+                        if (cmd.FromEtl == false)
+                        {
+                            cmd.Hash = attachmentStream.Hash;
+                            cmd.SizeInBytes = stream.Length;
+                        }
+                    }
+                    else
+                    {
+                        // this means we got the remote attachment from RavenDB ETL
+
+                        Debug.Assert(string.IsNullOrEmpty(cmd.Hash) == false, "string.IsNullOrEmpty(cmd.Hash) == false");
+                        Debug.Assert(cmd.FromEtl == true, "cmd.FromEtl == true");
+                        Debug.Assert(cmd.SizeInBytes.HasValue == true, "cmd.SizeInBytes.HasValue == true");
+                    }
+
+                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes.Value, cmd.RemoteParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue
@@ -489,6 +505,15 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
             Debug.Assert(Reply.Count == 0);
 
         return Reply.Count;
+    }
+
+    private AttachmentStream GetAttachmentStream(IEnumerator<AttachmentStream> attachmentIterator, out Stream stream)
+    {
+        attachmentIterator.MoveNext();
+        var attachmentStream = attachmentIterator.Current;
+        stream = attachmentStream.Stream;
+        _toDispose.Add(stream);
+        return attachmentStream;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)

@@ -102,9 +102,9 @@ for(const comment of this.Comments)
     return (
         <div>
             <div>Sample context generation script</div>
-            <Code code={code} language="javascript" elementToCopy={code} />
+            <Code code={code} language="javascript" />
             <div className="mt-2">With attachments</div>
-            <Code code={codeWithAttachments} language="javascript" elementToCopy={codeWithAttachments} />
+            <Code code={codeWithAttachments} language="javascript" />
         </div>
     );
 }

@@ -345,11 +345,11 @@ const QueryFieldQuerySyntaxHelp = () => {
     return (
         <div>
             <div>Example 1:</div>
-            <Code code={exampleCode1} elementToCopy={exampleCode1} language="json" />
+            <Code code={exampleCode1} language="json" />
             <div className="mt-2">Example 2:</div>
-            <Code code={exampleCode2} elementToCopy={exampleCode2} language="json" />
+            <Code code={exampleCode2} language="json" />
             <div className="mt-2">Example 3 (no parameters will be used):</div>
-            <Code code={exampleCode3} elementToCopy={exampleCode3} language="json" />
+            <Code code={exampleCode3} language="json" />
         </div>
     );
 };
@@ -377,7 +377,7 @@ const QueryFieldJsonSchemaSyntaxHelp = () => {
     return (
         <div>
             <div>Example:</div>
-            <Code code={exampleCode} elementToCopy={exampleCode} language="json" />
+            <Code code={exampleCode} language="json" />
         </div>
     );
 };

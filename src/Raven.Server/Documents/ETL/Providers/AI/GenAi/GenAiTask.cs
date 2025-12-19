@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Metrics;

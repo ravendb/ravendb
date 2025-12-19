@@ -5,9 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -801,7 +801,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, long start, long take)
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var table = context.DocumentsTable(this);
 
@@ -810,11 +810,11 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
-        public IEnumerable<Document> GetDocumentsInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long take, long skip)
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long take, long skip, DocumentFields fields = DocumentFields.All)
         {
             var table = context.DocumentsTable(this);
 
@@ -823,11 +823,11 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
-        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, long start, long take)
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, string collection, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -844,7 +844,7 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -1098,6 +1098,19 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Document Get(DocumentsOperationContext context, ReadOnlySpan<char> id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
+            if (context.Transaction == null)
+                throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
+
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+            {
+                return Get(context, lowerId, fields, throwOnConflict);
+            }
+        }
+
+        public Document Get(DocumentsOperationContext context, LazyStringValue id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        {
+            if (id == null)
+                throw new ArgumentException("Argument is null", nameof(id));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
 
@@ -2906,6 +2919,14 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static RemoteAttachmentFlags TableValueToAttachmentFlags(int index, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read(index, out _);
+            var etag = Bits.SwapBytes(*(int*)ptr);
+            return (RemoteAttachmentFlags)etag;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static short TableValueToShort<TTableValueReader>(int index, string name, ref TTableValueReader tvr)
             where TTableValueReader : struct, ITableValueReader
         {
@@ -2932,6 +2953,15 @@ namespace Raven.Server.Documents
             where TTableValueReader : struct, ITableValueReader
         {
             return new DateTime(*(long*)tvr.Read(index, out _), DateTimeKind.Utc);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static DateTime? TableValueToNullableDateTime(int index, ref TableValueReader tvr)
+        {
+            var ticks = *(long*)tvr.Read(index, out _);
+            if (ticks < 0)
+                return null;
+            return new DateTime(ticks, DateTimeKind.Utc);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

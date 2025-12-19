@@ -1,6 +1,21 @@
 @use "Content/scss/sizes";
+@use "Content/scss/colors";
 
 .code {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    border-radius: sizes.$gutter-xxs;
+    background-color: colors.$well-bg-var;
+
+    .code-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: sizes.$gutter-xxs sizes.$gutter-xs;
+        border-bottom: 1px solid colors.$panel-bg-1-var;
+    }
+
     .code-classes {
         height: unset;
         padding: sizes.$gutter-xs;

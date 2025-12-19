@@ -21,7 +21,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -164,6 +163,15 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, RavenLogger logger);
 
+        internal ManualResetEventSlim DebugWaitAndRunReplicationOnce()
+        {
+            if (ForTestingPurposes is { DebugWaitAndRunReplicationOnce: not null })
+            {
+                return ForTestingPurposes.DebugWaitAndRunReplicationOnce;
+            }
+            return _parent.DebugWaitAndRunReplicationOnce;
+        }
+
         protected override void Replicate()
         {
             using var documentSender = CreateDocumentSender(_stream, Logger);
@@ -172,7 +180,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 while (_database.Time.GetUtcNow().Ticks > NextReplicateTicks)
                 {
-                    var once = _parent.DebugWaitAndRunReplicationOnce;
+                    var once = DebugWaitAndRunReplicationOnce();
                     if (once != null)
                     {
                         once.Reset();
@@ -429,6 +437,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             public Action<Dictionary<Slice, AttachmentReplicationItem>, SortedList<long, ReplicationBatchItem>> OnMissingAttachmentStream;
 
             public bool DisableWaitForChangesForExternalReplication;
+
+            public ManualResetEventSlim DebugWaitAndRunReplicationOnce;
         }
     }
 

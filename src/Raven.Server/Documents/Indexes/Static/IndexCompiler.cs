@@ -882,8 +882,6 @@ namespace Raven.Server.Documents.Indexes.Static
                         results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
                     }
                 }
-
-                
                 
                 if (mapRewriter.HasLoadCompareExchangeValue)
                     results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddCompareExchangeReferenceToCollection)).Invoke(collection).AsExpressionStatement());

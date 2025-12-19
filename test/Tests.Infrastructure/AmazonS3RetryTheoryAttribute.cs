@@ -17,7 +17,7 @@ namespace Tests.Infrastructure
         private static readonly string ParsingError;
 
         private static readonly bool EnvVariableMissing;
-
+        
         static AmazonS3RetryTheoryAttribute()
         {
             var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
@@ -49,8 +49,10 @@ namespace Tests.Infrastructure
                 if (string.IsNullOrEmpty(base.Skip) == false)
                     return base.Skip;
 
-                ShouldSkip(out var skipMessage);
-                return skipMessage;
+                if (ShouldSkip(out var skipMessage))
+                    return skipMessage;
+
+                return base.Skip;
             }
 
             set => base.Skip = value;

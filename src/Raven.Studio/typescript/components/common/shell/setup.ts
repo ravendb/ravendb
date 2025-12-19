@@ -16,6 +16,9 @@ import buildInfo = require("models/resources/buildInfo");
 import genUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
+import { aiAssistantActions } from "./aiAssistantSlice";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import router from "plugins/router";
 
 let initialized = false;
 
@@ -42,7 +45,18 @@ function initRedux() {
     databasesManager.default.onUpdateCallback = throttledUpdateDatabases;
 
     activeDatabaseTracker.default.database.subscribe((db) => {
-        globalDispatch(databaseActions.activeDatabaseChanged(db?.name ?? null));
+        const dbName = db?.name ?? null;
+        globalDispatch(databaseActions.activeDatabaseChanged(dbName));
+        globalDispatch(chatbotActions.attachedContextUnrelatedRemoved());
+        globalDispatch(
+            chatbotActions.attachedContextUpserted({
+                id: "DatabaseName",
+                type: "DatabaseName",
+                label: dbName,
+                value: dbName,
+                state: "included",
+            })
+        );
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
@@ -106,6 +120,43 @@ function initRedux() {
     accessManager.clientCertificateThumbprint.subscribe((clientCertificateThumbprint) =>
         globalDispatch(accessManagerActions.clientCertificateThumbprintSet(clientCertificateThumbprint))
     );
+
+    // ai assistant
+    let prevLicenseId: string = undefined;
+
+    licenseModel.licenseStatus.subscribe(
+        (value) => {
+            prevLicenseId = value?.Id;
+        },
+        licenseModel.licenseStatus,
+        "beforeChange"
+    );
+
+    licenseModel.licenseStatus.subscribe(
+        (value) => {
+            if (value?.Id !== prevLicenseId) {
+                globalDispatch(aiAssistantActions.checkConsent());
+            }
+        },
+        licenseModel.licenseStatus,
+        "change"
+    );
+
+    accessManager.clientCertificateThumbprint.subscribe(() => {
+        globalDispatch(aiAssistantActions.checkConsent());
+    });
+
+    router.activeInstruction.subscribe((instruction) => {
+        globalDispatch(
+            chatbotActions.attachedContextUpserted({
+                id: "View",
+                type: "View",
+                label: instruction?.config?.title,
+                value: instruction?.config?.title,
+                state: "included",
+            })
+        );
+    });
 }
 
 declare module "yup" {

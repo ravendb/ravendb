@@ -65,6 +65,7 @@ import cpuCreditsBalanceDetails = require("viewmodels/common/notificationCenter/
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
 import typeUtils = require("common/typeUtils");
 import aiAgentExceededTokenThreshold = require("viewmodels/common/notificationCenter/detailViewer/alerts/aiAgentExceededTokenThreshold");
+
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;

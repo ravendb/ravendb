@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader)
+        public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader, bool replicationRemoteAttachments)
         {
             var type = *(ReplicationItemType*)reader.ReadExactly(sizeof(byte));
 
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     return new DocumentReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.Attachment:
                 case ReplicationItemType.AttachmentStream:
-                    return new AttachmentReplicationItem { Type = type, Reader = reader };
+                    return new AttachmentReplicationItem { Type = type, Reader = reader, RemoteAttachments = replicationRemoteAttachments };
                 case ReplicationItemType.AttachmentTombstone:
                     return new AttachmentTombstoneReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.RevisionTombstone:

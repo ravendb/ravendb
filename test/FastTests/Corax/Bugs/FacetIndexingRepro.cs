@@ -43,7 +43,7 @@ public class FacetIndexingRepro : StorageTest
         using (var builder = iw.Index("entryKey"))
         {
             builder.Write(0, Encoding.UTF8.GetBytes(entryKey));
-            entryId = builder.EntryId;
+            entryId = (long)builder.EntryId;
             builder.EndWriting();
         }
         iw.Commit();

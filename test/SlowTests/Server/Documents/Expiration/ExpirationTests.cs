@@ -23,6 +23,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 using Size = Sparrow.Size;
@@ -254,6 +255,7 @@ namespace SlowTests.Server.Documents.Expiration
 
                 var database = await GetDatabase(store.Database);
                 DatabaseTopology topology;
+
                 string nodeTag;
                         
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
@@ -265,7 +267,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, 10, MaxItemsToProcess: long.MaxValue);
+                    var options = new BackgroundWorkParameters(context, SystemTime.UtcNow.AddMinutes(10), topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
                     var totalCount = 0;
 
                     var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -309,6 +311,7 @@ namespace SlowTests.Server.Documents.Expiration
                 }
 
                 DatabaseTopology topology;
+
                 string nodeTag;
                         
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
@@ -322,7 +325,7 @@ namespace SlowTests.Server.Documents.Expiration
                 using (context.OpenWriteTransaction())
                 {
                     DateTime time = SystemTime.UtcNow.AddMinutes(10);
-                    var options = new BackgroundWorkParameters(context, time, topology,nodeTag, 10, MaxItemsToProcess: long.MaxValue);
+                    var options = new BackgroundWorkParameters(context, time, topology, nodeTag, AmountToTake: 10, MaxItemsToProcess: long.MaxValue);
                     var totalCount = 0;
 
                     var toRefresh = database.DocumentsStorage.RefreshStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
@@ -662,6 +665,7 @@ namespace SlowTests.Server.Documents.Expiration
                 await RefreshHelper.SetupExpiration(store, Server.ServerStore, config, database.Name);
 
                 DatabaseTopology topology;
+
                 string nodeTag;
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))

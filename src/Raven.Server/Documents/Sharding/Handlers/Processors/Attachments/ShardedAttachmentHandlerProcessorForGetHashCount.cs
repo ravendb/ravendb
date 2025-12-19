@@ -44,7 +44,11 @@ internal sealed class ShardedAttachmentHandlerProcessorForGetHashCount : Abstrac
 
             var responses = results.Values;
             foreach (var r in responses)
+            {
+                response.LocalAttachmentsCount += r.Result.LocalAttachmentsCount;
+                response.RemoteAttachmentsCount += r.Result.RemoteAttachmentsCount;
                 response.Count += r.Result.Count;
+            }
 
             return response;
         }

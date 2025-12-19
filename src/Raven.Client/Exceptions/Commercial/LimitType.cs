@@ -61,6 +61,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("AI Agent")]
         AiAgent,
 
+        [Description("AI Assistant")]
+        AiAssistant,
+
         [Description("Cores Limit")]
         Cores,
 
@@ -158,6 +161,9 @@ namespace Raven.Client.Exceptions.Commercial
         CustomSorters,
 
         [Description("Custom Analyzers")]
-        CustomAnalyzers
+        CustomAnalyzers,
+
+        [Description("Remote Attachments")]
+        RemoteAttachments,
     }
 }

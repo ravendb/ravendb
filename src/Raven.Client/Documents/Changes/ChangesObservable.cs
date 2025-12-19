@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
 using Sparrow.Collections;
@@ -9,7 +10,7 @@ namespace Raven.Client.Documents.Changes
     {
         private readonly TConnectionState _connectionState;
         private readonly Func<T, bool> _filter;
-        private readonly ConcurrentSet<IObserver<T>> _subscribers = new ConcurrentSet<IObserver<T>>();
+        private ConcurrentSet<IObserver<T>> _subscribers = new ConcurrentSet<IObserver<T>>();
 
         internal ChangesObservable(
             TConnectionState connectionState,
@@ -19,21 +20,47 @@ namespace Raven.Client.Documents.Changes
             _filter = filter;
         }
 
+        private bool TryRegisterFirstObserver(IObserver<T> observer)
+        {
+            var current = _subscribers;
+            if (current.IsEmpty)
+            {
+                var firstConnection = new ConcurrentSet<IObserver<T>> { observer };
+                return Interlocked.CompareExchange(ref _subscribers, firstConnection, current) == current;
+            }
+
+            return false;
+        }
+
         public IDisposable Subscribe(IObserver<T> observer)
         {
-            _connectionState.OnChangeNotification += Send;
-            _connectionState.OnError += Error;
-
-            _connectionState.Inc();
-            _subscribers.TryAdd(observer);
-            return new DisposableAction(() =>
+            if (TryRegisterFirstObserver(observer))
             {
-                _connectionState.Dec();
-                _subscribers.TryRemove(observer);
+                _connectionState.Inc();
+                // first subscriber, register to the connection state events
+                _connectionState.RegisterEvents(Send, Error);
+            }
+            else if (_subscribers.TryAdd(observer))
+            {
+                // the first subscriber, has already registered to the connection state events, we only Inc the count
+                _connectionState.Inc();
+            }
 
-                _connectionState.OnChangeNotification -= Send;
-                _connectionState.OnError -= Error;
-            });
+
+            return new DisposableAction(() => DisposeInternal(observer));
+        }
+
+        private void DisposeInternal(IObserver<T> observer)
+        {
+            if (_subscribers.TryRemove(observer) == false)
+                return;
+
+            var count = _connectionState.Dec();
+            if (count == 0)
+            {
+                // last subscriber gone, unregister from the connection state events
+                _connectionState.UnregisterEvents(Send, Error);
+            }
         }
 
         public void Send(T msg)

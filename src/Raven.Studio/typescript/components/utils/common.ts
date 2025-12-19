@@ -68,6 +68,28 @@ export async function tryHandleSubmit<T>(promise: () => Promise<T>) {
     }
 }
 
+export type TryCatchResult<T> =
+    | {
+          status: "success";
+          data: T;
+      }
+    | {
+          status: "error";
+          error: string;
+      };
+
+export async function tryCatch<T>(promiseFn: () => Promise<T>): Promise<TryCatchResult<T>> {
+    try {
+        const response = await promiseFn();
+        return { status: "success", data: response };
+    } catch (error) {
+        return {
+            status: "error",
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}
+
 // source: https://stackoverflow.com/a/55266531
 type AtLeastOne<T> = [T, ...T[]];
 

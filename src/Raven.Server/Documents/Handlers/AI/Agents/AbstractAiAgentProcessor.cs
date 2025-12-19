@@ -52,10 +52,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (streaming)
             {
                 var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath");
-
                 HttpContext.Response.Headers.ContentType = "text/event-stream";
-                var feature = HttpContext.Features.Get<IHttpResponseBodyFeature>();
-                feature?.DisableBuffering();
+                RequestHandler.DisableResponseBuffering();
 
                 r = await handler.HandleStreamingRequest(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
             }

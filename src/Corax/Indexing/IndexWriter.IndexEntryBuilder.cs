@@ -17,17 +17,17 @@ namespace Corax.Indexing;
 
 public partial class IndexWriter
 {
-    public sealed class IndexEntryBuilder :  IIndexEntryBuilder, IDisposable
+    public sealed class IndexEntryBuilder : IIndexEntryBuilder, IDisposable
     {
         private readonly IndexWriter _parent;
-        private long _entryId;
+        private DocumentEntryId _entryId;
         private int _termPerEntryIndex;
         public bool Active;
         private int _buildingList;
         private Slice _documentId;
         private bool _mapFinishedSuccessfully = false;
 
-        public long EntryId => _entryId;
+        public DocumentEntryId EntryId => _entryId;
 
         public IndexEntryBuilder(IndexWriter parent)
         {
@@ -39,7 +39,7 @@ public partial class IndexWriter
             _parent.BoostEntry(_entryId, boost);
         }
 
-        public void Init(long entryId, int termsPerEntryIndex, Slice documentId)
+        public void Init(DocumentEntryId entryId, int termsPerEntryIndex, Slice documentId)
         {
             Active = true;
             _mapFinishedSuccessfully = false;
@@ -58,7 +58,7 @@ public partial class IndexWriter
             Debug.Assert(Active, "Active");
             _mapFinishedSuccessfully = true;
         }
-        
+
         public void Dispose()
         {
             if (_mapFinishedSuccessfully == false)
@@ -105,7 +105,7 @@ public partial class IndexWriter
                 : _parent.GetDynamicIndexedField(_parent._entriesAllocator, path);
             return field;
         }
-        
+
         void Insert(IndexedField field, ReadOnlySpan<byte> value)
         {
             if (field.Analyzer != null)
@@ -125,7 +125,7 @@ public partial class IndexWriter
                 1 => wordsBuffer.Slice(tokens[0].Offset, (int)tokens[0].Length),
                 _ => ThrowTooManyTokens(tokens, value)
             };
-            
+
             ReadOnlySpan<byte> ThrowTooManyTokens(Span<Token> tokens, ReadOnlySpan<byte> v)
             {
                 throw new InvalidOperationException("Expected to get a single token from term, but got: " + tokens.Length + ", tokens: " +
@@ -171,7 +171,7 @@ public partial class IndexWriter
         ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value, InserterMode inserterMode)
         {
             Debug.Assert(field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
-            
+
             ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_parent._entriesAllocator, value, out var slice);
 
             // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
@@ -204,19 +204,19 @@ public partial class IndexWriter
                 {
                     var additionalItems = Math.Max(1, _termPerEntryIndex - field.EntryToTerms.Count + 1);
                     field.EntryToTerms.EnsureCapacityFor(_parent._entriesAllocator, additionalItems);
-                    
+
                     for (var i = field.EntryToTerms.Count; i <= _termPerEntryIndex; i++)
                     {
                         var nativeList = new NativeList<int>();
-                        
+
                         if (i == _termPerEntryIndex)
                             nativeList.Initialize(_parent._entriesAllocator, 1);
-                        
+
                         field.EntryToTerms.AddByRefUnsafe() = nativeList;
                     }
                 }
-                
-                
+
+
                 ref var nativeEntryTerms = ref field.EntryToTerms[_termPerEntryIndex];
                 if (nativeEntryTerms.TryAdd(termLocation) == false)
                 {
@@ -227,7 +227,7 @@ public partial class IndexWriter
                 PortableExceptions.ThrowIf<NotSupportedException>(nativeEntryTerms.Count >= Constants.IndexWriter.MaxSizeOfTermVectorList,
                     $"Field '{field.Name} exceeds the limit of terms. Search field can have up to {Constants.IndexWriter.MaxSizeOfTermVectorList} elements.");
             }
-            
+
             if (field.HasSuggestions)
                 _parent.AddSuggestions(field, slice);
 
@@ -264,10 +264,10 @@ public partial class IndexWriter
         private void RecordSpatialPointForEntry(IndexedField field, (double Lat, double Lng) coords)
         {
             field.Spatial ??= new();
-            ref var terms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Spatial, _entryId, out var exists);
+            ref var terms = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Spatial, (long)_entryId, out var exists);
             if (exists == false)
             {
-                terms = new IndexedField.SpatialEntry {Locations = new List<(double, double)>(), TermsPerEntryIndex = _termPerEntryIndex};
+                terms = new IndexedField.SpatialEntry { Locations = new List<(double, double)>(), TermsPerEntryIndex = _termPerEntryIndex };
             }
 
             terms.Locations.Add(coords);
@@ -281,25 +281,26 @@ public partial class IndexWriter
 
         public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value)
         {
-            if (value.Length <= 0) return; // we don't index missing / empty vectors 
+            if (value.Length <= 0)
+                return; // we don't index missing / empty vectors 
             var field = GetField(fieldId, path);
-            
+
             PortableExceptions.ThrowIfNot<InvalidOperationException>(field.HasVector, $"Field ({fieldId} , '{field.Name}') didn't have vector options but tried to write a vector. Vector length: {value.Length}");
 
             var vectorWriter = field.GetVectorIndexer(_parent._transaction.LowLevelTransaction, value.Length);
-            var vectorHash = vectorWriter.Register(_entryId, value);
-            
+            var vectorHash = vectorWriter.Register((long)_entryId, value);
+
             //We're storing the vector hash for removal purposes
             RegisterTerm(field, vectorHash.ToSpan(), StoredFieldType.Raw);
         }
-        
+
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
         {
             var field = GetField(fieldId, path);
-            
-            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector, 
+
+            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector,
                 $"Field '{field.Name} has vector options, however tried to index textual value instead.");
-            
+
             if (value.Length > 0)
             {
                 if (field.ShouldStore)
@@ -339,10 +340,10 @@ public partial class IndexWriter
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value, long longValue, double dblValue)
         {
             var field = GetField(fieldId, path);
-            
-            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector, 
+
+            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector,
                 $"Field '{field.Name} has vector options, however tried to index numerical value instead.");
-            
+
             if (field.ShouldStore)
             {
                 RegisterTerm(field, value, StoredFieldType.Tuple | StoredFieldType.Term);
@@ -360,13 +361,13 @@ public partial class IndexWriter
         public void WriteSpatial(int fieldId, string path, CoraxSpatialPointEntry entry)
         {
             var field = GetField(fieldId, path);
-            
-            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector, 
+
+            PortableExceptions.ThrowIf<InvalidOperationException>(field.HasVector,
                 $"Field '{field.Name} has vector options, however tried to index spatial value instead.");
-            
+
             PortableExceptions.ThrowIfNot<InvalidOperationException>(field.ShouldIndex,
                 $"Your spatial field '{field.Name}' has 'Indexing' set to 'No'. Spatial fields cannot be stored, so this field is useless because it cannot be searched or retrieved.");
-            
+
             RecordSpatialPointForEntry(field, (entry.Latitude, entry.Longitude));
 
             var maxLen = Encoding.UTF8.GetMaxByteCount(entry.Geohash.Length);
@@ -421,7 +422,7 @@ public partial class IndexWriter
             term.CopyTo(space);
 
             var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, termId);
-            
+
             if (entryTerms.TryAdd(recordedTerm) == false)
             {
                 entryTerms.Grow(_parent._entriesAllocator, 1);
@@ -441,7 +442,7 @@ public partial class IndexWriter
 
             _parent.InitializeFieldRootPage(field);
             var recordedTerm = RecordedTerm.CreateForStored(entryTerms, type, new ContainerEntryId(field.FieldRootPage));
-            
+
             if (entryTerms.TryAdd(recordedTerm) == false)
             {
                 entryTerms.Grow(_parent._entriesAllocator, 1);

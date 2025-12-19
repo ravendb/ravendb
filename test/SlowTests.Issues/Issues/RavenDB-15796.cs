@@ -109,8 +109,10 @@ namespace SlowTests.Issues
             {
                 ""Name"": ""a1"",
             ""Hash"": ""Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco="",
-        ""ContentType"": ""a1/png"",
-        ""Size"": 5
+            ""ContentType"": ""a1/png"",
+        ""Size"": 5,
+        ""RemoteParameters"":null,
+        ""Collection"":""Users""
             }
             ]
         }

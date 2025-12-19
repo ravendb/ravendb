@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             // Also check for missing hashes in storage
                             using (Slice.From(context.Allocator, attachment.Hash, out var hashSlice))
                             {
-                                var count = database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
+                                var count = database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice).Count;
                                 if (count == 0)
                                 {
                                     attachment.MissingSource = AttachmentHandler.MissingSource.Hash;

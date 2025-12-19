@@ -13,6 +13,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Stores attachment to be sent in the session.
         /// </summary>
+        /// <param name="documentId">The ID of the document to which the attachment will be added.</param>
+        /// <param name="parameters">The parameters for the attachment, including name, stream, content type, and optional change vector.</param>
+        void Store(string documentId, StoreAttachmentParameters parameters);
+
+        /// <summary>
+        /// Stores attachment to be sent in the session.
+        /// </summary>
         void Store(string documentId, string name, Stream stream, string contentType = null);
         
         /// <summary>
@@ -90,4 +97,5 @@ namespace Raven.Client.Documents.Session
         /// <param name="destinationName">the attachment name</param>
         void Move(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName);
     }
+
 }

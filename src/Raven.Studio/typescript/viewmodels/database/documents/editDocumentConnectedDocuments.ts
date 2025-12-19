@@ -20,6 +20,8 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import genUtils = require("common/generalUtils");
+import _ = require("lodash")
+import AddAttachmentWithRemoteParametersModal = require("viewmodels/database/documents/AddAttachmentWithRemoteParametersModal");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
@@ -81,6 +83,17 @@ class connectedDocuments {
     
     isArtificialDocument: KnockoutComputed<boolean>;
     isHiloDocument: KnockoutComputed<boolean>;  
+
+    isAddAttachmentWithRemoteParametersModalVisible = ko.observable<boolean>(false);
+    remoteAttachmentParametersModalView: ReactInKnockout<typeof AddAttachmentWithRemoteParametersModal.default> = ko.pureComputed(() => ({
+        component: AddAttachmentWithRemoteParametersModal.default,
+        props: {
+            document: this.document,
+            db: this.db,
+            onUploaded: () => this.afterUpload(),
+            onClose: () => this.isAddAttachmentWithRemoteParametersModalVisible(false)
+        }
+    }))
 
     gridController = ko.observable<virtualGridController<connectedItemType>>();
     private columnPreview = new columnPreviewPlugin<connectedItemType>();
@@ -154,12 +167,16 @@ class connectedDocuments {
         this.revisionsColumns = [revisionColumn];
         
         this.attachmentsColumns = [
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
+                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-info"></i>` : `<i class="icon-attachment text-primary"></i>`,
+            }),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
                     extraClass: () => 'btn-link',
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "100px"),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.crudActionsProvider().deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
@@ -172,12 +189,16 @@ class connectedDocuments {
         ];
 
         this.attachmentsInReadOnlyModeColumns = [
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
+                transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-info"></i>` : `<i class="icon-attachment text-primary"></i>`,
+            }),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "195px",
                 {
                     extraClass: () => 'btn-link',
                     title: () => "Download attachment"
                 }),
-            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' })
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
+            new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "100px"),
         ];
 
         this.countersColumns = [
@@ -257,16 +278,42 @@ class connectedDocuments {
                 const timeSeriesItem = (item as timeSeriesItem);
                 
                 if (column instanceof textColumn) {
-                    if (column.header === "Revision") {
-                        const value = column.getCellValue(item);
-                        onValue(moment.utc(value), value);
-                    } else if (column.header === "Timeseries date range") {
-                        onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
-                    } else if (column.header === "Timeseries items count") {
-                        onValue(timeSeriesItem.numberOfEntries.toLocaleString());
-                    } else {
-                        const value = column.getCellValue(item);
-                        onValue(genUtils.escapeHtml(value), value);
+                    const value = column.getCellValue(item);
+                    switch (column.header) {
+                        case "Revision": {
+                            onValue(moment.utc(value), value);
+                            break;
+                        }
+                        case "Timeseries date range":
+                            onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
+                            break;
+                        case "Timeseries items count":
+                            onValue(timeSeriesItem.numberOfEntries.toLocaleString());
+                            break;
+                        case "Remote parameters": {
+                            const remoteParametersValue = value as RemoteAttachmentParameters;
+                            if (remoteParametersValue == null) {
+                                return;
+                            }
+
+                            const attachmentMetadataHtml = `<div><strong>Upload time:</strong> ${moment(remoteParametersValue.At).format(genUtils.dateFormat)}
+<strong>Destination ID:</strong> ${remoteParametersValue.Identifier}
+<strong>Flags:</strong> ${remoteParametersValue.Flags}</div>`
+                            onValue(attachmentMetadataHtml, value);
+                            break;
+                        }
+                        case "Remote flags": {
+                            const flag = value as RemoteAttachmentFlags;
+                            onValue(flag === "Remote" ? "Remote attachment" : "Local attachment");
+                            break;
+                        }
+                        default: {
+                            if (value == null) {
+                                return;
+                            }
+                            onValue(genUtils.escapeHtml(value), value);
+                            break;
+                        }
                     }
                 }
             });

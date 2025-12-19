@@ -138,7 +138,7 @@ public class RavenDB_24407 : RavenTestBase
         
         await store.AI.CreateAgentAsync(agent, OutputSampleObject.Instance);
 
-        chat.SetUserPrompt("can you give me a cheaper alternative?");
+        chat.SetUserPrompt("Got anything that tastes better?");
         r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
         Assert.NotNull(r.Answer);

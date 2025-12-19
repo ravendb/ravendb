@@ -1,4 +1,5 @@
 using System.IO;
+using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
 using Voron;
 
@@ -16,5 +17,6 @@ namespace Raven.Server.Documents
         public Stream Stream;
         public short TransactionMarker;
         public long Size;
+        public RemoteAttachmentParameters RemoteParameters;
     }
 }

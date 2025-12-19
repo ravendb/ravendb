@@ -1995,7 +1995,7 @@ namespace FastTests.Corax
                     }
                 }
 
-                entry.IndexEntryId = builder.EntryId;
+                entry.IndexEntryId = (long)builder.EntryId;
                 builder.EndWriting();
             }
             indexWriter.Commit();

@@ -1,0 +1,55 @@
+@use "Content/scss/colors";
+
+.chatbot-nav-icon {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    aspect-ratio: 1/1;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 100%;
+        background: colors.$ai-gradient;
+        padding: 2px;
+        -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+        mask-composite: exclude;
+    }
+
+    i {
+        position: relative;
+        z-index: 1;
+        font-size: 16px !important;
+
+        &::before {
+            background: colors.$ai-gradient;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    }
+
+    &:focus,
+    &:hover,
+    &.active {
+        transition: border all 0.5s ease-in-out;
+
+        &::before {
+            mask-composite: unset;
+            border: 1px solid var(--bs-gray-500);
+        }
+
+        i {
+            &::before {
+                -webkit-text-fill-color: var(--bs-gray-100);
+            }
+        }
+    }
+}

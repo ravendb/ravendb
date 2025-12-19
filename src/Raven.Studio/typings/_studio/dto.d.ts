@@ -127,6 +127,7 @@ interface attachmentItem {
     name: string;
     contentType: string;
     size: number;
+    remoteParameters?: RemoteAttachmentParameters;
 }
 
 interface timeSeriesItem {
@@ -156,11 +157,18 @@ interface filterTimeSeriesDates<T> {
     endDate: T;
 }
 
+type RemoteAttachmentFlags = "Remote" | "None";
+
+interface RemoteAttachmentParameters extends Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters {
+    Flags: RemoteAttachmentFlags;
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;
     Name: string;
     Size: number;
+    RemoteParameters?: RemoteAttachmentParameters;
 }
 
 interface connectedDocument {
@@ -1120,3 +1128,5 @@ interface AiModelsRequestDto {
 interface GetAiAgentResultDto {
     AiAgents: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration[];
 }
+
+type AiAssistantResponseStatus = "Success" | "InvalidCredentials" | "InvalidData" | "ConsentRequired" | "OutOfTokens" | "RequestTooLarge";

@@ -53,6 +53,7 @@ const editSchema = yup.object({
                     }
                 ),
             description: yup.string().nullable(),
+            isSendToModel: yup.boolean(),
         })
     ),
 

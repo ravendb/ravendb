@@ -285,14 +285,32 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                     {
                         PortableExceptions.Throw<InvalidDataException>("Path field doesn't exist but is required.");
                     }
+
+                    var hasEmbeddingSourceDocumentId = obj.TryGetValue(JavaScriptFieldName.LoadVectorEmbeddingSourceDocumentId, out JsValue embeddingSourceDocumentIdJsv);
+                    var hasEmbeddingSourceDocumentCollectionName = obj.TryGetValue(JavaScriptFieldName.LoadVectorEmbeddingSourceDocumentCollectionName, out JsValue embeddingSourceDocumentCollectionNameJsv);
                     
+                    
+                    PortableExceptions.ThrowIf<ArgumentException>(hasEmbeddingSourceDocumentId && hasEmbeddingSourceDocumentCollectionName == false, "'loadVector': missing embedding source document collection name.");
+                    PortableExceptions.ThrowIf<ArgumentException>(hasEmbeddingSourceDocumentId == false && hasEmbeddingSourceDocumentCollectionName, "'loadVector': missing embedding source document id.");
                     PortableExceptions.ThrowIfNot<ArgumentException>(pathOfEmbeddingJsv.IsString(), $"'loadVector' requires a string value of the path to the vector.");
                     PortableExceptions.ThrowIfNot<ArgumentException>(nameofEmbeddingsGeneratorJsv.IsString(), $"'loadVector' requires a string AI Task of the vector.");
+                    PortableExceptions.ThrowIf<ArgumentException>(hasEmbeddingSourceDocumentCollectionName && embeddingSourceDocumentCollectionNameJsv.IsString() == false, $"'loadVector' requires a string value of the embedding source document collection.");
+                    
+                    
                     
                     var embeddingGeneratorName = nameofEmbeddingsGeneratorJsv.AsString();
                     var path = pathOfEmbeddingJsv.AsString();
+                    object embeddingSourceDocumentId = (hasEmbeddingSourceDocumentId) switch
+                    {
+                        false => null,
+                        true when embeddingSourceDocumentIdJsv.IsString() => embeddingSourceDocumentIdJsv.AsString(),
+                        true => (object)embeddingSourceDocumentIdJsv
+                    };
+                    var embeddingSourceDocumentCollectionName = hasEmbeddingSourceDocumentCollectionName 
+                        ? embeddingSourceDocumentCollectionNameJsv.AsString() 
+                        : null;
                     
-                    object objectForIndexing = AbstractStaticIndexBase.LoadVectorJs(field.Name, path, embeddingGeneratorName, out var indexField);
+                    object objectForIndexing = AbstractStaticIndexBase.LoadVectorJs(field.Name, path, embeddingGeneratorName, embeddingSourceDocumentId, embeddingSourceDocumentCollectionName, out var indexField);
 
                     if (objectForIndexing is CoraxDynamicItem dynamicItem)
                     {

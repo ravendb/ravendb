@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -277,7 +278,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.ConflictSolverConfig));
-                    WriteConflictSolver(databaseRecord.ConflictSolverConfig);
+                    WriteTaskConfiguration(databaseRecord.ConflictSolverConfig);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Settings))
@@ -291,49 +292,56 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Revisions));
-                    WriteRevisions(databaseRecord.Revisions);
+                    WriteTaskConfiguration(databaseRecord.Revisions);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.TimeSeries))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.TimeSeries));
-                    WriteTimeSeries(databaseRecord.TimeSeries);
+                    WriteTaskConfiguration(databaseRecord.TimeSeries);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DocumentsCompression))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.DocumentsCompression));
-                    WriteDocumentsCompression(databaseRecord.DocumentsCompression);
+                    WriteTaskConfiguration(databaseRecord.DocumentsCompression);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Expiration))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Expiration));
-                    WriteExpiration(databaseRecord.Expiration);
+                    WriteTaskConfiguration(databaseRecord.Expiration);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DataArchival))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.DataArchival));
-                    WriteDataArchival(databaseRecord.DataArchival);
+                    WriteTaskConfiguration(databaseRecord.DataArchival);
                 }
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.RemoteAttachments))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.RemoteAttachments));
+                    WriteTaskConfiguration(databaseRecord.RemoteAttachments);
+                }
+                
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Refresh))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Refresh));
-                    WriteRefresh(databaseRecord.Refresh);
+                    WriteTaskConfiguration(databaseRecord.Refresh);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Client))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Client));
-                    WriteClientConfiguration(databaseRecord.Client);
+                    WriteTaskConfiguration(databaseRecord.Client);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Sorters))
@@ -362,7 +370,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Studio));
 
-                    WriteStudioConfiguration(databaseRecord.Studio);
+                    WriteTaskConfiguration(databaseRecord.Studio);
                 }
 
                 if (databaseRecord.RevisionsForConflicts != null)
@@ -370,7 +378,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
 
-                    WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                    WriteTaskConfiguration(databaseRecord.RevisionsForConflicts);
                 }
 
                 if (databaseRecord.IsSharded)
@@ -552,26 +560,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 await _writer.MaybeFlushAsync();
-            }
-
-            private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
-            {
-                if (revisionsForConflictsConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, revisionsForConflictsConfiguration.ToJson());
-            }
-
-            private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
-            {
-                if (studioConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, studioConfiguration.ToJson());
             }
 
             private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)
@@ -1025,87 +1013,15 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteConflictSolver(ConflictSolver conflictSolver)
+            private void WriteTaskConfiguration(IDynamicJson config)
             {
-                if (conflictSolver == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, conflictSolver.ToJson());
-            }
-
-            private void WriteClientConfiguration(ClientConfiguration clientConfiguration)
-            {
-                if (clientConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, clientConfiguration.ToJson());
-            }
-
-            private void WriteExpiration(ExpirationConfiguration expiration)
-            {
-                if (expiration == null)
+                if (config == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
 
-                _context.Write(_writer, expiration.ToJson());
-            }
-
-            private void WriteDataArchival(DataArchivalConfiguration dataArchival)
-            {
-                if (dataArchival == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, dataArchival.ToJson());
-            }
-
-            private void WriteRefresh(RefreshConfiguration refresh)
-            {
-                if (refresh == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, refresh.ToJson());
-            }
-
-            private void WriteRevisions(RevisionsConfiguration revisions)
-            {
-                if (revisions == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, revisions.ToJson());
-            }
-
-            private void WriteTimeSeries(TimeSeriesConfiguration timeSeries)
-            {
-                if (timeSeries == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, timeSeries.ToJson());
-            }
-
-            private void WriteDocumentsCompression(DocumentsCompressionConfiguration compressionConfiguration)
-            {
-                if (compressionConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, compressionConfiguration.ToJson());
+                _context.Write(_writer, config.ToJson());
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
@@ -1722,17 +1638,20 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     progress.Attachments.ReadCount++;
-
-                    if (_attachmentStreamsAlreadyExported.Add(hash))
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) == false || remoteParameters == null 
+                        || (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.None))
                     {
-                        await using (var stream = _source.GetAttachmentStream(hash, out string tag))
+                        if (_attachmentStreamsAlreadyExported.Add(hash))
                         {
-                            if (stream == null)
+                            await using (var stream = _source.GetAttachmentStream(hash, out string tag))
                             {
-                                progress.Attachments.ErroredCount++;
-                                throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                if (stream == null)
+                                {
+                                    progress.Attachments.ErroredCount++;
+                                    throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                }
+                                await WriteAttachmentStreamAsync(hash, stream, tag);
                             }
-                            await WriteAttachmentStreamAsync(hash, stream, tag);
                         }
                     }
                 }

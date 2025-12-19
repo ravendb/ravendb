@@ -5,15 +5,17 @@ namespace Raven.Client.Documents.Changes
 {
     internal interface IChangesConnectionState<out T> : IDisposable
     {
-        void Inc();
+        int Inc();
 
-        void Dec();
+        int Dec();
 
         void Error(Exception e);
 
         Task EnsureSubscribedNow();
 
-        event Action<T> OnChangeNotification;
+        void RegisterEvents(Action<T> onChangeNotification, Action<Exception> onError);
+
+        void UnregisterEvents(Action<T> onChangeNotification, Action<Exception> onError);
 
         event Action<Exception> OnError;
     }

@@ -15,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.PeriodicBackup;
@@ -475,7 +476,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_options.IncludeExpired == false)
                     {
                         if (item.Document.Data.TryGetMetadata(out var metadata) &&
-                            AbstractBackgroundWorkStorage.HasPassed(metadata, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
+                            AbstractBackgroundWorkStorageBase.HasPassed(metadata, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
                         {
                             SkipDocument(item, result.Documents);
                             continue;

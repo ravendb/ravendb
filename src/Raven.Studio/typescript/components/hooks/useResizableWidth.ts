@@ -6,9 +6,10 @@ interface useResizableWidthProps {
     initialWidth: number;
     minWidth: number;
     maxWidth: number;
+    isSkipChatbot?: boolean; // used only in Chatbot component
 }
 
-export default function useResizableWidth({ initialWidth, minWidth, maxWidth }: useResizableWidthProps) {
+export default function useResizableWidth({ initialWidth, minWidth, maxWidth, isSkipChatbot }: useResizableWidthProps) {
     const [width, setWidth] = useState(initialWidth);
     const { value: isDragging, setValue: setIsDragging } = useBoolean(false);
 
@@ -26,13 +27,25 @@ export default function useResizableWidth({ initialWidth, minWidth, maxWidth }: 
     const handleMouseMove = useCallback(
         (e: MouseEvent) => {
             if (isDragging) {
+                let newWidth = window.innerWidth - e.clientX;
+
+                const isChatbotVisibleAndPinned = layoutClassObserver.hasClassNames(["pin-chatbot", "show-chatbot"]);
                 const isNotificationsVisibleAndPinned = layoutClassObserver.hasClassNames([
                     "pin-notifications",
                     "show-notifications",
                 ]);
-                const rightOffset = isNotificationsVisibleAndPinned ? 440 : 0;
 
-                const newWidth = window.innerWidth - e.clientX - rightOffset;
+                if (isChatbotVisibleAndPinned && !isSkipChatbot) {
+                    const chatbotWidthInPx = parseInt(
+                        document.getElementById("chatbot").style.getPropertyValue("width")
+                    );
+                    newWidth -= chatbotWidthInPx;
+                }
+
+                if (isNotificationsVisibleAndPinned) {
+                    newWidth -= 440;
+                }
+
                 const fixedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
                 setWidth(fixedWidth);

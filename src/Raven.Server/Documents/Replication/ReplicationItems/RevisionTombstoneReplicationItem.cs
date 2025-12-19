@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Raven.Client;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow;
 using Sparrow.Json;

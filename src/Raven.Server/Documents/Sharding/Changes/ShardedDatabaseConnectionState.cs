@@ -18,9 +18,23 @@ internal sealed class ShardedDatabaseConnectionState : AbstractDatabaseConnectio
         _onChangeNotification?.Invoke(change);
     }
 
-    event Action<BlittableJsonReaderObject> IChangesConnectionState<BlittableJsonReaderObject>.OnChangeNotification
+    void IChangesConnectionState<BlittableJsonReaderObject>.RegisterEvents(Action<BlittableJsonReaderObject> onChangeNotification, Action<Exception> onError)
     {
-        add => _onChangeNotification += value;
-        remove => _onChangeNotification -= value;
+        RegisterEventsInternal(ref _onChangeNotification, onChangeNotification, onError);
+    }
+
+    void IChangesConnectionState<BlittableJsonReaderObject>.UnregisterEvents(Action<BlittableJsonReaderObject> onChangeNotification, Action<Exception> onError)
+    {
+        UnregisterEventsInternal(ref _onChangeNotification, onChangeNotification, onError);
+    }
+
+    public override void Dispose()
+    {
+        lock (_eventLock)
+        {
+            base.Dispose();
+
+            _onChangeNotification = null;
+        }
     }
 }

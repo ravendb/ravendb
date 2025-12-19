@@ -198,7 +198,7 @@ namespace Corax.Querying.Matches
                         switch (termType)
                         {
                             case TermIdMask.Single:
-                                long entryId = EntryIdEncodings.GetContainerId(postingListId);
+                                long entryId = (long)EntryIdEncodings.GetContainerId(postingListId);
                                 if (entryId <= _max)
                                     sortedIds[currentIdx++] = entryId;
                                 postingListCalls++;
@@ -253,7 +253,7 @@ namespace Corax.Querying.Matches
                     if (termType == TermIdMask.SmallPostingList)
                     {
                         // Always has sufficient capacity due to the BufferSize constraint
-                        _smallPostListIds.AddByRefUnsafe() = EntryIdEncodings.GetContainerId(_itBuffer[i]);
+                        _smallPostListIds.AddByRefUnsafe() = (long)EntryIdEncodings.GetContainerId(_itBuffer[i]);
                     }
                 }
                 
@@ -266,7 +266,7 @@ namespace Corax.Querying.Matches
 
             private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
             {
-                if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx + read - 1]) > _max)
+                if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || (long)EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx + read - 1]) > _max)
                     _postListIt = default;
                 
                 EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx..], read);

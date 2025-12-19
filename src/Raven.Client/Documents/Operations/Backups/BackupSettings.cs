@@ -181,7 +181,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
     }
 
-    public sealed class S3Settings : AmazonSettings
+    public sealed class S3Settings : AmazonSettings, IS3Settings
     {
         /// <summary>
         /// S3 Bucket name.
@@ -359,7 +359,7 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public sealed class AzureSettings : BackupSettings, ICloudBackupSettings
+    public sealed class AzureSettings : BackupSettings, ICloudBackupSettings, IAzureSettings
     {
         /// <summary>
         /// Microsoft Azure Storage Container name.

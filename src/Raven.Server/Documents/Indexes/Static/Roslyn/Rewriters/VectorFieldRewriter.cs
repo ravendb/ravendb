@@ -38,13 +38,14 @@ internal sealed class VectorFieldRewriter(ReferencedCollectionsRetriever referen
                 
                 IEnumerable<string> names = collectionNameRetriever switch
                 {
-                    CollectionNameRetriever cnr => cnr!.CollectionNames!.Select(EmbeddingsHelper.GetEmbeddingDocumentCollectionName),
-                    CollectionNameRetrieverBase cnrb => cnrb.Collections.Select(n => EmbeddingsHelper.GetEmbeddingDocumentCollectionName(n.CollectionName)),
+                    _ when node.ArgumentList.Arguments.Count == 4 => [((LiteralExpressionSyntax)node.ArgumentList.Arguments[^1].Expression).ToString()[1..^1]],
+                    CollectionNameRetriever cnr => cnr!.CollectionNames!,
+                    CollectionNameRetrieverBase cnrb => cnrb.Collections.Select(n => n.CollectionName),
                     _ => throw new InvalidOperationException($"Unknown collection name retriever. Got: {collectionNameRetriever.GetType().FullName}.")
                 };
 
                 referencedCollectionsRetriever.CreateReferencedCollections();
-                referencedCollectionsRetriever.ReferencedCollections.AddRange(names.Distinct());
+                referencedCollectionsRetriever.ReferencedCollections.AddRange(names.Select(EmbeddingsHelper.GetEmbeddingDocumentCollectionName).Distinct());
                 return Rewrite();
         }
 

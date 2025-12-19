@@ -45,7 +45,7 @@ export default function IndexTermsPreviewModal({
                 <div className="text-center lead">Indexing term value</div>
             </Modal.Header>
             <Modal.Body>
-                <Code elementToCopy={term} code={term} language="plaintext" />
+                <Code code={term} language="plaintext" />
             </Modal.Body>
             <Modal.Footer className="mt-4 d-flex justify-content-between w-100">
                 <div className="d-flex gap-2">
