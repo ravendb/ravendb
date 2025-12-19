@@ -104,6 +104,6 @@ export const aiAssistantSelectors = {
     consentStatus: (store: RootState) => store.aiAssistant.consentStatus,
     usage: (store: RootState) => store.aiAssistant.usage,
     isDataSubmissionDisabled: (store: RootState) => store.aiAssistant.settings.isDataSubmissionDisabled,
-    isDisabled: (store: RootState) => store.aiAssistant.settings.isDisabled || !store.license.status.HasAiAssistant,
+    isDisabled: (store: RootState) => store.aiAssistant.settings.isDisabled || !store.license.status?.HasAiAssistant,
     settings: (store: RootState) => store.aiAssistant.settings,
 };
