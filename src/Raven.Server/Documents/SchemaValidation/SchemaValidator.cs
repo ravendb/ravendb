@@ -54,6 +54,5 @@ public class SchemaValidator
 public class SchemaValidatorSettings
 {
     public TimeSpan RegexTimeout { get; init; }
-    public TimeSpan ValidationTimeout { get; init; }
     public int MaxDepth { get; init; }
 }

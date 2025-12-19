@@ -253,7 +253,6 @@ public static class SchemaValidationHelper
         return new SchemaValidatorSettings
         {
             RegexTimeout = regexTimeout, 
-            ValidationTimeout = config.ValidationTimeout.AsTimeSpan, 
             MaxDepth = config.MaxDepth
         };
     }

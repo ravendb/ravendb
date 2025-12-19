@@ -20,7 +20,7 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
     {
     }
 
-    protected static SchemaValidatorSettings SchemaValidatorSettings { get;  } = new SchemaValidatorSettings{ValidationTimeout = TimeSpan.FromSeconds(1), RegexTimeout = TimeSpan.FromSeconds(1), MaxDepth = 10};
+    protected static SchemaValidatorSettings SchemaValidatorSettings { get;  } = new SchemaValidatorSettings{RegexTimeout = TimeSpan.FromSeconds(1), MaxDepth = 64};
     
     protected static void AssertError(string expected, string actual)
     {

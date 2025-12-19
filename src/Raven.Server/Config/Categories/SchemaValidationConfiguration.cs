@@ -12,21 +12,14 @@ namespace Raven.Server.Config.Categories
         {
         }
 
-        [Description("The maximum time allowed for a single document schema validation (in milliseconds)")]
-        [DefaultValue(500)]
-        [MinValue(10)]
-        [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("SchemaValidation.DocumentValidationTimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting ValidationTimeout { get; set; }
-
         [Description("The maximum depth allowed for document schema validation")]
-        [DefaultValue(16)]
+        [DefaultValue(64)]
         [MinValue(1)]
         [ConfigurationEntry("SchemaValidation.MaxDepth", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxDepth { get; set; }
 
         [Description("The maximum time allowed for regular expression matching during schema validation (in milliseconds)")]
-        [DefaultValue(200)]
+        [DefaultValue(1000)]
         [MinValue(10)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("SchemaValidation.RegexTimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]

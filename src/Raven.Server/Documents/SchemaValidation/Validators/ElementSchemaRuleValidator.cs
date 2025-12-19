@@ -33,8 +33,6 @@ public class ElementSchemaRuleValidator
     
     public bool Validate(SchemaValidationContext context, object value)
     {
-        context.CheckTimeoutAndThrow();
-
         if (IsOfRequiredType(value) == false)
         {
             context.ErrorBuilder?.AddError($"'{context.ErrorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(value?.GetType())}'.");

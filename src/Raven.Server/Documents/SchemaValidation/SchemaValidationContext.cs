@@ -8,8 +8,6 @@ namespace Raven.Server.Documents.SchemaValidation;
 
 public class SchemaValidationContext
 {
-    private readonly long _timeoutAt;
-    private readonly TimeSpan _timeout;
     private int _currentDepth;
     private readonly int _maxDepth;
 
@@ -25,8 +23,6 @@ public class SchemaValidationContext
     public SchemaValidationContext(SchemaValidatorSettings configuration)
     {
         _maxDepth = configuration.MaxDepth;
-        _timeout = configuration.ValidationTimeout;
-        _timeoutAt = Stopwatch.GetTimestamp() + (long)(_timeout.TotalMilliseconds * (Stopwatch.Frequency / 1000.0));
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -58,12 +54,6 @@ public class SchemaValidationContext
             throw new SchemaValidationException($"Maximum validation path depth of {_maxDepth} exceeded.");
     }
 
-    public void CheckTimeoutAndThrow()
-    {
-        if (Stopwatch.GetTimestamp() > _timeoutAt)
-            throw new SchemaValidationException($"Schema validation timed out after {_timeout.TotalMilliseconds}ms.");
-    }
-    
     public WithoutErrorScope WithoutCollectingErrors()
     {
         return new WithoutErrorScope(this);
