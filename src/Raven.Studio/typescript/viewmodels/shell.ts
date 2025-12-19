@@ -673,10 +673,17 @@ class shell extends viewModelBase {
                 })
             );
 
-            storeCompat.globalDispatch(chatbotSlice.chatbotActions.isDataSubmissionEnabledSet(!result.DisableDataSubmission));
-
             if (result.DisableAiAssistant) {
                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.chatbotTabSet("resources"));
+            }
+
+            if (result.DisableDataSubmission) {
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.isDataSubmissionEnabledSet(false));
+            } else {
+                studioSettings.default.globalSettings().done((globalSettings) => {
+                    const isEnabledInLocalStorage = globalSettings.isChatbotDataSubmissionEnabled.getValue();
+                    storeCompat.globalDispatch(chatbotSlice.chatbotActions.isDataSubmissionEnabledSet(isEnabledInLocalStorage));
+                });
             }
         });
     }

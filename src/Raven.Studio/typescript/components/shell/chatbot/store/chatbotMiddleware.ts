@@ -23,10 +23,17 @@ chatbotMiddleware.startListening({
 
 chatbotMiddleware.startListening({
     actionCreator: chatbotActions.isAlwaysAllowEndpointCallsSet,
-    effect: async (_, { getState }) => {
-        const state = getState() as RootState;
+    effect: async ({ payload }) => {
         const globalSettings = await studioSettings.default.globalSettings();
-        globalSettings.isChatbotAlwaysAllowEndpointCalls.setValue(state.chatbot.isAlwaysAllowEndpointCalls);
+        globalSettings.isChatbotAlwaysAllowEndpointCalls.setValue(payload);
+    },
+});
+
+chatbotMiddleware.startListening({
+    actionCreator: chatbotActions.isDataSubmissionEnabledSet,
+    effect: async ({ payload }) => {
+        const globalSettings = await studioSettings.default.globalSettings();
+        globalSettings.isChatbotDataSubmissionEnabled.setValue(payload);
     },
 });
 
