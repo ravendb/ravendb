@@ -10,13 +10,15 @@ export default function useTypewriter({ text, delay = 0, isDone = false }: UseTy
     const [displayedText, setDisplayedText] = useState("");
 
     useEffect(() => {
+        const currentText = text ?? "";
+
         if (isDone) {
-            setDisplayedText(text);
+            setDisplayedText(currentText);
             return;
         }
 
         const timeout = setTimeout(() => {
-            const nextText = (text ?? "").slice(0, displayedText.length + 1);
+            const nextText = currentText.slice(0, displayedText.length + 1);
             setDisplayedText(nextText);
         }, delay);
 
