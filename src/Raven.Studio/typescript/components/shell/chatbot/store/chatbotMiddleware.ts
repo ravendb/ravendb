@@ -31,9 +31,13 @@ chatbotMiddleware.startListening({
 
 chatbotMiddleware.startListening({
     actionCreator: chatbotActions.isDataSubmissionEnabledSet,
-    effect: async ({ payload }) => {
+    effect: async ({ payload }, { dispatch }) => {
         const globalSettings = await studioSettings.default.globalSettings();
         globalSettings.isChatbotDataSubmissionEnabled.setValue(payload);
+
+        if (!payload) {
+            dispatch(chatbotActions.attachedContextTypesRemoved(["QueryResult"]));
+        }
     },
 });
 
