@@ -19,14 +19,22 @@ public class RavenDB_25588(ITestOutputHelper output) : RavenTestBase(output)
                 documentStore.Conventions.FindCollectionName = t => "My." + t.Name;
             }
         });
-        
-        new MyIndex().Execute(store);
+
+        var index = new MyIndex
+        {
+            Conventions = store.Conventions
+        };
+        index.Execute(store);
+
+        var indexDefinition = index.CreateIndexDefinition();
+        Assert.Contains("docs[@ \"My.Item\"]", indexDefinition.Maps.First());
 
         using (var s = store.OpenSession())
         {
             s.Store(new Item("hello"));
             s.SaveChanges();
         }
+
         Indexes.WaitForIndexing(store);
         using (var s = store.OpenSession())
         {
@@ -38,12 +46,12 @@ public class RavenDB_25588(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     private record Item(string Name);
-    
+
     private class MyIndex : AbstractIndexCreationTask<Item>
     {
         public MyIndex()
         {
-            Map = items => 
+            Map = items =>
                 from item in items
                 select new { item.Name };
         }
