@@ -11,14 +11,14 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
     // ReSharper disable once ConvertToPrimaryConstructor
     public ConstantSchemaRuleValidator(object constantValue)
     {
-        _constantValue = ConvertTypeForComparison(constantValue);
+        _constantValue = ConvertTypeForComparison(constantValue, cloneAsRoot: true);
         _constantValueForError = IsString(_constantValue) ? $"\"{_constantValue}\"" : _constantValue;
     }
 
     public override bool Validate(SchemaValidationContext context, object value)
     {
-        //The order here is extremely important since when comparing between blittable objects the function uses the first object context and _constantValue is used concurrently 
-        if (Equals(ConvertTypeForComparison(value), _constantValue)) 
+        //The order here is mandatory since the validator 'value' is used concurrently and we CloneForConcurrentRead in case it is blittable 
+        if (SafeConcurrentEquals(schemaValue: _constantValue, documentValue: value))
             return true;
 
         var quoteIfString = IsString(value) ? "\"" : "";
@@ -28,7 +28,7 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
 
     protected override bool CheckTypeAndGetValue(object value, out object tValue)
     {
-        tValue = ConvertTypeForComparison(value);
+        tValue = ConvertTypeForComparison(value, cloneAsRoot: false);
         return true;
     }
 }

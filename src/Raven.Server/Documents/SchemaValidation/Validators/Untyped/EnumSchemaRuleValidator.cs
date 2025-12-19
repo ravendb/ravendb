@@ -12,13 +12,13 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
     // ReSharper disable once ConvertToPrimaryConstructor
     public EnumSchemaRuleValidator(IEnumerable<object> enums)
     {
-        _enums = enums.Select(ConvertTypeForComparison).ToArray();
+        _enums = enums.Select(v => ConvertTypeForComparison(v, cloneAsRoot: true)).ToArray();
     }
 
     public override bool Validate(SchemaValidationContext context, object value)
     {
-        //The order here is extremely important since when comparing between blittable objects the function uses the first object context and _constantValue is used concurrently 
-        if (_enums.Any(x => Equals(value, x))) 
+        //The order here is mandatory since the validator 'value' is used concurrently and we CloneForConcurrentRead in case it is blittable 
+        if (_enums.Any(x => SafeConcurrentEquals(schemaValue:x, documentValue:value))) 
             return true;
         
         var quoteIfString = IsString(value) ? "\"" : "";
@@ -28,7 +28,7 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
     
     protected override bool CheckTypeAndGetValue(object value, out object tValue)
     {
-        tValue = ConvertTypeForComparison(value);
+        tValue = ConvertTypeForComparison(value, cloneAsRoot: false);
         return true;
     }
 }
