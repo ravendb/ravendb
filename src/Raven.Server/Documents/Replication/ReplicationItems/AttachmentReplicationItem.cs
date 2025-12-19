@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
@@ -19,6 +21,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Key;
         public Slice Base64Hash;
         public Stream Stream;
+        public long AttachmentSize;
+        public RemoteAttachmentFlags Flags;
+        public DateTime? RemoteAtUtc;
+        public Slice RemoteIdentifier;
+        private const long NullTicks = -1L;
+
+        public bool RemoteAttachments { get; set; }
 
         public override long Size => base.Size + // common
 
@@ -32,7 +41,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      ContentType.Size +
 
                                      sizeof(byte) + // size of Base64Hash
-                                     Base64Hash.Size;
+                                     Base64Hash.Size
+
+                                     + sizeof(long) // size of AttachmentSize
+                                     + sizeof(long) // size of RemoteAtUtc
+                                     + sizeof(int) // size of Flags
+                                     + sizeof(int) + //  size of RemoteIdentifier
+                                     + RemoteIdentifier.Size;
 
         public long StreamSize => sizeof(byte) + // type
 
@@ -49,10 +64,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(ContentType)] = ContentType.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Base64Hash)] = Base64Hash.ToString();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            djv[nameof(Flags)] = Flags.ToString();
+            djv[nameof(RemoteAtUtc)] = RemoteAtUtc;
+            djv[nameof(RemoteIdentifier)] = RemoteIdentifier.ToString();
             return djv;
         }
 
-        public static unsafe AttachmentReplicationItem From(DocumentsOperationContext context, Attachment attachment)
+        public static unsafe AttachmentReplicationItem From(DocumentsOperationContext context, Attachment attachment, bool remoteAttachments)
         {
             var item = new AttachmentReplicationItem
             {
@@ -63,8 +81,23 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ContentType = attachment.ContentType,
                 Base64Hash = attachment.Base64Hash,
                 Stream = attachment.Stream,
-                TransactionMarker = attachment.TransactionMarker
+                TransactionMarker = attachment.TransactionMarker,
+                AttachmentSize = attachment.Size,
+                RemoteAttachments = remoteAttachments
             };
+
+            if (attachment.RemoteParameters != null)
+            {
+                item.Flags = attachment.RemoteParameters.Flags;
+                item.RemoteAtUtc = attachment.RemoteParameters.At;
+                item.ToDispose(Slice.From(context.Allocator, attachment.RemoteParameters.Identifier, ByteStringType.Immutable, out item.RemoteIdentifier));
+            }
+            else
+            {
+                item.Flags = RemoteAttachmentFlags.None;
+                item.RemoteAtUtc = null;
+                item.RemoteIdentifier = Slices.Empty;
+            }
 
             // although the key is LSV but is treated as slice and doesn't respect escaping
             item.ToDispose(Slice.From(context.Allocator, attachment.Key.Buffer, attachment.Key.Size, ByteStringType.Immutable, out item.Key));
@@ -101,9 +134,43 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += Base64Hash.Size;
 
+                tempBufferPos = WriteRemoteAttachmentsProperties(pTemp, tempBufferPos);
+
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
+        }
+
+        private unsafe int WriteRemoteAttachmentsProperties(byte* pTemp, int tempBufferPos)
+        {
+            if (RemoteAttachments == false)
+                return tempBufferPos;
+
+            *(long*)(pTemp + tempBufferPos) = AttachmentSize;
+            tempBufferPos += sizeof(long);
+            if (RemoteAtUtc.HasValue)
+            {
+                *(long*)(pTemp + tempBufferPos) = RemoteAtUtc.Value.Ticks;
+                tempBufferPos += sizeof(long);
+            }
+            else
+            {
+                *(long*)(pTemp + tempBufferPos) = NullTicks;
+                tempBufferPos += sizeof(long);
+            }
+
+            *(RemoteAttachmentFlags*)(pTemp + tempBufferPos) = Flags;
+            tempBufferPos += sizeof(RemoteAttachmentFlags);
+
+            *(int*)(pTemp + tempBufferPos) = RemoteIdentifier.Size;
+            tempBufferPos += sizeof(int);
+            if (RemoteIdentifier.Size != 0)
+            {
+                Memory.Copy(pTemp + tempBufferPos, RemoteIdentifier.Content.Ptr, RemoteIdentifier.Size);
+                tempBufferPos += RemoteIdentifier.Size;
+            }
+
+            return tempBufferPos;
         }
 
         public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
@@ -118,6 +185,31 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
+
+                if (RemoteAttachments)
+                {
+                    AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
+                    var ticks = *(long*)Reader.ReadExactly(sizeof(long));
+                    if (ticks != NullTicks)
+                        RemoteAtUtc = new DateTime(ticks, DateTimeKind.Utc);
+
+                    Flags = *(RemoteAttachmentFlags*)Reader.ReadExactly(sizeof(RemoteAttachmentFlags)) | RemoteAttachmentFlags.None;
+                    size = *(int*)Reader.ReadExactly(sizeof(int));
+
+                    if (size == 0)
+                    {
+                        RemoteIdentifier = Slices.Empty;
+                    }
+                    else
+                    {
+                        ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out RemoteIdentifier));
+                    }
+                }
+                else
+                {
+                    Flags = RemoteAttachmentFlags.None;
+                    RemoteIdentifier = Slices.Empty;
+                }
 
                 stats.RecordAttachmentRead(Size);
             }
@@ -145,10 +237,17 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.Base64Hash = Base64Hash.Clone(allocator);
             item.Key = Key.Clone(allocator);
 
+            item.RemoteAttachments = RemoteAttachments;
+            item.AttachmentSize = AttachmentSize;
+            item.RemoteAtUtc = RemoteAtUtc;
+            item.Flags = Flags;
+            item.RemoteIdentifier = RemoteIdentifier.Clone(allocator);
+
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Base64Hash.Release(allocator);
                 item.Key.Release(allocator);
+                item.RemoteIdentifier.Release(allocator);
             }));
 
             return item;
@@ -162,6 +261,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
                 var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
+                AttachmentSize = streamLength; // we populate the stream size here so we can use it in PreProcessAttachments method, when receiving replication from old versions, without remote attachments support
                 Stream = attachmentStreamsTempFile.StartNewStream();
                 Reader.ReadExactly(streamLength, Stream);
                 Stream.Flush();

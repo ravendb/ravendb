@@ -5,11 +5,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Core;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
@@ -18,7 +18,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    public interface IRavenAzureClient : IDirectUploader, IDisposable
+    public interface IRavenAzureClient : IDirectUploader
     {
         void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata);
         RavenStorageClient.ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, string continuationToken = null);
@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         string RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
         Size MaxSingleBlockSize { get; set; }
+        Task<IDictionary<string, string>> GetObjectMetadataAsync(string key);
     }
 
     public sealed class RavenAzureClient : IProgress<long>, IRavenAzureClient
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public Size MaxSingleBlockSize { get; set; } = new Size(256, SizeUnit.Megabytes);
 
-        private RavenAzureClient(AzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        private RavenAzureClient(IAzureSettings azureSettings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (azureSettings == null)
                 throw new ArgumentNullException(nameof(azureSettings));
@@ -213,9 +214,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             result.List = page.Values
                 .Where(x => listFolders || x.IsBlob)
-                .Select(x => listFolders ? RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name) : x.Blob.Name)
+                .Select(x =>
+                {
+                    if (listFolders)
+                    {
+                        return new RavenStorageClient.BlobProperties
+                        {
+                            Name = RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name), LastModified = x.Blob?.Properties.LastModified
+                        };
+                    }
+
+                    return new RavenStorageClient.BlobProperties { Name = x.Blob.Name, LastModified = x.Blob.Properties.LastModified };
+                })
                 .Distinct()
-                .Select(x => new RavenStorageClient.BlobProperties { Name = x })
                 .ToList();
 
             if (string.IsNullOrWhiteSpace(page.ContinuationToken) == false)
@@ -243,7 +254,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public static IRavenAzureClient Create(AzureSettings settings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        public static IRavenAzureClient Create(IAzureSettings settings, BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (configuration.AzureLegacy)
                 return new LegacyRavenAzureClient(settings, progress, cancellationToken: cancellationToken);
@@ -254,6 +265,56 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
             return new AzureMultiPartUploader(_client, key, metadata, _progress, _cancellationToken);
+        }
+
+        public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            try
+            {
+                var client = _client.GetBlobClient(key);
+                var response = await client.GetPropertiesAsync(cancellationToken: _cancellationToken);
+
+                var headers = ConvertHeaders(response.GetRawResponse().Headers);
+                var metadata = ConvertMetadata(response.Value.Metadata);
+
+                foreach (var kvp in headers)
+                {
+                    metadata.TryAdd(kvp.Key, kvp.Value);
+                }
+
+                return metadata;
+            }
+            catch (RequestFailedException e)
+            {
+                if (e.Status == (int)System.Net.HttpStatusCode.NotFound)
+                    return null;
+
+                throw;
+            }
+        }
+
+        private static IDictionary<string, string> ConvertHeaders(ResponseHeaders collection)
+        {
+            var metadata = new Dictionary<string, string>();
+
+            foreach (var header in collection)
+            {
+                metadata[header.Name] = header.Value;
+            }
+
+            return metadata;
+        }
+
+        private static IDictionary<string, string> ConvertMetadata(IDictionary<string, string> collection)
+        {
+            var metadata = new Dictionary<string, string>();
+            if (collection == null)
+                return metadata;
+
+            foreach (var key in collection.Keys)
+                metadata[key] = collection[key];
+
+            return metadata;
         }
     }
 }

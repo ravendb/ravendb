@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly Slice AttachmentsBucketAndEtagSlice;
         internal static readonly Slice AttachmentsBucketAndHashSlice;
         internal static readonly string AttachmentsTombstones = "Attachments.Tombstones";
+        internal static readonly Slice AttachmentsFlagAndHashSlice;
 
         internal enum AttachmentsTable
         {
@@ -29,7 +30,11 @@ namespace Raven.Server.Documents.Schemas
             ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
             Hash = 4, // base64 hash
             TransactionMarker = 5,
-            ChangeVector = 6
+            ChangeVector = 6,
+            Size = 7,
+            Flags = 8,
+            RemoteAt = 9,
+            Identifier = 10,
         }
 
         static Attachments()
@@ -43,6 +48,7 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AttachmentsBucketAndEtag", ByteStringType.Immutable, out AttachmentsBucketAndEtagSlice);
                 Slice.From(ctx, "AttachmentsBucketAndHash", ByteStringType.Immutable, out AttachmentsBucketAndHashSlice);
                 Slice.From(ctx, AttachmentsTombstones, ByteStringType.Immutable, out AttachmentsTombstonesSlice);
+                Slice.From(ctx, "AttachmentsFlagAndHash", ByteStringType.Immutable, out AttachmentsFlagAndHashSlice);
             }
 
             DefineIndexesForAttachmentsSchema(AttachmentsSchemaBase);
@@ -65,6 +71,13 @@ namespace Raven.Server.Documents.Schemas
                     StartIndex = (int)AttachmentsTable.Hash,
                     Count = 1,
                     Name = AttachmentsHashSlice
+                });
+                schema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = RemoteAttachmentsStorage.GenerateFlagAndHashForAttachments,
+                    IsGlobal = true,
+                    Name = AttachmentsFlagAndHashSlice,
+                    SupportDuplicateKeys = true
                 });
             }
 

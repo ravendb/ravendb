@@ -15,7 +15,8 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 >= 40 and < 50 => BuildVersionType.V4,
                 >= 90000 => BuildVersionType.GreaterThanCurrent,
                 >= 80000 and <= 89999 => BuildVersionType.V8,
-                >= 70000 and <= 79999 => BuildVersionType.V7,
+                >= 70000 and <= 71999 => BuildVersionType.V7,
+                >= 72000 and <= 79999 => BuildVersionType.V72,
                 >= 60000 and <= 69999 => BuildVersionType.V6,
                 >= 50000 and <= 59999 => BuildVersionType.V5,
                 >= 40000 and <= 49999 => BuildVersionType.V4,
@@ -32,6 +33,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
         V5,
         V6,
         V7,
+        V72,
         V8,
         GreaterThanCurrent
     }

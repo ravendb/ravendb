@@ -6,10 +6,11 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
+using Raven.Server.Documents.BackgroundWork;
 
 namespace Raven.Server.Documents.DataArchival;
 
-public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
+public sealed class DataArchivalStorage : DocumentBackgroundWorkStorage
 {
     private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
 

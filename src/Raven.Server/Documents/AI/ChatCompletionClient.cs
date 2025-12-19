@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.AI.Settings;
@@ -695,7 +696,7 @@ internal class ChatCompletionClient : IDisposable
                 RefusedToAnswerException.Throw(message, content.ToString(), null, reqId);
                 break;
             default:
-                UnsuccessfulRequestException.Throw(content.ToString(), response.StatusCode, reqId);
+                UnsuccessfulAiRequestException.Throw(content.ToString(), response.StatusCode, reqId);
                 break;
         }
     }

@@ -229,4 +229,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="Data\Attachments\RavenDB_24543\DumpofNorthwind.ravendbdump" />
+    <EmbeddedResource Include="Data\Attachments\RavenDB_24543\DumpofNorthwind.ravendbdump" />
+    <None Remove="Data\Attachments\RavenDB_24543\Northwind.zip" />
+    <EmbeddedResource Include="Data\Attachments\RavenDB_24543\Northwind.zip" />
+  </ItemGroup>
 </Project>

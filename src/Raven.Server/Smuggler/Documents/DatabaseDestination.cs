@@ -13,6 +13,8 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
@@ -652,6 +654,7 @@ namespace Raven.Server.Smuggler.Documents
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
                                     _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
@@ -841,18 +844,23 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
                     hasAttachments = true;
-
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
-                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                        attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                        attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
                         throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
+
+                    RemoteAttachmentParameters remoteParams = null;
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject readerObject) && readerObject != null)
+                    {
+                        remoteParams = JsonDeserializationClient.RemoteAttachmentParameters(readerObject);
+                    }
 
                     if (isRevision == false)
                     {
-                        if (attachmentsStorage.AttachmentExists(context, hash) == false)
+                        if (remoteParams.IsLocalStorageAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, updateDocument: false, fromSmuggler: true);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, remoteParams, updateDocument: false, fromSmuggler: true);
                         continue;
                     }
 
@@ -864,7 +872,7 @@ namespace Raven.Server.Smuggler.Documents
                     using (AttachmentsStorage.AttachmentKey.GetKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, remoteParams, size, isRevision: true);
                     }
                 }
             }
@@ -1031,7 +1039,8 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                                 attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue _) == false ||
-                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                                attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false || 
+                                attachment.TryGet(nameof(AttachmentName.Size), out long _) == false)
                                 throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                             var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;

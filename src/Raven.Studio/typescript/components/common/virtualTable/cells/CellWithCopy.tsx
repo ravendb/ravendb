@@ -35,7 +35,7 @@ export function CellWithCopy({ value, children, additionalButtons }: CellWithCop
                         style={{ maxHeight: "300px" }}
                         className={classNames("overflow-auto rounded mb-3 p-0 token", typeof value)}
                     >
-                        <Code language="json" code={jsonBody} />
+                        <Code language="json" code={jsonBody} isActionsHidden />
                     </pre>
                     <span className="small-label">Actions</span>
                     <div className="d-flex gap-2">

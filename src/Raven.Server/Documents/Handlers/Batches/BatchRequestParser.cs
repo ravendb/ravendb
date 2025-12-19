@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -66,6 +67,9 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
+            public long? SizeInBytes;
+            public RemoteAttachmentParameters RemoteParameters;
+            public string Hash;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
             #endregion Attachment
@@ -323,6 +327,69 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                             case JsonParserToken.String:
                                 commandData.ContentType = GetStringPropertyValue(state);
+                                break;
+
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
+                    
+                    case CommandPropertyName.SizeInBytes:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.SizeInBytes = null;
+                                break;
+
+                            case JsonParserToken.Integer:
+                                commandData.SizeInBytes = state.Long;
+
+                                break;
+
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                                break;
+                        }
+                        break;
+
+                    case CommandPropertyName.RemoteParameters:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+
+                        using (var remoteParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
+                        {
+                            if (remoteParameters == null)
+                                break;
+
+                            if (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.At), out DateTime at) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RemoteAttachmentParameters.At)}' property on '{nameof(RemoteAttachmentParameters)}'");
+
+                            if (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flag) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RemoteAttachmentParameters.Flags)}' property on '{nameof(RemoteAttachmentParameters)}'");
+
+                            if (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Identifier), out string identifier) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RemoteAttachmentParameters.Identifier)}' property on '{nameof(RemoteAttachmentParameters)}'");
+
+                            commandData.RemoteParameters = new RemoteAttachmentParameters(identifier, at) { Flags = flag };
+                        }
+
+                        break;
+
+                    case CommandPropertyName.Hash:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.Hash = null;
+                                break;
+
+                            case JsonParserToken.String:
+                                commandData.Hash = GetStringPropertyValue(state);
                                 break;
 
                             default:
@@ -697,7 +764,9 @@ namespace Raven.Server.Documents.Handlers.Batches
             DestinationName,
             ContentType,
             AttachmentType,
-
+            SizeInBytes,
+            RemoteParameters,
+            Hash,
             #endregion Attachment
 
             #region Counter
@@ -764,9 +833,11 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.Name;
                     if ("From"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.From;
-
+                    if ("Hash"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.Hash;
                     return CommandPropertyName.NoSuchProperty;
 
+     
                 case 5:
                     if ("Index"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Index;
@@ -787,7 +858,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 11:
                     if ("ContentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
-
+                    if ("SizeInBytes"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.SizeInBytes;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 12:
@@ -795,7 +867,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.ChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
-
+                    
                 case 7:
                     if ("FromEtl"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.FromEtl;
@@ -830,6 +902,11 @@ namespace Raven.Server.Documents.Handlers.Batches
                     if ("CreateIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.CreateIfMissing;
 
+                    return CommandPropertyName.NoSuchProperty;
+
+                case 16:
+                    if ("RemoteParameters"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.RemoteParameters;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 20:

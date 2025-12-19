@@ -6,6 +6,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
@@ -23,6 +25,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly string _name;
         private readonly Stream _stream;
         private readonly string _contentType;
+        private readonly RemoteAttachmentParameters _remoteParameters;
         private readonly string _changeVector;
 
         /// <summary>
@@ -32,19 +35,36 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// <param name="name">The name of the attachment.</param>
         /// <param name="stream">The stream containing the binary content of the attachment.</param>
         /// <param name="contentType">The MIME type of the attachment (optional).</param>
+        /// <param name="remoteParameters">The parameters for uploading the attachment to remote storage.</param>
         /// <param name="changeVector">An optional change vector for concurrency control.</param>
-        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, string changeVector = null)
+        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, RemoteAttachmentParameters remoteParameters = null, string changeVector = null)
         {
             _documentId = documentId;
             _name = name;
             _stream = stream;
             _contentType = contentType;
+            _remoteParameters = remoteParameters;
             _changeVector = changeVector;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PutAttachmentOperation"/> class.
+        /// </summary>
+        /// <param name="documentId">The ID of the document to which the attachment will be added.</param>
+        /// <param name="parameters">The parameters for the attachment, including name, stream, content type, and optional change vector.</param>
+        public PutAttachmentOperation(string documentId, StoreAttachmentParameters parameters)
+        {
+            _documentId = documentId;
+            _name = parameters.Name;
+            _stream = parameters.Stream;
+            _contentType = parameters.ContentType;
+            _remoteParameters = parameters.RemoteParameters;
+            _changeVector = parameters.ChangeVector;
         }
 
         public RavenCommand<AttachmentDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector);
+            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector, _remoteParameters);
         }
 
         internal sealed class PutAttachmentCommand : RavenCommand<AttachmentDetails>
@@ -53,15 +73,16 @@ namespace Raven.Client.Documents.Operations.Attachments
             private readonly string _name;
             private readonly Stream _stream;
             private readonly string _contentType;
+            private readonly RemoteAttachmentParameters _remoteParameters;
             private readonly string _changeVector;
             private readonly bool _validateStream;
 
-            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector) : 
-                this(documentId, name, stream, contentType, changeVector, validateStream: true)
+            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, RemoteAttachmentParameters remoteParameters) : 
+                this(documentId, name, stream, contentType, changeVector, remoteParameters, validateStream: true)
             {
             }
 
-            internal PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, bool validateStream)
+            internal PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector, RemoteAttachmentParameters remoteParameters, bool validateStream)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -72,11 +93,12 @@ namespace Raven.Client.Documents.Operations.Attachments
                 _name = name;
                 _stream = stream;
                 _contentType = contentType;
+                _remoteParameters = remoteParameters;
                 _changeVector = changeVector;
                 _validateStream = validateStream;
 
                 if (_validateStream)
-                    PutAttachmentCommandHelper.ValidateStream(stream);
+                    PutAttachmentCommandHelper.TryValidateStream(stream, parameters: null);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -87,6 +109,12 @@ namespace Raven.Client.Documents.Operations.Attachments
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 if (string.IsNullOrWhiteSpace(_contentType) == false)
                     url += $"&contentType={Uri.EscapeDataString(_contentType)}";
+                if (_remoteParameters != null)
+                {
+                    url += $"&remoteAt={Uri.EscapeDataString(_remoteParameters.At.EnsureUtc().GetDefaultRavenFormat())}";
+                    url += $"&remoteIdentifier={Uri.EscapeDataString(_remoteParameters.Identifier)}";
+                }
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Put,

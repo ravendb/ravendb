@@ -32,7 +32,7 @@ public class RavenDB_22463 : RavenTestBase
 
             using (var session = store.OpenAsyncSession())
             {
-                var command = new GenerateClassFromDocumentCommand("cats/1", "csharp");
+                var command = new GenerateClassFromDocumentCommand("cats/1", collection: null, "csharp");
 
                 await session.Advanced.RequestExecutor.ExecuteAsync(command, session.Advanced.Context);
 

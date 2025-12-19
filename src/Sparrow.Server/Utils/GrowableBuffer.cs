@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Sparrow.Platform;
 
 namespace Sparrow.Server.Utils;
 
@@ -32,8 +34,11 @@ where TNumber : unmanaged, INumber<TNumber>
 {
     public int GetNewSize(in int currentSizeInBytes)
     {
+        // Slower growth on 32-bit platforms
+        float platformScalar = PlatformDetails.Is32Bits ? 1.1f : 1.5f;
+        
         var size = currentSizeInBytes > 16 * Sparrow.Global.Constants.Size.Megabyte
-            ? (int)(currentSizeInBytes * 1.5)
+            ? (int)(currentSizeInBytes * platformScalar)
             : currentSizeInBytes * 2;
 
         // Represent array as N*sizeof(long)
@@ -49,7 +54,14 @@ where TNumber : unmanaged, INumber<TNumber>
 
     public int GetInitialSize(in long initialSize)
     {
+        Debug.Assert(initialSize < int.MaxValue, "initialSize < int.MaxValue");
         var size = 4 * Math.Min(Math.Max(Sparrow.Global.Constants.Size.Kilobyte, (int)initialSize), 16 * Sparrow.Global.Constants.Size.Kilobyte);
+        if (size < initialSize)
+        {
+            Debug.Assert(size % sizeof(long) == 0, "size % sizeof(long) == 0");
+            return (int)initialSize;
+        }
+        
         // Represent array as N*sizeof(long)
         return size - (size % Unsafe.SizeOf<TNumber>());
     }

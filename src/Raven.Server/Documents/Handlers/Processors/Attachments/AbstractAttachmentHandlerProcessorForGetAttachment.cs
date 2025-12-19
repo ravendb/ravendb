@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             _isDocument = isDocument;
         }
 
-        protected abstract ValueTask GetAttachmentAsync(TOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token);
+        protected abstract ValueTask GetAttachmentAsync(TOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken token);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
                 }
                 
-                await GetAttachmentAsync(context, documentId, name, type, changeVector, token.Token);
+                await GetAttachmentAsync(context, documentId, name, type, changeVector, token);
             }
         }
     }

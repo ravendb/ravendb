@@ -250,12 +250,12 @@ namespace Corax.Querying.Matches.TermProviders
                 
                 if ((termId & (long)TermIdMask.PostingList) != 0)
                 {
-                    postingLists.Add(allocator, EntryIdEncodings.GetContainerId(termId));
+                    postingLists.Add(allocator, (long)EntryIdEncodings.GetContainerId(termId));
                     postingListsType.Add(allocator, TermIdMask.PostingList);
                 }
                 else if ((termId & (long)TermIdMask.SmallPostingList) != 0)
                 {
-                    postingLists.Add(allocator, EntryIdEncodings.GetContainerId(termId));
+                    postingLists.Add(allocator, (long)EntryIdEncodings.GetContainerId(termId));
                     postingListsType.Add(allocator, TermIdMask.SmallPostingList);
                 }
                 else

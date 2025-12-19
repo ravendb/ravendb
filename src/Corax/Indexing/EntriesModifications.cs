@@ -135,21 +135,27 @@ internal unsafe struct EntriesModifications
         Updates = new();
     }
 
-    public void Addition([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq, InserterMode termType)
+    /// <summary>
+    /// Records document entry addition. Document-layer API.
+    /// </summary>
+    public void Addition([NotNull] ByteStringContext context, DocumentEntryId entryId, int termsPerEntryIndex, short freq, InserterMode termType)
     {
         if (Additions.HasCapacityFor(1) == false)
             Additions.Grow(context, 1);
         AddToList(ref Additions, entryId, termsPerEntryIndex, freq, termType);
     }
 
-    public void Removal([NotNull] ByteStringContext context, long entryId, int termsPerEntryIndex, short freq, InserterMode termType)
+    /// <summary>
+    /// Records document entry removal. Document-layer API.
+    /// </summary>
+    public void Removal([NotNull] ByteStringContext context, DocumentEntryId entryId, int termsPerEntryIndex, short freq, InserterMode termType)
     {
         if (Removals.HasCapacityFor(1) == false)
             Removals.Grow(context, 1);
         AddToList(ref Removals, entryId, termsPerEntryIndex, freq, termType);
     }
 
-    private void AddToList(ref NativeList<TermInEntryModification> list, long entryId, int termsPerEntryIndex, short freq, InserterMode inserterMode)
+    private void AddToList(ref NativeList<TermInEntryModification> list, DocumentEntryId entryId, int termsPerEntryIndex, short freq, InserterMode inserterMode)
     {
         AssertPreparationIsNotFinished();
         NeedToUpdate = true;
@@ -268,6 +274,7 @@ internal unsafe struct EntriesModifications
         for (int i = 0; i < Additions.Count; i++)
         {
             ref var cur = ref Additions[i];
+            // Encoding boundary: document-layer ID -> storage-layer long
             additions[i] = EntryIdEncodings.Encode(cur.EntryId, cur.Frequency, TermIdMask.Single);
         }
 

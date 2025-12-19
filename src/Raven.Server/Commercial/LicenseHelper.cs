@@ -36,7 +36,7 @@ namespace Raven.Server.Commercial
         {
             _serverStore = serverStore;
         }
-
+        
         public void UpdateLocalLicense(License newLicense, RSAParameters rsaParameters)
         {
             if (_sm.Wait(0) == false)

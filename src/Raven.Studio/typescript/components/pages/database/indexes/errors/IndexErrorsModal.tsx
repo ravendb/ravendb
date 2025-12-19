@@ -71,7 +71,7 @@ export default function IndexErrorsModal({
                         {errorDetailsOriginal.Action}
                     </Col>
                 </Row>
-                <Code code={errorDetailsOriginal.Error} elementToCopy={errorDetailsOriginal.Error} language="csharp" />
+                <Code code={errorDetailsOriginal.Error} language="csharp" />
             </Modal.Body>
             <Modal.Footer className="d-flex justify-content-between mt-4">
                 <div className="d-flex gap-2">

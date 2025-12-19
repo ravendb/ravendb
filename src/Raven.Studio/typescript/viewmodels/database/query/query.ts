@@ -47,6 +47,9 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import killQueryCommand = require("commands/database/query/killQueryCommand");
 import getEssentialDatabaseStatsCommand = require("commands/resources/getEssentialDatabaseStatsCommand");
 import queryPlan = require("viewmodels/database/query/queryPlan");
+import store = require("components/store");
+import storeCompat = require("components/storeCompat");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
 
 type queryResultTab = "results" | "explanations" | "queryPlan" | "timings" | "revisions";
 
@@ -575,7 +578,7 @@ class query extends shardViewModelBase {
             }); 
     }
 
-    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: { database: string; openGraph: boolean }) {
+    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: { database: string; openGraph: boolean; sourceView?: "chatbot" }) {
         super.activate(indexNameOrRecentQueryHash, additionalParameters);
         
         if (additionalParameters && additionalParameters.openGraph) {
@@ -1193,7 +1196,32 @@ class query extends shardViewModelBase {
                             
                             this.autoOpenGraph = false;
                         }
-                        
+
+                        // Attach query first page result to chatbot context
+                        if (skip === 0) {
+                            const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id" | "state"> = {
+                                type: "QueryResult",
+                                label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
+                                query: criteriaForFetcher.queryText(),
+                                value: queryResults.items?.map(doc => doc?.toDto(true)) ?? [],
+                            };
+                            
+                            if (store.default.getState().chatbot.isRunQueryFromChatbot) {
+                                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
+                                    ...attachedContextBase,
+                                    id: `QueryResult-from-chatbot-${_.uniqueId()}}`,
+                                    state: "included",
+                                }));
+                                storeCompat.globalDispatch(chatbotSlice.chatbotActions.isRunQueryFromChatbotSet(false));
+                            } else {
+                                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
+                                    ...attachedContextBase,
+                                    id: "QueryResult-regular",
+                                    state: "excluded",
+                                }));
+                            }
+                        }
+
                         // get index info After query was run because it could be a newly generated auto-index
                         this.getQueriedIndexInfo();
                     })
@@ -1202,6 +1230,24 @@ class query extends shardViewModelBase {
                         this.queryStats(null);
                         this.totalResultsForUi(0);
                         resultsTask.reject(request);
+
+                        const errorMessage = request.responseJSON?.Message;
+                        const isQueryErrorInContext = !!Object.values(
+                            store.default.getState().chatbot.attachedContexts.entities
+                        ).find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
+
+                        if (errorMessage && !isQueryErrorInContext) {
+                            storeCompat.globalDispatch(
+                                chatbotSlice.chatbotActions.attachedContextUpserted({
+                                    id: `QueryError-${_.uniqueId()}}`,
+                                    type: "QueryError",
+                                    label: errorMessage.replaceAll("\r\n", " "),
+                                    value: errorMessage,
+                                    state: "included",
+                                    query: criteriaForFetcher.queryText(),
+                                })
+                            );
+                        }
                     });
                 
                 return resultsTask;

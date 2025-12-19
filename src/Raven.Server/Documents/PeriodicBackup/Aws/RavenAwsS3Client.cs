@@ -10,7 +10,6 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
@@ -18,7 +17,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
-    public sealed class RavenAwsS3Client : IDirectUploader, IDisposable
+    public sealed class RavenAwsS3Client : IDirectUploader
     {
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public readonly string Region;
         private readonly Amazon.S3.S3StorageClass _storageClass;
 
-        public RavenAwsS3Client(S3Settings s3Settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
+        public RavenAwsS3Client(IS3Settings s3Settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken cancellationToken = default)
         {
             if (s3Settings == null)
                 throw new ArgumentNullException(nameof(s3Settings));
@@ -256,6 +255,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return AsyncHelpers.RunSync(() => ListObjectsAsync(prefix, delimiter, listFolders, includeFolders, take, continuationToken, startAfter));
         }
 
+        public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            try
+            {
+                GetObjectMetadataResponse response = await _client.GetObjectMetadataAsync(_bucketName, key, _cancellationToken);
+                var headers = ConvertHeaders(response.Headers);
+                var metadata = ConvertMetadata(response.Metadata);
+
+                foreach (var kvp in headers)
+                {
+                    metadata.TryAdd(kvp.Key, kvp.Value);
+                }
+
+                return metadata;
+            }
+            catch (AmazonS3Exception e)
+            {
+                await MaybeHandleExceptionAsync(e);
+
+                if (e.StatusCode == HttpStatusCode.NotFound)
+                    return null;
+
+                throw;
+            }
+        }
+
         public async Task<RavenStorageClient.Blob> GetObjectAsync(string key)
         {
             try
@@ -383,6 +408,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             foreach (var kvp in metadata)
                 collection[Uri.EscapeDataString(kvp.Key)] = Uri.EscapeDataString(kvp.Value);
+        }
+
+        private static IDictionary<string, string> ConvertHeaders(HeadersCollection collection)
+        {
+            var metadata = new Dictionary<string, string>();
+            if (collection == null)
+                return metadata;
+
+            foreach (var key in collection.Keys)
+                metadata[key] = collection[key];
+
+            return metadata;
         }
 
         private static IDictionary<string, string> ConvertMetadata(MetadataCollection collection)

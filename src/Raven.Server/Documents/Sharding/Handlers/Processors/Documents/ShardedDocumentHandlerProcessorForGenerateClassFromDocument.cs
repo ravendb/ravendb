@@ -13,9 +13,9 @@ internal sealed class ShardedDocumentHandlerProcessorForGenerateClassFromDocumen
     {
     }
 
-    protected override async ValueTask HandleClassGenerationAsync(string id, string lang)
+    protected override async ValueTask HandleClassGenerationAsync(string id, string collection, string lang)
     {
-        var command = new GenerateClassFromDocumentCommand(id, lang);
+        var command = new GenerateClassFromDocumentCommand(id, collection, lang);
 
         int shardNumber;
         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))

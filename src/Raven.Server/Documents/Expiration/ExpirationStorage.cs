@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Expiration
 {
-    public sealed class ExpirationStorage : AbstractBackgroundWorkStorage
+    public sealed class ExpirationStorage : DocumentBackgroundWorkStorage
     {
         private const string DocumentsByExpiration = "DocumentsByExpiration";
 
@@ -42,14 +43,11 @@ namespace Raven.Server.Documents.Expiration
 
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
         {
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                return;
-
             (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
 
             if (allExpired)
             {
-                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
+                expiredDocs.Enqueue(id == null ? new DocumentExpirationInfo(ticksAsSlice, clonedId, null, BackgroundWorkInfoStatus.Delete) : new DocumentExpirationInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
                 totalCount++;
             }
         }

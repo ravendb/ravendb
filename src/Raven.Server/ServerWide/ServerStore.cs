@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
@@ -132,9 +133,9 @@ namespace Raven.Server.ServerWide
 
         private RequestExecutor _leaderRequestExecutor;
         internal long _lastClusterTopologyIndex = -1;
+        private readonly RavenServer _server;
 
         public readonly RavenConfiguration Configuration;
-        private readonly RavenServer _server;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly ServerNotificationCenter NotificationCenter;
         public readonly ThreadsInfoNotifications ThreadsInfoNotifications;
@@ -2063,6 +2064,13 @@ namespace Raven.Server.ServerWide
 
             var editDataArchival = new EditDataArchivalCommand(dataArchivalConfiguration, databaseName, raftRequestId);
             return SendToLeaderAsync(editDataArchival);
+        }
+
+        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRemote(TransactionOperationContext context, string databaseName, RemoteAttachmentsConfiguration configuration, string raftRequestId)
+        {
+            var editRemoteAttachmentsCommand = new EditRemoteAttachmentsCommand(configuration, databaseName, raftRequestId);
+
+            return SendToLeaderAsync(editRemoteAttachmentsCommand);
         }
 
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)

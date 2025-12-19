@@ -35,6 +35,7 @@ namespace Raven.Server.Smuggler.Documents
             public Stream Stream;
 
             public BlittableJsonReaderObject Data;
+            public long SizeInBytes;
 
             public void Dispose()
             {

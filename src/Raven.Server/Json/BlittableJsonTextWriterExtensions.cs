@@ -1218,6 +1218,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfTimeSeriesDeletedRanges);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.CountOfRemoteAttachments));
+            writer.WriteInteger(statistics.CountOfRemoteAttachments);
+            writer.WriteComma();
+
             WriteDatabaseStatisticsInternal(writer, statistics);
 
             writer.WriteEndObject();

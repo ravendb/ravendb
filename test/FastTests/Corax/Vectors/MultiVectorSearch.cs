@@ -126,8 +126,8 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         using var _ = GetMappings(out var bsc, out var mapping, out var getVector);
 
         float[][] vectors = [[1f, 1.8f], [1.2f, 1.2f], [0.3f, 0.7f]];
-        float[] sourceIds = [-1L, -1L, -1L];
-        
+        DocumentEntryId[] sourceIds = [DocumentEntryId.Invalid, DocumentEntryId.Invalid, DocumentEntryId.Invalid];
+
         using (var indexWriter = new IndexWriter(Env, mapping, SupportedFeatures.All))
         {
             using (var entry = indexWriter.Index("vectors/1"))
@@ -137,7 +137,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.EndWriting();
                 sourceIds[0] = entry.EntryId;
             }
-            
+
             using (var entry = indexWriter.Index("vectors/2"))
             {
                 entry.Write(0, "vectors/2"u8);
@@ -145,7 +145,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.EndWriting();
                 sourceIds[1] = entry.EntryId;
             }
-            
+
             using (var entry = indexWriter.Index("vectors/3"))
             {
                 entry.Write(0, "vectors/3"u8);
@@ -153,41 +153,41 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
                 entry.EndWriting();
                 sourceIds[2] = entry.EntryId;
             }
-            
+
             indexWriter.Commit();
         }
-        
+
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
             var metadata = mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true);
             Span<long> ids = stackalloc long[16];
             Span<float> scores = stackalloc float[16];
-            
+
             var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, false);
-            
+
             var read = query.Fill(ids);
             Assert.Equal(3, read);
-            Assert.Equal(new long[]{1L, 2L, 3L}, ids[..3]);
+            Assert.Equal(new long[] { 1L, 2L, 3L }, ids[..3]);
             query.Score(ids[..3], scores[..3], 0f);
             Assert.Equal(scores[0], 0.96f, 0.01); // doc 1
             Assert.Equal(scores[1], 1f, 0.01); // doc 2
             Assert.Equal(scores[2], 0.92f, 0.01); // doc3
-            
-            
+
+
             query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, true);
             read = query.Fill(ids);
             Assert.Equal(3, read);
-            Assert.Equal(sourceIds[1], ids[0]);
+            Assert.Equal((long)sourceIds[1], ids[0]);
             query.Score(ids[..3], scores[..3], 0f);
             Assert.True(scores[0] > scores[1]);
             Assert.True(scores[1] > scores[2]);
         }
-        
+
         //AND WITH
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
             var metadata = mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true);
-            
+
             var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, false);
 
             Span<long> toAndWith = stackalloc long[16];
@@ -198,7 +198,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(2, resultOfAndWith);
             Assert.Equal(1L, toAndWith[0]);
             Assert.Equal(3L, toAndWith[1]);
-        }        
+        }
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
@@ -210,7 +210,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         var length = Sorting.SortAndMinOnDuplicates(values, itemsAssociated);
 
         Assert.Equal(3, length);
-    
+
         Assert.Equal(1, values[0]);
         Assert.Equal(2, values[1]);
         Assert.Equal(3, values[2]);
@@ -219,12 +219,12 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         Assert.Equal(0.5f, itemsAssociated[1]);
         Assert.Equal(0.7f, itemsAssociated[2]);
     }
-    
+
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     public void MultiVectorSearchShouldSumDuplicates()
     {
         float[][] vectors = [[1f, 1f], [2f, 0f], [-1f, 3f]];
-        
+
         using var _ = GetMappings(out var _, out var mapping, out var getVector);
         using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
         {
@@ -247,7 +247,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         {
             var metadata = mapping.GetByFieldId(1).Metadata;
             Span<long> ids = stackalloc long[16];
-            
+
             var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[0]), getVector(vectors[2]) }, 0.0f, 16, false, true);
             var read = combinedQuery.Fill(ids);
             Assert.Equal(3, read);

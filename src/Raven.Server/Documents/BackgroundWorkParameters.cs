@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 

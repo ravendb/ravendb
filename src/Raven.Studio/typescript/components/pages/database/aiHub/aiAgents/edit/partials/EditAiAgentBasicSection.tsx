@@ -18,6 +18,8 @@ import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
 import Code from "components/common/Code";
 import Collapse from "react-bootstrap/Collapse";
+import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
+import AiAssistantButton from "components/common/aiAssistant/AiAssistantButton";
 import CollapseButton from "components/common/CollapseButton";
 
 interface EditAiAgentBasicSectionProps {
@@ -37,6 +39,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
 
     const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
     const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
+    const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
 
     const asyncGetConnectionStringsOptions = useAsync(async () => {
         const result = await tasksService.getConnectionStrings(databaseName);
@@ -192,14 +195,30 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                     <Icon icon="info-new" />
                                 </PopoverWithHoverWrapper>
                             </FormLabel>
-                            <FormInput
-                                type="textarea"
-                                as="textarea"
-                                control={control}
-                                name="systemPrompt"
-                                placeholder={agentDescriptionPlaceholder}
-                                rows={7}
-                            />
+                            <div className="position-relative">
+                                <FormInput
+                                    type="textarea"
+                                    as="textarea"
+                                    control={control}
+                                    name="systemPrompt"
+                                    placeholder={agentDescriptionPlaceholder}
+                                    rows={7}
+                                />
+                                {formValues.systemPrompt?.length > 0 && (
+                                    <AiAssistantButton handleClick={toggleIsAiAssistOpen} />
+                                )}
+                                {isAiAssistOpen && (
+                                    <AiAssistantWindow
+                                        data={{
+                                            View: "AI Agents",
+                                            Message: getRefinePromptMessage(formValues),
+                                        }}
+                                        acceptResult={(text) => setValue("systemPrompt", text)}
+                                        successMessage="AI refined your prompt based on your input."
+                                        closeWindow={toggleIsAiAssistOpen}
+                                    />
+                                )}
+                            </div>
                         </FormGroup>
                         <SampleObjectAndSchemaFields
                             control={control}
@@ -271,7 +290,7 @@ const SampleObjectSyntaxHelp = () => {
     return (
         <div>
             <div>Example of a sample object that defines the expected response structure:</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 };
@@ -308,10 +327,16 @@ const JsonSchemaSyntaxHelp = () => {
     return (
         <div>
             <div>Example of a JSON schema that defines the expected response structure:</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 };
+
+function getRefinePromptMessage(formValues: EditAiAgentFormData) {
+    return `## Original prompt
+${formValues.systemPrompt}
+`;
+}
 
 const stateOptions: SelectOption[] = ["Enabled", "Disabled"].map((x) => ({
     label: x,

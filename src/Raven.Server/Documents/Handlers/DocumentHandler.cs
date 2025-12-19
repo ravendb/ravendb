@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 using (Slice.From(context.Allocator, hash, out var hashSlice))
                 {
-                    if (_database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice) < 1)
+                    if (_database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice).LocalAttachmentsCount < 1)
                     {
                         throw new InvalidOperationException($"Can not put document (id={id}) because it contains an attachment with hash={hash} but no such attachment is stored.");
                     }

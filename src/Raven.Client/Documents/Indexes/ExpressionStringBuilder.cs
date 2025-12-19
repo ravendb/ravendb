@@ -9,6 +9,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -653,9 +654,14 @@ namespace Raven.Client.Documents.Indexes
                         }
                         else
                         {
-                            right = _conventions.SaveEnumsAsIntegers
-                                ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
-                                : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+                            if (_conventions.SaveEnumsAsIntegers)
+                                right = Expression.Constant(Convert.ToInt32(constantExpression.Value));
+                            else
+                            {
+                                right = TypeExistsOnServer(enumType)
+                                    ? Expression.Constant(Enum.ToObject(enumType, constantExpression.Value), enumType)
+                                    : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
+                            }
                         }
                     }
                     else
@@ -1065,6 +1071,9 @@ namespace Raven.Client.Documents.Indexes
                 return true;
 
             if (type.Assembly == typeof(Regex).Assembly) // System.Text.RegularExpressions
+                return true;
+
+            if (type == typeof(RemoteAttachmentFlags)) // Current type is RemoteAttachmentFlags enum
                 return true;
 
             if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
@@ -1865,6 +1874,9 @@ namespace Raven.Client.Documents.Indexes
                     case nameof(ILoadCompareExchangeApiForIndexes.LoadCompareExchangeValue):
                         Out(nameof(ILoadCompareExchangeApiForIndexes.LoadCompareExchangeValue));
                         break;
+                    case nameof(AbstractIndexCreationTask.LoadVector):
+                        Out(nameof(AbstractIndexCreationTask.LoadVector));
+                        break;
                     default:
                         Out(node.Method.Name);
                         if (node.Method.IsGenericMethod)
@@ -1971,6 +1983,25 @@ namespace Raven.Client.Documents.Indexes
                 else
                 {
                     throw new NotSupportedException($"Unknown overload of {nameof(ILoadCommonApiForIndexes.LoadDocument)} method");
+                }
+            }
+
+            if (node.Method is { Name: nameof(AbstractIndexCreationTask.LoadVector)})
+            {
+                var parameters = node.Method.GetParameters();
+
+                if (parameters.Length == 3 && node.Method.IsGenericMethod)
+                {
+                    var type = node.Method.GetGenericArguments()[0];
+                    Out($", \"");
+                    OutLiteral(_conventions.GetCollectionName(type));
+                    Out("\" ");
+                }
+                else if (parameters.Length == 4)
+                {
+                    var argument = node.Arguments[3];
+                    if (argument.NodeType != ExpressionType.Constant)
+                        throw new InvalidOperationException($"Invalid argument in {nameof(AbstractIndexCreationTask.LoadVector)}. String constant was expected but was '{argument.NodeType}' with value '{argument}'.");
                 }
             }
 

@@ -6,7 +6,6 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
@@ -32,21 +31,21 @@ namespace Raven.Server.Documents.Replication.Senders
 
             var bucket = Destination.Bucket;
 
-            foreach (var replicationBatchItem in ReplicationBatchItemsForBucket(documentsStorage, ctx, etag, stats, bucket))
+            foreach (var replicationBatchItem in ReplicationBatchItemsForBucket(documentsStorage, ctx, etag, stats, bucket, replicationSupportedFeatures))
             {
                 Parent.LastSentEtag = replicationBatchItem.Etag;
                 yield return replicationBatchItem;
             }
         }
 
-        public static IEnumerable<ReplicationBatchItem> ReplicationBatchItemsForBucket(ShardedDocumentsStorage documentsStorage, DocumentsOperationContext ctx, long etag, ReplicationStats stats, int bucket)
+        internal static IEnumerable<ReplicationBatchItem> ReplicationBatchItemsForBucket(ShardedDocumentsStorage documentsStorage, DocumentsOperationContext ctx, long etag, ReplicationStats stats, int bucket, ReplicationSupportedFeatures replicationSupportedFeatures)
         {
             var docs = documentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(x => DocumentReplicationItem.From(x, ctx));
             var tombs = documentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
             var conflicts = documentsStorage.ConflictsStorage.GetConflictsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = documentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1).Select(x => DocumentReplicationItem.From(x, ctx));
-            var attachments = documentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1);
+            var attachments = documentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1, replicationSupportedFeatures.RemoteAttachments);
             var counters = documentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1);
             var timeSeries = documentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1);
             var deletedTimeSeriesRanges = documentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(ctx, bucket, etag + 1);

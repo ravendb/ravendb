@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
@@ -965,6 +966,14 @@ namespace Raven.Server.Web
             }
 
             return null;
+        }
+
+        public void DisableResponseBuffering()
+        {
+            HttpContext.Response.Headers.CacheControl = "no-cache";
+            HttpContext.Response.Headers.Append("X-Accel-Buffering", "no");
+            var feature = HttpContext.Features.Get<IHttpResponseBodyFeature>();
+            feature?.DisableBuffering();
         }
     }
 }

@@ -1,5 +1,5 @@
 import { EmptySet } from "components/common/EmptySet";
-import { FormInput, FormErrorIcon } from "components/common/Form";
+import { FormInput, FormErrorIcon, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useFieldArray } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
@@ -55,7 +55,9 @@ export default function EditAiAgentParametersSection() {
                             <Button
                                 variant="link"
                                 size="sm"
-                                onClick={() => parametersFieldArray.append({ name: "", description: null })}
+                                onClick={() =>
+                                    parametersFieldArray.append({ name: "", description: null, isSendToModel: true })
+                                }
                                 className="mb-1"
                             >
                                 <Icon icon="plus" />
@@ -70,21 +72,39 @@ export default function EditAiAgentParametersSection() {
                                     </EmptySet>
                                 </div>
                             ) : (
-                                <div className="parameters-grid overflow-y-auto" style={{ maxHeight: "220px" }}>
-                                    <div className="parameters-header position-sticky top-0 z-1 panel-bg-2">
-                                        <div className="parameters-grid-header">
-                                            <div className="parameter-name-header fw-bold">Parameter</div>
-                                            <div className="parameter-description-header fw-bold">
-                                                Description <OptionalLabel />
-                                            </div>
-                                            <div className="parameter-actions-header fw-bold">Actions</div>
-                                        </div>
-                                    </div>
-                                    <div className="parameters-list">
-                                        {parametersFieldArray.fields.map((field, index) => (
-                                            <div key={field.id} className="parameter-row">
-                                                <div className="parameters-grid-row">
-                                                    <div className="parameter-name-cell">
+                                <div className="parameters-table-wrapper">
+                                    <table className="table table-borderless">
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter</th>
+                                                <th>
+                                                    Description <OptionalLabel />
+                                                </th>
+                                                <th style={{ width: "135px" }}>
+                                                    Send to model
+                                                    <PopoverWithHoverWrapper
+                                                        message={
+                                                            <>
+                                                                When enabled, the parameter is exposed to the model. It
+                                                                is included in the prompt sent to the model and in any
+                                                                echo messages.
+                                                                <br />
+                                                                <br />
+                                                                When disabled, the parameter is hidden from the model.
+                                                                It is excluded from both the prompt and echo messages.
+                                                            </>
+                                                        }
+                                                    >
+                                                        <Icon icon="info-new" />
+                                                    </PopoverWithHoverWrapper>
+                                                </th>
+                                                <th style={{ width: "80px" }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {parametersFieldArray.fields.map((field, index) => (
+                                                <tr key={field.id}>
+                                                    <td>
                                                         <FormInput
                                                             type="text"
                                                             control={control}
@@ -92,8 +112,8 @@ export default function EditAiAgentParametersSection() {
                                                             placeholder="e.g. company"
                                                             className="form-control border-0 rounded-0"
                                                         />
-                                                    </div>
-                                                    <div className="parameter-description-cell">
+                                                    </td>
+                                                    <td>
                                                         <FormInput
                                                             type="text"
                                                             control={control}
@@ -101,8 +121,16 @@ export default function EditAiAgentParametersSection() {
                                                             placeholder="e.g. The company ID"
                                                             className="form-control border-0 rounded-0"
                                                         />
-                                                    </div>
-                                                    <div className="d-flex px-1">
+                                                    </td>
+                                                    <td>
+                                                        <div className="hstack justify-content-center">
+                                                            <FormSwitch
+                                                                control={control}
+                                                                name={`parameters.${index}.isSendToModel`}
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                    <td className="text-center">
                                                         <Button
                                                             variant="link"
                                                             className="text-danger p-0"
@@ -112,11 +140,11 @@ export default function EditAiAgentParametersSection() {
                                                         >
                                                             <Icon icon="trash" margin="m-0" />
                                                         </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
                         </div>

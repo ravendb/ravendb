@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
@@ -149,10 +151,33 @@ namespace Raven.Client.Documents.Operations.Attachments
             {
                 var contentType = response.Content.Headers.TryGetValues(Constants.Headers.ContentType, out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var changeVector = response.GetEtagHeader();
-                var hash = response.Headers.TryGetValues("Attachment-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
+                var hash = response.Headers.TryGetValues(Constants.Headers.AttachmentHash, out IEnumerable<string> hashVal) ? hashVal.First() : null;
                 long size = 0;
-                if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
+                if (response.Headers.TryGetValues(Constants.Headers.AttachmentSize, out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
+
+                var remoteIdentifier = response.Headers.TryGetValues(Constants.Headers.AttachmentRemoteParametersIdentifier, out IEnumerable<string> remoteIdentifierVal) ? Uri.UnescapeDataString(remoteIdentifierVal.First()) : null;
+                RemoteAttachmentParameters remoteParameters = null;
+                if (string.IsNullOrEmpty(remoteIdentifier) == false)
+                {
+                    DateTime attachmentRemoteAt = default;
+                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRemoteParametersAt, out IEnumerable<string> dt) == false)
+                        ThrowOnMissingHeader(Constants.Headers.AttachmentRemoteParametersAt);
+
+                    if (DateTime.TryParseExact(dt.First(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out attachmentRemoteAt) == false)
+                        ThrowOnBadHeader(Constants.Headers.AttachmentRemoteParametersAt, dt.First());
+
+                    if (response.Headers.TryGetValues(Constants.Headers.AttachmentRemoteParametersFlags, out IEnumerable<string> flagsVal) == false)
+                        ThrowOnMissingHeader(Constants.Headers.AttachmentRemoteParametersFlags);
+
+                    if (Enum.TryParse(flagsVal.First(), out RemoteAttachmentFlags attachmentFlags) == false)
+                        ThrowOnBadHeader(Constants.Headers.AttachmentRemoteParametersFlags, flagsVal.First());
+
+                    remoteParameters = new RemoteAttachmentParameters(remoteIdentifier, attachmentRemoteAt)
+                    {
+                        Flags = attachmentFlags
+                    };
+                }
 
                 var attachmentDetails = new AttachmentDetails
                 {
@@ -161,7 +186,8 @@ namespace Raven.Client.Documents.Operations.Attachments
                     Hash = hash,
                     Size = size,
                     ChangeVector = changeVector,
-                    DocumentId = _documentId
+                    DocumentId = _documentId,
+                    RemoteParameters = remoteParameters
                 };
 
                 var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
@@ -175,6 +201,16 @@ namespace Raven.Client.Documents.Operations.Attachments
                 };
 
                 return ResponseDisposeHandling.Manually;
+            }
+
+            private void ThrowOnMissingHeader(string header)
+            {
+                throw new InvalidOperationException($"Attachment remote parameters header '{header}' is missing for attachment '{_name}' on document '{_documentId}'.");
+            }
+
+            private void ThrowOnBadHeader(string header, string value)
+            {
+                throw new InvalidOperationException($"Attachment remote parameters header '{header}' has invalid value '{value}' for attachment '{_name}' on document '{_documentId}'.");
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)

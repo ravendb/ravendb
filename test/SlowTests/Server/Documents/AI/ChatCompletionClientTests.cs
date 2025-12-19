@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
@@ -92,7 +93,7 @@ public class ChatCompletionClientTests : RavenTestBase
             configuration.Connection.OpenAiSettings.ApiKey += "xyz"; // wrong api key
             using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
             {
-                var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
+                var ex = await Assert.ThrowsAsync<UnsuccessfulAiRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
                 Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
             }
             configuration.Connection.OpenAiSettings.ApiKey = 
@@ -118,14 +119,14 @@ public class ChatCompletionClientTests : RavenTestBase
                 writer.WriteEndObject();
             };
 
-            var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
+            var ex = await Assert.ThrowsAsync<UnsuccessfulAiRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
             Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         }
 
         SetModel("gpt-4kabcdefg", out var originalModel); // wrong model name
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
-            var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
+            var ex = await Assert.ThrowsAsync<UnsuccessfulAiRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
             Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
         }
         SetModel(originalModel, out _); // back to the original model name

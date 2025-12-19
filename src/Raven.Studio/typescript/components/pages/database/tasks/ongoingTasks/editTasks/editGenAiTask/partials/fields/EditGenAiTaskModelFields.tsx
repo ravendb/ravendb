@@ -14,6 +14,8 @@ import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
 import Code from "components/common/Code";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
+import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
+import AiAssistantButton from "components/common/aiAssistant/AiAssistantButton";
 import CollapseButton from "components/common/CollapseButton";
 import Collapse from "react-bootstrap/Collapse";
 import Button from "react-bootstrap/Button";
@@ -30,6 +32,8 @@ export default function EditGenAiTaskModelFields() {
     const formValues = useWatch({ control });
 
     const promptRef = useRef<ReactAce>(null);
+
+    const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
 
     return (
         <>
@@ -48,23 +52,40 @@ export default function EditGenAiTaskModelFields() {
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <FormAceEditor
-                    aceRef={promptRef}
-                    control={control}
-                    name="prompt"
-                    mode="text"
-                    actions={[
-                        { component: <AceEditor.FullScreenAction /> },
-                        {
-                            component: <AceEditor.HelpAction message={<PromptSyntaxHelp />} />,
-                            position: "bottom",
-                        },
-                    ]}
-                    wrapEnabled
-                    setOptions={{
-                        indentedSoftWrap: false,
-                    }}
-                />
+                <div className="position-relative">
+                    <FormAceEditor
+                        aceRef={promptRef}
+                        control={control}
+                        name="prompt"
+                        mode="text"
+                        actions={[
+                            { component: <AceEditor.FullScreenAction /> },
+                            {
+                                component: <AceEditor.HelpAction message={<PromptSyntaxHelp />} />,
+                                position: "bottom",
+                            },
+                        ]}
+                        wrapEnabled
+                        setOptions={{
+                            indentedSoftWrap: false,
+                        }}
+                        isFullScreenLabelHidden
+                    />
+                    {formValues.prompt?.length > 0 && (
+                        <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
+                    )}
+                    {isAiAssistOpen && (
+                        <AiAssistantWindow
+                            data={{
+                                View: "GenAI",
+                                Message: getRefinePromptMessage(formValues),
+                            }}
+                            acceptResult={(text) => setValue("prompt", text)}
+                            successMessage="AI refined your prompt based on your input and information from the previous steps."
+                            closeWindow={toggleIsAiAssistOpen}
+                        />
+                    )}
+                </div>
             </FormGroup>
             <SampleObjectAndSchemaFields
                 control={control}
@@ -183,7 +204,7 @@ function PromptSyntaxHelp() {
     return (
         <div>
             <div>Sample prompt</div>
-            <Code code={samplePrompt} elementToCopy={samplePrompt} language="plaintext" whiteSpace="normal" />
+            <Code code={samplePrompt} language="plaintext" whiteSpace="normal" />
         </div>
     );
 }
@@ -197,7 +218,7 @@ function SampleObjectSyntaxHelp() {
     return (
         <div>
             <div>Sample response object</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
 }
@@ -228,7 +249,21 @@ function JsonSchemaSyntaxHelp() {
     return (
         <div>
             <div>Sample JSON schema</div>
-            <Code code={code} elementToCopy={code} language="json" />
+            <Code code={code} language="json" />
         </div>
     );
+}
+
+function getRefinePromptMessage(formValues: EditGenAiTaskFormData) {
+    return `## Original prompt
+${formValues.prompt}
+
+## Source collection name
+${formValues.collectionName}
+
+## Context generation script
+${formValues.script}
+
+## Output structure
+${formValues.jsonSchema || formValues.sampleObject || ""}`;
 }

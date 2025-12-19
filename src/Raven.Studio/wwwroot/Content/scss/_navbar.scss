@@ -50,17 +50,13 @@ $bounceinonce-properties: bounceInOnce 0.15s 1 both;
     }
 
     #navbar {
-        @media (max-width: $screen-sm-max) {
-            margin-right: $gutter-xxs;
-            gap: $gutter-xs;
-        }
         margin: $gutter-sm;
         display: flex;
         flex-grow: 1;
         justify-content: flex-end;
         align-items: center;
         flex-wrap: wrap;
-        gap: $gutter;
+        gap: $gutter-xs;
     }
 
     .navbar-header {
@@ -113,9 +109,8 @@ $bounceinonce-properties: bounceInOnce 0.15s 1 both;
 
         display: flex;
         flex-direction: row;
-        gap: $gutter-sm;
+        gap: $gutter-xs;
         align-items: center;
-        margin-right: $gutter-sm;
 
         li {
             display: inline-block;
@@ -149,8 +144,8 @@ $bounceinonce-properties: bounceInOnce 0.15s 1 both;
                 line-height: 15px;
                 color: $white;
                 text-align: center;
-                top: -$gutter-xs;
-                right: -$gutter-xxs;
+                top: -3px;
+                right: -2px;
                 background-color: $primary-var;
                 border-radius: 50%;
                 border: 1px solid $border-color-light-var;

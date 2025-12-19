@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -22,10 +23,18 @@ namespace Raven.Server.Web.Studio.Processors
             {
                 var shardedDocumentDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(RequestHandler.Database);
                 var stats = new ReplicationDocumentSenderBase.ReplicationStats();
+                var tcpSupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, TcpConnectionHeaderMessage.ReplicationTcpVersion);
+                var supportedFeatures = new ReplicationDocumentSenderBase.ReplicationSupportedFeatures()
+                {
+                    RemoteAttachments = tcpSupportedFeatures.Replication.RemoteAttachments,
+                    CaseInsensitiveCounters = tcpSupportedFeatures.Replication.CaseInsensitiveCounters,
+                    RevisionTombstonesWithId = tcpSupportedFeatures.Replication.RevisionTombstonesWithId
+                };
+
                 using var helper = new DocumentInfoHelper(context);
 
                 var items = new List<string>();
-                foreach (var item in MigrationReplicationDocumentSender.ReplicationBatchItemsForBucket(shardedDocumentDatabase.ShardedDocumentsStorage, context, 0, stats, bucket))
+                foreach (var item in MigrationReplicationDocumentSender.ReplicationBatchItemsForBucket(shardedDocumentDatabase.ShardedDocumentsStorage, context, 0, stats, bucket, supportedFeatures))
                 {
                     var info = helper.GetItemInformation(item); 
                     items.Add(info);

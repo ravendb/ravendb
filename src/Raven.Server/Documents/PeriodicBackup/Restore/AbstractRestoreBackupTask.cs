@@ -624,6 +624,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.AiAgents = smugglerDatabaseRecord.AiAgents;
                     databaseRecord.EmbeddingsGenerations = smugglerDatabaseRecord.EmbeddingsGenerations;
                     databaseRecord.GenAis = smugglerDatabaseRecord.GenAis;
+                    databaseRecord.RemoteAttachments = smugglerDatabaseRecord.RemoteAttachments;
 
                     DisableOngoingTasksIfNeeded(databaseRecord);
 
@@ -636,7 +637,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 // need to enable revisions before import
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-                
+
                 database.SupportedFeatures = new SupportedFeature(smugglerDatabaseRecord);
             };
         }

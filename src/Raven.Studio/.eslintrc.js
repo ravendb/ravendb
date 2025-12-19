@@ -49,7 +49,8 @@ module.exports = {
           }
         ]
       }
-    ]
+    ],
+    "no-constant-condition": "off"
   },
   "settings": {
     "react": {

@@ -72,14 +72,15 @@ namespace SlowTests.Server.Documents.DataArchival
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-
                     DatabaseTopology topology;
+
                     string nodeTag;
 
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                     using (serverContext.OpenReadTransaction())
                     {
                         topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+
                         nodeTag = database.ServerStore.NodeTag;
                     }
 
@@ -545,6 +546,7 @@ namespace SlowTests.Server.Documents.DataArchival
                 await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config, database.Name);
 
                 DatabaseTopology topology;
+
                 string nodeTag;
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))

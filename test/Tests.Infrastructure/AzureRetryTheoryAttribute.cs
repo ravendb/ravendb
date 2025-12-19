@@ -49,8 +49,10 @@ namespace Tests.Infrastructure
                 if (string.IsNullOrEmpty(base.Skip) == false)
                     return base.Skip;
 
-                ShouldSkip(out var skipMessage);
-                return skipMessage;
+                if (ShouldSkip(out var skipMessage))
+                    return skipMessage;
+
+                return base.Skip;
             }
 
             set => base.Skip = value;

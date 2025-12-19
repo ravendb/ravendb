@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public sealed class RestoreFromLocal : IRestoreSource
     {
-        private readonly string _backupLocation;
+        public string _remoteFolderName { get; set; }
 
         public RestoreFromLocal(RestoreBackupConfiguration restoreConfiguration)
         {
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (Directory.Exists(restoreConfiguration.BackupLocation) == false)
                 throw new ArgumentException($"Backup location doesn't exist, path: {restoreConfiguration.BackupLocation}");
 
-            _backupLocation = restoreConfiguration.BackupLocation;
+            _remoteFolderName = restoreConfiguration.BackupLocation;
         }
 
         public Task<Stream> GetStream(string path)
@@ -39,17 +39,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public Task<List<string>> GetFilesForRestore()
         {
-            return Task.FromResult(Directory.GetFiles(_backupLocation).ToList());
-        }
-
-        public string GetBackupPath(string fileName)
-        {
-            return fileName;
-        }
-
-        public string GetBackupLocation()
-        {
-            return _backupLocation;
+            return Task.FromResult(Directory.GetFiles(_remoteFolderName).ToList());
         }
 
         public Task ValidateConfigurationsAsync()

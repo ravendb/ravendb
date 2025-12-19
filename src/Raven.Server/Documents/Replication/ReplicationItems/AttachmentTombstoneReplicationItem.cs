@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow;
@@ -23,6 +24,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             var djv = base.ToDebugJson();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            djv[nameof(Flags)] = Flags.ToString();
             return djv;
         }
 
@@ -69,7 +71,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             var item = new AttachmentTombstoneReplicationItem();
             item.Key = Key.Clone(allocator);
-
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Key.Release(allocator);

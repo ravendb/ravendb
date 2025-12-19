@@ -21,7 +21,6 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions.PeriodicBackup;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Size = Raven.Client.Util.Size;
 
@@ -44,7 +43,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public Sparrow.Size MaxUploadPutBlob { get; set; } = new Sparrow.Size(256, SizeUnit.Megabytes);
         public Sparrow.Size MaxSingleBlockSize { get; set; } = new Sparrow.Size(100, SizeUnit.Megabytes);
 
-        public LegacyRavenAzureClient(AzureSettings azureSettings, Progress progress = null, RavenLogger logger = null, CancellationToken? cancellationToken = null)
+        public LegacyRavenAzureClient(IAzureSettings azureSettings, Progress progress = null, RavenLogger logger = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
             var hasAccountKey = string.IsNullOrWhiteSpace(azureSettings.AccountKey) == false;
@@ -704,6 +703,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
             throw new NotSupportedException("Multi part uploader isn't supported for the legacy azure client");
+        }
+
+        public IDictionary<string, string> GetObjectMetadata(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            throw new NotImplementedException();
         }
     }
 }

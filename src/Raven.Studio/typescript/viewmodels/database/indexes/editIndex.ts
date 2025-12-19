@@ -63,6 +63,8 @@ import getDatabaseSettingsCommand = require("commands/database/settings/getDatab
 import models = require("models/database/settings/databaseSettingsModels");
 import indexingDatabaseSettingsTypes = require("models/database/index/types")
 import genUtils = require("common/generalUtils");
+import storeCompat = require("components/storeCompat");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
 
 class editIndex extends shardViewModelBase {
     
@@ -988,6 +990,14 @@ class editIndex extends shardViewModelBase {
                     this.editedIndex(new indexDefinition(result, this.indexingAnalyzerSettings()));
                 }
 
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
+                    id: "IndexName",
+                    type: "IndexName",
+                    label: this.editedIndex().name(),
+                    value: this.editedIndex().name(),
+                    state: "excluded",
+                }));
+                
                 this.initIndex();
             });
     }

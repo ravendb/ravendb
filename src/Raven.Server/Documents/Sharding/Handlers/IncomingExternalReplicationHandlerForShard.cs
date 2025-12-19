@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -40,6 +42,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
+                switch (item)
+                {
+                    case AttachmentReplicationItem attachmentReplicationItem:
+
+                        if (attachmentReplicationItem.Flags == RemoteAttachmentFlags.Remote)
+                        {
+                            throw new NotSupportedException("Replicating remote attachments to sharded database is not supported.");
+                        }
+
+                        break;
+                }
+
                 var changeVector = context.GetChangeVector(item.ChangeVector);
                 var result = _database.DocumentsStorage.GetNewChangeVector(context);
 

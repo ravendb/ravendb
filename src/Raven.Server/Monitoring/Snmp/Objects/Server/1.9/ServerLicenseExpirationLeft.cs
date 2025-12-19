@@ -21,10 +21,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             get
             {
                 var status = _store.LicenseManager.LicenseStatus;
-                if (status.Expiration.HasValue == false)
+                if (status.SubscriptionExpiration.HasValue == false)
                     return null;
 
-                return status.Expiration.Value - SystemTime.UtcNow;
+                return status.SubscriptionExpiration.Value - SystemTime.UtcNow;
             }
         }
 

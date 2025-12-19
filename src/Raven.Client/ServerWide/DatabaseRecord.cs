@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.AI;
@@ -103,6 +104,8 @@ namespace Raven.Client.ServerWide
         public RefreshConfiguration Refresh;
 
         public DataArchivalConfiguration DataArchival;
+
+        public RemoteAttachmentsConfiguration RemoteAttachments;
 
         public IntegrationConfigurations Integrations;
 

@@ -5,10 +5,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
-using Raven.Server.Logging;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 using Sparrow.Platform;
 
 namespace Raven.Server.Documents.DataArchival;
@@ -103,9 +102,8 @@ public class DataArchivist : BackgroundWorkBase
 
         try
         {
-            DatabaseTopology topology;
             string nodeTag;
-            
+            DatabaseTopology topology;
             using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
             using (serverContext.OpenReadTransaction())
             {
@@ -121,12 +119,12 @@ public class DataArchivist : BackgroundWorkBase
                     context.Reset();
                     context.Renew();
 
-                    Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo> toArchive;
+                    Queue<DocumentExpirationInfo> toArchive;
                     Stopwatch duration;
 
                     using (context.OpenReadTransaction())
                     {
-                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize, maxItemsToProcess);
+                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, AmountToTake: batchSize, MaxItemsToProcess: maxItemsToProcess);
 
                         toArchive = _database.DocumentsStorage.DataArchivalStorage.GetDocuments(options, ref totalCount, out duration, CancellationToken);
 
