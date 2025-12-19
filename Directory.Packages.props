@@ -108,6 +108,7 @@
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.0" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.13" />
     <PackageVersion Include="Raven.Pal" Version="7.0.850" />
+    <PackageVersion Include="SharpZipLib" Version="1.4.2" />
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Snowflake.Data" Version="5.1.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />

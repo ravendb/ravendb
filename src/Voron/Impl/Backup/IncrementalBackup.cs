@@ -5,17 +5,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using ICSharpCode.SharpZipLib.Zip;
+using Sparrow.Backups;
 using System.Linq;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
-using Voron.Exceptions;
 using Voron.Impl.Journal;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
-using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Util.Settings;
 
@@ -48,11 +48,11 @@ namespace Voron.Impl.Backup
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             {
                 long numberOfBackedUpPages;
-                using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+                using (var package = new BackupZipArchive(new ZipOutputStream(file) { IsStreamOwner = false }, SnapshotBackupCompressionAlgorithm.Deflate, compression))
                 {
-                    numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify,
-                        backupStarted, package, string.Empty, copier);
+                    numberOfBackedUpPages = Incremental_Backup(env, compression, infoNotify, backupStarted, package, string.Empty, copier);
                 }
+                
                 file.Flush(true); // make sure that this is actually persisted fully to disk
                 return numberOfBackedUpPages;
             }
@@ -70,7 +70,7 @@ namespace Voron.Impl.Backup
             long totalNumberOfBackedUpPages = 0;
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             {
-                using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+                using (var package = new BackupZipArchive(new ZipOutputStream(file) { IsStreamOwner = false }, SnapshotBackupCompressionAlgorithm.Deflate, compression))
                 {
                     foreach (var e in envs)
                     {
@@ -92,7 +92,7 @@ namespace Voron.Impl.Backup
         }
 
         private static long Incremental_Backup(StorageEnvironment env, CompressionLevel compression, Action<string> infoNotify,
-            Action backupStarted, ZipArchive package, string basePath, DataCopier copier)
+            Action backupStarted, BackupZipArchive package, string basePath, DataCopier copier)
         {
             long numberOfBackedUpPages = 0;
             long lastWrittenLogFile = -1;
@@ -157,10 +157,8 @@ namespace Voron.Impl.Backup
                         if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocated4Kb) // nothing to do here
                             continue;
 
-                        var part =
-                            package.CreateEntry(
-                                Path.Combine(basePath, StorageEnvironmentOptions.JournalName(journalNum))
-                                , compression);
+                        var part = package.CreateEntry(
+                                Path.Combine(basePath, StorageEnvironmentOptions.JournalName(journalNum)));
                         Debug.Assert(part != null);
 
                         if (journalFile.Number == lastWrittenLogFile)
@@ -279,7 +277,7 @@ namespace Voron.Impl.Backup
                 var transactionPersistentContext = new TransactionPersistentContext(true);
                 using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
-                    using (var package = ZipFile.Open(singleBackupFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+                    using (var package = System.IO.Compression.ZipFile.Open(singleBackupFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                     {
                         if (package.Entries.Count == 0)
                             return;
