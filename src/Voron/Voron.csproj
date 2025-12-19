@@ -32,6 +32,7 @@
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="SharpZipLib" />
     <PackageReference Include="System.Numerics.Tensors" />
   </ItemGroup>
 

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using ICSharpCode.SharpZipLib.Zip;
 using System.Linq;
 using System.Threading;
 using Sparrow;
@@ -44,16 +45,15 @@ namespace Voron.Impl.Backup
 
             using (var file = SafeFileStream.Create(backupPath.FullPath, FileMode.Create))
             {
-                using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
+                using (var package = new BackupZipArchive(new ZipOutputStream(file) { IsStreamOwner = false }, compressionAlgorithm, compressionLevel))
                 {
                     infoNotify(("Voron backup started", 0));
                     var dataPager = env.DataPager;
                     var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                    Backup(env, compressionAlgorithm, compressionLevel, dataPager, package, string.Empty, copier, infoNotify);
-
-                    file.Flush(true); // make sure that we fully flushed to disk
-
+                    Backup(env, dataPager, package, string.Empty, copier, infoNotify);
                 }
+                
+                file.Flush(true); // make sure that we fully flushed to disk
             }
 
             infoNotify(("Voron backup db finished", 0));
@@ -63,9 +63,7 @@ namespace Voron.Impl.Backup
         /// Do a full backup of a set of environments. Note that the order of the environments matter!
         /// </summary>
         public void ToFile(IEnumerable<StorageEnvironmentInformation> envs,
-            ZipArchive archive,
-            SnapshotBackupCompressionAlgorithm compressionAlgorithm,
-            CompressionLevel compressionLevel,
+            BackupZipArchive archive,
             int? maxReadOpsPerSecond = null,
             Action<(string Message, int FilesCount)> infoNotify = null,
             CancellationToken cancellationToken = default)
@@ -85,7 +83,7 @@ namespace Voron.Impl.Backup
                 if (ForTestingPurposes?.OnBeforeRateGateWaitToProceed != null)
                     copier.ForTestingPurposesOnly().OnBeforeRateGateWaitToProceed = ForTestingPurposes?.OnBeforeRateGateWaitToProceed;
 
-                Backup(env, compressionAlgorithm, compressionLevel, env.DataPager, archive, basePath, copier, infoNotify, cancellationToken);
+                Backup(env, env.DataPager, archive, basePath, copier, infoNotify, cancellationToken);
             }
 
             infoNotify(("Voron backup db finished", 0));
@@ -93,10 +91,8 @@ namespace Voron.Impl.Backup
 
         private static void Backup(
             StorageEnvironment env,
-            SnapshotBackupCompressionAlgorithm compressionAlgorithm,
-            CompressionLevel compressionLevel,
             Pager dataPager,
-            ZipArchive zipArchive,
+            BackupZipArchive package,
             string basePath,
             DataCopier copier,
             Action<(string Message, int FilesCount)> infoNotify,
@@ -107,9 +103,7 @@ namespace Voron.Impl.Backup
             long lastWrittenLogFile = -1;
             LowLevelTransaction txr = null;
             var backupSuccess = false;
-
-            var package = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel);
-
+            
             try
             {
                 long allocatedPages;
@@ -294,7 +288,7 @@ namespace Voron.Impl.Backup
             int? maxReadOpsPerSecond = null,
             CancellationToken cancellationToken = default)
         {
-            using (var zip = ZipFile.Open(backupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            using (var zip = System.IO.Compression.ZipFile.Open(backupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                 Restore(zip.Entries, voronDataDir, journalDir, onProgress, maxReadOpsPerSecond, cancellationToken);
         }
 
