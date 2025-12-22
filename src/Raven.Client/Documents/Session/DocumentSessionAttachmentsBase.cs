@@ -53,7 +53,13 @@ namespace Raven.Client.Documents.Session
         /// <param name="contentType">The content type of the attachment</param>
         public void Store(string documentId, string name, Stream stream, string contentType = null)
         {
-            Store(documentId, name, stream, contentType, remoteParameters: null);
+            // Store(documentId, name, stream, contentType, remoteParameters: null);
+
+            Store(documentId, new StoreAttachmentParameters(name, stream)
+            {
+                ContentType = contentType,
+                RemoteParameters = new RemoteAttachmentParameters("conf-RavenDB-25354-identifier", DateTime.Now - TimeSpan.FromDays(5))
+            });
         }
 
         internal void Store(string documentId, string name, Stream stream, string contentType, RemoteAttachmentParameters remoteParameters)
@@ -94,7 +100,12 @@ namespace Raven.Client.Documents.Session
             if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSessionOrMissingId(entity);
 
-            Store(document.Id, name, stream, contentType);
+            // Store(document.Id, name, stream, contentType);
+            Store(document.Id, new StoreAttachmentParameters(name, stream)
+            {
+                ContentType = contentType,
+                RemoteParameters = new RemoteAttachmentParameters("conf-RavenDB-25354-identifier", DateTime.Now - TimeSpan.FromDays(5))
+            });
         }
 
         /// <summary>

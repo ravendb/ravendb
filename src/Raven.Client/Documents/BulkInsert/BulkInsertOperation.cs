@@ -1011,11 +1011,12 @@ namespace Raven.Client.Documents.BulkInsert
             /// before uploading. The stream is not disposed by this method.
             /// </para>
             /// </remarks>
-            public void Store(string name, Stream stream, string contentType = null)
+            public void Store(string name, Stream stream, string contentType = null) //CHECKED
             {
                 Store(new StoreAttachmentParameters(name, stream)
                 {
-                    ContentType = contentType
+                    ContentType = contentType,
+                    RemoteParameters = new RemoteAttachmentParameters("conf-RavenDB-25354-identifier", DateTime.Now - TimeSpan.FromDays(5))
                 });
             }
 
@@ -1037,11 +1038,12 @@ namespace Raven.Client.Documents.BulkInsert
             /// handling of large files without loading them entirely into memory.
             /// </para>
             /// </remarks>
-            public Task StoreAsync(string name, Stream stream, string contentType = null, CancellationToken token = default)
+            public Task StoreAsync(string name, Stream stream, string contentType = null, CancellationToken token = default) // CHECKED
             {
                 return StoreAsync(new StoreAttachmentParameters(name, stream)
                 {
-                    ContentType = contentType
+                    ContentType = contentType,
+                    RemoteParameters = new RemoteAttachmentParameters("conf-RavenDB-25354-identifier", DateTime.Now - TimeSpan.FromDays(5))
                 }, token);
             }
 
@@ -1063,8 +1065,9 @@ namespace Raven.Client.Documents.BulkInsert
             /// <exception cref="BulkInsertAbortedException">
             /// Thrown when the bulk insert operation is aborted due to server errors.
             /// </exception>
-            public void Store(StoreAttachmentParameters parameters)
+            public void Store(StoreAttachmentParameters parameters)// CHECKED
             {
+                parameters.RemoteParameters ??= new RemoteAttachmentParameters("conf-RavenDB-25354-identifier", DateTime.Now - TimeSpan.FromDays(5));
                 _operation._attachmentsOperation.Store(_id, parameters);
             }
 
@@ -1090,8 +1093,9 @@ namespace Raven.Client.Documents.BulkInsert
             /// ensuring cancellation propagates correctly for the local storage phase.
             /// </para>
             /// </remarks>
-            public Task StoreAsync(StoreAttachmentParameters parameters, CancellationToken token = default)
+            public Task StoreAsync(StoreAttachmentParameters parameters, CancellationToken token = default)// HEREE
             {
+                parameters.RemoteParameters ??= new RemoteAttachmentParameters("conf-RavenDB-25354-identifier", DateTime.Now - TimeSpan.FromDays(5));
                 return _operation._attachmentsOperation.StoreAsync(_id, parameters, token);
             }
         }

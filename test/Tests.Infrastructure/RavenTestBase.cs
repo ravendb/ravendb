@@ -14,9 +14,13 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments.Remote;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -370,6 +374,9 @@ namespace FastTests
                     if (adminStore != null)
                         CreatedStores.Add(adminStore);
 
+                    if (options.CreateDatabase && options.DatabaseMode == RavenDatabaseMode.Single)
+                        GetS3Settings(store, name+"_remoteFolder");
+
                     return store;
                 }
             }
@@ -377,6 +384,57 @@ namespace FastTests
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
             }
+        }
+
+        private static void GetS3Settings(IDocumentStore store, string remoteFolderName)
+        {
+            var s3SettingsString = Environment.GetEnvironmentVariable("S3_CREDENTIAL");
+            if (s3SettingsString == null)
+            {
+                throw new InvalidOperationException(@"""S3_CREDENTIAL"" is missing");
+            }
+
+            var s3Settings = JsonConvert.DeserializeObject<S3Settings>(s3SettingsString);
+            if (s3Settings == null)
+                throw new InvalidOperationException(@"""S3_CREDENTIAL"" is empty");
+
+            var settings_s3 = new S3Settings
+            {
+                BucketName = s3Settings.BucketName,
+                RemoteFolderName = remoteFolderName,
+                AwsAccessKey = s3Settings.AwsAccessKey,
+                AwsSecretKey = s3Settings.AwsSecretKey,
+                AwsRegionName = s3Settings.AwsRegionName
+            };
+
+            var s = new RemoteAttachmentsS3Settings
+            {
+                AwsAccessKey = settings_s3.AwsAccessKey,
+                AwsSecretKey = settings_s3.AwsSecretKey,
+                AwsSessionToken = settings_s3.AwsSessionToken,
+                AwsRegionName = settings_s3.AwsRegionName,
+                RemoteFolderName = settings_s3.RemoteFolderName,
+                BucketName = settings_s3.BucketName,
+                CustomServerUrl = settings_s3.CustomServerUrl,
+                ForcePathStyle = settings_s3.ForcePathStyle,
+                StorageClass = settings_s3.StorageClass
+            };
+
+            var conf = new RemoteAttachmentsConfiguration
+            {
+                Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                {
+                    {
+                        "conf-RavenDB-25354-identifier", new RemoteAttachmentsDestinationConfiguration()
+                        {
+                            Disabled = false,
+                            S3Settings = s,
+                        }
+                    }
+                },
+                CheckFrequencyInSec = 1,
+            };
+            store.Maintenance.ForDatabase(store.Database).Send(new ConfigureRemoteAttachmentsOperation(conf));
         }
 
         public static bool IsRavenTestCategoryTest(Context context, RavenTestCategory flags)
