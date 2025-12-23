@@ -625,6 +625,14 @@ internal class ChatCompletionClient : IDisposable
             await responseStream.CopyToAsync(ms, token);
             var contentLength = (int)ms.Position;
             ms.Position = 0;
+            if (response.IsSuccessStatusCode == false)
+            {
+                string errorContent = Encoding.UTF8.GetString(ms.GetMemory().Span[..contentLength]);
+                throw UnexpectedResponseException.Create(
+                    message: $"The server returned an error status code: {response.StatusCode}",
+                    response,
+                    errorContent);
+            }
             try
             {
                 return await context.ReadForMemoryAsync(ms, "response/object").ConfigureAwait(false);
