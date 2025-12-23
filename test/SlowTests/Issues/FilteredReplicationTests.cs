@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -18,6 +19,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
@@ -2029,6 +2031,136 @@ namespace SlowTests.Issues
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(hubClusterId));
             }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task ShouldKeepConnectionAlive_WhenFilteringTakesLongTime()
+        {
+            // 1. Configure settings
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "8"
+            };
+
+            var certificates = Certificates.SetupServerAuthentication(customSettings: customSettings);
+            var dbNameHub = GetDatabaseName();
+            var dbNameSink = GetDatabaseName();
+
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbNameHub
+            });
+
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbNameSink
+            });
+
+            // 2. Prepare Data
+            // We replicate enough documents to complete several full 1024-cycles.
+            const int documentsCount = 5000;
+
+            // Using single transactions as requested
+            for (int i = 0; i < documentsCount; i++)
+            {
+                using (var session = hubStore.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Type = "Noise" }, $"items/skip/{i}");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            // The marker document
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new { Type = "Important" }, "items/include/1");
+                await session.SaveChangesAsync();
+            }
+
+            // 3. Inject dynamic Delay Logic
+            var hubDb = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
+            hubDb.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = outgoingHandler =>
+            {
+                if (outgoingHandler.Destination.Database != sinkStore.Database)
+                    return;
+
+                int itemsProcessed = 0;
+                var sw = Stopwatch.StartNew();
+
+                outgoingHandler.ForTestingPurposesOnly().OnDocumentSenderFetchNewItem = () =>
+                {
+                    itemsProcessed++;
+
+                    if ((itemsProcessed & 1023) != 0)
+                        return;
+
+                    // We want each batch of 1024 items to take AT LEAST this long.
+                    // 2500ms > 1000ms HeartbeatInterval (triggers heartbeat)
+                    // 2500ms < 8000ms ConnectionTimeout (safe for single batch)
+                    // Total time for 5000 docs approx 10-12s > 8s (fails without heartbeat)
+                    const int targetBatchDurationMs = 2500;
+
+                    var elapsed = sw.ElapsedMilliseconds;
+                    var timeToWait = targetBatchDurationMs - elapsed;
+
+                    if (timeToWait > 0)
+                        Thread.Sleep((int)timeToWait);
+
+                    // Reset for the next batch
+                    sw.Restart();
+                };
+            };
+
+            // 4. Setup Pull Replication
+            var pullCert = certificates.ClientCertificate2.Value;
+            var pullCertBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx));
+            var publicCertBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert));
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "slow-hub",
+                Mode = PullReplicationMode.HubToSink,
+                WithFiltering = true
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("slow-hub",
+                new ReplicationHubAccess
+                {
+                    Name = "SinkUser",
+                    CertificateBase64 = publicCertBase64,
+                    AllowedHubToSinkPaths = ["items/include/*"]
+                }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = "HubConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = "HubConStr",
+                CertificateWithPrivateKey = pullCertBase64,
+                HubName = "slow-hub",
+                Mode = PullReplicationMode.HubToSink
+            }));
+
+            // 5. Assert
+            // Total simulated time is approx 12 seconds. Connection timeout is 8 seconds.
+            var replicated = WaitForDocument(sinkStore, "items/include/1", timeout: 30_000);
+            Assert.True(replicated, "Document should be replicated. Failure implies connection timeout due to lack of heartbeats.");
         }
     }
 }

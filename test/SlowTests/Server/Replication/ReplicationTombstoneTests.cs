@@ -46,7 +46,7 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocumentDeletion(store2, "users/1"));
-                await Task.Delay((int)(documentDatabase.ReplicationLoader.MinimalHeartbeatInterval * 2.5));
+                await Task.Delay((int)(documentDatabase.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds * 2.5));
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
