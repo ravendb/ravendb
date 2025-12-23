@@ -42,7 +42,7 @@ public class SchemaValidator
     
     public bool Validate(BlittableJsonReaderObject obj, ErrorBuilder errorBuilder)
     {
-        var context = new SchemaValidationContext(_configuration)
+        var context = new SchemaValidationContext(_configuration, obj._context)
         {
             ErrorBuilder = errorBuilder,
         };

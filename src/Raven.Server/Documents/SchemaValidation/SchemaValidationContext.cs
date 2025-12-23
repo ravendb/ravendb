@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.SchemaValidation;
 
@@ -11,6 +11,8 @@ public class SchemaValidationContext
     private int _currentDepth;
     private readonly int _maxDepth;
 
+    public JsonOperationContext OperationContext { get; }
+    
     public ErrorBuilder ErrorBuilder
     {
         init;
@@ -20,8 +22,9 @@ public class SchemaValidationContext
     private bool _withError = true;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SchemaValidationContext(SchemaValidatorSettings configuration)
+    public SchemaValidationContext(SchemaValidatorSettings configuration, JsonOperationContext operationContext)
     {
+        OperationContext = operationContext;
         _maxDepth = configuration.MaxDepth;
     }
     

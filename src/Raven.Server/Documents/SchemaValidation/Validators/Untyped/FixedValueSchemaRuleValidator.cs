@@ -11,30 +11,29 @@ public abstract class FixedValueSchemaRuleValidator : SchemaRuleValidator<object
         {
             LazyNumberValue lnv => (decimal)lnv,
             long lv => (decimal)lv,
-            LazyStringValue or LazyCompressedStringValue => v.ToString(),
+            // TODO: The Clone can be removed after RavenDB-25633 is fixed
             BlittableJsonReaderObject obj => cloneAsRoot ? obj.CloneOnTheSameContext() : obj,
             BlittableJsonReaderArray array => cloneAsRoot ? array.Clone() : array,
-            decimal or bool or null => v,
+            LazyStringValue or LazyCompressedStringValue or decimal or bool or null => v,
             _ => throw new InvalidOperationException($"The type {v.GetType()} is not supported.")
         };
     }
 
 
-    protected static bool SafeConcurrentEquals(object schemaValue, object documentValue)
+    protected static bool SafeConcurrentEquals(JsonOperationContext operationContext, object schemaValue, object documentValue)
     {
         if (schemaValue is BlittableJsonReaderObject schemaObj)
-        {
-            if (documentValue is not BlittableJsonReaderObject documentObj)
-                return false;
-            return schemaObj.CloneForConcurrentRead(documentObj._context).Equals(documentObj);
-        }
+            schemaValue = schemaObj.CloneForConcurrentRead(operationContext);
         
         if (schemaValue is BlittableJsonReaderArray schemaArray)
-        {
-            if (documentValue is not BlittableJsonReaderArray documentArray)
-                return false;
-            return schemaArray.CloneForConcurrentRead(documentArray._context).Equals(documentArray);
-        }
+            schemaValue = schemaArray.CloneForConcurrentRead(operationContext);
+        
+        if (schemaValue is LazyStringValue schemaLsv)
+            schemaValue =  schemaLsv.CloneForConcurrentRead(operationContext);
+        
+        if (schemaValue is LazyCompressedStringValue schemaLcsv)
+            // schemaValue = schemaLcsv;
+            schemaValue = schemaLcsv.CloneForConcurrentRead(operationContext);
 
         return Equals(schemaValue, documentValue);
     }

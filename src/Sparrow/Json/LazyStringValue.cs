@@ -169,6 +169,14 @@ namespace Sparrow.Json
 
             return _context.GetLazyString(_buffer, _size, longLived: false);
         }
+        
+        public LazyStringValue CloneForConcurrentRead(JsonOperationContext context)
+        {
+            if (_size == 0)
+                return context.Empty;
+
+            return context.AllocateStringValue(_string, _buffer, _size);
+        }
 
         public bool HasStringValue => _string != null;
 

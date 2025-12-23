@@ -150,6 +150,11 @@ namespace Sparrow.Json
             return sizeOfEscapePositions;
         }
 
+        public LazyCompressedStringValue CloneForConcurrentRead(JsonOperationContext context)
+        {
+            return new LazyCompressedStringValue(String, Buffer, UncompressedSize, CompressedSize, context);
+        }
+
         public override string ToString()
         {
             return (string)this;

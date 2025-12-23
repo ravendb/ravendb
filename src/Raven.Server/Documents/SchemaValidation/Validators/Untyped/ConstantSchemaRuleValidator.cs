@@ -18,7 +18,7 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
     public override bool Validate(SchemaValidationContext context, object value)
     {
         //The order here is mandatory since the validator 'value' is used concurrently and we CloneForConcurrentRead in case it is blittable 
-        if (SafeConcurrentEquals(schemaValue: _constantValue, documentValue: value))
+        if (SafeConcurrentEquals(context.OperationContext,  schemaValue: _constantValue, documentValue: value))
             return true;
 
         var quoteIfString = IsString(value) ? "\"" : "";

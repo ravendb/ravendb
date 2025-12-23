@@ -152,6 +152,9 @@ public class ErrorBuilder : IDisposable
             case LazyNumberValue lazyNumberValue:
                 Append((ISpanFormattable)lazyNumberValue.Inner);
                 break;
+            case LazyCompressedStringValue lazyCompressedStringValue:
+                Append((ISpanFormattable)lazyCompressedStringValue.ToLazyStringValue());
+                break;
             case ValidationPath validationPathValue:
                 Append(validationPathValue);
                 break;

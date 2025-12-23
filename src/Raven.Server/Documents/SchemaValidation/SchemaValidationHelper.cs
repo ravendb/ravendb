@@ -101,7 +101,7 @@ public static class SchemaValidationHelper
             return Integer;
         if (type == typeof(LazyNumberValue) || type == typeof(decimal))
             return Number;
-        if (type == typeof(LazyStringValue) || type == typeof(LazyCompressedStringValue) || type == typeof(string)) 
+        if (type == typeof(LazyStringValue) || type == typeof(LazyCompressedStringValue)) 
             return String;
         if (type == typeof(bool))
             return Boolean;

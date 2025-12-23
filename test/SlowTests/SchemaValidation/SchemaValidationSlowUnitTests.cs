@@ -38,7 +38,7 @@ public class SchemaValidationSlowUnitTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         using var barrier = new Barrier(concurrency);
         var tasks = Enumerable.Range(0, concurrency).Select(_ =>
@@ -75,7 +75,7 @@ public class SchemaValidationSlowUnitTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        schemaValidator.Init(blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition, SchemaValidatorSettings);
 
         using var barrier = new Barrier(concurrency);
         var tasks = Enumerable.Range(0, concurrency).Select(_ =>
@@ -102,5 +102,39 @@ public class SchemaValidationSlowUnitTests : SchemaValidationTestsBase
             Fill(obj, depth-1);
             parent[$"prop{i}"] = obj;
         }
+    }
+    
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenValidateEnumWithCompressedStringWithMassiveConcurrency()
+    {
+        const int concurrency = 100;
+        var usageMode = BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings;
+        
+        var schemaValidator = new SchemaValidator();
+        var value = string.Join("", Enumerable.Repeat("there", 4));
+        
+        var schemaDefinition = new DynamicJsonValue
+        {
+            [SVC.Properties] = new DynamicJsonValue
+            {
+                ["strProp"] = new DynamicJsonValue { [SVC.Enum] = new DynamicJsonArray{value} }
+            }
+        };
+        
+        using var schemaCtx = JsonOperationContext.ShortTermSingleUse();
+        using var readObj = schemaCtx.ReadObject(schemaDefinition, "test object", usageMode);
+        
+        schemaValidator.Init(readObj, SchemaValidatorSettings);
+
+        using var barrier = new Barrier(concurrency);
+        var tasks = Enumerable.Range(0, concurrency).Select(_ => Task.Run(() =>
+        {
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+            var obj = ctx.ReadObject(new DynamicJsonValue { ["strProp"] = value }, "test object");
+            barrier.SignalAndWait();
+            Assert.True(schemaValidator.Validate(obj, out var errors), errors);
+        })).ToArray();
+        
+        await Task.WhenAll(tasks);
     }
 }
