@@ -8,6 +8,7 @@ using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -37,13 +38,13 @@ namespace Raven.Server.Documents.Replication.Senders
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         internal readonly DatabaseOutgoingReplicationHandler _parent;
-        private OutgoingReplicationStatsScope _statsInstance;
-        protected readonly ReplicationStats _stats = new ReplicationStats();
-        public bool MissingAttachmentsInLastBatch { get; private set; }
-        private HashSet<Slice> _deduplicatedAttachmentHashes = new(SliceComparer.Instance);
-        private Queue<Slice> _deduplicatedAttachmentHashesLru = new();
+        private readonly ReplicationStats _stats = new();
+        private readonly HashSet<Slice> _deduplicatedAttachmentHashes = new(SliceComparer.Instance);
+        private readonly Queue<Slice> _deduplicatedAttachmentHashesLru = new();
         private readonly int _numberOfAttachmentsTrackedForDeduplication;
         private readonly ByteStringContext _allocator; // required to clone the hashes 
+        public bool MissingAttachmentsInLastBatch { get; private set; }
+        private OutgoingReplicationStatsScope _statsInstance;
 
         protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandler parent, Logger log)
         {
@@ -99,12 +100,11 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        public bool ExecuteReplicationOnce(TcpConnectionOptions tcpConnectionOptions, OutgoingReplicationStatsScope stats, ref long next)
+        public bool ExecuteReplicationOnce(TcpConnectionOptions tcpConnectionOptions, OutgoingReplicationStatsScope stats, ref long nextReplicateTicks)
         {
             EnsureValidStats(stats);
             var wasInterrupted = false;
-            var delay = GetDelayReplication();
-            var currentNext = next;
+            var currentNextReplicateTicks = nextReplicateTicks;
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
@@ -132,15 +132,9 @@ namespace Raven.Server.Documents.Replication.Senders
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     long prevLastEtag = _lastEtag;
 
-                    var state = new ReplicationBatchState(documentsContext, _parent._database.Configuration.Databases.PulseReadTransactionLimit, this, next)
+                    var state = new ReplicationBatchState(documentsContext, _parent._database, parent: this, nextReplicateTicks)
                     {
-                        BatchSize = _parent._database.Configuration.Replication.MaxItemsCount,
-                        MaxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend,
-                        CurrentNext = currentNext,
-                        Delay = delay,
-                        LastTransactionMarker = -1,
-                        NumberOfItemsSent = 0,
-                        Size = 0L,
+                        CurrentNextReplicateTicks = currentNextReplicateTicks
                     };
 
                     var replicationSupportedFeatures = new ReplicationSupportedFeatures
@@ -156,7 +150,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
                         while (enumerator.MoveNext())
                         {
-                            next = state.Next;
+                            nextReplicateTicks = state.NextReplicateTicks;
                             if (state.WasInterrupted)
                             {
                                 wasInterrupted = true;
@@ -190,7 +184,7 @@ namespace Raven.Server.Documents.Replication.Senders
                                     attachment.Stream = stream;
                                     var attachmentItem = AttachmentReplicationItem.From(documentsContext, attachment);
                                     AddReplicationItemToBatch(documentsContext, attachmentItem, _stats.Storage, state, skippedReplicationItemsInfo);
-                                    state.Size += attachmentItem.Size;
+                                    state._size += attachmentItem.Size;
                                 }
                             }
 
@@ -205,8 +199,8 @@ namespace Raven.Server.Documents.Replication.Senders
                                 continue;
                             }
 
-                            state.Size += item.Size;
-                            state.NumberOfItemsSent++;
+                            state._size += item.Size;
+                            state._numberOfItemsSent++;
                         }
                     }
 
@@ -227,7 +221,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         {
                             msg += $"encryption buffer overhead size is {new Size(encryptionSize, SizeUnit.Bytes)}, ";
                         }
-                        msg += $"total size: {new Size(state.Size + encryptionSize, SizeUnit.Bytes)}";
+                        msg += $"total size: {new Size(state._size + encryptionSize, SizeUnit.Bytes)}";
 
                         Log.Info(msg);
                     }
@@ -242,6 +236,20 @@ namespace Raven.Server.Documents.Replication.Senders
                         _parent._lastSentDocumentEtag = _lastEtag;
                         _parent._lastDocumentSentTime = DateTime.UtcNow;
                         var changeVector = wasInterrupted ? null : DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+
+                        if (Log.IsInfoEnabled)
+                        {
+                            var reason = wasInterrupted
+                                ? "batch enumeration was interrupted due to limits (time/size)"
+                                : "no items were found to replicate in this batch";
+
+                            var skippedInfo = skippedReplicationItemsInfo.SkippedItems > 0
+                                ? $", Skipped items: '{skippedReplicationItemsInfo.SkippedItems}'"
+                                : string.Empty;
+
+                            Log.Info($"Sending heartbeat (empty batch, {reason}){skippedInfo}. Last scanned etag: '{_lastEtag}'. WasInterrupted: '{wasInterrupted}'.");
+                        }
+
                         _parent.SendHeartbeat(changeVector);
                         return hasModification;
                     }
@@ -258,7 +266,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
                             tcpConnectionOptions.LastEtagSent = _lastEtag;
-                            tcpConnectionOptions.RegisterBytesSent(state.Size);
+                            tcpConnectionOptions.RegisterBytesSent(state._size);
                             if (MissingAttachmentsInLastBatch)
                                 return false;
                         }
@@ -688,34 +696,40 @@ namespace Raven.Server.Documents.Replication.Senders
         private sealed class ReplicationBatchState : PulsedEnumerationState<ReplicationBatchItem>
         {
             private readonly ReplicationDocumentSenderBase _parent;
-            public bool WasInterrupted { get; private set; }
+            private readonly RavenConfiguration _config;
+            private readonly DocumentDatabase _database;
+            private readonly TimeSpan _delay;
 
-            private long _next;
-            public long Next
+            private ReplicationBatchItem _item;
+            private long _lastHeartbeatTicks;
+            private short _lastTransactionMarker = -1;
+
+            private long _nextReplicateTicks;
+            internal long NextReplicateTicks
             {
-                get => _next;
-                private set
-                {
-                    _next = value;
-                }
+                get => _nextReplicateTicks;
+                private init => _nextReplicateTicks = value;
             }
 
             public HashSet<Slice> MissingAttachmentBase64Hashes;
-            public TimeSpan Delay;
-            private ReplicationBatchItem _item;
-            public long CurrentNext;
-            public long Size;
-            public int NumberOfItemsSent;
-            public short LastTransactionMarker;
-            public int? BatchSize;
-            public Size? MaxSizeToSend;
+            public long CurrentNextReplicateTicks;
 
-            public ReplicationBatchState(DocumentsOperationContext context, Size pulseLimit, ReplicationDocumentSenderBase parent, long next)
-                : base(context, pulseLimit, parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
+            internal long _size;
+            internal int _numberOfItemsSent;
+            internal bool WasInterrupted { get; private set; }
+
+            public ReplicationBatchState(DocumentsOperationContext context, DocumentDatabase database, ReplicationDocumentSenderBase parent, long nextReplicateTicks)
+                : base(context, database.Configuration.Databases.PulseReadTransactionLimit, database.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
             {
+                _database = database;
+                _config = database.Configuration;
                 _parent = parent;
+                _delay = parent.GetDelayReplication();
+
                 WasInterrupted = false;
-                Next = next;
+                NextReplicateTicks = nextReplicateTicks;
+
+                _lastHeartbeatTicks = database.Time.GetUtcNow().Ticks;
             }
 
             public override void OnMoveNext(ReplicationBatchItem current)
@@ -725,7 +739,20 @@ namespace Raven.Server.Documents.Replication.Senders
                 _parent._parent.CancellationToken.ThrowIfCancellationRequested();
                 _parent.AssertNoLegacyReplicationViolation(current);
 
-                if (LastTransactionMarker != current.TransactionMarker)
+                if ((ReadCount & 1023) == 0)
+                {
+                    var now = _database.Time.GetUtcNow().Ticks;
+                    if (now - _lastHeartbeatTicks > _config.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.Ticks)
+                    {
+                        if (_parent.Log.IsInfoEnabled)
+                             _parent.Log.Info($"Sending keep-alive heartbeat during active filtering. Current read count: '{ReadCount}'. Last sent etag: '{_parent._lastEtag}'.");
+
+                        _parent._parent.SendHeartbeat(null);
+                        _lastHeartbeatTicks = now;
+                    }
+                }
+
+                if (_lastTransactionMarker != current.TransactionMarker)
                 {
                     _item = current;
                     if (CanContinueBatch() == false)
@@ -733,7 +760,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         WasInterrupted = true;
                         return;
                     }
-                    LastTransactionMarker = current.TransactionMarker;
+                    _lastTransactionMarker = current.TransactionMarker;
                 }
             }
 
@@ -741,28 +768,28 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 if (_parent.MissingAttachmentsInLastBatch)
                 {
-                    // we do have missing attachments but we haven't gathered yet any of the missing hashes
+                    // we do have missing attachments, but we haven't gathered yet any of the missing hashes
                     if (MissingAttachmentBase64Hashes == null)
                         return true;
 
-                    // we do have missing attachments but we haven't included all of them in the batch yet
+                    // we do have missing attachments, but we haven't included all of them in the batch yet
                     if (MissingAttachmentBase64Hashes.Count > 0)
                         return true;
                 }
 
-                if (Delay.Ticks > 0)
+                if (_delay.Ticks > 0)
                 {
-                    var nextReplication = _item.LastModifiedTicks + Delay.Ticks;
-                    if (_parent._parent._database.Time.GetUtcNow().Ticks < nextReplication)
+                    var nextReplicateTicks = _item.LastModifiedTicks + _delay.Ticks;
+                    if (_database.Time.GetUtcNow().Ticks < nextReplicateTicks)
                     {
-                        if (Interlocked.CompareExchange(ref _next, nextReplication, CurrentNext) == CurrentNext)
+                        if (Interlocked.CompareExchange(ref _nextReplicateTicks, nextReplicateTicks, CurrentNextReplicateTicks) == CurrentNextReplicateTicks)
                         {
                             return false;
                         }
                     }
                 }
 
-                if (NumberOfItemsSent == 0)
+                if (_numberOfItemsSent == 0)
                 {
                     // always send at least one item
                     return true;
@@ -770,22 +797,12 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 // We want to limit batch sizes to reasonable limits.
                 var totalSize =
-                    Size + Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+                    _size + Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
-                if (MaxSizeToSend.HasValue && totalSize >= MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                    BatchSize.HasValue && NumberOfItemsSent >= BatchSize.Value)
+                if (_numberOfItemsSent >= _config.Replication.MaxItemsCount ||
+                    _config.Replication.MaxSizeToSend.HasValue && totalSize >= _config.Replication.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes))
                 {
                     return false;
-                }
-
-                var currentCount = _parent._stats.Storage.CurrentStats.InputCount;
-                if (currentCount > 0 && currentCount % 16384 == 0)
-                {
-                    // ReSharper disable once PossibleLossOfFraction
-                    if ((_parent._parent._parent.MinimalHeartbeatInterval / 2) < _parent._stats.Storage.Duration.TotalMilliseconds)
-                    {
-                        return false;
-                    }
                 }
 
                 return true;
@@ -793,7 +810,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             public override bool ShouldPulseTransaction()
             {
-                if (NumberOfItemsSent == 0) // when we start to collect items to send (NumberOfItemsSent>0), we don't want to pulse transaction to prevent those items from being deleted before we send them in the batch.
+                if (_numberOfItemsSent == 0) // when we start to collect items to send (NumberOfItemsSent>0), we don't want to pulse transaction to prevent those items from being deleted before we send them in the batch.
                 {
                     return base.ShouldPulseTransaction();
                 }
