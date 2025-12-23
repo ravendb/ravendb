@@ -124,7 +124,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
                     using (context.OpenReadTransaction())
                     {
                         var current = ShardedDocumentsStorage.GetMergedChangeVectorInBucket(context, process.Bucket);
-                        var status = ChangeVector.GetConflictStatusForDocument(context.GetChangeVector(process.LastSourceChangeVector), current);
+                        var status = ChangeVector.GetConflictStatusForBucket(context.GetChangeVector(process.LastSourceChangeVector), current, ShardedDocumentsStorage.UnusedDatabaseIds);
                         if (status == ConflictStatus.AlreadyMerged)
                         {
                             index = process.MigrationIndex;
