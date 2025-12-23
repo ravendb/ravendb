@@ -1,7 +1,10 @@
+
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
@@ -269,7 +272,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
-                throw new ArgumentException($"Setting up the configuration for {GetConfigurationName()} via an external script is not allowed for non cluster admins.");
+                throw new SecurityException($"Setting up the configuration for {GetConfigurationName()} via an external script is not allowed for non cluster admins.");
 
                 string GetConfigurationName()
                 {
