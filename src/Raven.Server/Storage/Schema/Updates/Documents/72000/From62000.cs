@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -71,6 +70,17 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 SupportDuplicateKeys = true
             };
 
+            attachmentsSchemaBase.DefineIndex(dynamicIndex);
+
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, PopulateAttachmentsFlagAndHashDynamicIndex);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, AttachmentsTableSchemaUpdate);
+
+            return true;
+        }
+
+        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex,
+            Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update)
+        {
             var skip = 0L;
             var processed = 0L;
             var done = false;
@@ -97,15 +107,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 using (scope)
                                 using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
                                 {
-                                    writeTable.DeleteByKey(pkSlice);
-
-                                    var id = writeTable.Insert(tvb);
-
-                                    using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
-                                    {
-                                        var indexTree = writeTable.GetTree(dynamicIndex);
-                                        writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
-                                    }
+                                    update.Invoke(dynamicIndex, writeTable, pkSlice, tvb);
                                 }
                             }
 
@@ -129,7 +131,26 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     }
                 }
             }
+        }
 
+        private static bool PopulateAttachmentsFlagAndHashDynamicIndex(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
+        {
+            if (writeTable.TryFindIdFromPrimaryKey(pkSlice, out var id))
+            {
+                // populate value into the new dynamic index
+                using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
+                {
+                    var indexTree = writeTable.GetTree(dynamicIndex);
+                    writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
+                }
+            }
+
+            return true;
+        }
+
+        private bool AttachmentsTableSchemaUpdate(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
+        {
+            writeTable.Set(tvb, forceUpdate: true);
             return true;
         }
 
@@ -198,8 +219,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 
-            var flags = *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
-            Debug.Assert(size == sizeof(int));
+            int flags = tvr.Count == 7 ? 0 : *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
             var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
             var span = new Span<byte>(buffer.Ptr, buffer.Length);

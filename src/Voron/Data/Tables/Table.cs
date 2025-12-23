@@ -208,7 +208,7 @@ namespace Voron.Data.Tables
             return pkTree.TryRead(key, out _);
         }
 
-        private bool TryFindIdFromPrimaryKey(Slice key, out long id)
+        internal bool TryFindIdFromPrimaryKey(Slice key, out long id)
         {
             id = -1;
             var pkTree = GetTree(_schema.Key);
