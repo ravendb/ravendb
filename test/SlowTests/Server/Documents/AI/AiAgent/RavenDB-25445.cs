@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                         await client.GetResponseContentAsync(context, response, CancellationToken.None);
                     });
 
-                    Assert.Contains("The server returned an error status code: BadGateway", ex.Message);
+                    Assert.Contains("Received an unrecognized response from the server.\r\nStatus Code: BadGateway\r\nResponse:\r\nStatusCode: 502, ReasonPhrase: 'Bad Gateway'", ex.Message);
 
                     Assert.IsNotType<InvalidDataException>(ex.InnerException);
                 }
