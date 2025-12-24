@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -41,6 +42,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             using var o = Slice.From(ctx.Allocator, AttachmentsHash, out var attachmentsHashSlice);
             using var r = Slice.From(ctx.Allocator, AttachmentsFlagAndHash, out var attachmentsFlagAndHashSlice);
 
+            var isSharded = step.DocumentsStorage is ShardedDocumentsStorage;
             step.WriteTx.CreateTree(attachmentsFlagAndHashSlice, isIndexTree: true);
 
             TableSchema attachmentsSchemaBase = new TableSchema();
@@ -72,13 +74,32 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             attachmentsSchemaBase.DefineIndex(dynamicIndex);
 
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, PopulateAttachmentsFlagAndHashDynamicIndex);
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, AttachmentsTableSchemaUpdate);
+            if (isSharded)
+            {
+                attachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = AttachmentsStorage.GenerateBucketAndHashForAttachments,
+                    IsGlobal = true,
+                    Name = Raven.Server.Documents.Schemas.Attachments.AttachmentsBucketAndHashSlice,
+                    SupportDuplicateKeys = true
+                });
+
+                attachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
+                    OnEntryChanged = AttachmentsStorage.UpdateBucketStatsForAttachments,
+                    IsGlobal = true,
+                    Name = Raven.Server.Documents.Schemas.Attachments.AttachmentsBucketAndEtagSlice
+                });
+            }
+
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate);
 
             return true;
         }
 
-        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex,
+        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex, bool isSharded,
             Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update)
         {
             var skip = 0L;
@@ -89,6 +110,13 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    if (isSharded)
+                    {
+                        step.WriteTx.Owner = context;
+                        step.WriteTx.OnBeforeCommit += ((ShardedDocumentsStorage)step.DocumentsStorage).OnBeforeCommit;
+                        step.WriteTx.LowLevelTransaction.OnRollBack += ((ShardedDocumentsStorage)step.DocumentsStorage).OnFailure;
+                    }
+
                     context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
                     var commit = false;
                     var readTable = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
@@ -128,6 +156,16 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         }
 
                         done = true;
+                    }
+
+                    if (isSharded)
+                    {
+                        // for sharded we need to manually commit here, since it is using the context in the tx.OnBeforeCommit event
+                        step.Commit(context);
+                        step.RenewTransactions();
+                        step.WriteTx.Owner = null;
+                        step.WriteTx.OnBeforeCommit -= ((ShardedDocumentsStorage)step.DocumentsStorage).OnBeforeCommit;
+                        step.WriteTx.LowLevelTransaction.OnRollBack -= ((ShardedDocumentsStorage)step.DocumentsStorage).OnFailure;
                     }
                 }
             }

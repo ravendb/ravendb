@@ -110,12 +110,6 @@ namespace Raven.Server.Documents
 
         internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase })
-            {
-                Debug.Assert(false, $"tx.Owner is not DocumentsOperationContext");
-                return;
-            }
-
             var streamSize = 0L;
             var tree = tx.CreateTree(AttachmentsSlice);
 
@@ -131,12 +125,11 @@ namespace Raven.Server.Documents
             key.AsReadOnlySpan().Slice(0, sizeof(int)).CopyTo(bufferAsSpan);
             old.CopyTo(bufferAsSpan.Slice(sizeof(int)));
 
-            var schema = documentDatabase.ShardedDocumentsStorage.AttachmentsStorage.AttachmentsSchema;
-            var table = tx.OpenTable(schema, AttachmentsMetadataSlice);
+            var table = tx.OpenTable(ShardingAttachmentsSchemaBase, AttachmentsMetadataSlice);
             using (Slice.External(tx.Allocator, buffer, sizeof(int) + oldHashSize, ByteStringType.Immutable, out var slice))
             using (Slice.External(tx.Allocator, oldHashPtr, oldHashSize, ByteStringType.Immutable, out var hashSlice))
             {
-                var refCount = table.GetCountOfMatchesFor(schema.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
+                var refCount = table.GetCountOfMatchesFor(ShardingAttachmentsSchemaBase.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
                 switch (refCount)
                 {
                     case 1:
