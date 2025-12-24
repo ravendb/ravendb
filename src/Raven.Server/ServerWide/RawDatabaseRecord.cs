@@ -1700,6 +1700,30 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private HashSet<string> _unusedDatabaseIds;
+
+        public HashSet<string> UnusedDatabaseIds
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.UnusedDatabaseIds;
+
+                if (_unusedDatabaseIds == null)
+                {
+                    _unusedDatabaseIds = new HashSet<string>(StringComparer.Ordinal);
+                    if (_record.TryGet(nameof(DatabaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (LazyStringValue id in bjra)
+                        {
+                            _unusedDatabaseIds.Add(id);
+                        }
+                    }
+                }
+                return _unusedDatabaseIds;
+            }
+        }
+
         internal bool IsShardBeingDeletedOnAnyNode(int shardNumber)
         {
             foreach (var deletion in DeletionInProgress)
