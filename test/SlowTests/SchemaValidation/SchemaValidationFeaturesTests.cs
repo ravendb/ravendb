@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.SchemaValidation;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -191,35 +194,6 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
                 Assert.Equal(0, count);
             }
         }
-    }
-
-    private static async Task SetupSchemaValidation(DocumentStore store)
-    {
-        string schemaDefinition;
-        using (var context = JsonOperationContext.ShortTermSingleUse())
-        {
-            schemaDefinition =
-                context.ReadObject(
-                    new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
-                    "schema-validation-configuration").ToString();
-        }
-
-        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
-        {
-            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
-            {
-                {"Users", new SchemaDefinition
-                {
-                    Schema = schemaDefinition
-                }}
-            }
-        }));
-    }
-
-    private class TestObj
-    {
-        public string Id { get; set; }
-        public string Prop { get; set; }
     }
 
     [RavenFact(RavenTestCategory.Replication)]
@@ -416,7 +390,96 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.ExpirationRefresh)]
+    public async Task MapReduceWithOutputReduceToCollection()
+    {
+        using (var store = GetDocumentStore())
+        {
+            string schemaDefinition;
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                schemaDefinition =
+                    context.ReadObject(
+                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                        "schema-validation-configuration").ToString();
+            }
 
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        "companies", new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    },
+                    {
+                        "Names", new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    }
+                }
+            };
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            var error = await Assert.ThrowsAsync<IndexCreationException>(async () => await new Index("companies", "names").ExecuteAsync(store));
+            Assert.Contains("companies", error.Message);
+            error = await Assert.ThrowsAsync<IndexCreationException>(async () => await new Index("companies1", "names").ExecuteAsync(store));
+            Assert.Contains("names", error.Message);
+            Assert.DoesNotContain("companies", error.Message);
+
+            await new Index("companies1", "names1").ExecuteAsync(store);
+
+            configuration.ValidatorsPerCollection["companies1"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            var schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("companies1", schemaError.Message);
+
+            configuration.ValidatorsPerCollection["companies1"].Disabled = true;
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            configuration.ValidatorsPerCollection["names1"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("names1", schemaError.Message);
+            Assert.DoesNotContain("companies1", error.Message);
+        }
+    }
+
+    private static async Task SetupSchemaValidation(DocumentStore store)
+    {
+        string schemaDefinition;
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            schemaDefinition =
+                context.ReadObject(
+                    new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                    "schema-validation-configuration").ToString();
+        }
+
+        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+        {
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                {"Users", new SchemaDefinition
+                {
+                    Schema = schemaDefinition
+                }}
+            }
+        }));
+    }
+
+    private class TestObj
+    {
+        public string Id { get; set; }
+        public string Prop { get; set; }
+    }
 
     private class Category
     {
@@ -478,5 +541,33 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
+    private class Index : AbstractIndexCreationTask<User>
+    {
+        public Index(string outputCollection, string outputCollectionForPattern)
+        {
+            Map = users => from user in users
+                select new
+                {
+                    user.Name,
+                    Count = 1
+                };
 
+            Reduce = results => from result in results
+                group result by result.Name
+                into g
+                select new
+                {
+                    Name = g.Key,
+                    Count = g.Sum(x => x.Count)
+                };
+
+            OutputReduceToCollection = outputCollection;
+
+            if (outputCollectionForPattern != null)
+            {
+                PatternForOutputReduceToCollectionReferences = x => $"patterns/{x.Name}";
+                PatternReferencesCollectionName = outputCollectionForPattern;
+            }
+        }
+    }
 }

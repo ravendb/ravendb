@@ -214,6 +214,8 @@ namespace Raven.Client.ServerWide
 
         public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)
         {
+            ValidateSchemaCollections(definition);
+
             var lockMode = IndexLockMode.Unlock;
 
             IndexDefinitionCompareDifferences? differences = null;
@@ -283,6 +285,30 @@ namespace Raven.Client.ServerWide
             }
 
             definition.ClusterState.LastIndex = raftIndex;
+        }
+
+        private void ValidateSchemaCollections(IndexDefinition definition)
+        {
+            if (SchemaValidation == null || SchemaValidation.HasEnabledConfiguration() == false)
+                return;
+
+            if (definition.Reduce == null || definition.OutputReduceToCollection == null)
+                return;
+
+            if (SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.OutputReduceToCollection, out var schemaDefinition) &&
+                schemaDefinition.Disabled == false)
+            {
+                throw new InvalidOperationException($"Cannot create index '{definition.Name}' which outputs to collection " +
+                                                    $"'{definition.OutputReduceToCollection}' that has a schema validation configured.");
+            }
+
+            if (definition.PatternReferencesCollectionName != null &&
+                SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.PatternReferencesCollectionName, out schemaDefinition) &&
+                schemaDefinition.Disabled == false)
+            {
+                throw new InvalidOperationException($"Cannot create index '{definition.Name}' which outputs the pattern to collection " +
+                                                    $"'{definition.PatternReferencesCollectionName}' that has a schema validation configured.");
+            }
         }
 
         internal void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
