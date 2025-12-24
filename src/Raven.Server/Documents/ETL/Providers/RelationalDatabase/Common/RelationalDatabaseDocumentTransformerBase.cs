@@ -5,6 +5,7 @@ using System.Linq;
 using Jint.Native;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
@@ -82,7 +83,10 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
                 relationalColumn.Type = 0;
                 relationalColumn.Value = attachment.Stream;
 
-                _stats.IncrementBatchSize(attachment.Stream.Length);
+                if (attachment.RemoteParameters.IsLocalStorageAttachment())
+                {
+                    _stats.IncrementBatchSize(attachment.Stream.Length);
+                }
             }
 
             columns.Add(relationalColumn);

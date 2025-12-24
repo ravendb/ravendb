@@ -1645,6 +1645,73 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
+        [InlineData(1, 3)]
+        [InlineData(32, 3)]
+        public async Task CanEtlRemoteAttachmentsToDestination2(int attachmentsCount, int size)
+        {
+            await using (var holder = CreateCloudSettings())
+            {
+                int docsCount = RemoteAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                var ids = new List<(string Id, string Collection)>();
+                using (var store = GetDocumentStore())
+                using (var replica = GetDocumentStore())
+                {
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var taskName = "etl-test";
+                    var csName = "cs-test";
+
+                    var configuration = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = csName,
+                        Name = taskName,
+                        Transforms = { new Transformation { Name = "S1", Collections = { "Orders" }, Script = @"
+
+var meta = this['@metadata'];
+if (!meta || !meta['@attachments'])
+    return;
+
+for (var i = 0; i < meta['@attachments'].length; i++) {
+    var att = meta['@attachments'][i];
+	
+	loadToOrders(this).addAttachment(att.Name, loadAttachment(att.Name));
+}
+
+" } }
+                    };
+
+                    var connectionString = new RavenConnectionString { Name = csName, TopologyDiscoveryUrls = replica.Urls, Database = replica.Database, };
+
+                    var etlDone = Etl.WaitForEtlToComplete(store);
+                    Etl.AddEtl(store, configuration, connectionString);
+                    await etlDone.WaitAsync(TimeSpan.FromSeconds(15));
+
+                    var replicaDb = await Databases.GetDocumentDatabaseInstanceFor(replica);
+                    var val3 = WaitForValue(() =>
+                    {
+                        using (replicaDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var c = replicaDb.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).Count();
+
+                            return c;
+                        }
+                    }, attachmentsCount, 30_000);
+                    Assert.Equal(attachmentsCount, val3);
+
+                    foreach (var remote in Attachments)
+                    {
+                        var e = await Assert.ThrowsAsync<RavenException>(async () =>
+                            await replica.Operations.SendAsync(new GetAttachmentOperation(remote.DocumentId, remote.Name, AttachmentType.Document, null)));
+                        Assert.Contains($"Cannot perform 'GetAttachmentOperation' for remote attachment '{remote.Name}' on document '{remote.DocumentId}' because the database does not have a RemoteAttachmentsConfiguration configured.", e.Message);
+                    }
+
+                    var identifier2 = await PutRemoteAttachmentsConfiguration(replica, Settings);
+                    await AssertGetRemoteAttachmentsInBulk(replica, size, identifier2, RemoteAttachmentFlags.Remote);
+                }
+            }
+        }
+
+        [AmazonS3RetryTheory]
         [InlineData(1, 3, true)]
         [InlineData(1, 3, false)]
         [InlineData(64, 3, true)]
