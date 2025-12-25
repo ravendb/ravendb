@@ -9,8 +9,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Order = Tests.Infrastructure.Entities.Order;
@@ -87,27 +87,30 @@ loadTo(""Orders"", partitionBy(key),
 
                 var key = EtlProcessState.GenerateItemName(store.Database, configurationName, transformationName).ToLowerInvariant();
 
+                BlittableJsonReaderObject item;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var item = Server.ServerStore.Engine.StateMachine.GetItem(context, key);
+                    item = Server.ServerStore.Engine.StateMachine.GetItem(context, key);
                     Assert.NotNull(item);
                 }
 
                 // delete task
-                var deleteTaskResult = store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.OlapEtl));
+                store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.OlapEtl));
                 var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.OlapEtl));
                 Assert.Null(ongoingTask);
 
-                // wait for RemoveEtlProcessStateCommand to complete (executed after DeleteOngoingTaskCommand)
-                await Server.ServerStore.Cluster.WaitForIndexNotification(deleteTaskResult.RaftCommandIndex + 1);
-
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                // wait for etl process state to be deleted
+                item = WaitForValue(() =>
                 {
-                    var item = Server.ServerStore.Engine.StateMachine.GetItem(context, key);
-                    Assert.Null(item);
-                }
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        return Server.ServerStore.Engine.StateMachine.GetItem(context, key);
+                    }
+                }, expectedVal: null, timeout: 30_000);
+
+                Assert.Null(item);
             }
         }
 
