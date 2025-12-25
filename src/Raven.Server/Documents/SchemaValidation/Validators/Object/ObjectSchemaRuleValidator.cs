@@ -87,7 +87,13 @@ public class ObjectSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReader
                 var (allowed, additionalPropertiesValidator) = _additionalPropertiesValidator;
                 if (allowed == false)
                 {
-                    context.ErrorBuilder?.AddError($"The property '{propName}' at '{context.ErrorBuilder.Path}' is not defined and additional properties are not allowed.");
+                    if (context.ErrorBuilder != null)
+                    {
+                        var path = context.ErrorBuilder.Path;
+                        path.StepIn(propName);
+                        context.ErrorBuilder.AddError($"The property '{propName}' is not defined in the schema and additional properties are not allowed. Full path: '{path}'.");
+                        path.StepOut();
+                    }
                     isValid = false;
                 }
                 else if (additionalPropertiesValidator != null)

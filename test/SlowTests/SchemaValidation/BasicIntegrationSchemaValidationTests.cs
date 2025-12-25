@@ -50,7 +50,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         {
             var additionalPropertiesDefinition = new (object, string)[]
             {
-                (false, "The property 'Prop2' at '' is not defined and additional properties are not allowed."),
+                (false, "The property 'Prop2' is not defined in the schema and additional properties are not allowed. Full path: 'Prop2'"),
                 (new DynamicJsonValue { [SVC.Type] = SchemaValidationHelper.Integer }, "'Prop2' should be of type 'integer' but actual type is 'string'.")
             };
             foreach (var additionalProperties in additionalPropertiesDefinition)

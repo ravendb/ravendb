@@ -49,7 +49,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [notDefinedProp] = "1234" }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError("The property 'notDefinedProp' at '' is not defined and additional properties are not allowed.", errors);
+                AssertError("The property 'notDefinedProp' is not defined in the schema and additional properties are not allowed. Full path: 'notDefinedProp'.", errors);
             });
     }
 
