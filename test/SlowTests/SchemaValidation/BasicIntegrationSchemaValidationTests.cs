@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -13,6 +14,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.SchemaValidation;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
@@ -283,7 +285,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4.", e.Message);
     }
     
-    [RavenFact(RavenTestCategory.JavaScript)]
+    [RavenFact(RavenTestCategory.Smuggler)]
     public async Task SchemaValidation_WhenBulkInsert_ShouldValidateAndFailInNeeded()
     {
         const string id = "random-id";
@@ -322,21 +324,57 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         Assert.True(stringException.Contains("The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4."), $"actual: {stringException}");
     }
 
-    [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenImportInvalidDataDefinedOnTheSource_ShouldNotThrow()
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Smuggler)]
+    [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task SchemaValidation_WhenImportInvalidDataDocuments_ShouldSkip(Options options, bool configOnDestination)
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
 
         using var context = JsonOperationContext.ShortTermSingleUse();
         using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
-        using var source = GetDocumentStore();
-
-        const string id = "random-id";
-        using (var session = source.OpenAsyncSession())
+        
+        var modifyRecord = options.ModifyDatabaseRecord;
+        var option = new Options
         {
+            ModifyDatabaseRecord = record =>
+            {
+                record.ConflictSolverConfig = new ConflictSolver
+                {
+                    ResolveToLatest = false,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                };
+                modifyRecord?.Invoke(record);
+            }
+        };
+        using var sourceA = GetDocumentStore(option);
+        using var sourceB = GetDocumentStore(option);
+
+        await RevisionsHelper.SetupRevisionsAsync(sourceA);
+        
+        const string idConflict = "conflict-doc-id";
+        const string idRevisions = "revisions-id";
+        const string id = "random-id";
+        using (var session = sourceA.OpenAsyncSession())
+        {
+            await session.StoreAsync(new TestObj { Prop = "1234" }, idConflict);
             await session.StoreAsync(new TestObj { Prop = "1234" }, id);
+            var testObj = new TestObj { Prop = "1234" };
+            await session.StoreAsync(testObj, idRevisions);
+            await session.SaveChangesAsync();
+
+            testObj.Prop = "123";
             await session.SaveChangesAsync();
         }
+        
+        using (var session = sourceB.OpenAsyncSession())
+        {
+            await session.StoreAsync(new TestObj { Prop = "2234" }, idConflict);
+            await session.SaveChangesAsync();
+        }
+        
+        await SetupReplicationAsync(sourceB, sourceA);
+        WaitUntilHasConflict(sourceA, idConflict);
 
         using var destination = GetDocumentStore();
         var configuration = new SchemaValidationConfiguration
@@ -347,52 +385,32 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
                 { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
-        await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+        
+        await (configOnDestination ? destination : sourceA).Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
 
-        var e = await Assert.ThrowsAnyAsync<Exception>(async () =>
+        var operation = await sourceA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
+        await operation.WaitForCompletionAsync();
+
+        
+        using (var sourceSession = destination.OpenAsyncSession())
+        using (var destinationSession = destination.OpenAsyncSession())
         {
-            var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
-            await operation.WaitForCompletionAsync();
-        });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
-    }
+            Assert.Null(await destinationSession.LoadAsync<TestObj>(id));
+            Assert.NotNull(await destinationSession.LoadAsync<TestObj>(idRevisions));
 
-    [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenImportInvalidDataDefinedOnTheDestination_ShouldNotThrow()
-    {
-        var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
-
-        using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
-        using var source = GetDocumentStore();
-
-        const string id = "random-id";
-        using (var session = source.OpenAsyncSession())
-        {
-            await session.StoreAsync(new TestObj { Prop = "1234" }, id);
-            await session.SaveChangesAsync();
+            var sourceRevisions = await GetRevisions(sourceSession);
+            var destinationRevisions = await GetRevisions(destinationSession);
+            Assert.Subset(sourceRevisions.ToHashSet(), destinationRevisions.ToHashSet());
+            
+            var conflicts = await destination.Commands().GetConflictsForAsync(idConflict);
+            Assert.Equal(2, conflicts.Length);
+            
+            async Task<IEnumerable<string>> GetRevisions(IAsyncDocumentSession asyncDocumentSession)
+                => (await asyncDocumentSession.Advanced.Revisions.GetForAsync<TestObj>(idRevisions)).Select(x => asyncDocumentSession.Advanced.GetChangeVectorFor(x));
         }
-
-        using var destination = GetDocumentStore();
-        var configuration = new SchemaValidationConfiguration
-        {
-            Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
-            {
-                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
-            }
-        };
-        await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
-
-        var e = await Assert.ThrowsAnyAsync<Exception>(async () =>
-        {
-            var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
-            await operation.WaitForCompletionAsync();
-        });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
 
-    [RavenFact(RavenTestCategory.JavaScript)]
+    [RavenFact(RavenTestCategory.Smuggler)]
     public async Task SchemaValidation_WhenRestoreInvalidData_ShouldNotThrow()
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
@@ -501,49 +519,6 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             
             return error.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"");
         }
-    }
-
-    [RavenFact(RavenTestCategory.JavaScript)]
-    public async Task SchemaValidation_WhenImportToDestinationWithSchemaValidation_ShouldValidateAndFailInNeeded()
-    {
-        var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
-
-        using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
-        using var source = GetDocumentStore();
-
-        const string id = "random-id";
-        using (var session = source.OpenAsyncSession())
-        {
-            await session.StoreAsync(new TestObj { Prop = "1234" }, id);
-            await session.SaveChangesAsync();
-        }
-
-        using var destination = GetDocumentStore();
-        var configuration = new SchemaValidationConfiguration
-        {
-            Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
-            {
-                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
-            }
-        };
-        await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
-
-        var e = await Assert.ThrowsAnyAsync<RavenException>(async () =>
-        {
-            var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
-            await operation.WaitForCompletionAsync();
-        });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
-
-        using (var session = source.OpenAsyncSession())
-        {
-            await session.StoreAsync(new TestObj { Prop = "1234" }, id);
-            await session.SaveChangesAsync();
-        }
-
-        await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]

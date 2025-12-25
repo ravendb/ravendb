@@ -524,7 +524,15 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    await documentActions.WriteDocumentAsync(item, result.Documents, beforeFlush);
+                    try
+                    {
+                        await documentActions.WriteDocumentAsync(item, result.Documents, beforeFlush);
+                    }
+                    catch (Exception e)
+                    {
+                        result.Documents.ErroredCount++;
+                        result.AddError($"Could not write document {item.Document.Id}: {e.Message}");
+                    }
                 }
 
                 await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, documentActions, result);
