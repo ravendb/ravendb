@@ -376,7 +376,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         await SetupReplicationAsync(sourceB, sourceA);
         WaitUntilHasConflict(sourceA, idConflict);
 
-        using var destination = GetDocumentStore();
+        using var destination = GetDocumentStore(option);
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
@@ -411,7 +411,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
     }
 
     [RavenFact(RavenTestCategory.Smuggler)]
-    public async Task SchemaValidation_WhenRestoreInvalidData_ShouldNotThrow()
+    public async Task SchemaValidation_WhenRestoreInvalidData_ShouldRestore()
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
 
@@ -420,9 +420,10 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         using var source = GetDocumentStore();
 
         const string id = "random-id";
+        const string invalidValue = "1234";
         using (var session = source.OpenAsyncSession())
         {
-            await session.StoreAsync(new TestObj { Prop = "1234" }, id);
+            await session.StoreAsync(new TestObj { Prop = invalidValue }, id);
             await session.SaveChangesAsync();
         }
 
@@ -443,6 +444,12 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         using var _ = Backup.RestoreDatabase(source,
             new RestoreBackupConfiguration { DatabaseName = destinationName, BackupLocation = Directory.GetDirectories(backupPath).First(), });
         using var destination = new DocumentStore { Urls = source.Urls, Database = destinationName, }.Initialize();
+
+        using (var session = destination.OpenAsyncSession())
+        {
+            var loaded = await session.LoadAsync<TestObj>(id);
+            Assert.Equal(invalidValue, loaded.Prop);
+        }
         
         var e = await Assert.ThrowsAnyAsync<RavenException>(async () =>
         {

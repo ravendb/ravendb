@@ -82,9 +82,9 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseRecordActions(_database, log: _log);
         }
 
-        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true)
+        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true, BackupKind? backupKind = null)
         {
-            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError);
+            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError, backupKind);
         }
 
         public IDocumentActions RevisionDocuments()
@@ -240,10 +240,11 @@ namespace Raven.Server.Smuggler.Documents
             private readonly HashSet<string> _documentIdsOfMissingAttachments;
             private readonly DuplicateDocsHandler _duplicateDocsHandler;
             private readonly bool _throwOnCollectionMismatchError;
+            private readonly BackupKind? _backupKind;
 
             private ErrorBuilder _schemaErrorBuilder;
             
-            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, RavenLogger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, RavenLogger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError, BackupKind? backupKind = null)
             {
                 _database = database;
                 _buildType = buildType;
@@ -253,6 +254,7 @@ namespace Raven.Server.Smuggler.Documents
                 _enqueueThreshold = new Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
                 _duplicateDocsHandler = duplicateDocsHandler;
                 _throwOnCollectionMismatchError = throwOnCollectionMismatchError;
+                _backupKind = backupKind;
 
                 _missingDocumentsForRevisions = isRevision || buildType == BuildVersionType.V3 ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -281,7 +283,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SchemaValidateAndThrow(DocumentItem item)
             {
-                if (_isRevision)
+                if (_backupKind != BackupKind.None || _isRevision)
                     return;
                 
                 var schemaValidatorCache = _database.SchemaValidatorCache;

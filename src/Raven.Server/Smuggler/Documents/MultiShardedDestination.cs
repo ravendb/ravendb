@@ -118,7 +118,7 @@ namespace Raven.Server.Smuggler.Documents
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context) =>
             new ShardedCompareExchangeActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchangeTombstones(databaseName, context)), _options);
 
-        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true) =>
+        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true, BackupKind? backupKind = null) =>
             new ShardedDocumentActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
 
         public IDocumentActions RevisionDocuments() =>

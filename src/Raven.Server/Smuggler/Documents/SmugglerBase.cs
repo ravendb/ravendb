@@ -403,7 +403,7 @@ namespace Raven.Server.Smuggler.Documents
 
             var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
 
-            await using (var documentActions = _destination.Documents(throwOnCollectionMismatchError))
+            await using (var documentActions = _destination.Documents(throwOnCollectionMismatchError, backupKind: BackupKind))
             await using (var compareExchangeActions = _destination.CompareExchange(_databaseName, _context, BackupKind, withDocuments: true))
             {
                 List<LazyStringValue> legacyIdsToDelete = null;

@@ -165,7 +165,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseRecordActions(_writer, _context);
         }
 
-        public IDocumentActions Documents(bool throwOnDuplicateCollection)
+        public IDocumentActions Documents(bool throwOnDuplicateCollection, BackupKind? backupKind = null)
         {
             return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, "Docs");
         }
