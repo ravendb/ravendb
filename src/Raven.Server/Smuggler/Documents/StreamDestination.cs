@@ -1446,10 +1446,7 @@ namespace Raven.Server.Smuggler.Documents
                             foreach (var attachment in item.Attachments)
                             {
                                 attachment.Stream.Position = 0;
-                                await using (attachment.Stream)
-                                {
-                                    await WriteAttachmentStreamAsync(attachment.Base64Hash.ToString(), attachment.Stream, attachment.Tag.ToString());
-                                }
+                                await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
                             }
                         }
                         
