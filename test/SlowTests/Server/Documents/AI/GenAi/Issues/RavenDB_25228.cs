@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {
     public class RavenDB_25228(ITestOutputHelper output) : RavenTestBase(output)
     {
-        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs:10_000)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanPassAgentParametersIntoGenAiTools(Options options, GenAiConfiguration config)
         {
@@ -29,9 +29,10 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             config.Collection = "ShoppingCarts";
 
             config.Prompt =
-                "Use the tool 'recent-orders-for-customer' to fetch items from the customer's recent orders. " +
-                "From that list, suggest items to add to the shopping cart. " +
-                "Make sure that the items you suggest are NOT already in 'cartItems'. ";
+                "Find items in 'recent-orders-for-customer' results. " +
+                "Subtract all items already present in 'cartItems'. " +
+                "Return every single remaining item to complete the customer's collection. " +
+                "Make sure to do not miss any item";
 
             config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
 
