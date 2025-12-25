@@ -1669,11 +1669,11 @@ namespace SlowTests.Server.Documents.Attachments
 var meta = this['@metadata'];
 if (!meta || !meta['@attachments'])
     return;
-
+var doc = loadToOrders(this);
 for (var i = 0; i < meta['@attachments'].length; i++) {
     var att = meta['@attachments'][i];
-	
-	loadToOrders(this).addAttachment(att.Name, loadAttachment(att.Name));
+    
+    doc.addAttachment(att.Name, loadAttachment(att.Name));
 }
 
 " } }
