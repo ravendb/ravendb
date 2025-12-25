@@ -66,6 +66,33 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public int TimeoutInMs { get; set; }
 
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((GetBackupConfigurationScript)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = TimeoutInMs.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Arguments != null ? Arguments.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (Exec != null ? Exec.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
+
+        private bool Equals(GetBackupConfigurationScript other)
+        {
+            return Exec == other.Exec && Arguments == other.Arguments && TimeoutInMs == other.TimeoutInMs;
+        }
+
         public DynamicJsonValue ToAuditJson()
         {
 

@@ -202,6 +202,12 @@ public class AuthenticationEndpointTests : RavenTestBase
             {
                 configuration.IncrementalBackupFrequency = "0 30 * * *";
                 store.Maintenance.Send(new UpdatePeriodicBackupOperation(configuration));
+
+                configuration.LocalSettings.FolderPath = "c:\\";
+                configuration.LocalSettings.GetBackupConfigurationScript = null;
+                configuration.IncrementalBackupFrequency = "0 31 * * *";
+                var error = Assert.Throws<RavenException>(() => store.Maintenance.Send(new UpdatePeriodicBackupOperation(configuration)));
+                Assert.Contains("an external script is not allowed for non cluster admins", error.Message);
             }
         }
     }

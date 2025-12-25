@@ -245,32 +245,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             
             for (var i = 0; i < backupSettings.Count; i++)
             {
-                var currentBackupSetting = backupSettings[i];
-                if (previousBackupSettings == null)
-                {
-                    if (currentBackupSetting?.GetBackupConfigurationScript == null)
-                        continue;
-                }
-                else
-                {
-                    var previousBackupSetting = previousBackupSettings[i];
-                    if (previousBackupSetting == null && currentBackupSetting == null)
-                        continue;
+                var current = backupSettings?[i]?.GetBackupConfigurationScript;
+                var previous = previousBackupSettings?[i]?.GetBackupConfigurationScript;
 
-                    var previous = previousBackupSetting?.GetBackupConfigurationScript;
-                    var current = currentBackupSetting?.GetBackupConfigurationScript;
+                if (current == null && previous == null)
+                    continue;
 
-                    if (previous == null && current == null)
-                        continue;
-
-                    if (previous != null && current != null)
-                    {
-                        if (previous.Exec == current.Exec &&
-                            previous.Arguments == current.Arguments &&
-                            previous.TimeoutInMs == current.TimeoutInMs)
-                            continue;
-                    }
-                }
+                if (current != null && previous != null && previous.Equals(current))
+                    continue;
 
                 throw new SecurityException($"Setting up the configuration for {GetConfigurationName()} via an external script is not allowed for non cluster admins.");
 
