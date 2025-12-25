@@ -1446,13 +1446,14 @@ namespace Raven.Server.Smuggler.Documents
                             foreach (var attachment in item.Attachments)
                             {
                                 attachment.Stream.Position = 0;
-                                await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
+                                await using (attachment.Stream)
+                                {
+                                    await WriteAttachmentStreamAsync(attachment.Base64Hash.ToString(), attachment.Stream, attachment.Tag.ToString());
+                                }
                             }
                         }
-                        else
-                        {
-                            await WriteUniqueAttachmentStreamsAsync(document, progress);
-                        }
+                        
+                        await WriteUniqueAttachmentStreamsAsync(document, progress);
                     }
 
                     if (First == false)
@@ -1562,10 +1563,9 @@ namespace Raven.Server.Smuggler.Documents
                         throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
                     }
 
-                    progress.Attachments.ReadCount++;
-
                     if (_attachmentStreamsAlreadyExported.Add(hash))
                     {
+                        progress.Attachments.ReadCount++;
                         await using (var stream = _source.GetAttachmentStream(hash, out string tag))
                         {
                             if (stream == null)
