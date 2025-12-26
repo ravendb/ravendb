@@ -991,7 +991,7 @@ namespace SlowTests.Sharding.Backup
             Assert.Equal(0, shardedRestoreResults[2].Result.Counters.ReadCount);
             Assert.Equal(1, shardedRestoreResults[2].Result.TimeSeries.ReadCount);
             Assert.Equal(6, shardedRestoreResults[2].Result.RevisionDocuments.ReadCount);
-            Assert.Equal(1, shardedRestoreResults[2].Result.RevisionDocuments.Attachments.ReadCount);
+            Assert.Equal(2, shardedRestoreResults[2].Result.RevisionDocuments.Attachments.ReadCount);
             Assert.Equal(0, shardedRestoreResults[2].Result.Tombstones.ReadCount);
             Assert.Equal(1, shardedRestoreResults[2].Result.Identities.ReadCount);
             Assert.Equal(1, shardedRestoreResults[2].Result.Indexes.ReadCount);
