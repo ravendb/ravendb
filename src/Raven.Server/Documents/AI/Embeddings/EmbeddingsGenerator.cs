@@ -52,7 +52,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     private interface IEmbeddingsCommand;
 
-    private record RefreshCache(List<string> DocumentIds, TimeSpan CacheDuration) : IEmbeddingsCommand;
+    private record RefreshCache(List<(string DocId, string Value)> DocumentIds, TimeSpan CacheDuration) : IEmbeddingsCommand;
     
     private record StoreEmbeddings(List<GenerateEmbeddings> GeneratedEmbeddings, VectorEmbeddingType Quantization): IEmbeddingsCommand;
 
@@ -121,7 +121,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
          {
              Dictionary<string, HashSet<GenerateEmbeddings>> embeddingsByName = new();
              var cacheDuration = Configuration.EmbeddingsCacheExpiration;
-             List<string> expirationRefresh = null;
+             List<(string DocId, string Value)> expirationRefresh = null;
              foreach (var (name, field) in props)
              {
                  HashSet<GenerateEmbeddings> hashes = [];
@@ -170,7 +170,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             string value)
         {
             List<ReadOnlyMemory<byte>> results = [];
-            List<string> expirationRefresh = null;
+            List<(string, string)> expirationRefresh = null;
             List<string> pending = null;
             // we explicitly do *not* care about the order of vectors compared to the text, including with chunking or 
             // with multiple values. Logically, we send text, and get a set of vectors back, in some arbitrary order
@@ -231,7 +231,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
         
         private bool TryGetFromCache(DocumentsOperationContext documentsContext, string text,
-            TimeSpan cacheDuration, ref List<string> expirationRefresh, out ReadOnlyMemory<byte> result)
+            TimeSpan cacheDuration, ref List<(string, string)> expirationRefresh, out ReadOnlyMemory<byte> result)
         {
             var valueHash = EmbeddingsHelper.CalculateInputValueHash(text);
             var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(_connectionStringIdentifier, valueHash, Configuration.Quantization);
@@ -253,7 +253,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     if (halfTime > timeToExpireSeconds)
                     {
                         expirationRefresh ??= [];
-                        expirationRefresh.Add(docId);
+                        expirationRefresh.Add((docId,text));
                     }
                 }
             }
@@ -601,9 +601,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                     case RefreshCache rc:
                     {
                         DateTime expireAt = now.Add(rc.CacheDuration);
-                        foreach (string docIdToRefresh in rc.DocumentIds)
+                        foreach (var (docIdToRefresh, val) in rc.DocumentIds)
                         {
-                            var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
+                            var docJson = CreateEmbeddingCacheDocumentJson(expireAt, val);
                             using (var json = context.ReadObject(docJson, docIdToRefresh))
                             {
                                 operations++;
@@ -628,7 +628,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                                 var val = ge.Values[i];
                                 var embedding = ge.Embeddings[i];
                             
-                                var docJson = CreateEmbeddingCacheDocumentJson(expireAt);
+                                var docJson = CreateEmbeddingCacheDocumentJson(expireAt, val);
                                 var valueHash = EmbeddingsHelper.CalculateInputValueHash(val);
                                 var docId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(ge.ConnectionStringId, valueHash, se.Quantization);
 
@@ -654,10 +654,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             return operations; 
         }
         
-        private DynamicJsonValue CreateEmbeddingCacheDocumentJson(DateTime expireAt)
+        private DynamicJsonValue CreateEmbeddingCacheDocumentJson(DateTime expireAt, string val)
         {
             return new DynamicJsonValue
             {
+                ["Value"] = val,
                 [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
                     [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.EmbeddingsCacheCollection,
