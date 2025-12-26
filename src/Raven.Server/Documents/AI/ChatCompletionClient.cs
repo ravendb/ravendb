@@ -247,7 +247,7 @@ internal class ChatCompletionClient : IDisposable
             var choice = (BlittableJsonReaderObject)choices[0];
             if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
-                if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
+                if (TryGetDeltaContent(delta, out LazyStringValue content))
                 {
                     toolCallState.AddAndReset();
 
@@ -274,7 +274,8 @@ internal class ChatCompletionClient : IDisposable
             }
         }
 
-        if (toolCallState.AllToolCalls?.Count >= 0)
+        // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
+        if (toolCallState.AllToolCalls?.Count > 0)
         {
             DynamicJsonArray toolCalls = new();
             foreach (var call in toolCallState.AllToolCalls)
@@ -312,6 +313,22 @@ internal class ChatCompletionClient : IDisposable
             }, "persisted/streamed/message"),
             Result = message,
         };
+    }
+
+    private static bool TryGetDeltaContent(BlittableJsonReaderObject delta, out LazyStringValue content)
+    {
+        // Try content, then reasoning_content, then reasoning (for LM Studio and other reasoning model compatibility)
+        if (delta.TryGet(Constants.ResponseFields.Content, out content) && content?.Length > 0)
+            return true;
+
+        if (delta.TryGet(Constants.ResponseFields.ReasoningContent, out content) && content?.Length > 0)
+            return true;
+
+        if (delta.TryGet(Constants.ResponseFields.Reasoning, out content) && content?.Length > 0)
+            return true;
+
+        content = null;
+        return false;
     }
 
     public async Task<(string Result, string Message)> TestCompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
@@ -376,16 +393,35 @@ internal class ChatCompletionClient : IDisposable
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
 
-            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
-                Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
+            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false)
             {
-                throw UnexpectedResponseException.Create(message: "No message/content property in choice", response, responseContent);
+                throw UnexpectedResponseException.Create(message: "No message property in choice", response, responseContent);
+            }
+
+            // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
+            if (TryGetOrNullIfEmpty(Message, Constants.ResponseFields.Content, out _content) == false &&
+                TryGetOrNullIfEmpty(Message, Constants.ResponseFields.ReasoningContent, out _content) == false &&
+                TryGetOrNullIfEmpty(Message, Constants.ResponseFields.Reasoning, out _content) == false)
+            {
+                // Content is null - this is valid when there are tool calls or a refusal
+                _content = null;
             }
 
             if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
                 throw UnexpectedResponseException.Create(message: "No usage in response content", response, responseContent);
 
             usage.UpdateFrom(usageJson);
+        }
+
+        private static bool TryGetOrNullIfEmpty(BlittableJsonReaderObject obj, string propertyName, out string value)
+        {
+            if (obj.TryGet(propertyName, out value) && string.IsNullOrEmpty(value) == false)
+            {
+                return true;
+            }
+
+            value = null;
+            return false;
         }
 
         public bool TryParseToolCalls(out List<AiToolCall> toolCalls)
@@ -407,7 +443,8 @@ internal class ChatCompletionClient : IDisposable
                 toolCalls.Add(new AiToolCall(callId, name, args));
             }
 
-            return true;
+            // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
+            return toolCalls.Count > 0;
         }
 
         public BlittableJsonReaderObject GetContent(JsonOperationContext context)
@@ -934,6 +971,8 @@ internal class ChatCompletionClient : IDisposable
             public const string Choices = "choices";
             public const string Message = "message";
             public const string Content = "content";
+            public const string ReasoningContent = "reasoning_content";
+            public const string Reasoning = "reasoning";
             public const string FinishReason = "finish_reason";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
