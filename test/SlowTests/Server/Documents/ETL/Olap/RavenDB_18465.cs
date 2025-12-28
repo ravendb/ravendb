@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -87,11 +86,10 @@ loadTo(""Orders"", partitionBy(key),
 
                 var key = EtlProcessState.GenerateItemName(store.Database, configurationName, transformationName).ToLowerInvariant();
 
-                BlittableJsonReaderObject item;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    item = Server.ServerStore.Engine.StateMachine.GetItem(context, key);
+                    var item = Server.ServerStore.Engine.StateMachine.GetItem(context, key);
                     Assert.NotNull(item);
                 }
 
@@ -101,16 +99,16 @@ loadTo(""Orders"", partitionBy(key),
                 Assert.Null(ongoingTask);
 
                 // wait for etl process state to be deleted
-                item = WaitForValue(() =>
+                var itemDeleted = WaitForValue(() =>
                 {
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        return Server.ServerStore.Engine.StateMachine.GetItem(context, key);
+                        return Server.ServerStore.Engine.StateMachine.GetItem(context, key) == null;
                     }
-                }, expectedVal: null, timeout: 30_000);
+                }, expectedVal: true, timeout: 30_000);
 
-                Assert.Null(item);
+                Assert.True(itemDeleted);
             }
         }
 
