@@ -64,4 +64,10 @@ public sealed class AiConfiguration : ConfigurationCategory
     [DefaultValue(false)]
     [ConfigurationEntry("Ai.Assistant.DisableDataSubmission", ConfigurationEntryScope.ServerWideOnly)]
     public bool DisableDataSubmission { get; set; }
+
+    [Description("Maximum number of seconds GenAi 'SendToModel' batch will take.")]
+    [DefaultValue(60)]
+    [TimeUnit(TimeUnit.Seconds)]
+    [ConfigurationEntry("Ai.GenAi.GenAiSendToModelTimeout", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting GenAiSendToModelTimeout { get; set; }
 }
