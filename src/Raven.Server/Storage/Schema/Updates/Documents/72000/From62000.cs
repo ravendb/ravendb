@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
@@ -28,6 +29,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private static readonly string AttachmentsEtag = "AttachmentsEtag";
         private static readonly string AttachmentsHash = "AttachmentsHash";
         private static readonly string AttachmentsFlagAndHash = "AttachmentsFlagAndHash";
+        private static readonly int _oldSchemaSize = 7;
 
         internal static int NumberOfAttachmentsToMigrateInSingleTransaction = PlatformDetails.Is32Bits ? 2048 : 32768;
 
@@ -257,7 +259,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 
-            int flags = tvr.Count == 7 ? 0 : *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
+            int flags = tvr.Count == _oldSchemaSize ? (int)RemoteAttachmentFlags.None : *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
             var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
             var span = new Span<byte>(buffer.Ptr, buffer.Length);
