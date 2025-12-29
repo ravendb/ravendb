@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                         await client.GetResponseContentAsync(context, response, CancellationToken.None);
                     });
 
-                    Assert.Contains("Received an unrecognized response from the server.\r\nStatus Code: BadGateway\r\nResponse:\r\nStatusCode: 502, ReasonPhrase: 'Bad Gateway'", ex.Message);
+                    RavenTestHelper.AssertContainsRespectingNewLines("Received an unrecognized response from the server.\r\nStatus Code: BadGateway\r\nResponse:\r\nStatusCode: 502, ReasonPhrase: 'Bad Gateway'", ex.Message);
 
                     Assert.IsNotType<InvalidDataException>(ex.InnerException);
                 }
