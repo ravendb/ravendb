@@ -1,4 +1,5 @@
 @use "sass:color";
+@use "Content/scss/colors";
 @use "Content/scss/variables";
 
 // TODO replace all panels widh cards -> remove css
@@ -701,4 +702,12 @@ $filtering-input-bg: $toggle-bg !default;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.border-color-light {
+    border-color: $border-color-light-var !important;
+}
+
+.text-muted {
+    color: colors.$text-muted-var !important;
 }

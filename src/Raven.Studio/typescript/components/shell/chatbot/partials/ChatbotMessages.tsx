@@ -15,6 +15,7 @@ import ChatbotAskAiMarkdown from "./askAi/ChatbotAskAiMarkdown";
 import ChatbotAskAiMessageEndpoints from "./askAi/ChatbotAskAiMessageEndpoints";
 import ChatbotAskAiMessageRelevantLinks from "./askAi/ChatbotAskAiMessageRelevantLinks";
 import ChatbotAskAiMessageFollowUpQuestions from "./askAi/ChatbotAskAiMessageFollowUpQuestions";
+import { TextShimmer } from "components/common/TextShimmer";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -39,7 +40,7 @@ export default function ChatbotMessages() {
     }, [messageIds.length]);
 
     return (
-        <div ref={messagesRef} className="flex-grow-1 overflow-y-auto vstack gap-2 px-2">
+        <div ref={messagesRef} className="chatbot-body flex-grow-1 overflow-y-auto vstack gap-2 px-2">
             {messageIds.map((id) => (
                 <AiAgentMessage key={id} id={id} />
             ))}
@@ -162,7 +163,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
                 {message.thinkingTimeInMs != null ? (
                     <span>Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s</span>
                 ) : (
-                    <span>Thinking</span>
+                    <TextShimmer>Thinking</TextShimmer>
                 )}
             </div>
             <div className="pb-1">

@@ -14,6 +14,7 @@ import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
 import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstants";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
+import "./ChatbotAskAiMessageEndpoints.scss";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -213,8 +214,8 @@ export default function ChatbotAskAiMessageEndpoints({
     }, []);
 
     return (
-        <div className="well border border-secondary rounded-2">
-            <div className="fs-6 py-1 px-2 border-bottom border-secondary">
+        <div className="retrieve-endpoints well border border-color-light rounded-2">
+            <div className="retrieve-endpoints-header border-bottom border-color-light">
                 <Icon icon="endpoint" />
                 Retrieve endpoints
             </div>
@@ -225,7 +226,7 @@ export default function ChatbotAskAiMessageEndpoints({
                     ))}
                 </div>
                 {userActionState === "waiting" ? (
-                    <div className="hstack justify-content-between mt-2">
+                    <div className="retrieve-endpoints-actions hstack justify-content-between mt-2">
                         <Button
                             variant="secondary"
                             className="rounded-pill"
@@ -263,7 +264,7 @@ export default function ChatbotAskAiMessageEndpoints({
                                     disabled={asyncHandleAllow.loading}
                                 />
                                 <Dropdown.Menu>
-                                    <Dropdown.Item onClick={handleAlwaysAllow} className="fs-5">
+                                    <Dropdown.Item onClick={handleAlwaysAllow}>
                                         Always allow
                                     </Dropdown.Item>
                                 </Dropdown.Menu>
@@ -271,21 +272,21 @@ export default function ChatbotAskAiMessageEndpoints({
                         </div>
                     </div>
                 ) : (
-                    <div className="hstack justify-content-end mt-2">
+                    <div className="hstack justify-content-end">
                         {userActionState === "alwaysAllowed" && (
-                            <Badge bg="success" className="rounded-pill">
+                            <Badge bg="success" className="rounded-pill mt-2">
                                 <Icon icon="check" />
                                 Always allowed
                             </Badge>
                         )}
                         {userActionState === "denied" && (
-                            <Badge bg="secondary" className="rounded-pill">
+                            <Badge bg="secondary" className="rounded-pill mt-2">
                                 <Icon icon="cancel" />
                                 Denied
                             </Badge>
                         )}
                         {userActionState === "skipped" && (
-                            <Badge bg="secondary" className="rounded-pill">
+                            <Badge bg="secondary" className="rounded-pill mt-2">
                                 <Icon icon="skip" />
                                 Skipped
                             </Badge>
@@ -314,12 +315,7 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
                     <EndpointItemStateIcon state={endpoint.state} />
                     GET
                 </span>
-                <a
-                    href={endpoint.url}
-                    target="_blank"
-                    className="ms-1 text-emphasis text-truncate"
-                    title={endpoint.url}
-                >
+                <a href={endpoint.url} target="_blank" className="ms-1 text-truncate no-decor" title={endpoint.url}>
                     {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
                 </a>
             </div>

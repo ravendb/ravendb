@@ -44,6 +44,7 @@ export function JoinCommunityContent({ openFeedbackForm }: JoinCommunityContentP
                     </li>
                 </VStack>
             </ul>
+            <FlexGrow />
             <div className="action-menu__footer">
                 <small>
                     <Icon icon="feedback" />

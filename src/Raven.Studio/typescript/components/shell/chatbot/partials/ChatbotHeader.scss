@@ -1,0 +1,31 @@
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+@use "Content/scss/colors";
+
+.chatbot-header {
+    :not(.dropdown-menu) > .btn {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 16px;
+        font-size: 0.875em;
+        padding: 0;
+
+        .icon-plus, .icon-settings, .icon-pin {
+            color: colors.$text-color-var;
+
+            &:hover {
+                color: colors.$text-emphasis-var;
+            }
+        }
+
+        .icon-pinned {
+            color: colors.$primary-var;
+
+            &:hover {
+                color: colors.$text-color-var;
+            }
+        }
+
+    }
+}

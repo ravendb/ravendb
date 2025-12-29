@@ -1,0 +1,30 @@
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+@use "Content/scss/variables";
+@use "Content/scss/colors";
+
+.source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: sizes.$gutter-xxxs;
+    max-width: 128px;
+    padding: sizes.$gutter-xxxs;
+    font-size: 0.875em;
+    line-height: 1;
+    background-color: colors.$panel-bg-2-var;
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius-pill;
+    color: colors.$text-color-var !important;
+    transition: bs5variables.$transition-base;
+
+    span {
+        display: block;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    &:hover {
+        background-color: colors.$panel-bg-3-var;
+    }
+}

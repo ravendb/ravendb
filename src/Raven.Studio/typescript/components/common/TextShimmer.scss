@@ -1,0 +1,20 @@
+.text-shimmer {
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    font-weight: 500;
+    color: transparent;
+    animation-name: text-shimmer;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: background-position;
+    
+    @keyframes text-shimmer {
+        0% {
+            background-position: 0 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+}

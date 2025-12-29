@@ -72,38 +72,23 @@ body {
             justify-content: center;
             align-items: center;
             aspect-ratio: 1/1;
-            border: none !important;
+            background-color: var(--bs-body-bg);
+            border: 1px solid var(--border-color-light) !important;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+
+            &.active {
+                background-color: var(--panel-bg-2);
+            }
 
             i {
                 font-size: 16px !important;
                 color: var(--text-emphasis);
             }
 
-            &::before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                border-radius: 100%;
-                background: var(--border-color-light);
-                padding: 2px;
-                -webkit-mask:
-                    linear-gradient(#fff 0 0) content-box,
-                    linear-gradient(#fff 0 0);
-                -webkit-mask-composite: xor;
-                mask:
-                    linear-gradient(#fff 0 0) content-box,
-                    linear-gradient(#fff 0 0);
-                mask-composite: exclude;
-            }
-
-            &:focus,
-            &:hover,
-            &.active {
-                &::before {
-                    mask-composite: unset;
-                    border: 1px solid var(--bs-secondary);
-                    transition: border all 0.5s ease-in-out;
-                }
+            &:hover {
+                background-color: var(--panel-bg-2);
+                border-color: var(--border-color-light) !important;
             }
         }
     }

@@ -173,11 +173,6 @@ $bounceinonce-properties: bounceInOnce 0.15s 1 both;
             }
         }
 
-        [class*=" icon-"],
-        [class^="icon-"] {
-            font-size: 21px;
-        }
-
         @media (min-width: $screen-md) {
             float: right;
         }

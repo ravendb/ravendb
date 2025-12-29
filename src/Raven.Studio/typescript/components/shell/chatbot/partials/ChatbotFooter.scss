@@ -1,0 +1,18 @@
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+
+.chatbot-tab {
+    transition: bs5variables.$transition-base;
+    border: 1px solid colors.$panel-bg-2-var;
+    outline: none;
+
+    &.active {
+        background-color: colors.$panel-bg-3-var;
+        border: 1px solid colors.$border-color-light-var;
+    }
+
+    &:hover {
+        background-color: colors.$panel-bg-3-var;
+    }
+}

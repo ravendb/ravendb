@@ -16,7 +16,7 @@ export default function ChatbotNavIcon() {
             className={classNames("chatbot-nav-icon", { active: isOpen })}
             onClick={() => dispatch(chatbotActions.isOpenToggled())}
         >
-            <Icon icon="ai-assistant" margin="m-0" className="icon-chatbot ai-gradient" />
+            <Icon icon="ai-assistant" margin="m-0" className="icon-chatbot" />
         </Button>
     );
 }

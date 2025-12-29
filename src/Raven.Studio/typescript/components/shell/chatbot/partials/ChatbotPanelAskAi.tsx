@@ -76,16 +76,22 @@ export default function ChatbotPanelAskAi() {
                         <div className="hstack justify-content-end">
                             <ButtonWithSpinner
                                 variant="secondary"
-                                icon="arrow-up"
+                                icon="arrow-thin-top"
                                 onClick={handleSubmit(handleSend)}
                                 className="rounded-pill p-0"
                                 style={{ width: "30px", height: "30px" }}
                                 isSpinning={isPromptDisabled}
+                                title={isPromptDisabled ? "Please wait" : "Submit"}
                             />
                         </div>
                     )}
                 </div>
             </div>
+            <p className="chatbot-disclaimer mb-0 pt-1 small text-center text-muted">
+                This chatbot is experimental.
+                <br />
+                Always double-check responses.
+            </p>
         </div>
     );
 }
