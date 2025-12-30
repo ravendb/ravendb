@@ -79,6 +79,28 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
 {
+    public class TestFinalizer : IDisposable
+    {
+        private readonly JsonOperationContext _context;
+
+        public TestFinalizer()
+        {
+            _context = JsonOperationContext.ShortTermSingleUse();
+        }
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+
+            _context?.Dispose();
+        }
+
+        ~TestFinalizer()
+        {
+            Dispose();
+        }
+    }
+
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
@@ -131,6 +153,7 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<LogLevel, string> addToInitLog)
         {
+            _testFinalizer = new TestFinalizer();
             Name = name;
             Loggers = new DatabaseLoggersContext(this);
             _logger = Loggers.GetLogger<DocumentDatabase>();
@@ -588,6 +611,7 @@ namespace Raven.Server.Documents
         private PoolOfThreads.LongRunningWork _clusterTransactionsThread;
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
+        private TestFinalizer _testFinalizer;
 
         private static readonly List<StorageEnvironmentWithType.StorageEnvironmentType> DefaultStorageEnvironmentTypes = new()
         {
@@ -947,6 +971,8 @@ namespace Raven.Server.Documents
 
         private unsafe void DisposeInternal()
         {
+            _testFinalizer = null;
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
 
             _databaseShutdown.Cancel();
