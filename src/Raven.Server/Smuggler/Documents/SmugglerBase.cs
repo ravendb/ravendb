@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Commercial;
+using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -504,10 +505,10 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         await documentActions.WriteDocumentAsync(item, counts, beforeFlush);
                     }
-                    catch (Exception e)
+                    catch (SchemaValidationException e)
                     {
                         result.Documents.ErroredCount++;
-                        result.AddError($"Could not write document {item.Document.Id}: {e.Message}");
+                        result.AddError($"Could not write document '{item.Document.Id}' due to invalid schema: {e.Message}");
                     }
                 }
 
