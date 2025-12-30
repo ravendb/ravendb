@@ -165,13 +165,6 @@ public class SchemaValidatorCache : IDisposable
     {
         GC.SuppressFinalize(this);
 
-        using (_context)
-        {
-        }
-    }
-
-    ~SchemaValidatorCache()
-    {
-        Dispose();
+        _context?.Dispose();
     }
 }
