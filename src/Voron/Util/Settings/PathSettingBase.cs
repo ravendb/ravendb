@@ -80,11 +80,6 @@ namespace Voron.Util.Settings
                 ? path
                 : Path.Combine(baseDataDirFullPath ?? AppContext.BaseDirectory, path);
 
-            if (result.Length >= 260 && 
-                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                result.StartsWith(@"\\?\") == false)
-                result = @"\\?\" + result;
-
             var resultRoot = Path.GetPathRoot(result);
             if (resultRoot != result && (result.EndsWith(@"\") || result.EndsWith("/")))
                 result = result.TrimEnd('\\', '/');
@@ -92,9 +87,18 @@ namespace Voron.Util.Settings
             if (PlatformDetails.RunningOnPosix)
                 result = PosixHelper.FixLinuxPath(result);
 
-            return result != string.Empty || resultRoot == null ? 
+            var finalFullPath = result != string.Empty || resultRoot == null ? 
                 Path.GetFullPath(result) :
                 Path.GetFullPath(resultRoot); // it will unify directory separators and sort out parent directories
+
+            if (finalFullPath.Length >= 260 &&
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                finalFullPath.StartsWith(@"\\?\") == false)
+            {
+                finalFullPath = @"\\?\" + finalFullPath;
+            }
+            
+            return finalFullPath;
         }
 
         public static bool IsSubDirectory(string userPath, string rootPath)
