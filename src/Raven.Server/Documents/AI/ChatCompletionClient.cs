@@ -353,10 +353,9 @@ internal class ChatCompletionClient : IDisposable
         return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
     }
 
-    private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response, BlittableJsonReaderObject responseContent)
+    internal struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response, BlittableJsonReaderObject responseContent)
     {
         public BlittableJsonReaderObject Message;
-        private string _content;
         private BlittableJsonReaderObject _choice0;
 
         public void EnsureSuccessfulResponse()
@@ -377,10 +376,9 @@ internal class ChatCompletionClient : IDisposable
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
 
-            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
-                Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
+            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false)
             {
-                throw UnexpectedResponseException.Create(message: "No message/content property in choice", response, responseContent);
+                throw UnexpectedResponseException.Create(message: "No message property in choice", response, responseContent);
             }
 
             if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
@@ -413,15 +411,68 @@ internal class ChatCompletionClient : IDisposable
 
         public BlittableJsonReaderObject GetContent(JsonOperationContext context)
         {
-            if (string.IsNullOrEmpty(_content))
+            if (Message.TryGet(Constants.ResponseFields.Content, out string content) == false || string.IsNullOrEmpty(content))
             {
                 _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                _ = _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || Message.TryGet(Constants.ResponseFields.Refusal, out refusal);
+                _ = _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal)
+                   || Message.TryGet(Constants.ResponseFields.Refusal, out refusal);
+
+                _ = string.IsNullOrEmpty(refusal) 
+                    && _choice0.TryGet(Constants.ResponseFields.ContentFilterResults, out BlittableJsonReaderObject filtersObj) 
+                    && GetFiltersMessage(filtersObj, out refusal);
 
                 RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
             }
 
-            return context.Sync.ReadForMemory(_content, "ai/output");
+            return context.Sync.ReadForMemory(content, "ai/output");
+        }
+
+        internal static bool GetFiltersMessage(BlittableJsonReaderObject filtersObj, out string message)
+        {
+            var filtered = false;
+
+            var reasons = filtersObj.GetPropertyNames();
+
+            var sb = new StringBuilder();
+            sb.Append("Response blocked due to content policy: ");
+            foreach (var reason in reasons)
+            {
+                if (IsFiltered(filtersObj, reason, out string severity))
+                {
+                    if (filtered)
+                        sb.Append(", ");
+                    sb.Append(reason).Append(" ").Append("(").Append(severity).Append(" severity)");
+                    filtered = true;
+                }
+            }
+            message = filtered ? sb.ToString() : string.Empty;
+
+            return filtered;
+        }
+
+        private static bool IsFiltered(BlittableJsonReaderObject filtersObj, string reason, out string severity)
+        {
+            // return true if filtered by this reason
+            severity = string.Empty;
+
+            if (filtersObj.TryGet(reason, out BlittableJsonReaderObject filterReasonObj) == false)
+                return false;
+
+            if (filterReasonObj.TryGet(Constants.ResponseFields.ContentFilterResultFiltered, out bool filtered) == false)
+                return false;
+
+            if (filtered == false)
+                return false;
+
+            if (filterReasonObj.TryGet(Constants.ResponseFields.ContentFilterResultSeverity, out severity) == false)
+            {
+                if (filterReasonObj.TryGet(Constants.ResponseFields.ContentFilterResultDetected, out bool detected) && detected)
+                    severity = Constants.ResponseFields.ContentFilterResultDetected;
+                else
+                    severity = "none";
+            }
+
+            return true;
         }
     }
 
@@ -944,6 +995,10 @@ internal class ChatCompletionClient : IDisposable
             public const string Message = "message";
             public const string Content = "content";
             public const string FinishReason = "finish_reason";
+            public const string ContentFilterResults = "content_filter_results";
+            public const string ContentFilterResultFiltered = "filtered";
+            public const string ContentFilterResultSeverity = "severity";
+            public const string ContentFilterResultDetected = "detected";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";

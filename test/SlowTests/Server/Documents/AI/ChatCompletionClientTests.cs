@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron;
@@ -61,10 +62,96 @@ public class ChatCompletionClientTests : RavenTestBase
             var context =
                 "{\"Text\":\"Surefire investment property in caiman islands, win $$$$ for sure, qucik!\",\"Author\":\"homepage\",\"Id\":\"2236672c-b941-4855-999e-5374f41cbddd\"}";
 
-            var res = await client.TestCompleteAsync(prompt, context, defaultJsonSchema, default);
-            var answer = JsonConvert.DeserializeObject<AiCommentResult>(res.Result); // check if it can be parsed to json, if cannot parse it throws
-            Assert.NotNull(answer.Blocked);
-            Assert.False(string.IsNullOrEmpty(answer.Reason));
+            (string Result, string Message) res = (null, null);
+            bool succeeded;
+            try
+            {
+                res = await client.TestCompleteAsync(prompt, context, defaultJsonSchema, default);
+                var answer = JsonConvert.DeserializeObject<AiCommentResult>(res.Result); // check if it can be parsed to json, if cannot parse it throws
+                Assert.NotNull(answer.Blocked);
+                Assert.False(string.IsNullOrEmpty(answer.Reason));
+                succeeded = true;
+            }
+            catch (RefusedToAnswerException)
+            {
+                succeeded = true; // expected - the llm can refuse answering this because it's a violent prompt
+            }
+            Assert.True(succeeded);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task FiltersRightMessageTest()
+    {
+        const string json = @"{
+        ""hate"": {
+            ""filtered"": true,
+            ""severity"": ""high""
+        },
+        ""protected_material_code"": {
+            ""filtered"": true,
+            ""detected"": true
+        },
+        ""protected_material_text"": {
+            ""filtered"": false,
+            ""detected"": false
+        },
+        ""self_harm"": {
+            ""filtered"": false,
+            ""severity"": ""safe""
+        },
+        ""sexual"": {
+            ""filtered"": false,
+            ""severity"": ""safe""
+        },
+        ""violence"": {
+            ""filtered"": true,
+            ""severity"": ""medium""
+        }
+    }";
+
+        const string json2 = @"{
+        ""hate"": {
+            ""filtered"": false,
+            ""severity"": ""safe""
+        },
+        ""protected_material_code"": {
+            ""filtered"": false,
+            ""detected"": false
+        },
+        ""protected_material_text"": {
+            ""filtered"": false,
+            ""detected"": false
+        },
+        ""self_harm"": {
+            ""filtered"": false,
+            ""severity"": ""safe""
+        },
+        ""sexual"": {
+            ""filtered"": false,
+            ""severity"": ""safe""
+        },
+        ""violence"": {
+            ""filtered"": false,
+            ""severity"": ""safe""
+        }
+    }";
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+            {
+                var blt = await context.ReadForMemoryAsync(stream, "json");
+                Assert.True(ChatCompletionClient.AiResponseParser.GetFiltersMessage(blt, out var refusal));
+                Assert.Equal("Response blocked due to content policy: hate (high severity), protected_material_code (detected severity), violence (medium severity)", refusal);
+            }
+
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json2)))
+            {
+                var blt = await context.ReadForMemoryAsync(stream, "json2");
+                Assert.False(ChatCompletionClient.AiResponseParser.GetFiltersMessage(blt, out var refusal));
+                Assert.Empty(refusal);
+            }
         }
     }
 
