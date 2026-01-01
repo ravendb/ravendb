@@ -15,6 +15,7 @@ public class ConversationResult<TAnswer>
     public AiUsage Usage { get; set; }
     public TimeSpan Elapsed { get; set; }
     public List<AiAgentActionRequest> ActionRequests { get; set; }
+    internal int ToolsIterations { get; set; }
 
     internal static ConversationResult<TAnswer> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
     {

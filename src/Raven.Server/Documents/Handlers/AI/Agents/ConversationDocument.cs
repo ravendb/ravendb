@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices.JavaScript;
@@ -26,7 +27,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
     public List<string> LinkedConversations = [];
-    public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
+    public ConcurrentDictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public AiUsage CurrentUsage = new AiUsage();
     public string ChangeVector;
@@ -38,7 +39,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public int RemainingToolIterations;
 
-    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, bool resetRemainingToolIterations)
+    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, bool resetRemainingToolIterations, int maxModelIterationsPerCall)
     {
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
@@ -86,7 +87,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (resetRemainingToolIterations == false)
             return;
 
-        RemainingToolIterations = configuration.MaxModelIterationsPerCall ?? ConversationHandler.DefaultMaxModelIterationsPerCall;
+        RemainingToolIterations = maxModelIterationsPerCall;
     }
 
     public List<AiToolCall> InitialOperations(JsonOperationContext context, AiAgentConfiguration configuration)
@@ -246,7 +247,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         LastMessageAt = currentDate;
     }
 
-    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, AiAgentConfiguration config)
+    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, int maxModelIterationsPerCall)
     {
         if (document.TryGet(nameof(Agent), out string agent) == false)
             throw new ArgumentException($"Missing Agent in '{id}' conversation document");
@@ -267,16 +268,16 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
             throw new ArgumentException($"Missing Expires in '{id}' conversation document");
         if (document.TryGet(nameof(RemainingToolIterations), out int remainingToolIterations) == false)
-            remainingToolIterations = config.MaxModelIterationsPerCall ?? ConversationHandler.DefaultMaxModelIterationsPerCall;
+            remainingToolIterations = maxModelIterationsPerCall;
 
-        var openTools = new Dictionary<string, AiAgentActionRequest>();
+        var openTools = new ConcurrentDictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
             var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
-            openTools.Add(callId, call);
+            openTools.TryAdd(callId, call);
         }
 
-        var conversation =  new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
+        var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
             Messages = messages.Items.Select(m => ((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),

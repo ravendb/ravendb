@@ -622,6 +622,89 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task CheckMaxToolIterationsLimitOnSubAgent(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+        await CreateMoviesDatabase(store);
+
+        var userAgent2 = new AiAgentConfiguration("user-info-agent-2",
+            config.ConnectionStringName,
+            "You are authorized to edit the user's name and to create movie-rating records associated with the user." +
+            "Use exclusively the 'ChangeUserName' tool for changing the user's name. " +
+            "Use exclusively the 'RateMovie' tool for adding a movie-rating record (rating a movie). " +
+            "Do not perform these actions in any other way."
+        )
+        {
+            Actions = new List<AiAgentToolAction>()
+            {
+                new AiAgentToolAction("ChangeUserName",
+                    "Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.")
+                {
+                    ParametersSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance)
+                },
+                new AiAgentToolAction("RateMovie",
+                    "Add movie rate required movie name and rate value between 0 to 5 (can be double, doesn't has to be integer)")
+                {
+                    ParametersSampleObject = JsonConvert.SerializeObject(RateToolSampleRequest.Instance)
+                },
+            }
+        };
+        userAgent2.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+        var userAgent2Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent2, MoviesSampleObject.Instance)).Identifier;
+
+
+        var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
+            config.ConnectionStringName,
+            "You are a User Profile Agent on movies rating system."
+        )
+        {
+            SubAgents =
+            [
+                new AiAgentToolSubAgent
+                {
+                    Identifier = userAgent2Id,
+                    Description = "Use for adding movie rate for the current user you talking with OR changing user name (cannot ask for both at once)"
+                }
+            ],
+            MaxModelIterationsPerCall = 1
+        };
+        userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+        var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
+
+        var chat = store.AI.Conversation(userAgent1Id, "chats/",
+            new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
+        chat.Handle<ChangeUserNameSampleRequest>("user-info-agent-2/ChangeUserName", async (r) =>
+        {
+            var res = (await ChangeUserNameAsync(store, r)) as ActionToolResult;
+            // Console.WriteLine(res.Answer);
+            return res;
+        });
+        chat.Handle<RateToolSampleRequest>("user-info-agent-2/RateMovie", async (r) =>
+        {
+            var res = await RateMovieAsync(store, "Users/1", r) as ActionToolResult;
+            // Console.WriteLine(res.Answer);
+            return res;
+        });
+
+        chat.SetUserPrompt("Can you rate the movie \"Toy Story\" as 5 and change my name from 'Shahar Hikri' to 'Aviv Rachmani'?");
+        var r = await chat.RunAsync<MoviesSampleObject>();
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        // check 2 conversation (1 sub-conversations)
+        Assert.Equal(2, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["@conversations"]);
+
+        // check that nothing has been changed
+        using (var session = store.OpenAsyncSession())
+        {
+            var u = await session.LoadAsync<User>("Users/1");
+            Assert.Equal("Shahar Hikri", u.Name);
+        }
+        Assert.Equal(Rates.Count, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task SubAgent2OpenActionToolsAtOnce(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

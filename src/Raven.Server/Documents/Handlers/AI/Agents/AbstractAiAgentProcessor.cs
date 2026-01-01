@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var agentId = RequestHandler.GetStringQueryString("agentId");
             var streaming = RequestHandler.GetBoolValueQueryString("streaming", required: false) ?? false;
             var changeVector = RequestHandler.GetChangeVectorStringQueryString("changeVector", required: false);
+            var maxModelIterationsPerCall = RequestHandler.GetIntValueQueryString("maxModelIterationsPerCall", required: false);
 
             AiAgentConfiguration configuration = GetAiAgentConfiguration(agentId);
 
@@ -42,14 +43,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
             };
 
-            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, token);
+            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, maxModelIterationsPerCall, token);
         }
 
         protected async Task ExecuteInternalAsync(ConversationHandler handler, DocumentsOperationContext context, AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector,
-            bool streaming, OperationCancelToken token)
+            bool streaming, int? maxModelIterationsPerCall, OperationCancelToken token)
         {
-            handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery());
-            (BlittableJsonReaderObject Response, AiUsage Usage) r;
+            handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), maxModelIterationsPerCall);
+            (BlittableJsonReaderObject Response, AiUsage Usage, int ToolsIterations) r;
 
             if (streaming)
             {
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
-            var finalPayload = handler.GetConversationResponse(context, r.Response);
+            var finalPayload = handler.GetConversationResponse(context, r.Response, r.ToolsIterations);
             context.Write(writer, finalPayload);
         }
 

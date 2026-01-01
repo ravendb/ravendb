@@ -43,7 +43,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         if (ServerStore.LicenseManager.LicenseStatus.HasAiAgent == false)
             throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
 
-        await ExecuteInternalAsync(handler, context, body.Configuration, "TestConversation", req, changeVector: null, streaming: streaming, token: token);
+        await ExecuteInternalAsync(handler, context, body.Configuration, "TestConversation", req, changeVector: null, streaming: streaming, maxModelIterationsPerCall: null, token: token);
     }
 
     public class TestConversationHandler(ServerStore server, DocumentDatabase database, AiAgentTestRequest request) : ConversationHandler(server, database)
@@ -54,9 +54,9 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             return Task.FromResult("test");
         }
 
-        public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response)
+        public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response, int toolsIterations)
         {
-            var r = base.GetConversationResponse(context, response);
+            var r = base.GetConversationResponse(context, response, toolsIterations);
             r["Document"] = _document.ToBlittable(context);
             return r;
         }
@@ -69,7 +69,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
                 return;
             }
 
-            _document = ConversationDocument.ToDocument("TestConversation", request.Document, request.Configuration);
+            _document = ConversationDocument.ToDocument("TestConversation", request.Document, request.Configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall);
         }
     }
 
