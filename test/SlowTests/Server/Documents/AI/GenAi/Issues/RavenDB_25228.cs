@@ -29,12 +29,11 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             config.Collection = "ShoppingCarts";
 
             config.Prompt =
-                "Find items in 'recent-orders-for-customer' results. " +
-                "Subtract all items already present in 'cartItems'. " +
-                "Return every single remaining item to complete the customer's collection. " +
-                "Make sure to do not miss any item";
+                "execute tool 'recent-orders-for-customer' ONCE to fetch the list of items from the customer's recent orders.  +\n  " +
+                "FROM that list, suggest the rest of the items (the ones that are on the tool list but not on the customer shopping cart) \" +\n               " +
+                "Make sure that the items you suggest ARE NOT already in 'cartItems'. ";
 
-            config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "milk", "bread" } }));
+            config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new { Suggestions = new[] { "meat" } }));
 
             config.GenAiTransformation = new GenAiTransformation
             {
