@@ -67,7 +67,8 @@ namespace Raven.Client.Documents.Smuggler
         internal const DatabaseRecordItemType ShardingNotSupportedDatabaseSmugglerOptions = DatabaseRecordItemType.HubPullReplications | 
                                                                                             DatabaseRecordItemType.SinkPullReplications |
                                                                                             DatabaseRecordItemType.PostgreSQLIntegration |
-                                                                                            DatabaseRecordItemType.QueueEtls;
+                                                                                            DatabaseRecordItemType.QueueEtls |
+                                                                                            DatabaseRecordItemType.RemoteAttachments;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

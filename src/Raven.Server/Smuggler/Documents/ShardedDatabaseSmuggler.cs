@@ -88,6 +88,11 @@ namespace Raven.Server.Smuggler.Documents
                 AddWarning(DatabaseRecordItemType.QueueSinks);
             }
 
+            if (databaseRecord.RemoteAttachments != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RemoteAttachments))
+            {
+                AddWarning(DatabaseRecordItemType.RemoteAttachments);
+            }
+
             //warn and remove mentor nodes
             foreach (var externalReplication in databaseRecord.ExternalReplications)
             {
@@ -216,6 +221,16 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return false;
+        }
+
+        protected override void ThrowOnRemoteAttachmentsIfNeeded(Document item)
+        {
+            if (item.NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.HasRemoteAttachments))
+            {
+                throw new NotSupportedException($"Document '{item.Id}' cannot be imported because it contains remote attachments, " +
+                                                "which are not supported in sharded databases. " +
+                                                "Consider downloading the attachments locally before importing to a sharded database.");
+            }
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType)

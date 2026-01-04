@@ -450,6 +450,8 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    ThrowOnRemoteAttachmentsIfNeeded(item.Document);
+
                     if (_options.IncludeExpired == false)
                     {
                         if (item.Document.Data.TryGetMetadata(out var metadata) &&
@@ -799,6 +801,11 @@ namespace Raven.Server.Smuggler.Documents
         {
             msg = null;
             return false;
+        }
+
+        protected virtual void ThrowOnRemoteAttachmentsIfNeeded(Document item)
+        {
+            // no-op
         }
 
         protected virtual Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType) =>

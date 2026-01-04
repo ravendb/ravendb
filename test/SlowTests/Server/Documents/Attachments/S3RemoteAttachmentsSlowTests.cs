@@ -14,6 +14,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -38,6 +39,37 @@ namespace SlowTests.Server.Documents.Attachments
     {
         public S3RemoteAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [AmazonS3RetryFact]
+        public async Task ShouldThrowOnDocumentWithRemoteAttachmentsOnImportToShardedDatabase()
+        {
+            int attachmentsCount = 1;
+            int size = 3;
+            using (var store = GetDocumentStore())
+            using (var sharded = Sharding.GetDocumentStore())
+            {
+                await using (var holder = CreateCloudSettings())
+                {
+                    int docsCount = RemoteAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
+
+                    using (var dest = new MemoryStream())
+                    {
+                        var export = await store.Smuggler.ExportToStreamAsync(new DatabaseSmugglerExportOptions(), s => s.CopyToAsync(dest));
+                        await export.WaitForCompletionAsync();
+                        dest.Position = 0;
+                        var import = await sharded.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
+                        {
+                        }, dest);
+
+                        var e = await Assert.ThrowsAsync<RavenException>(() => import.WaitForCompletionAsync());
+
+                        Assert.Contains("System.NotSupportedException: Document 'Orders/0' cannot be imported because it contains remote attachments, which are not supported in sharded databases. Consider downloading the attachments locally before importing to a sharded database.", e.Message);
+                    }
+                }
+            }
         }
 
         [AmazonS3RetryTheory]

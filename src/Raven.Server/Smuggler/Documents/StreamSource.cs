@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
@@ -1916,6 +1917,25 @@ namespace Raven.Server.Smuggler.Documents
                         else
                         {
                             data.Modifications = new DynamicJsonValue(data) { [Constants.Documents.Metadata.Key] = metadata };
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
+                {
+                    foreach (BlittableJsonReaderObject attachmentInMetadata in att)
+                    {
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject readerObject) && readerObject != null)
+                        {
+                            RemoteAttachmentParameters current = JsonDeserializationClient.RemoteAttachmentParameters(readerObject);
+                            if (current.IsRemoteStorageAttachment())
+                            {
+                                modifier.NonPersistentFlags |= NonPersistentDocumentFlags.HasRemoteAttachments;
+                                break;
+
+                            }
                         }
                     }
                 }
