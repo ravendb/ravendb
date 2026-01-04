@@ -1637,7 +1637,6 @@ namespace Raven.Server.Smuggler.Documents
                         throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
                     }
 
-                    progress.Attachments.ReadCount++;
                     if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) == false || remoteParameters == null 
                         || (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.None))
                     {
