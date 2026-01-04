@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -217,4 +221,262 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         public string Id { get; set; }
         public string Prop { get; set; }
     }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task PullReplication_HubToSink_SchemaOnSink_InvalidDocDoesNotBreakReplication()
+    {
+        var name = $"pull-replication {GetDatabaseName()}";
+
+        var settings = new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+            [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+            [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1",
+            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+        };
+
+        var certificates = Certificates.SetupServerAuthentication(customSettings: settings);
+
+        using (var server = GetNewServer(new ServerCreationOptions { CustomSettings = settings }))
+        using (var sink = GetDocumentStore(new Options
+        {
+            Server = server,
+            ModifyDatabaseName = s => $"Sink_{s}",
+            RunInMemory = false,
+            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+            AdminCertificate = certificates.ServerCertificateForCommunication.Value
+        }))
+        using (var hub = GetDocumentStore(new Options
+        {
+            Server = server,
+            ModifyDatabaseName = s => $"Hub_{s}",
+            RunInMemory = false,
+            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+            AdminCertificate = certificates.ServerCertificateForCommunication.Value
+        }))
+        {
+            // Define schema ONLY on SINK (destination of Hub->Sink)
+            await ConfigureCategoriesSchemaAsync(sink);
+
+            await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+            {
+                Name = name,
+                Mode = PullReplicationMode.HubToSink
+            }));
+
+            await hub.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = name,
+                    CertificateBase64 = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Cert)),
+                }));
+
+            var conStrName = "PullReplicationAsSink";
+            await sink.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hub.Database,
+                Name = conStrName,
+                TopologyDiscoveryUrls = hub.Urls
+            }));
+
+            await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = conStrName,
+                CertificateWithPrivateKey = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Pfx)),
+                HubName = name,
+                Mode = PullReplicationMode.HubToSink
+            }));
+
+            // 1) Valid doc on HUB should replicate to SINK
+            StoreCategory(hub, "categories/1-A", "Valid #1", "ok");
+
+            // 2) Invalid doc on HUB should be rejected on SINK (schema), but must NOT break replication
+            StoreInvalidCategoryWithExtraField(hub, "categories/2-A");
+
+            // Ensure the invalid one did NOT replicate
+            using (var session = sink.OpenSession())
+            {
+                var doc = session.Load<Category>("categories/2-A");
+                Assert.True(doc == null, "Invalid document should not be accepted by schema on sink.");
+            }
+
+            var replicationFailureInfo = await sink.Maintenance.SendAsync(new GetReplicationOutgoingsFailureInfoOperation(nodeTag: server.ServerStore.NodeTag));
+            var info = replicationFailureInfo.Stats.Single();
+            Assert.True(info.Key is PullReplicationAsSink);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task PullReplication_SinkToHub_SchemaOnHub_InvalidDocDoesNotBreakReplication()
+    {
+        var name = $"pull-replication {GetDatabaseName()}";
+
+        var settings = new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+            [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+            [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1",
+            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+        };
+
+        var certificates = Certificates.SetupServerAuthentication(customSettings: settings);
+
+        using (var server = GetNewServer(new ServerCreationOptions { CustomSettings = settings }))
+        using (var sink = GetDocumentStore(new Options
+        {
+            Server = server,
+            ModifyDatabaseName = s => $"Sink_{s}",
+            RunInMemory = false,
+            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+            AdminCertificate = certificates.ServerCertificateForCommunication.Value
+        }))
+        using (var hub = GetDocumentStore(new Options
+        {
+            Server = server,
+            ModifyDatabaseName = s => $"Hub_{s}",
+            RunInMemory = false,
+            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+            AdminCertificate = certificates.ServerCertificateForCommunication.Value
+        }))
+        {
+            // Define schema ONLY on HUB (destination of Sink->Hub)
+            await ConfigureCategoriesSchemaAsync(hub);
+
+            await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+            {
+                Name = name,
+                Mode = PullReplicationMode.SinkToHub
+            }));
+
+            await hub.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(name,
+                new ReplicationHubAccess
+                {
+                    Name = name,
+                    CertificateBase64 = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Cert)),
+                }));
+
+            var conStrName = "PullReplicationAsSink";
+            await sink.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hub.Database,
+                Name = conStrName,
+                TopologyDiscoveryUrls = hub.Urls
+            }));
+
+            await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = conStrName,
+                CertificateWithPrivateKey = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Pfx)),
+                HubName = name,
+                Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub
+            }));
+
+            // 1) Valid doc on SINK should replicate to HUB
+            StoreCategory(sink, "categories/10-A", "Valid #1", "ok");
+
+            // 2) Invalid doc on SINK should be rejected on HUB (schema), but must NOT break replication
+            StoreInvalidCategoryWithExtraField(sink, "categories/11-A");
+
+            // Ensure invalid doc did NOT replicate
+            using (var session = hub.OpenSession())
+            {
+                var doc = session.Load<Category>("categories/11-A");
+                Assert.True(doc == null, "Invalid document should not be accepted by schema on hub.");
+            }
+
+            var replicationFailureInfo = await sink.Maintenance.SendAsync(new GetReplicationOutgoingsFailureInfoOperation(nodeTag: server.ServerStore.NodeTag));
+            var info = replicationFailureInfo.Stats.Single();
+            Assert.True(info.Key is PullReplicationAsSink);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenEtl_ShouldValidateAndFailInNeeded()
+    {
+        using (var source = GetDocumentStore())
+        {
+            using (var destination = GetDocumentStore())
+            {
+                await ConfigureCategoriesSchemaAsync(destination);
+                Etl.AddEtl(source, destination, "Categories", "");
+                StoreInvalidCategoryWithExtraField(source, "categories/0");
+                for (int i = 1; i < 5000; i++)
+                {
+                    StoreCategory(source, "categories/" + i, "Valid #" + i, "ok");
+                }
+
+                var count = await WaitForGreaterThanAsync(async () =>
+                {
+                    using var session = destination.OpenAsyncSession();
+                    return await session.Query<Category>().CountAsync();
+                }, 0);
+
+                Assert.Equal(0, count);
+            }
+        }
+    }
+
+
+
+    private class Category
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+    }
+
+    private static string CategorySchemaJson = @"
+{
+  ""title"": ""Category"",
+  ""type"": ""object"",
+  ""properties"": {
+    ""Name"": { ""type"": ""string"" },
+    ""Description"": { ""type"": ""string"" }
+  },
+  ""required"": [ ""Name"" ],
+  ""additionalProperties"": false
+}";
+
+    private static async Task ConfigureCategoriesSchemaAsync(IDocumentStore store)
+    {
+        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+        {
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                ["Categories"] = new SchemaDefinition
+                {
+                    Schema = CategorySchemaJson
+                }
+            }
+        }));
+    }
+
+    private static void StoreCategory(IDocumentStore store, string id, string name, string description)
+    {
+        using (var session = store.OpenSession())
+        {
+            var doc = new Category { Name = name, Description = description };
+            session.Store(doc, id);
+            session.SaveChanges();
+        }
+    }
+
+    private static void StoreInvalidCategoryWithExtraField(IDocumentStore store, string id)
+    {
+        using (var session = store.OpenSession())
+        {
+            var invalid = new
+            {
+                Id = id,
+                Name = "Invalid",
+                Description = "Has extra field",
+                ExtraField = "Not allowed"
+            };
+
+            session.Store(invalid, id);
+            session.Advanced.GetMetadataFor(invalid)["@collection"] = "Categories";
+            session.SaveChanges();
+        }
+    }
+
+
 }
