@@ -16,6 +16,8 @@ import ChatbotAskAiMessageEndpoints from "./askAi/ChatbotAskAiMessageEndpoints";
 import ChatbotAskAiMessageRelevantLinks from "./askAi/ChatbotAskAiMessageRelevantLinks";
 import ChatbotAskAiMessageFollowUpQuestions from "./askAi/ChatbotAskAiMessageFollowUpQuestions";
 import { TextShimmer } from "components/common/TextShimmer";
+import { Icon } from "components/common/Icon";
+import copyToClipboard from "common/copyToClipboard";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -133,7 +135,22 @@ function AgentMessageBody({ message }: AgentMessageProps) {
     }
 
     if (message.state === "RequestTooLarge" || message.state === "Aborted" || message.state === "InternalError") {
-        return <RichAlert variant="danger">{message.errorMessage}</RichAlert>;
+        const errorMessageId = message.errorMessage?.match(/id: '([^']+)'/)?.[1];
+
+        return (
+            <RichAlert variant="danger">
+                {message.errorMessage}
+                {errorMessageId && (
+                    <Button
+                        variant="link"
+                        onClick={() => copyToClipboard.copy(errorMessageId, `Copied error ID to clipboard`)}
+                        title="Copy error ID"
+                    >
+                        <Icon icon="copy" />
+                    </Button>
+                )}
+            </RichAlert>
+        );
     }
 
     if (message.state === "Error") {
