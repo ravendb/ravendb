@@ -265,6 +265,8 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlushing = null)
             {
+                ThrowOnRemoteAttachmentsIfNeeded(item.Document);
+
                 var shardNumber = GetShardNumberAndHandleLegacyRevisionsIfNeeded(item.Document);
                 await _actions[shardNumber].WriteDocumentAsync(item, progress, beforeFlushing);
             }
@@ -339,6 +341,16 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var kvp in _actions)
                     await kvp.Value.FlushAsync();
+            }
+
+            private void ThrowOnRemoteAttachmentsIfNeeded(Document item)
+            {
+                if (item.NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.HasRemoteAttachments))
+                {
+                    throw new NotSupportedException($"Document '{item.Id}' cannot be imported because it contains remote attachments, " +
+                                                    "which are not supported in sharded databases. " +
+                                                    "Consider downloading the attachments locally before importing to a sharded database.");
+                }
             }
         }
 

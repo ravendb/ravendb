@@ -223,16 +223,6 @@ namespace Raven.Server.Smuggler.Documents
             return false;
         }
 
-        protected override void ThrowOnRemoteAttachmentsIfNeeded(Document item)
-        {
-            if (item.NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.HasRemoteAttachments))
-            {
-                throw new NotSupportedException($"Document '{item.Id}' cannot be imported because it contains remote attachments, " +
-                                                "which are not supported in sharded databases. " +
-                                                "Consider downloading the attachments locally before importing to a sharded database.");
-            }
-        }
-
         protected override async Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType)
         {
             await using (var action = new DatabaseKeyValueActions(_server, _databaseRecord.DatabaseName))
