@@ -74,7 +74,7 @@ function SheetWrapper(props: Required<PropsWithChildren> & ClassNameProps) {
 
     const positionStyle: CSSProperties = isSheetPinned
         ? { position: "relative" }
-        : { position: "absolute", right: 0, top: 0, bottom: 0, zIndex: 12 };
+        : { position: "absolute", right: 0, top: 0, bottom: 0, zIndex: "var(--zindex-unpinned-split-view)" };
 
     return (
         <div

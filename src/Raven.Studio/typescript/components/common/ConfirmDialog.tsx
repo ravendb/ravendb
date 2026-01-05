@@ -48,7 +48,7 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
             {children}
             {isOpen && (
                 <Modal show onHide={onCancel} contentClassName={`modal-border bulge-${actionColor}`} size={size}>
-                    <Modal.Header closeButton className="vstack gap-4" onCloseClick={onCancel}>
+                    <Modal.Header closeButton className="vstack gap-4 pb-0" onCloseClick={onCancel}>
                         {icon && (
                             <div className="text-center">
                                 <Icon icon={icon} color={actionColor} className="fs-1" margin="m-0" />

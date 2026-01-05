@@ -20,20 +20,28 @@ interface AboutViewProps {
 
 interface AboutViewHeadingProps {
     title: string;
-    icon: IconName;
+    icon?: IconName;
     licenseBadgeText?: LicenseBadgeText;
     iconAddon?: IconName;
     marginBottom?: number;
     className?: string;
+    isNested?: boolean;
+    backUrl?: string;
 }
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, iconAddon, licenseBadgeText, marginBottom, className } = props;
+    const { title, icon, iconAddon, licenseBadgeText, marginBottom, className, isNested, backUrl } = props;
 
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`, className)}>
-            <Icon icon={icon} addon={iconAddon} /> {title}{" "}
-            {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
+            {isNested && backUrl ? (
+                <a href={backUrl} className="link-muted no-decor hover-filter me-1">
+                    <Icon icon="arrow-thin-left" margin="m-0" />
+                </a>
+            ) : (
+                icon && <Icon icon={icon} addon={iconAddon} />
+            )}
+            {title} {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
         </h2>
     );
 };

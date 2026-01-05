@@ -55,6 +55,10 @@ import { useViewSheet } from "components/common/splitView/ViewSheet";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 import { ScriptSyntaxHelp } from "components/pages/database/settings/documentSchema/partials/ScriptSyntaxHelp";
+import { StickyHeader } from "components/common/StickyHeader";
+import { useAppUrls } from "hooks/useAppUrls";
+import useConfirm from "components/common/ConfirmDialog";
+import { useEventsCollector } from "hooks/useEventsCollector";
 
 const ajv = new Ajv({
     allErrors: true,
@@ -62,6 +66,7 @@ const ajv = new Ajv({
 });
 
 export default function DocumentSchema() {
+    const { forCurrentDatabase: urls } = useAppUrls();
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -72,6 +77,17 @@ export default function DocumentSchema() {
         dispatch(documentSchemaActions.validatorsLoadedFromServer(result));
         return result;
     }, []);
+
+    const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
+    const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
+    const {
+        value: isTogglingGlobalStatus,
+        setTrue: setIsTogglingGlobalStatusTrue,
+        setFalse: setIsTogglingGlobalStatusFalse,
+    } = useBoolean(false);
+    const confirm = useConfirm();
+    const { reportEvent } = useEventsCollector();
+    const allValidators = useAppSelector(documentSchemaSelectors.allValidators);
 
     const {
         options,
@@ -84,23 +100,96 @@ export default function DocumentSchema() {
         setSelectedStatuses,
     } = useDocumentSchema();
 
+    const handleGlobalStatusOperation = async (disabled: boolean) => {
+        const isConfirmed = await confirm({
+            title: disabled
+                ? "Do you want to disable schema validation globally?"
+                : "Do you want to enable schema validation globally?",
+            message: disabled ? (
+                <p>
+                    This will disable schema validation for all collections in the database. Documents will no longer be
+                    validated against their schemas.
+                </p>
+            ) : (
+                <p>
+                    This will <b>enable schema validation globally</b> for all collections in the database. Documents
+                    will be validated against their defined schemas. If a schema has validation{" "}
+                    <b>disabled individually</b>, you’ll need to <b>enable it manually</b>. The global setting does not
+                    override per-schema configurations.
+                </p>
+            ),
+            icon: disabled ? "stop" : "play",
+            confirmText: disabled ? "Disable" : "Enable",
+            actionColor: disabled ? "danger" : "success",
+        });
+
+        if (!isConfirmed) {
+            return;
+        }
+
+        try {
+            setIsTogglingGlobalStatusTrue();
+            reportEvent("document-schema", disabled ? "global-disable" : "global-enable");
+
+            dispatch(documentSchemaActions.isGlobalDisabledToggled(disabled));
+
+            await databasesService.saveSchemaValidation(
+                databaseName,
+                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allValidators, disabled)
+            );
+
+            dispatch(documentSchemaActions.validatorsSaved());
+        } finally {
+            setIsTogglingGlobalStatusFalse();
+        }
+    };
+
     return (
         <div className="content-margin">
             <Row className="gy-sm">
                 <Col>
                     <AboutViewHeading marginBottom={4} title="Document Schema" icon="document-schema" />
-                    {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
-
-                    {hasAnyValidator && (
-                        <DocumentSchemaFilter
-                            selectedCollections={selectedCollections}
-                            setSelectedCollections={handleOnSelectCollection}
-                            collectionOptions={options}
-                            selectedStatuses={selectedStatuses}
-                            setSelectedStatuses={setSelectedStatuses}
-                            schemasCount={filteredValidators.length}
-                            isLoading={asyncLoadValidators.loading}
-                        />
+                    {hasDatabaseAdminAccess && (
+                        <StickyHeader>
+                            <Row>
+                                <div className="d-flex flex-wrap gap-2">
+                                    {hasAnyValidator && (
+                                        <DocumentSchemaFilter
+                                            selectedCollections={selectedCollections}
+                                            setSelectedCollections={handleOnSelectCollection}
+                                            collectionOptions={options}
+                                            selectedStatuses={selectedStatuses}
+                                            setSelectedStatuses={setSelectedStatuses}
+                                            schemasCount={filteredValidators.length}
+                                            isLoading={asyncLoadValidators.loading}
+                                        />
+                                    )}
+                                    <div className="d-flex gap-2 align-items-end ms-auto">
+                                        <a
+                                            className="btn btn-secondary rounded-pill"
+                                            href={urls.documentSchemaPlayground()}
+                                        >
+                                            <Icon icon="rocket" />
+                                            Schema Playground
+                                        </a>
+                                        {allCollectionNames.length !== 0 && (
+                                            <ButtonWithSpinner
+                                                variant={isGlobalDisabled ? "success" : "secondary"}
+                                                onClick={() => handleGlobalStatusOperation(!isGlobalDisabled)}
+                                                isSpinning={isTogglingGlobalStatus}
+                                                className="rounded-pill"
+                                            >
+                                                <Icon icon={isGlobalDisabled ? "play" : "stop"} />
+                                                {isGlobalDisabled ? "Enable" : "Disable"} Schema Validation
+                                            </ButtonWithSpinner>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mt-3">
+                                    <DocumentSchemaSelectActions />
+                                </div>
+                            </Row>
+                        </StickyHeader>
                     )}
 
                     <div className="mt-4">
@@ -109,7 +198,7 @@ export default function DocumentSchema() {
                             right={
                                 hasDatabaseAdminAccess && (
                                     <Button
-                                        size="xs"
+                                        size="sm"
                                         variant="info"
                                         className="rounded-pill"
                                         onClick={handleAddNew}

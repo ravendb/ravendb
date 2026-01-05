@@ -145,7 +145,12 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
 
             <FormGroup>
                 <FormLabel>S3 Storage Class</FormLabel>
-                <FormSelect name="s3.storageClass" control={control} options={storageClassOptions} />
+                <FormSelect
+                    name="s3.storageClass"
+                    control={control}
+                    options={storageClassOptions}
+                    menuPlacement="top"
+                />
             </FormGroup>
 
             {asyncTest.result?.Error && (

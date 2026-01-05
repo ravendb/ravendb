@@ -98,17 +98,19 @@ function DocumentSchemaPlaygroundBody() {
 
     return (
         <form onSubmit={handleSubmit(handleOpenSheet)}>
-            <AboutViewHeading marginBottom={4} title="Document Schema Playground" icon="rocket" />
+            <AboutViewHeading
+                marginBottom={4}
+                title="Document Schema Playground"
+                isNested
+                backUrl={appUrl.forDocumentSchema(databaseName)}
+            />
             <span>
-                Quickly create and test schemas against your documents without affecting your saved data. The Schema
-                Playground is a temporary workspace designed for safe experimentation.
+                Quickly create and test schemas against your documents without affecting your saved data.
+                <br />
+                The Schema Playground is a temporary workspace designed for safe experimentation.
             </span>
 
-            <div className="mt-5 d-flex align-items-center justify-content-between">
-                <a href={appUrl.forDocumentSchema(databaseName)} className="btn btn-secondary">
-                    <Icon icon="close" />
-                    Cancel
-                </a>
+            <div className="mt-4 d-flex align-items-center">
                 <Button type="submit" className="rounded-pill">
                     <Icon icon="rocket" />
                     Run test
@@ -119,14 +121,14 @@ function DocumentSchemaPlaygroundBody() {
                 <HrHeader
                     count={fields.length}
                     right={
-                        <Button onClick={handleAppendTestField} size="xs" variant="info" className="rounded-pill">
+                        <Button onClick={handleAppendTestField} size="sm" variant="info" className="rounded-pill">
                             <Icon icon="plus" />
                             Add new
                         </Button>
                     }
                 >
                     <Icon icon="documents" />
-                    <span>Collection specific document schemas</span>
+                    <span>Collection specific experimental schemas</span>
                     <PopoverWithHoverWrapper message="info">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>

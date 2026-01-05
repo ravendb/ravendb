@@ -29,7 +29,7 @@ export default function DocumentSchemaFilter({
     isLoading,
 }: DocumentSchemaFilterProps) {
     return (
-        <div className="hstack flex-wrap align-items-end gap-3 my-3 justify-content-end">
+        <div className="hstack flex-wrap align-items-end gap-3 justify-content-end">
             <div className="flex-grow">
                 <div className="small-label ms-1 mb-1">Filter by collection</div>
                 <Select
@@ -41,6 +41,13 @@ export default function DocumentSchemaFilter({
                     placeholder="All collections"
                     isClearable
                     isRoundedPill
+                    className="filtering-input"
+                    styles={{
+                        container: (base) => ({
+                            ...base,
+                            minWidth: "300px",
+                        }),
+                    }}
                 />
             </div>
 
