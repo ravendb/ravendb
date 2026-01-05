@@ -11,6 +11,7 @@ import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AiAssistantDisabledInSettingsMessage from "components/common/aiAssistant/AiAssistantDisabledInSettingsMessage";
 import "./ChatbotHeader.scss";
+import useConfirm from "components/common/ConfirmDialog";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
@@ -44,9 +45,21 @@ function AskAiActions() {
     const aiAssistantSettings = useAppSelector(aiAssistantSelectors.settings);
     const messagesCount = useAppSelector(chatbotSelectors.messagesCount);
 
+    const confirm = useConfirm();
+
     const isNewConversationDisabled = messagesCount === 0;
 
-    const resetConversation = () => {
+    const resetConversation = async () => {
+        const isConfirmed = await confirm({
+            title: "Start new conversation",
+            message: "This will clear the current conversation.",
+            confirmText: "Start new",
+        });
+
+        if (!isConfirmed) {
+            return;
+        }
+
         dispatch(chatbotActions.abortChat());
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
