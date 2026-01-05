@@ -11,7 +11,9 @@
         font-size: 0.875em;
         padding: 0;
 
-        .icon-plus, .icon-settings, .icon-pin {
+        .icon-plus,
+        .icon-settings,
+        .icon-pin {
             color: colors.$text-color-var;
 
             &:hover {
@@ -26,6 +28,5 @@
                 color: colors.$text-color-var;
             }
         }
-
     }
 }

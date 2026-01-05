@@ -13,7 +13,6 @@ import { useAsyncCallback } from "react-async-hook";
 import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
 import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstants";
-import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 import "./ChatbotAskAiMessageEndpoints.scss";
 
 interface ChatbotAskAiMessageEndpointsProps {
@@ -264,9 +263,7 @@ export default function ChatbotAskAiMessageEndpoints({
                                     disabled={asyncHandleAllow.loading}
                                 />
                                 <Dropdown.Menu>
-                                    <Dropdown.Item onClick={handleAlwaysAllow}>
-                                        Always allow
-                                    </Dropdown.Item>
+                                    <Dropdown.Item onClick={handleAlwaysAllow}>Always allow</Dropdown.Item>
                                 </Dropdown.Menu>
                             </Dropdown>
                         </div>
