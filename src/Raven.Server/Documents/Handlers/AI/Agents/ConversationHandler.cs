@@ -47,18 +47,18 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
-    private int _maxModelIterationsPerCall;
+    protected int _maxModelIterationsPerCall;
 
     public required RavenServer.AuthenticateConnection Authentication;
 
-    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, int? maxModelIterationsPerCall = null)
+    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
         _conversationId = conversationId;
         _request = body;
         _configuration = configuration;
         _changeVector = changeVector;
         _raftId = raftId;
-        _maxModelIterationsPerCall = maxModelIterationsPerCall ?? configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
+        _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
     }
 
     protected virtual async Task InitializeDocument(DocumentsOperationContext context)
@@ -140,7 +140,10 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, int ToolsIterations)> StreamingTalkAsync(
+    public static int GetMaxModelIterationsPerCall(RequestBody body, AiAgentConfiguration configuration)
+        => body.CreationOptions.MaxModelIterationsPerCall ?? configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
+
+    public async Task<AiInternalConversationResult> StreamingTalkAsync(
         JsonOperationContext context,
         string firstStreamPropertyPath,
         Func<Memory<byte>, Task> streaming,
@@ -150,7 +153,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return await RunInternalAsync(context, talker, token);
     }
         
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, int ToolsIterations)> TalkAsync(
+    public async Task<AiInternalConversationResult> TalkAsync(
         JsonOperationContext context,
         CancellationToken token = default)
     {
@@ -160,7 +163,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private TimeSpan _elapsed;
 
-    private async Task<(BlittableJsonReaderObject Response, AiUsage Usage, int ToolsIterations)> RunInternalAsync(
+    private async Task<AiInternalConversationResult> RunInternalAsync(
         JsonOperationContext context,
         Talker talker, CancellationToken token)
     {
@@ -238,7 +241,13 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             database.NotificationCenter.Add(
                 ExceededTokenThresholdDetails.CreateAlert(pendingAlertDetails, database.Name));
         }
-        return (r.Result, talker.AiUsage, toolsIterations);
+
+        return new AiInternalConversationResult
+        {
+            Response = r.Result,
+            Usage = talker.AiUsage,
+            ToolsIterations = toolsIterations,
+        };
     }
 
     private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiUsage aiUsage, CancellationToken token)
@@ -538,7 +547,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 {
                     { } td => (int)td.TotalSeconds,
                     null => null
-                }
+                },
+                [nameof(AiConversationCreationOptions.MaxModelIterationsPerCall)] = _document.RemainingToolIterations
             })));
 
         _document.OpenActionCalls.TryAdd(call.Id, new AiAgentActionRequest
@@ -786,7 +796,6 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         var queryString = new StringBuilder("?")
             .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
             .Append("&agentId=").Append(Uri.EscapeDataString(agent))
-            .Append("&maxModelIterationsPerCall=").Append(_document.RemainingToolIterations)
             .ToString();
 
         return new DynamicJsonValue
@@ -943,14 +952,14 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, int ToolsIterations)> HandleRequest(
+    public async Task<AiInternalConversationResult> HandleRequest(
         DocumentsOperationContext context,
         CancellationToken token)
     {
         await InitializeDocument(context);
 
         if (await TryHandleActionResponses(context) is false)
-            return default;
+            return AiInternalConversationResult.Default;
 
         return await TalkAsync(context, token: token);
     }
@@ -962,7 +971,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return (r.Response.ToString(), r.Usage);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage, int ToolsIterations)> HandleStreamingRequest(
+    public async Task<AiInternalConversationResult> HandleStreamingRequest(
         DocumentsOperationContext context,
         Stream outputStream,
         string streamPropertyPath,

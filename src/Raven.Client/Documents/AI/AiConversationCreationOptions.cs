@@ -8,6 +8,7 @@ public class AiConversationCreationOptions : IDynamicJson
 {
     public Dictionary<string, object> Parameters { get; set; }
     public int? ExpirationInSec { get; set; }
+    public int? MaxModelIterationsPerCall { get; set; }
 
     public AiConversationCreationOptions()
     {
