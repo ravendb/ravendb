@@ -2,9 +2,11 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -27,22 +29,23 @@ namespace Raven.Server.Documents.Handlers
             using var tsCsvWriter = new TimeSeriesCsvWriter(res.TimeSeriesStream);
             do
             {
+                CsvWriter csvWriter = GetCsvWriter();
                 foreach (var (property, path) in GetProperties())
                 {
                     if (Constants.Documents.Metadata.Id == property)
                     {
-                        GetCsvWriter().WriteField(res.Id.ToString());
+                        csvWriter.WriteField(res.Id.ToString(), shouldQuote: true);
                     }
                     else
                     {
                         var o = path.StartsWith(TimeSeriesCsvWriter.TimeSeriesPathPrefix) ?
                             tsCsvWriter.GetValue(property) :
                             new BlittablePath(path).Evaluate(res.Data);
-
-                        GetCsvWriter().WriteField(o?.ToString());
+                        var shouldQuote = o is string or LazyStringValue or LazyCompressedStringValue;
+                        csvWriter.WriteField(o?.ToString(), shouldQuote);
                     }
                 }
-                await GetCsvWriter().NextRecordAsync();
+                await csvWriter.NextRecordAsync();
 
             } while (tsCsvWriter.MoveNext());
         }
