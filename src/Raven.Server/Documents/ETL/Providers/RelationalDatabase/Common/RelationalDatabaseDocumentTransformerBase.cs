@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+using System.IO;
 using Jint.Native;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -81,11 +81,16 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
                 var attachment = _loadedAttachments[attachmentName].Dequeue();
 
                 relationalColumn.Type = 0;
-                relationalColumn.Value = attachment.Stream;
 
                 if (attachment.RemoteParameters.IsLocalStorageAttachment())
                 {
+                    relationalColumn.Value = attachment.Stream;
                     _stats.IncrementBatchSize(attachment.Stream.Length);
+                }
+                else
+                {
+                    // for remote attachments, we don't stream the content to the relational db
+                    relationalColumn.Value = Stream.Null;
                 }
             }
 
