@@ -12,7 +12,7 @@ public class ConstantSchemaRuleValidator : FixedValueSchemaRuleValidator
     public ConstantSchemaRuleValidator(object constantValue)
     {
         _constantValue = ConvertTypeForComparison(constantValue, cloneAsRoot: true);
-        _constantValueForError = IsString(_constantValue) ? $"\"{_constantValue}\"" : _constantValue;
+        _constantValueForError = IsString(_constantValue) ? $"\"{_constantValue}\"" : $"{_constantValue}";
     }
 
     public override bool Validate(SchemaValidationContext context, object value)

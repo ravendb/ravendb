@@ -18,8 +18,6 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateStringConstant()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -50,8 +48,6 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateIntConstant()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -88,8 +84,6 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateDoubleConstant()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -120,8 +114,6 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateObjectConstant()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {

@@ -230,8 +230,6 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateBoolean()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -268,8 +266,6 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateNull()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
@@ -300,8 +296,6 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateArray()
     {
-        using var context = JsonOperationContext.ShortTermSingleUse();
-
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
