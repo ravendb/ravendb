@@ -38,15 +38,18 @@ namespace Raven.Server.Documents.Handlers
                     }
                     else
                     {
-                        var o = path.StartsWith(TimeSeriesCsvWriter.TimeSeriesPathPrefix) ?
-                            tsCsvWriter.GetValue(property) :
-                            new BlittablePath(path).Evaluate(res.Data);
-                        var shouldQuote = o is string or LazyStringValue or LazyCompressedStringValue;
-                        csvWriter.WriteField(o?.ToString(), shouldQuote);
+                        var o = path.StartsWith(TimeSeriesCsvWriter.TimeSeriesPathPrefix) 
+                            ? tsCsvWriter.GetValue(property) 
+                            : new BlittablePath(path).Evaluate(res.Data);
+
+                        if (WellKnownTypeForQuoting(o))
+                            csvWriter.WriteField(o?.ToString(), shouldQuote: true);
+                        else
+                            csvWriter.WriteField(o?.ToString());
                     }
                 }
-                await csvWriter.NextRecordAsync();
 
+                await csvWriter.NextRecordAsync();
             } while (tsCsvWriter.MoveNext());
         }
 

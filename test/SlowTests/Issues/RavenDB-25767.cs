@@ -11,14 +11,14 @@ namespace SlowTests.Issues;
 
 public class RavenDB_25767(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+    [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task WillQuoteCsvExportStringFields(Options options)
     {
         using var store = GetDocumentStore(options);
         using (var s = store.OpenSession())
         {
-            s.Store(new Item("1234",5678));
+            s.Store(new Item("1234", 5678));
             s.SaveChanges();
         }
 
@@ -27,9 +27,9 @@ public class RavenDB_25767(ITestOutputHelper output) : RavenTestBase(output)
         using var reader = new StreamReader(stream);
         string csv = await reader.ReadToEndAsync();
         Assert.Contains("""
-                     "1234",5678
-                     """.Trim('\r','\n'), csv);
+                        "1234",5678
+                        """.Trim('\r', '\n'), csv);
     }
-    
+
     private record Item(string Name, int Age);
 }

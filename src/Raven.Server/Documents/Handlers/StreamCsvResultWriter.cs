@@ -75,6 +75,8 @@ namespace Raven.Server.Documents.Handlers
             _csvWriter.NextRecord();
         }
 
+        protected bool WellKnownTypeForQuoting(object o) => o is string or LazyStringValue or LazyCompressedStringValue;
+
         protected abstract (string, string)[] GetProperties(T entity, bool writeIds);
 
         private readonly char[] _splitter = { '.' };
