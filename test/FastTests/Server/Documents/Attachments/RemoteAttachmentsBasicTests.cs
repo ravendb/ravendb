@@ -435,7 +435,7 @@ namespace FastTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task ShouldSkipRemoteAttachmentsConfigOnImportToShardedDatabase()
         {
             using (var store = GetDocumentStore())
