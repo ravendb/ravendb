@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             base(parent, database, node, connectionInfo)
         {
             _taskId = node.TaskId;
-            DocumentsSend += (_) => UpdateExternalReplicationInfo();
+            SuccessfulReplication += (_) => UpdateExternalReplicationInfo();
         }
 
         protected override DynamicJsonValue GetInitialHandshakeRequest()
