@@ -429,7 +429,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
     }
 
-    private bool TryCloseSubAgentCall(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall, List<BlittableJsonReaderObject> messages, ref int toolsIterations)
+    private bool TryCloseSubAgentCall(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall, 
+        List<BlittableJsonReaderObject> messages, List<string> openToolCallsToRemove, ref int toolsIterations)
     {
         if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string agentConversationId) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ConversationId)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
@@ -482,7 +483,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 ["subConversation"] = agentConversationId,
             }, "tool-call/response"));
 
-        _document.OpenActionCalls.Remove(currentCall.Id, out _); // Parent call
+        openToolCallsToRemove.Add(currentCall.Id);
 
         return true;
     }
@@ -814,7 +815,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private async Task<int> ExecuteMultiAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
-        List<Task<(IDisposable, List<BlittableJsonReaderObject> Messages, int ToolsIterations)>> tasks = [];
+        List<Task<(IDisposable Disposable, List<BlittableJsonReaderObject> Messages, List<string> OpenToolCallsToRemove, int ToolsIterations)>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
         {
             tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs));
@@ -835,15 +836,20 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         {
             try
             {
-                var (disposable, messages, iterations) = await t;
-                toolsIterations += iterations;
-                using (disposable)
+                var r = await t;
+                toolsIterations += r.ToolsIterations;
+                using (r.Disposable)
                 {
                     if (exceptions.Count > 0)
                         continue; // only dispose
-                    foreach (var m in messages)
+                    foreach (var m in r.Messages)
                     {
                         _document.AddMessage(context, m.Clone(context), usage: null);
+                    }
+
+                    foreach (var callId in r.OpenToolCallsToRemove)
+                    {
+                        _document.OpenActionCalls.Remove(callId, out _);
                     }
                 }
             }
@@ -860,7 +866,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return toolsIterations;
     }
 
-    private async Task<(IDisposable, List<BlittableJsonReaderObject> Messages, int ToolsIterations)> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
+    private async Task<(IDisposable Disposable, List<BlittableJsonReaderObject> Messages, List<string> OpenToolCallsToRemove, int ToolsIterations)> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
     {
         IDisposable disposable = null;
 
@@ -869,6 +875,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             disposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
             var messages = new List<BlittableJsonReaderObject>();
+            var openToolCallsToRemove = new List<string>();
             int iterations = 0;
 
             await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
@@ -881,8 +888,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 switch (toolCall)
                 {
                     case AiAgentToolSubAgent:
-                        if (TryCloseSubAgentCall(context, requestResult, currentCall, messages, ref iterations) == false)
-                            return (disposable, messages, iterations);
+                        if (TryCloseSubAgentCall(context, requestResult, currentCall, messages, openToolCallsToRemove, ref iterations) == false)
+                            return (disposable, messages, openToolCallsToRemove, iterations);
                         break;
                     case AiAgentToolQuery:
                         if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
@@ -903,7 +910,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 }
             }
 
-            return (disposable, messages, iterations);
+            return (disposable, messages, openToolCallsToRemove, iterations);
         }
         catch
         {

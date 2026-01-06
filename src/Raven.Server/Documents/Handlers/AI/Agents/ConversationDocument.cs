@@ -27,7 +27,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
     public List<string> LinkedConversations = [];
-    public ConcurrentDictionary<string, AiAgentActionRequest> OpenActionCalls = [];
+    public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public AiUsage CurrentUsage = new AiUsage();
     public string ChangeVector;
@@ -270,7 +270,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (document.TryGet(nameof(RemainingToolIterations), out int remainingToolIterations) == false)
             remainingToolIterations = maxModelIterationsPerCall;
 
-        var openTools = new ConcurrentDictionary<string, AiAgentActionRequest>();
+        var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
             var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
