@@ -144,9 +144,9 @@ public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
             }
         }
 
-        if (Logger.IsInfoEnabled)
+        if (Logger.IsDebugEnabled)
         {
-            Logger.Info($"Executed {NumberOfCommands:#,#;;0} bulk insert operations, size: ({new Size(TotalSize, SizeUnit.Bytes)})");
+            Logger.Debug($"Executed {NumberOfCommands:#,#;;0} bulk insert operations, size: ({new Size(TotalSize, SizeUnit.Bytes)})");
         }
 
         return NumberOfCommands;
