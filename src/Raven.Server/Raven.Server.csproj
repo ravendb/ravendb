@@ -232,11 +232,13 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+    <GarbageCollectionAdaptationMode>false</GarbageCollectionAdaptationMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)' == 'x86'">
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    <GarbageCollectionAdaptationMode>false</GarbageCollectionAdaptationMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(RAVEN_BuildOptions)' != ''">
     <DefineConstants>$(DefineConstants);$(RAVEN_BuildOptions)</DefineConstants>
