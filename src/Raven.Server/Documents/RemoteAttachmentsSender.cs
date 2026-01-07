@@ -48,8 +48,8 @@ namespace Raven.Server.Documents
         // Identifier (case in-sensitive) -> AttachmentUploader
         private readonly Dictionary<string, AttachmentUploader> _uploaderByIdentifier = new(StringComparer.OrdinalIgnoreCase);
 
-        // DocumentId (case in-sensitive) -> Ticks Slice: we keep track of all documents we have seen
-        private readonly Dictionary<string, List<Slice>> _alreadySeenDocs = new(StringComparer.OrdinalIgnoreCase);
+        // LowerDocumentId Slice (case in-sensitive) -> Ticks Slice: we keep track of all documents we have seen
+        private readonly Dictionary<Slice, List<Slice>> _alreadySeenDocs = new(SliceComparer.Instance);
 
         // Identifier (case in-sensitive) -> (Hash (case sensitive) -> AttachmentRemoteInfo): we keep track of all attachments to upload
         private readonly Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> _attachmentsToUploadByIdentifier = new(StringComparer.OrdinalIgnoreCase);
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents
 
                 // we add all the ticks for this document, so we can update them all at once
 
-                ref var ticks = ref CollectionsMarshal.GetValueRefOrAddDefault(_alreadySeenDocs, document.Id, out var exists);
+                ref var ticks = ref CollectionsMarshal.GetValueRefOrAddDefault(_alreadySeenDocs, document.LowerId, out var exists);
                 if (exists)
                 {
                     ticks.Add(document.Ticks);
@@ -247,6 +247,7 @@ namespace Raven.Server.Documents
                         // document or attachment was deleted, we will remove it from remote tree
                         continue;
                     case BackgroundWorkInfoStatus.Process:
+                        // in this switch case the document.Id is only used for logging or alerts!
                         foreach (Attachment attachment in _database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, AttachmentType.Document, document.LowerId))
                         {
                             _token.ThrowIfCancellationRequested();
@@ -292,7 +293,7 @@ namespace Raven.Server.Documents
 
                             if (Logger.IsDebugEnabled)
                             {
-                                Logger.Debug($"Added a remote attachment '{attachment.Name}' with hash '{hash}' for document id '{document.LowerId}' to upload batch for identifier '{identifier}'.");
+                                Logger.Debug($"Added a remote attachment '{attachment.Name}' with hash '{hash}' for document id '{document.Id}' to upload batch for identifier '{identifier}'.");
                             }
                         }
 
@@ -473,14 +474,14 @@ namespace Raven.Server.Documents
 
         internal sealed class UpdateRemoteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
-            private readonly Dictionary<string, List<Slice>> _seenDocs;
+            private readonly Dictionary<Slice, List<Slice>> _seenDocs;
             private readonly Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> _attachmentsToUploadByIdentifier;
             private readonly DocumentDatabase _database;
             private readonly DateTime _currentTime;
 
             public int RemoteCount;
 
-            public UpdateRemoteAttachmentsCommand(DocumentDatabase database, DateTime currentTime, Dictionary<string, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
+            public UpdateRemoteAttachmentsCommand(DocumentDatabase database, DateTime currentTime, Dictionary<Slice, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
             {
                 _seenDocs = seenDocs;
                 _attachmentsToUploadByIdentifier = attachmentsToUploadByIdentifier;
@@ -527,17 +528,17 @@ namespace Raven.Server.Documents
         public RemoteAttachmentsSender.UpdateRemoteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             // clone slices
-            var seenDocs = new Dictionary<string, List<Slice>>();
+            var seenDocs = new Dictionary<Slice, List<Slice>>();
             foreach (var item in SeenDocs)
             {
-                seenDocs[item.Key] = item.Value.Select(slice => slice.Clone(context.Allocator)).ToList();
+                seenDocs[item.Key.Clone(context.Allocator)] = item.Value.Select(slice => slice.Clone(context.Allocator)).ToList();
             }
 
             var command = new RemoteAttachmentsSender.UpdateRemoteAttachmentsCommand(database, CurrentTime, seenDocs, AttachmentsToUploadByIdentifier);
             return command;
         }
 
-        public Dictionary<string, List<Slice>> SeenDocs { get; set; }
+        public Dictionary<Slice, List<Slice>> SeenDocs { get; set; }
 
         public Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> AttachmentsToUploadByIdentifier { get; set; }
 

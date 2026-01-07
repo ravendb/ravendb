@@ -224,7 +224,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         return downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
 
-    public long TryUpdateRemoteAttachment(DocumentsOperationContext context, DateTime? newRemoteAtDt, long currentDt, string newIdentifier, string currentIdentifier, Slice keySlice)
+    public long TryUpdateRemoteAttachment(DocumentsOperationContext context, string documentId, string name, DateTime? newRemoteAtDt, long currentDt, string newIdentifier, string currentIdentifier, Slice keySlice)
     {
         // Handle case where there's no current upload date
         if (currentDt == -1L)
@@ -351,13 +351,12 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         }
     }
 
-    public int ProcessRemoteAttachments(DocumentsOperationContext context, DateTime currentTime, Dictionary<string, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
+    public int ProcessRemoteAttachments(DocumentsOperationContext context, DateTime currentTime, Dictionary<Slice, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
     {
         var processedCount = 0;
         var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-        foreach (var (docId, allTicks) in seenDocs)
+        foreach (var (lowerId, allTicks) in seenDocs)
         {
-            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var lowerId))
             using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
             {
                 // remove all entries for processed document
@@ -412,7 +411,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                                 break;
                             case BackgroundWorkInfoStatus.Process:
                                 // we uploaded this, we can mark the attachment as remote and delete its stream
-                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, docId, name, contentType, hash, sizeInBytes);
+                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, doc.Id, name, contentType, hash, sizeInBytes);
                                 processedCount++;
                                 break;
                             default:
@@ -423,7 +422,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
 
                 if (processedCount > 0)
                 {
-                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, docId);
+                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChangeInternal(context, lowerId, doc.Id);
                 }
             }
         }
