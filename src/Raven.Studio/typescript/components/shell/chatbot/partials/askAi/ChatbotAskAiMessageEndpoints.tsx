@@ -84,10 +84,18 @@ export default function ChatbotAskAiMessageEndpoints({
                     const jsonError = await tryCatch(() => response.data.json());
 
                     if (jsonError.status === "success") {
+                        let resultText = defaultErrorMessage;
+
+                        if (jsonError.data.Error) {
+                            resultText = jsonError.data.Error.slice(0, 200);
+                        } else if (jsonError.data.Message) {
+                            resultText = jsonError.data.Message;
+                        }
+
                         return {
                             ...baseResult,
                             status: "error",
-                            resultText: jsonError.data.Error?.slice(0, 200) ?? defaultErrorMessage,
+                            resultText,
                         };
                     }
 
