@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_19148 : ClusterTestBase
+public class RavenDB_19148 : DisableParallelTestBase
 {
     public RavenDB_19148(ITestOutputHelper output) : base(output)
     {
