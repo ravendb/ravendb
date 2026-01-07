@@ -328,7 +328,11 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
                     {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
                 </a>
                 {endpoint.resultSizeInBytes != null && (
-                    <Badge className="ms-auto text-nowrap" bg="secondary" pill>
+                    <Badge
+                        className="ms-auto text-nowrap"
+                        bg={endpoint.resultSizeInBytes > 1024 ? "warning" : "secondary"}
+                        pill
+                    >
                         {genUtils.formatBytesToSize(endpoint.resultSizeInBytes)}
                     </Badge>
                 )}
