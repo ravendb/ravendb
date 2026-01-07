@@ -244,10 +244,18 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         var remoteAtChanged = newRemoteAtDt.Value.Ticks != currentDt;
         var identifierChanged = HasIdentifierChanged(currentIdentifier, newIdentifier);
 
-        if (remoteAtChanged == false && identifierChanged == false)
+        if (_logger.IsDebugEnabled)
         {
-            // No changes needed
-            return currentDt;
+            var curDt = new DateTime(currentDt);
+            if (remoteAtChanged == false && identifierChanged == false)
+            {
+                // The attachment was re added, lets update the background work tree even if its the same identifier and at
+                _logger.Debug("Updated remote parameters for attachment '{0}' of document '{1}' with unchanged remote parameters (identifier '{2}', at: '{3}'). Updating background work tree entry.", name, documentId, currentIdentifier, curDt.GetDefaultRavenFormat());
+            }
+            else
+            {
+                _logger.Debug("Updated remote parameters for attachment '{0}' of document '{1}' with new remote parameters (identifier '{2}' -> '{3}', at: '{4}' -> '{5}'). Updating background work tree entry.", name, documentId, currentIdentifier, newIdentifier, curDt.GetDefaultRavenFormat(), newRemoteAtDt.Value.GetDefaultRavenFormat());
+            }
         }
 
         // Something changed - remove the old entry and add the new one
