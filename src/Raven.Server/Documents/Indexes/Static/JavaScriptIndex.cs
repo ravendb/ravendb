@@ -23,7 +23,6 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Sparrow;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -66,6 +65,10 @@ function map(name, lambda) {
             engine.SetClrFunc("loadAttachment", LoadAttachment);
             engine.SetClrFunc("loadAttachments", LoadAttachments);
             engine.SetClrFunc("id", GetDocumentId);
+            
+            var schemaValidatorObject = new JsObject(engine);
+            schemaValidatorObject.SetClfFunc("getErrorsFor", GetErrorsFor);
+            engine.SetValue("schema", schemaValidatorObject);
         }
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -201,6 +204,14 @@ function map(name, lambda) {
             scope.RegisterJavaScriptUtils(_javaScriptUtils);
 
             return _javaScriptUtils.LoadAttachments(self, args);
+        }
+        
+        private JsValue GetErrorsFor(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            
+            return _javaScriptUtils.GetErrorsFor(self, args);
         }
     }
 

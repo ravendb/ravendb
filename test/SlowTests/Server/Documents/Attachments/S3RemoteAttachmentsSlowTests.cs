@@ -14,6 +14,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -38,6 +39,107 @@ namespace SlowTests.Server.Documents.Attachments
     {
         public S3RemoteAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3)]
+        [InlineData(64, 3)]
+        public async Task CanProcessItemWithDeleteStatusInSender(int attachmentsCount, int size)
+        {
+            var srcDb = GetDatabaseName();
+            var srcRaft = await CreateRaftCluster(3);
+            var leader = srcRaft.Leader;
+            var srcNodes = await CreateDatabaseInCluster(srcDb, 3, leader.WebUrl);
+            using (var src = new DocumentStore { Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(), Database = srcDb, }.Initialize())
+            {
+                DocumentStore store = (DocumentStore)src;
+                await using (var holder = CreateCloudSettings())
+                {
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+                    var identifier = await PutRemoteAttachmentsConfiguration(store, Settings);
+                    await CreateDocs(store, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(store, identifier, size, ids, attachmentsPerDoc);
+                    Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
+
+                    int count = 0;
+                    DocumentDatabase database = null;
+
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)).ConfigureAwait(false);
+
+                    // ReSharper disable once InconsistentNaming
+                    string F = record.Topology.AllNodes.FirstOrDefault();
+
+                    var remote = await WaitForValueAsync(async () =>
+                    {
+                        record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)).ConfigureAwait(false);
+                        F = record.Topology.AllNodes.FirstOrDefault();
+                        var srv = srcRaft.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == F);
+                        database = await Databases.GetDocumentDatabaseInstanceFor(srv, store);
+
+                        GetStorageAttachmentsMetadataFromAllAttachments(database);
+                        Assert.Equal(attachmentsCount, Attachments.Count);
+
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                        count += await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                        return count;
+                    }, attachmentsCount, interval: 1000);
+
+                    Assert.Equal(attachmentsCount, remote);
+
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
+                    await AssertAllRemoteAttachments(store, cloudObjects, size, identifier);
+
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)).ConfigureAwait(false);
+                    var notF = record.Topology.AllNodes.FirstOrDefault(x => x != F);
+                    var srv = srcRaft.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == notF);
+                    Assert.NotNull(srv);
+                    database = await Databases.GetDocumentDatabaseInstanceFor(srv, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    var deleted = await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+                    Assert.Equal(attachmentsCount, deleted);
+
+                    var notNotF = record.Topology.AllNodes.FirstOrDefault(x => x != F && x != notF);
+                    srv = srcRaft.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == notNotF);
+                    Assert.NotNull(srv);
+                    database = await Databases.GetDocumentDatabaseInstanceFor(srv, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    var deleted2 = await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+                    Assert.Equal(attachmentsCount, deleted2);
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task ShouldThrowOnDocumentWithRemoteAttachmentsOnImportToShardedDatabase()
+        {
+            int attachmentsCount = 1;
+            int size = 3;
+            using (var store = GetDocumentStore())
+            using (var sharded = Sharding.GetDocumentStore())
+            {
+                await using (var holder = CreateCloudSettings())
+                {
+                    int docsCount = RemoteAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
+
+                    using (var dest = new MemoryStream())
+                    {
+                        var export = await store.Smuggler.ExportToStreamAsync(new DatabaseSmugglerExportOptions(), s => s.CopyToAsync(dest));
+                        await export.WaitForCompletionAsync();
+                        dest.Position = 0;
+                        var import = await sharded.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
+                        {
+                        }, dest);
+
+                        var e = await Assert.ThrowsAsync<RavenException>(() => import.WaitForCompletionAsync());
+
+                        Assert.Contains("System.NotSupportedException: Document 'Orders/0' cannot be imported because it contains remote attachments, which are not supported in sharded databases. Consider downloading the attachments locally before importing to a sharded database.", e.Message);
+                    }
+                }
+            }
         }
 
         [AmazonS3RetryTheory]
@@ -1374,7 +1476,6 @@ namespace SlowTests.Server.Documents.Attachments
                     GetStorageAttachmentsMetadataFromAllAttachments(database2, settings);
 
                     Assert.Equal(attachmentsCount, Attachments.Count);
-                    WaitForUserToContinueTheTest(store1);
 
                     GetToRemoteAttachmentsCount(database2, attachmentsCount);
 
@@ -1642,6 +1743,73 @@ namespace SlowTests.Server.Documents.Attachments
         public async Task CanEtlRemoteAttachmentsToDestination(int attachmentsCount, int size)
         {
             await CanEtlRemoteAttachmentsToDestinationInternal(attachmentsCount, size);
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3)]
+        [InlineData(32, 3)]
+        public async Task CanEtlRemoteAttachmentsToDestination2(int attachmentsCount, int size)
+        {
+            await using (var holder = CreateCloudSettings())
+            {
+                int docsCount = RemoteAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                var ids = new List<(string Id, string Collection)>();
+                using (var store = GetDocumentStore())
+                using (var replica = GetDocumentStore())
+                {
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var taskName = "etl-test";
+                    var csName = "cs-test";
+
+                    var configuration = new RavenEtlConfiguration
+                    {
+                        ConnectionStringName = csName,
+                        Name = taskName,
+                        Transforms = { new Transformation { Name = "S1", Collections = { "Orders" }, Script = @"
+
+var meta = this['@metadata'];
+if (!meta || !meta['@attachments'])
+    return;
+var doc = loadToOrders(this);
+for (var i = 0; i < meta['@attachments'].length; i++) {
+    var att = meta['@attachments'][i];
+    
+    doc.addAttachment(att.Name, loadAttachment(att.Name));
+}
+
+" } }
+                    };
+
+                    var connectionString = new RavenConnectionString { Name = csName, TopologyDiscoveryUrls = replica.Urls, Database = replica.Database, };
+
+                    var etlDone = Etl.WaitForEtlToComplete(store);
+                    Etl.AddEtl(store, configuration, connectionString);
+                    await etlDone.WaitAsync(TimeSpan.FromSeconds(15));
+
+                    var replicaDb = await Databases.GetDocumentDatabaseInstanceFor(replica);
+                    var val3 = WaitForValue(() =>
+                    {
+                        using (replicaDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var c = replicaDb.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).Count();
+
+                            return c;
+                        }
+                    }, attachmentsCount, 30_000);
+                    Assert.Equal(attachmentsCount, val3);
+
+                    foreach (var remote in Attachments)
+                    {
+                        var e = await Assert.ThrowsAsync<RavenException>(async () =>
+                            await replica.Operations.SendAsync(new GetAttachmentOperation(remote.DocumentId, remote.Name, AttachmentType.Document, null)));
+                        Assert.Contains($"Cannot perform 'GetAttachmentOperation' for remote attachment '{remote.Name}' on document '{remote.DocumentId}' because the database does not have a RemoteAttachmentsConfiguration configured.", e.Message);
+                    }
+
+                    var identifier2 = await PutRemoteAttachmentsConfiguration(replica, Settings);
+                    await AssertGetRemoteAttachmentsInBulk(replica, size, identifier2, RemoteAttachmentFlags.Remote);
+                }
+            }
         }
 
         [AmazonS3RetryTheory]

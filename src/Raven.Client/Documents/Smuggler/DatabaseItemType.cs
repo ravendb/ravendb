@@ -69,5 +69,6 @@ namespace Raven.Client.Documents.Smuggler
         GenAiEtls = 1L << 34,
         AiAgents = 1L << 35,
         RemoteAttachments = 1L << 36,
+        SchemaValidation = 1L << 37
     }
 }

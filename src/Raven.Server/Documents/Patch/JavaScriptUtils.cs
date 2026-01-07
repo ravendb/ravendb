@@ -366,6 +366,30 @@ namespace Raven.Server.Documents.Patch
             return value;
         }
 
+        internal JsValue GetErrorsFor(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1)
+                throw new InvalidOperationException($"'schema.GetErrorsFor' may only be called with one argument, but '{args.Length}' were passed.");
+
+            if (args[0].IsObject() == false || args[0].AsObject() is BlittableObjectInstance blitDoc == false)
+                throw new InvalidOperationException($"'schema.GetErrorsFor' may only be called with an object non-null entity as a parameter, but was called with a parameter of type {args[0].GetType().FullName}.");
+
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
+            if(CurrentIndexingScope.Current.Source is not DynamicBlittableJson srcDoc 
+               || ReferenceEquals(srcDoc.BlittableJson, blitDoc.Blittable) == false)
+                throw new InvalidOperationException("'schema.GetErrorsFor' can only be performed on the source document.");
+
+            var errors = CurrentIndexingScope.Current.SchemaGetErrorsFor(blitDoc.Blittable);
+            var jsValues = new JsValue[errors.Length];
+            for (int i = 0; i < errors.Length; i++)
+            {
+                jsValues[i] = errors[i];
+            }
+            return new JsArray(_scriptEngine, jsValues);
+        }
+
         internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o, bool needsClone = true)
         {
             if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)

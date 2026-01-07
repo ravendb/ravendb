@@ -71,9 +71,9 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
-using Raven.Server.Documents.AI;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Logging;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Rachis;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -313,6 +313,8 @@ namespace Raven.Server.Documents
         public TimeSeriesPolicyRunner TimeSeriesPolicyRunner { get; private set; }
 
         public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
+
+        public SchemaValidatorCache SchemaValidatorCache { get; private set; }
 
         public TombstoneCleaner TombstoneCleaner { get; private set; }
 
@@ -1260,6 +1262,13 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
 
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing SchemaValidatorCache");
+            exceptionAggregator.Execute(() =>
+            {
+                SchemaValidatorCache?.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed SchemaValidatorCache");
+
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
             exceptionAggregator.Execute(() =>
             {
@@ -1756,6 +1765,7 @@ namespace Raven.Server.Documents
 
             try
             {
+                UpdateSchemaValidation(record.SchemaValidation);
                 PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
@@ -1772,6 +1782,29 @@ namespace Raven.Server.Documents
             OnDatabaseRecordChanged(record);
         }
 
+        private void UpdateSchemaValidation(SchemaValidationConfiguration configuration)
+        {
+            if (configuration != null && configuration.HasEnabledConfiguration())
+            {
+                if (SchemaValidatorCache != null)
+                {
+                    SchemaValidatorCache.Update(configuration);
+                }
+                else
+                {
+                    var cache = new SchemaValidatorCache(NotificationCenter, Configuration.SchemaValidation, Loggers.GetLogger<SchemaValidatorCache>());
+                    cache.Update(configuration);
+                    SchemaValidatorCache = cache;
+                }
+            }
+            else
+            {
+                // we intentionally don't dispose here since it might be used by a transaction,
+                // clearing the resources will be done by the finalizer.
+                SchemaValidatorCache = null;
+            }
+        }
+        
         private void SetUnusedDatabaseIds(DatabaseRecord record)
         {
             if (record.UnusedDatabaseIds == null && DocumentsStorage.UnusedDatabaseIds == null)

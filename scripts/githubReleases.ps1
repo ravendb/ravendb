@@ -24,5 +24,5 @@ function CreateRelease($version, $owner, $repo, $branch, $token, $changelog, $dr
         return;
     }
     
-    Invoke-WebRequest -Uri https://api.github.com/repos/$owner/$repo/releases -Method POST -Body $json -Headers $headers
+    Invoke-WebRequest -UseBasicParsing -Uri https://api.github.com/repos/$owner/$repo/releases -Method POST -Body $json -Headers $headers
 }

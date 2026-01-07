@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -477,7 +478,9 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
 
             // this will delete the remote entry from remote tree because the configuration identifier doesn't exist
             database2.Time.UtcDateTime = () => remoteAt.AddMinutes(1);
-            await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+            var processed = await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+            // the item is with Deleted status and got removed from the remote tree, but no upload happened because of different identifier
+            Assert.Equal(attachmentsCount, processed);
             await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
 
             var config1 = await store2.Maintenance.SendAsync(new GetRemoteAttachmentsConfigurationOperation());
@@ -486,7 +489,37 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
             Assert.Equal(2, config1.Destinations.Count);
             await store2.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(config1));
 
-            await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+            processed = await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+            // even after adding appropriate identifier, the item was removed from remote tree, so no upload will happen
+            Assert.Equal(0, processed);
+
+            // we "touch" the attachments inorder to re-add them to remote tree
+            var operation = await store2
+                .Operations
+                .SendAsync(new PatchByQueryOperation(new IndexQuery
+                {
+                    Query =
+                        $$"""
+                          from @all_docs 
+                          update { 
+                              var attachmentsList = this["@metadata"]["@attachments"];
+                              for (let i = 0; i < attachmentsList.length; i++){
+                                      attachments(this, attachmentsList[i].Name).remote(attachmentsList[i].RemoteParameters.Identifier, attachmentsList[i].RemoteParameters.At);
+                           
+                              }
+                          }
+                          """,
+                    QueryParameters = new Raven.Client.Parameters
+                    {
+                        { "storageIdentifier", identifier1 }
+                    }
+                }));
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(10));
+
+            processed = await database2.RemoteAttachmentsSender!.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+            // even after adding appropriate identifier, the item was removed from remote tree, so no upload will happen
+            Assert.Equal(attachmentsCount, processed);
+
             GetStorageAttachmentsMetadataFromAllAttachments(database2);
 
             var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);

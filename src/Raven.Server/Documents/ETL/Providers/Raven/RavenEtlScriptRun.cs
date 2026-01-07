@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
@@ -149,7 +150,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             attachments.Add((name ?? attachment.Name, attachment));
-            _stats.IncrementBatchSize(attachment.Stream.Length);
+
+            if (attachment.RemoteParameters.IsLocalStorageAttachment())
+            {
+                _stats.IncrementBatchSize(attachment.Stream.Length);
+            }
         }
 
         public void DeleteAttachment(string documentId, string name)

@@ -70,6 +70,7 @@ public sealed partial class ClusterStateMachine
         nameof(AddOrUpdateAiAgentCommand),
         nameof(AddSnowflakeEtlCommand),
         nameof(EditRemoteAttachmentsCommand),
+        nameof(EditSchemaValidationConfigurationCommand),
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
@@ -197,6 +198,9 @@ public sealed partial class ClusterStateMachine
             case nameof(EditRemoteAttachmentsCommand):
                 AssertRemoteAttachmentsConfiguration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
+            case nameof(EditSchemaValidationConfigurationCommand):
+                AssertSchemaValidationConfiguration(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
+                break;
         }
     }
 
@@ -264,6 +268,7 @@ public sealed partial class ClusterStateMachine
             AssertAiAgent(databaseRecord, newLicenseLimits, context);
             AssertDocumentsCompressionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertRemoteAttachmentsConfiguration(databaseRecord, newLicenseLimits, context);
+            AssertSchemaValidationConfiguration(databaseRecord, newLicenseLimits, context);
         }
     }
 
@@ -1177,7 +1182,11 @@ public sealed partial class ClusterStateMachine
 
     private void AssertDynamicNodesDistribution(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
-        if (databaseRecord.Topology.DynamicNodesDistribution == false)
+        var usingDynamicNodesDistribution = databaseRecord.IsSharded
+            ? databaseRecord.Sharding.Orchestrator.Topology.DynamicNodesDistribution
+            : databaseRecord.Topology.DynamicNodesDistribution;
+
+        if (usingDynamicNodesDistribution == false)
             return;
 
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
@@ -1200,6 +1209,7 @@ public sealed partial class ClusterStateMachine
             }
         }
     }
+
     internal void AssertClusterSizeAndCores(ServerStore serverStore, LicenseStatus licenseStatus)
     {
         if (serverStore.IsPassive())
@@ -1235,6 +1245,17 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.RemoteAttachments, "Your license doesn't support adding the remote attachments configuration.");
+    }
+
+    private void AssertSchemaValidationConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasSchemaValidation)
+            return;
+
+        if (databaseRecord.SchemaValidation == null || databaseRecord.SchemaValidation.Disabled)
+            return;
+
+        throw new LicenseLimitException(LimitType.SchemaValidation, "Your license doesn't support adding the schema validation configuration.");
     }
 
     private enum DatabaseRecordElementType

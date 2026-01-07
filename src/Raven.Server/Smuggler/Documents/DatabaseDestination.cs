@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
@@ -21,6 +22,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Actions;
@@ -80,9 +82,9 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseRecordActions(_database, log: _log);
         }
 
-        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true)
+        public IDocumentActions Documents(bool throwOnCollectionMismatchError = true, BackupKind? backupKind = null)
         {
-            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError);
+            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError, backupKind);
         }
 
         public IDocumentActions RevisionDocuments()
@@ -238,8 +240,11 @@ namespace Raven.Server.Smuggler.Documents
             private readonly HashSet<string> _documentIdsOfMissingAttachments;
             private readonly DuplicateDocsHandler _duplicateDocsHandler;
             private readonly bool _throwOnCollectionMismatchError;
+            private readonly BackupKind? _backupKind;
 
-            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, RavenLogger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
+            private ErrorBuilder _schemaErrorBuilder;
+            
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, RavenLogger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError, BackupKind? backupKind = null)
             {
                 _database = database;
                 _buildType = buildType;
@@ -249,6 +254,7 @@ namespace Raven.Server.Smuggler.Documents
                 _enqueueThreshold = new Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
                 _duplicateDocsHandler = duplicateDocsHandler;
                 _throwOnCollectionMismatchError = throwOnCollectionMismatchError;
+                _backupKind = backupKind;
 
                 _missingDocumentsForRevisions = isRevision || buildType == BuildVersionType.V3 ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -269,8 +275,29 @@ namespace Raven.Server.Smuggler.Documents
                         progress.Attachments.Skipped = true;
                 }
 
+                SchemaValidateAndThrow(item);
+
                 _command.Add(item);
                 return HandleBatchOfDocumentsIfNecessaryAsync(beforeFlushing, force: false);
+            }
+
+            private void SchemaValidateAndThrow(DocumentItem item)
+            {
+                if (_backupKind != BackupKind.None || _isRevision)
+                    return;
+                
+                var schemaValidatorCache = _database.SchemaValidatorCache;
+                if (schemaValidatorCache == null) 
+                    return;
+                
+                _schemaErrorBuilder ??= new ErrorBuilder();
+                _schemaErrorBuilder.Reset();
+                    
+                var collection = CollectionName.GetCollectionName(item.Document.Data);
+                if (schemaValidatorCache.Validate(collection, item.Document.Data, _schemaErrorBuilder)) 
+                    return;
+
+                throw new SchemaValidationException(_schemaErrorBuilder.ToString());
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -350,6 +377,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (_duplicateDocsHandler._markForDispose)
                     _duplicateDocsHandler.Dispose();
+                
+                _schemaErrorBuilder?.Dispose();
             }
 
             private async ValueTask FixDocumentMetadataIfNecessaryAsync()

@@ -104,6 +104,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
 
     const contentTypewriter = useTypewriter({
         text: message.content,
+        isDone: message.thinkingTimeInMs != null,
     });
 
     if (message.state === "Loading") {
@@ -130,7 +131,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         return <AiAssistantConsentStatusChecker onConsentGiven={() => dispatch(chatbotActions.retryRunChat())} />;
     }
 
-    if (message.state === "RequestTooLarge") {
+    if (message.state === "RequestTooLarge" || message.state === "Aborted" || message.state === "InternalError") {
         return <RichAlert variant="danger">{message.errorMessage}</RichAlert>;
     }
 
@@ -157,14 +158,14 @@ function AgentMessageBody({ message }: AgentMessageProps) {
 
     return (
         <div>
-            {message.thinkingTimeInMs != null ? (
-                <div className="text-muted">
-                    Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s
-                </div>
-            ) : (
-                <div className="text-muted">Thinking</div>
-            )}
-            <div className="mt-1">
+            <div className="text-muted pb-1">
+                {message.thinkingTimeInMs != null ? (
+                    <span>Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s</span>
+                ) : (
+                    <span>Thinking</span>
+                )}
+            </div>
+            <div className="pb-1">
                 <ChatbotAskAiMarkdown content={contentTypewriter} />
             </div>
             <ChatbotAskAiMessageRelevantLinks links={message.relevantLinks} />

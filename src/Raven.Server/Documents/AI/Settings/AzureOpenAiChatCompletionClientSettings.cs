@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Operations.AI;
 using Sparrow.Json;
 
@@ -49,6 +50,73 @@ internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompl
             ErrorType = errorType,
             Message = error.message
         };
+    }
+
+    public override string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
+    {
+        var refusal = base.GetRefusal(choice0, message);
+        _ = string.IsNullOrEmpty(refusal)
+            && choice0.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject filtersObj)
+            && GetFiltersMessage(filtersObj, out refusal);
+
+        return refusal;
+    }
+
+
+    internal static bool GetFiltersMessage(BlittableJsonReaderObject filtersObj, out string message)
+    {
+        var filtered = false;
+
+        var reasons = filtersObj.GetPropertyNames();
+
+        var sb = new StringBuilder();
+        sb.Append("Response blocked due to content policy: ");
+        foreach (var reason in reasons)
+        {
+            if (IsFiltered(filtersObj, reason, out string severity))
+            {
+                if (filtered)
+                    sb.Append(", ");
+                sb.Append(reason).Append(" ").Append("(").Append(severity).Append(" severity)");
+                filtered = true;
+            }
+        }
+        message = filtered ? sb.ToString() : string.Empty;
+
+        return filtered;
+    }
+
+    private static bool IsFiltered(BlittableJsonReaderObject filtersObj, string reason, out string severity)
+    {
+        // return true if filtered by this reason
+        severity = string.Empty;
+
+        if (filtersObj.TryGet(reason, out BlittableJsonReaderObject filterReasonObj) == false)
+            return false;
+
+        if (filterReasonObj.TryGet(FiltersConstants.ContentFilterResultFiltered, out bool filtered) == false)
+            return false;
+
+        if (filtered == false)
+            return false;
+
+        if (filterReasonObj.TryGet(FiltersConstants.ContentFilterResultSeverity, out severity) == false)
+        {
+            if (filterReasonObj.TryGet(FiltersConstants.ContentFilterResultDetected, out bool detected) && detected)
+                severity = FiltersConstants.ContentFilterResultDetected;
+            else
+                severity = "none";
+        }
+
+        return true;
+    }
+
+    private static class FiltersConstants
+    {
+        public const string ContentFilterResults = "content_filter_results";
+        public const string ContentFilterResultFiltered = "filtered";
+        public const string ContentFilterResultSeverity = "severity";
+        public const string ContentFilterResultDetected = "detected";
     }
 
     private static ErrorType FindErrorFromMessage(string message)

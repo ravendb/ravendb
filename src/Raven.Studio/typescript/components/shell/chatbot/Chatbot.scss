@@ -8,13 +8,17 @@
     right: 10px;
     bottom: 10px;
     transform: translateY(150%);
-    z-index: var(--zindex-notification-center);
+    z-index: var(--zindex-chatbot);
     transition: transform variables.$menu-transition-ease;
     display: flex;
     flex-direction: column;
     border: 1px solid colors.$border-color-light-var;
     background-color: colors.$panel-bg-1-var;
     border-radius: sizes.$gutter-xs;
+
+    &.is-dragging {
+        border-left-color: colors.$border-color-var !important;
+    }
 
     .prompt-wrapper {
         display: flex;

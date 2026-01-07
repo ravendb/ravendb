@@ -87,7 +87,7 @@ export class ChatbotStubs {
                     },
                     {
                         toolId: "call_wrdx4K9jyZhDjbZaQcZAS047",
-                        url: "/databases/AiAssistant/indexes/stats?pageSize=1024",
+                        url: "/databases/test/docs?id=orders%2F830-A&id=orders%2F831313131313131313131313131313131313131313131313131313131313131-A",
                         state: "waiting",
                     },
                 ],

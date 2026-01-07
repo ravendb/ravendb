@@ -69,6 +69,7 @@ import getRevisionsBinCleanerConfigurationCommand from "commands/database/settin
 import saveRevisionsBinCleanerConfigurationCommand from "commands/database/settings/saveRevisionsBinCleanerConfigurationCommand";
 import deleteDocumentsCommand from "commands/database/documents/deleteDocumentsCommand";
 import deleteCollectionCommand from "commands/database/documents/deleteCollectionCommand";
+import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
 import getRevisionsPreviewCommand from "commands/database/documents/getRevisionsPreviewCommand";
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsIdsCommand from "commands/database/documents/getRevisionsIdsCommand";
@@ -76,6 +77,9 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsByIDPrefixCommand = require("commands/database/documents/getDocumentsByIDPrefixCommand");
 import getRemoteAttachmentsConfigurationCommand from "commands/database/settings/getRemoteAttachmentsConfigurationCommand";
 import saveRemoteAttachmentsConfigurationCommand from "commands/database/settings/saveRemoteAttachmentsConfigurationCommand";
+import getSchemaValidationCommand from "commands/database/settings/getSchemaValidationCommand";
+import saveSchemaValidationCommand from "commands/database/settings/saveSchemaValidationCommand";
+import validateSchemaCommand from "commands/database/settings/validateSchemaCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -346,6 +350,10 @@ export default class DatabasesService {
         return new deleteCollectionCommand(...args).execute();
     }
 
+    async getDatabaseSettings(...args: ConstructorParameters<typeof getDatabaseSettingsCommand>) {
+        return new getDatabaseSettingsCommand(...args).execute();
+    }
+
     async deleteRevisionsForDocuments(...args: ConstructorParameters<typeof deleteRevisionsForDocumentsCommand>) {
         return new deleteRevisionsForDocumentsCommand(...args).execute();
     }
@@ -368,5 +376,17 @@ export default class DatabasesService {
         ...args: ConstructorParameters<typeof saveRemoteAttachmentsConfigurationCommand>
     ) {
         return new saveRemoteAttachmentsConfigurationCommand(...args).execute();
+    }
+
+    async getSchemaValidation(...args: ConstructorParameters<typeof getSchemaValidationCommand>) {
+        return new getSchemaValidationCommand(...args).execute();
+    }
+
+    async saveSchemaValidation(...args: ConstructorParameters<typeof saveSchemaValidationCommand>) {
+        return new saveSchemaValidationCommand(...args).execute();
+    }
+
+    async validateSchema(...args: ConstructorParameters<typeof validateSchemaCommand>) {
+        return new validateSchemaCommand(...args).execute();
     }
 }

@@ -13,6 +13,7 @@ import { mapAzureToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
+import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
 
 export default function Azure() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -39,14 +40,7 @@ export default function Azure() {
                 </FormSwitch>
                 <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
                     <div>
-                        <FormSwitch
-                            name={`${fieldBase}.config.isOverrideConfig`}
-                            control={control}
-                            className="ms-3 w-100"
-                            color="secondary"
-                        >
-                            Override configuration via external script
-                        </FormSwitch>
+                        <OverrideConfigurationViaExternalScriptToggle fieldBase={fieldBase} />
                         {formValues.config.isOverrideConfig ? (
                             <OverrideConfiguration fieldBase={fieldBase} />
                         ) : (

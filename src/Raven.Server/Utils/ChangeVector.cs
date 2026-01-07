@@ -126,7 +126,16 @@ public sealed class ChangeVector
         return context.GetChangeVector(version, Order);
     }
 
-    public static ConflictStatus GetConflictStatusForDocument(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote?.Version, local?.Version);
+    public static ConflictStatus GetConflictStatusForBucket(ChangeVector remote, ChangeVector local, HashSet<string> exclude = null)
+    {
+        var remoteVersion = remote?.Version;
+        var localVersion = local?.Version;
+
+        remoteVersion?.EnsureValid();
+        localVersion?.EnsureValid();
+
+        return ChangeVectorUtils.GetConflictStatus(remoteVersion?.AsString(), localVersion?.AsString(), exclude);
+    }
     
     public static ConflictStatus GetConflictStatus(IChangeVectorOperationContext context, string remote, string local) => 
         GetConflictStatusInternal(context.GetChangeVector(remote)?.Version, context.GetChangeVector(local)?.Version);

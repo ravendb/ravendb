@@ -26,26 +26,25 @@ public sealed class OrchestratorStreamSource : StreamSource
 
     public override Stream GetAttachmentStream(LazyStringValue hash, out string tag)
     {
-        using (Slice.From(_allocator, hash, out var slice))
+        using var _ = Slice.From(_allocator, hash, out var slice);
+        if (_uniqueStreams.TryGetValue(slice, out var item))
         {
-            if (_uniqueStreams.TryGetValue(slice, out var item))
+            tag = "$from-sharding-import";
+            return item.Stream.CreateDisposableReaderStream(new DisposableAction(() =>
             {
-                tag = "$from-sharding-import";
-                return item.Stream.CreateDisposableReaderStream(new DisposableAction(() =>
+                if (Interlocked.Increment(ref item.Usages) == _numberOfShards)
                 {
-                    if (Interlocked.Increment(ref item.Usages) == _numberOfShards)
+                    if (_uniqueStreams.TryRemove(item.KeySlice, out var streamValue))
                     {
-                        if (_uniqueStreams.TryRemove(slice, out var streamValue))
+                        using (streamValue)
                         {
-                            using (streamValue)
-                            {
-                                slice.Release(_allocator);
-                            }
+                            item.KeySlice.Release(_allocator);
                         }
                     }
-                }));
-            }
+                }
+            }));
         }
+
         tag = null;
         return null;
     }
@@ -61,6 +60,7 @@ public sealed class OrchestratorStreamSource : StreamSource
             var hash = r.Base64Hash.Clone(_allocator);
             _uniqueStreams.TryAdd(hash, new UniqueStreamValue
             {
+                KeySlice = hash,
                 Usages = 1,
                 Stream = inner
             });
@@ -90,7 +90,7 @@ public sealed class OrchestratorStreamSource : StreamSource
     {
         public StreamsTempFile.InnerStream Stream;
         public int Usages;
-
+        public Slice KeySlice;
         public void Dispose()
         {
             Stream?.Dispose();

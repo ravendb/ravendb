@@ -101,9 +101,16 @@ namespace Raven.Server.Extensions
             var settings = new DynamicJsonValue();
             foreach (var kvp in definition.Configuration)
                 settings[kvp.Key] = kvp.Value;
-
             result[nameof(IndexDefinition.Configuration)] = settings;
 
+            if (definition.SchemaDefinitions != null)
+            {
+                var schemaDefinitions = new DynamicJsonValue();
+                foreach (var kvp in definition.SchemaDefinitions)
+                    schemaDefinitions[kvp.Key] = kvp.Value;
+                result[nameof(IndexDefinition.SchemaDefinitions)] = schemaDefinitions;
+            }
+            
             var additionalSources = new DynamicJsonValue();
             foreach (var kvp in definition.AdditionalSources)
                 additionalSources[kvp.Key] = kvp.Value;

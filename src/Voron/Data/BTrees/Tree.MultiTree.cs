@@ -170,6 +170,7 @@ namespace Voron.Data.BTrees
                             
                             // We may change the page. Ensure all pointers are valid as well.
                             page = ModifyPage(SearchForPage(key, out _)); 
+                            keyItem = page.GetNode(page.LastSearchPosition);
                             continue;
                         }
                     }

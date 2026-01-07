@@ -8,7 +8,8 @@ import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
 import { useStudioSearchMouseEvents } from "./useStudioSearchMouseEvents";
 import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
-import { useAppDispatch } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 export function useStudioSearch(menuItems: menuItem[]) {
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
@@ -25,7 +26,17 @@ export function useStudioSearch(menuItems: menuItem[]) {
 
     const dispatch = useAppDispatch();
 
+    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
+
     const handleAskAi = useCallback(() => {
+        if (isAiAssistantDisabled) {
+            return;
+        }
+
+        if (!searchQuery?.trim()) {
+            return;
+        }
+
         dispatch(chatbotActions.isOpenSet(true));
         dispatch(chatbotActions.runChat({ message: searchQuery }));
         setSearchQuery("");

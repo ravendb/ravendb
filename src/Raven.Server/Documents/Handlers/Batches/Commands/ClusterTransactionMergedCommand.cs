@@ -75,7 +75,7 @@ public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
                                 }
 
                                 var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, changeVector: changeVector,
-                                    flags: DocumentFlags.FromClusterTransaction);
+                                    flags: DocumentFlags.FromClusterTransaction, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                 AddPutResult(putResult);
                             }

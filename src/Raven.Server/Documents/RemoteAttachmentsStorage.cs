@@ -224,7 +224,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         return downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
 
-    public long TryUpdateRemoteAttachment(DocumentsOperationContext context, DateTime? newRemoteAtDt, long currentDt, string newIdentifier, string currentIdentifier, Slice keySlice)
+    public long TryUpdateRemoteAttachment(DocumentsOperationContext context, string documentId, string name, DateTime? newRemoteAtDt, long currentDt, string newIdentifier, string currentIdentifier, Slice keySlice)
     {
         // Handle case where there's no current upload date
         if (currentDt == -1L)
@@ -244,10 +244,18 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         var remoteAtChanged = newRemoteAtDt.Value.Ticks != currentDt;
         var identifierChanged = HasIdentifierChanged(currentIdentifier, newIdentifier);
 
-        if (remoteAtChanged == false && identifierChanged == false)
+        if (_logger.IsDebugEnabled)
         {
-            // No changes needed
-            return currentDt;
+            var curDt = new DateTime(currentDt);
+            if (remoteAtChanged == false && identifierChanged == false)
+            {
+                // The attachment was re added, lets update the background work tree even if its the same identifier and at
+                _logger.Debug("Updated remote parameters for attachment '{0}' of document '{1}' with unchanged remote parameters (identifier '{2}', at: '{3}'). Updating background work tree entry.", name, documentId, currentIdentifier, curDt.GetDefaultRavenFormat());
+            }
+            else
+            {
+                _logger.Debug("Updated remote parameters for attachment '{0}' of document '{1}' with new remote parameters (identifier '{2}' -> '{3}', at: '{4}' -> '{5}'). Updating background work tree entry.", name, documentId, currentIdentifier, newIdentifier, curDt.GetDefaultRavenFormat(), newRemoteAtDt.Value.GetDefaultRavenFormat());
+            }
         }
 
         // Something changed - remove the old entry and add the new one
@@ -351,13 +359,12 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         }
     }
 
-    public int ProcessRemoteAttachments(DocumentsOperationContext context, DateTime currentTime, Dictionary<string, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
+    public int ProcessRemoteAttachments(DocumentsOperationContext context, DateTime currentTime, Dictionary<Slice, List<Slice>> seenDocs, Dictionary<string, Dictionary<string, AttachmentRemoteInfo>> attachmentsToUploadByIdentifier)
     {
         var processedCount = 0;
         var docsTree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-        foreach (var (docId, allTicks) in seenDocs)
+        foreach (var (lowerId, allTicks) in seenDocs)
         {
-            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var lowerId))
             using (var doc = Database.DocumentsStorage.Get(context, lowerId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
             {
                 // remove all entries for processed document
@@ -412,7 +419,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                                 break;
                             case BackgroundWorkInfoStatus.Process:
                                 // we uploaded this, we can mark the attachment as remote and delete its stream
-                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, docId, name, contentType, hash, sizeInBytes);
+                                Database.DocumentsStorage.AttachmentsStorage.MarkAsRemoteAttachment(context, lowerId, doc.Id, name, contentType, hash, sizeInBytes);
                                 processedCount++;
                                 break;
                             default:
@@ -423,7 +430,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
 
                 if (processedCount > 0)
                 {
-                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, docId);
+                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChangeInternal(context, lowerId, doc.Id);
                 }
             }
         }

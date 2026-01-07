@@ -38,6 +38,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.SchemaValidation;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -83,8 +84,8 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
-using Voron.Impl.Journal;
-using static Raven.Server.Utils.MetricCacher.Keys;
+using Raven.Server.Documents.SchemaValidation;
+using Sparrow.Json.Sync;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
@@ -286,6 +287,7 @@ namespace Raven.Server.Documents.Indexes
         public bool IsOnBeforeExecuteIndexing { get; private set; }
 
         public TestIndexRun TestRun;
+        internal IndexSchemaValidatorsByCollection _schemaValidators;
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
@@ -404,6 +406,8 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
 
             exceptionAggregator.Execute(() => { _mre?.Dispose(); });
+
+            exceptionAggregator.Execute(() =>_schemaValidators?.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -894,6 +898,9 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
+                if (Definition.SchemaValidation != null)
+                    _schemaValidators = IndexSchemaValidatorsByCollection.Create(_contextPool, Definition.SchemaValidation, DocumentDatabase.Configuration.SchemaValidation);
+                
                 OnInitialization();
 
                 if (LastIndexingTime != null)

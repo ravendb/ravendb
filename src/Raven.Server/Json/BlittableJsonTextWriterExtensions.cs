@@ -1502,6 +1502,10 @@ namespace Raven.Server.Json
             else
                 writer.WriteNull();
             writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.SchemaDefinitions));
+            writer.WriteIndexSchemaDefinitions(indexDefinition.SchemaDefinitions);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Priority));
             if (indexDefinition.Priority.HasValue)
@@ -2759,6 +2763,28 @@ namespace Raven.Server.Json
             writer.WriteComma();
             writer.WritePropertyName("NodeTag");
             writer.WriteString(nodeTag);
+            writer.WriteEndObject();
+        }
+        
+        public static void WriteIndexSchemaDefinitions(this AbstractBlittableJsonTextWriter writer, IndexSchemaDefinitions indexDefinitionSchemaDefinitions)
+        {
+            if(indexDefinitionSchemaDefinitions == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+            
+            var first = true;
+            writer.WriteStartObject();
+            foreach (var (collection, definition) in indexDefinitionSchemaDefinitions)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+                writer.WritePropertyName(collection);
+                writer.WriteString(definition);
+            }
             writer.WriteEndObject();
         }
     }

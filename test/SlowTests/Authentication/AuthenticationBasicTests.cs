@@ -36,7 +36,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
-    public class AuthenticationBasicTests : RavenTestBase
+    public class AuthenticationBasicTests : DisableParallelTestBase
     {
         public AuthenticationBasicTests(ITestOutputHelper output) : base(output)
         {

@@ -119,9 +119,13 @@ function AllTabsItem({ tab, label, iconName, isRequiredDatabaseName }: AllTabsIt
 function DatabaseNameTab() {
     const dispatch = useAppDispatch();
     const allDatabases = useAppSelector(databaseSelectors.allDatabases).filter((db) => !db.isDisabled);
+    const [filter, setFilter] = useState("");
 
     const databaseOptions = useMemo(() => {
-        const sortedByNameDatabases = [...allDatabases].sort((a, b) => a.name.localeCompare(b.name));
+        const sortedByNameDatabases = allDatabases
+            .filter((db) => db.name.toLowerCase().includes(filter.trim().toLowerCase()))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
         return sortedByNameDatabases.map((db) => db.name);
     }, [allDatabases]);
 
@@ -153,6 +157,22 @@ function DatabaseNameTab() {
                     Database Name
                 </span>
             </Dropdown.Header>
+            <div className="clearable-input mb-2">
+                <Form.Control
+                    type="text"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Search database name"
+                    className="rounded-pill ps-3 pe-4"
+                />
+                {filter && (
+                    <div className="clear-button">
+                        <Button variant="secondary" size="sm" onClick={() => setFilter("")}>
+                            <Icon icon="clear" margin="m-0" />
+                        </Button>
+                    </div>
+                )}
+            </div>
             <div className="overflow-y-auto flex-grow-1">
                 {databaseOptions.length > 0 ? (
                     databaseOptions.map((dbName) => (
@@ -266,6 +286,7 @@ function DocumentIdTab() {
 function CollectionNameTab() {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector((state) => chatbotSelectors.attachedContextById(state, "DatabaseName"))?.value;
+    const [filter, setFilter] = useState("");
 
     const { tasksService } = useServices();
 
@@ -302,24 +323,42 @@ function CollectionNameTab() {
                     Collection Name
                 </span>
             </Dropdown.Header>
+            <div className="clearable-input mb-2">
+                <Form.Control
+                    type="text"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Search collection name"
+                    className="rounded-pill ps-3 pe-4"
+                />
+                {filter && (
+                    <div className="clear-button">
+                        <Button variant="secondary" size="sm" onClick={() => setFilter("")}>
+                            <Icon icon="clear" margin="m-0" />
+                        </Button>
+                    </div>
+                )}
+            </div>
             {asyncGetCollections.loading && <ListSkeleton />}
             {asyncGetCollections.result?.length === 0 && !asyncGetCollections.loading && (
                 <EmptySet compact className="hstack justify-content-center mt-3">
-                    No indexes found
+                    No collections found
                 </EmptySet>
             )}
             <div className="overflow-y-auto flex-grow-1">
                 {asyncGetCollections.result?.length > 0 &&
-                    asyncGetCollections.result.map((collectionName) => (
-                        <Dropdown.Item
-                            key={collectionName}
-                            onClick={() => handleSelect(collectionName)}
-                            className="text-truncate"
-                            title={collectionName}
-                        >
-                            {collectionName}
-                        </Dropdown.Item>
-                    ))}
+                    asyncGetCollections.result
+                        .filter((collectionName) => collectionName.toLowerCase().includes(filter.trim().toLowerCase()))
+                        .map((collectionName) => (
+                            <Dropdown.Item
+                                key={collectionName}
+                                onClick={() => handleSelect(collectionName)}
+                                className="text-truncate"
+                                title={collectionName}
+                            >
+                                {collectionName}
+                            </Dropdown.Item>
+                        ))}
             </div>
         </>
     );
@@ -330,6 +369,7 @@ function IndexNameTab() {
     const databaseName = useAppSelector((state) => chatbotSelectors.attachedContextById(state, "DatabaseName"))?.value;
     const db = useAppSelector(databaseSelectors.allDatabases).find((db) => db.name === databaseName);
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
+    const [filter, setFilter] = useState("");
 
     const { indexesService } = useServices();
 
@@ -372,6 +412,22 @@ function IndexNameTab() {
                     Index Name
                 </span>
             </Dropdown.Header>
+            <div className="clearable-input mb-2">
+                <Form.Control
+                    type="text"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Search index name"
+                    className="rounded-pill ps-3 pe-4"
+                />
+                {filter && (
+                    <div className="clear-button">
+                        <Button variant="secondary" size="sm" onClick={() => setFilter("")}>
+                            <Icon icon="clear" margin="m-0" />
+                        </Button>
+                    </div>
+                )}
+            </div>
             {asyncGetIndexNames.loading && <ListSkeleton />}
             {asyncGetIndexNames.result?.length === 0 && !asyncGetIndexNames.loading && (
                 <EmptySet compact className="hstack justify-content-center mt-3">
@@ -380,16 +436,18 @@ function IndexNameTab() {
             )}
             <div className="overflow-y-auto flex-grow-1">
                 {asyncGetIndexNames.result?.length > 0 &&
-                    asyncGetIndexNames.result.map((indexName) => (
-                        <Dropdown.Item
-                            key={indexName}
-                            onClick={() => handleSelect(indexName)}
-                            className="text-truncate"
-                            title={indexName}
-                        >
-                            {indexName}
-                        </Dropdown.Item>
-                    ))}
+                    asyncGetIndexNames.result
+                        .filter((indexName) => indexName.toLowerCase().includes(filter.trim().toLowerCase()))
+                        .map((indexName) => (
+                            <Dropdown.Item
+                                key={indexName}
+                                onClick={() => handleSelect(indexName)}
+                                className="text-truncate"
+                                title={indexName}
+                            >
+                                {indexName}
+                            </Dropdown.Item>
+                        ))}
             </div>
         </>
     );

@@ -7,6 +7,9 @@ import AiAssistantUsagePercentageCircle from "components/common/aiAssistant/AiAs
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { Switch } from "components/common/Checkbox";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import AiAssistantDisabledInSettingsMessage from "components/common/aiAssistant/AiAssistantDisabledInSettingsMessage";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
@@ -19,7 +22,7 @@ export default function ChatbotHeader() {
                 <HeaderTitle />
             </h4>
             <div className="hstack">
-                {chatbotTab === "Ask AI" && <AskAiActions />}
+                {chatbotTab === "askAi" && <AskAiActions />}
                 <Button
                     variant="link"
                     size="sm"
@@ -27,14 +30,6 @@ export default function ChatbotHeader() {
                     className={classNames({ "text-reset": !isPinned })}
                 >
                     <Icon icon={isPinned ? "pinned" : "pin"} margin="m-0" />
-                </Button>
-                <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => dispatch(chatbotActions.isOpenToggled())}
-                    className="text-reset"
-                >
-                    <Icon icon="cancel" margin="m-0" />
                 </Button>
             </div>
         </div>
@@ -44,8 +39,11 @@ export default function ChatbotHeader() {
 function AskAiActions() {
     const dispatch = useAppDispatch();
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
+    const isChatbotDataSubmissionEnabled = useAppSelector(chatbotSelectors.isDataSubmissionEnabled);
+    const aiAssistantSettings = useAppSelector(aiAssistantSelectors.settings);
 
     const resetConversation = () => {
+        dispatch(chatbotActions.abortChat());
         dispatch(chatbotActions.messagesSet([]));
         dispatch(chatbotActions.conversationIdSet(null));
         dispatch(chatbotActions.attachedContextUnrelatedRemoved());
@@ -70,6 +68,25 @@ function AskAiActions() {
                     >
                         Always allow endpoints calls
                     </Switch>
+                    <ConditionalPopover
+                        conditions={[
+                            {
+                                isActive: aiAssistantSettings.isDataSubmissionDisabled,
+                                message: <AiAssistantDisabledInSettingsMessage />,
+                            },
+                        ]}
+                    >
+                        <Switch
+                            color="primary"
+                            selected={isChatbotDataSubmissionEnabled}
+                            toggleSelection={() =>
+                                dispatch(chatbotActions.isDataSubmissionEnabledSet(!isChatbotDataSubmissionEnabled))
+                            }
+                            disabled={aiAssistantSettings.isDataSubmissionDisabled}
+                        >
+                            Allow data submission
+                        </Switch>
+                    </ConditionalPopover>
                     <Button
                         variant="outline-secondary"
                         onClick={() => dispatch(chatbotActions.exportConversation())}
@@ -91,10 +108,10 @@ function HeaderTitle() {
     const resourcesTab = useAppSelector(chatbotSelectors.chatbotResourcesTab);
 
     const handleResourcesGoBack = () => {
-        dispatch(chatbotActions.chatbotResourcesTabSet("Help and resources"));
+        dispatch(chatbotActions.chatbotResourcesTabSet("helpAndResources"));
     };
 
-    if (chatbotTab === "Ask AI") {
+    if (chatbotTab === "askAi") {
         return (
             <div className="d-flex align-items-center gap-2">
                 <div>
@@ -106,8 +123,8 @@ function HeaderTitle() {
         );
     }
 
-    if (chatbotTab === "Resources") {
-        if (resourcesTab === "Help and resources") {
+    if (chatbotTab === "resources") {
+        if (resourcesTab === "helpAndResources") {
             return (
                 <div>
                     <Icon icon="resources" />

@@ -95,6 +95,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public bool ConflictSolverConfigUpdated { get; set; }
 
+        public bool SchemaValidationConfigUpdated { get; set; }
+
         public bool TimeSeriesConfigurationUpdated { get; set; }
 
         public bool DocumentsCompressionConfigurationUpdated { get; set; }
@@ -188,6 +190,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (ConflictSolverConfigUpdated)
                 json[nameof(ConflictSolverConfigUpdated)] = ConflictSolverConfigUpdated;
+
+            if (SchemaValidationConfigUpdated)
+                json[nameof(SchemaValidationConfigUpdated)] = SchemaValidationConfigUpdated;
 
             if (PeriodicBackupsUpdated)
                 json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
@@ -293,6 +298,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (ConflictSolverConfigUpdated)
                 sb.AppendLine("- Conflicts Solvers");
+
+            if (SchemaValidationConfigUpdated)
+                sb.AppendLine("- Schema Validation Configurations");
 
             if (PeriodicBackupsUpdated)
                 sb.AppendLine("- Periodic Backups");

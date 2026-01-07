@@ -5,22 +5,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.NotificationCenter;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Utils;
@@ -58,6 +58,8 @@ namespace Raven.Server.Documents.Sharding
         private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
         private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
 
+        public SchemaValidatorCache SchemaValidatorCache { get; private set; }
+
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 reduce the record to the needed fields");
@@ -77,6 +79,7 @@ namespace Raven.Server.Documents.Sharding
 
             UpdateConfiguration(record.Settings);
 
+            UpdateSchemaValidationCache(record.SchemaValidation);
             Indexes = new ShardedIndexesContext(this, serverStore);
 
             ShardExecutor = new ShardExecutor(ServerStore, _record, _record.DatabaseName);
@@ -101,6 +104,29 @@ namespace Raven.Server.Documents.Sharding
 
             CompareExchangeStorage = new ShardedCompareExchangeStorage(this);
             CompareExchangeStorage.Initialize(DatabaseName);
+        }
+
+        private void UpdateSchemaValidationCache(SchemaValidationConfiguration configuration)
+        {
+            if (configuration != null && configuration.HasEnabledConfiguration())
+            {
+                if (SchemaValidatorCache != null)
+                {
+                    SchemaValidatorCache.Update(configuration);
+                }
+                else
+                {
+                    var cache = new SchemaValidatorCache(NotificationCenter, Configuration.SchemaValidation, Loggers.GetLogger<SchemaValidatorCache>());
+                    cache.Update(configuration);
+                    SchemaValidatorCache = cache;
+                }
+            }
+            else
+            {
+                // we intentionally don't dispose here since it might be currently being used for validation,
+                // clearing the resources will be done by the finalizer.
+                SchemaValidatorCache = null;
+            }
         }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
@@ -152,6 +178,8 @@ namespace Raven.Server.Documents.Sharding
                 AllOrchestratorNodesExecutor.ForgetAbout();
                 AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
             }
+
+            UpdateSchemaValidationCache(record.SchemaValidation);
 
             Indexes.Update(record, index);
 

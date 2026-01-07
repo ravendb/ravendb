@@ -13,40 +13,6 @@ namespace Raven.Server.Utils.Cli
         {
         }
 
-        private static (bool HasValue, bool Value) TryGetRetainVMSettingValue()
-        {
-            // REMARK: Whenever CoreCLR includes this we can get rid of this method.
-            var runtimeConfigurationPath = Path.Combine(AppContext.BaseDirectory, "Raven.Server.runtimeconfig.json");
-
-            // Try read runtime configuration from file
-            if (File.Exists(runtimeConfigurationPath))
-            {
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (FileStream f = File.OpenRead(runtimeConfigurationPath))
-                using (BlittableJsonReaderObject @object = context.Sync.ReadForMemory(f, "n"))
-                {
-                    if (@object.TryGet("runtimeOptions", out BlittableJsonReaderObject runtime) &&
-                        runtime.TryGet("configProperties", out BlittableJsonReaderObject properties) &&
-                        properties.TryGet("System.GC.RetainVM", out bool value))
-                    {
-                        return (true, value);
-                    }
-                }
-            }
-
-            // Fallback (Environment Variable)
-            string retainVM = Environment.GetEnvironmentVariable("GCRetainVM");
-            if (string.IsNullOrEmpty(retainVM) == false)
-            {
-                if (bool.TryParse(retainVM, out bool value))
-                {
-                    return (true, value);
-                }
-            }
-
-            return (false, false);
-        }
-
         public static string Describe()
         {
             var latencyMode = GCSettings.LatencyMode;
@@ -64,19 +30,26 @@ namespace Raven.Server.Utils.Cli
             {
                 serverGcConcurrentMode = "concurrent";
             }
+            
+            var retaining = IsRetainVMEnabled() ? "retaining" : "not retaining";
 
-            // https://github.com/dotnet/runtime/issues/42720
-            /*
-            var retaining = "not retaining";
-            (bool HasValue, bool Value) retainVmSettingValue = TryGetRetainVMSettingValue();
-            if (retainVmSettingValue.HasValue && retainVmSettingValue.Value)
-            {
-                retaining = "retaining";
-            }
+            var datas = IsDatasDisabled() ? "disabled" : "enabled";
+            
+            return $"Using GC in { serverGcMode } {serverGcConcurrentMode} mode {retaining} memory from the OS. DATAS {datas}.";
+        }
 
-            return $"Using GC in { serverGcMode } {serverGcConcurrentMode} mode {retaining} memory from the OS.";
-            */
-            return $"Using GC in { serverGcMode } {serverGcConcurrentMode} mode.";
+        private static bool IsRetainVMEnabled()
+        {
+            var config = GC.GetConfigurationVariables();
+
+            return config.TryGetValue("RetainVM", out var value) && Convert.ToInt32(value) == 1;
+        }
+        
+        private static bool IsDatasDisabled()
+        {
+            var config = GC.GetConfigurationVariables();
+
+            return config.TryGetValue("GCDynamicAdaptationMode", out var value) && Convert.ToInt32(value) == 0;
         }
 
         public override void Print()
@@ -104,14 +77,9 @@ namespace Raven.Server.Utils.Cli
                 paragraph.Add(new ConsoleText { Message = " concurrent", ForegroundColor = ConsoleColor.Green });
             }
 
-            paragraph.Add(new ConsoleText { Message = " mode.", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
-
-            // https://github.com/dotnet/runtime/issues/42720
-            /*
             paragraph.Add(new ConsoleText { Message = " mode ", ForegroundColor = ConsoleColor.Gray });
 
-            (bool HasValue, bool Value) retainVmSettingValue = TryGetRetainVMSettingValue();
-            if (retainVmSettingValue.HasValue && retainVmSettingValue.Value)
+            if (IsRetainVMEnabled())
             {
                 paragraph.Add(new ConsoleText { Message = "retaining", ForegroundColor = ConsoleColor.Green });
             }
@@ -120,8 +88,10 @@ namespace Raven.Server.Utils.Cli
                 paragraph.Add(new ConsoleText { Message = "not retaining", ForegroundColor = ConsoleColor.Red });
             }
 
-            paragraph.Add(new ConsoleText { Message = " memory from the OS.", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
-            */
+            paragraph.Add(new ConsoleText { Message = " memory from the OS. ", ForegroundColor = ConsoleColor.Gray });
+            
+            paragraph.Add(new ConsoleText { Message = $"DATAS {(IsDatasDisabled() ? "disabled" : "enabled")}. ", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
+            
 
             ConsoleWriteWithColor(paragraph.ToArray());
         }

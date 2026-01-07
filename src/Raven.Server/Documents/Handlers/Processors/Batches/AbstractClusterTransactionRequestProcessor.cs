@@ -11,6 +11,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -39,6 +40,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
 
     protected abstract ClusterConfiguration GetClusterConfiguration();
 
+    protected abstract SchemaValidatorCache SchemaValidatorCache { get; }
+
     public async ValueTask<(long Index, DynamicJsonArray Results)> ProcessAsync(JsonOperationContext context, TBatchCommand command, CancellationToken token)
     {
         ArraySegment<BatchRequestParser.CommandData> parsedCommands = GetParsedCommands(command);
@@ -52,6 +55,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
         ValidateCommands(parsedCommands, disableAtomicDocumentWrites);
+
+        ValidateSchema(parsedCommands);
 
         var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
 
@@ -84,6 +89,37 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
             }
 
             return (index, array);
+        }
+    }
+
+    private void ValidateSchema(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+    {
+        var schemaValidatorCache = SchemaValidatorCache;
+        if (schemaValidatorCache == null)
+            return;
+
+        JsonOperationContext context = null;
+        IDisposable disposable = null;
+
+        try
+        {
+            foreach (var command in parsedCommands)
+            {
+                if (command.Type != CommandType.PUT)
+                    continue;
+
+                if (context == null)
+                {
+                    disposable = RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out context);
+                }
+
+                var collectionName = CollectionName.GetCollectionName(command.Document);
+                schemaValidatorCache.Validate(collectionName, command.Document, NonPersistentDocumentFlags.None, context);
+            }
+        }
+        finally
+        {
+            disposable?.Dispose();
         }
     }
 

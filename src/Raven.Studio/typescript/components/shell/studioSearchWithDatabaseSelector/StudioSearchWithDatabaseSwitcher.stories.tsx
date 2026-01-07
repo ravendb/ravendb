@@ -29,7 +29,9 @@ export const DefaultStory: StoryObj<StoryArgs> = {
     name: "Studio Search With Database Switcher",
     render: (args) => {
         const { databasesService, indexesService, tasksService } = mockServices;
-        const { databases, collectionsTracker } = mockStore;
+        const { databases, collectionsTracker, license } = mockStore;
+
+        license.with_License();
 
         const db1: DatabaseSharedInfo = {
             ...DatabasesStubs.nonShardedSingleNodeDatabase().toDto(),

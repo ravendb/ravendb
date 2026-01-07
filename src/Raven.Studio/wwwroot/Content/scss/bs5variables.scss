@@ -824,6 +824,7 @@ $zindexes: (
     "menu-xs": 1090,
     "notification-center-pinned": 1100,
     "notification-center": 1102,
+    "chatbot": 1102,
     "modal-backdrop": 1103,
     "modal": 1104,
     "offcanvas": 1111,
@@ -849,6 +850,7 @@ $zindex-tooltip: map.get($zindexes, "tooltip") !default;
 $zindex-toast: map.get($zindexes, "toast") !default;
 $zindex-notification-center: map.get($zindexes, "notification-center") !default;
 $zindex-notification-center-pinned: map.get($zindexes, "notification-center-pinned") !default;
+$zindex-chatbot: map.get($zindexes, "chatbot") !default;
 // scss-docs-end zindex-stack
 
 // scss-docs-start zindex-levels-map

@@ -165,5 +165,8 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Remote Attachments")]
         RemoteAttachments,
+
+        [Description("Schema Validation")]
+        SchemaValidation,
     }
 }

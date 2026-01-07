@@ -123,9 +123,8 @@ export default function ClientGlobalConfiguration() {
                                             <PopoverWithHoverWrapper
                                                 message={
                                                     <>
-                                                        Set the separator character for automatically generated{" "}
-                                                        <strong>Identity</strong> and <strong>HiLo</strong> document
-                                                        IDs.
+                                                        Set the default separator for automatically generated document
+                                                        IDs (<i>Identity</i>, <i>HiLo</i>, and <i>Server-side</i>).
                                                         <br />
                                                         Use any character except <code>&apos;|&apos;</code> (pipe).
                                                     </>

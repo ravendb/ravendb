@@ -15,7 +15,7 @@ export default function ChatbotPanelResources() {
 
     return (
         <div className="chatbot-panel-resources vstack">
-            {activeTab === "Help and resources" && (
+            {activeTab === "helpAndResources" && (
                 <div className="vstack">
                     <ul className="action-menu__list flex-grow">
                         <p>
@@ -26,7 +26,7 @@ export default function ChatbotPanelResources() {
                             className="action-menu__list-item action-menu__list-item--highlight"
                             role="button"
                             title="Join the Community"
-                            onClick={() => dispatch(chatbotActions.chatbotResourcesTabSet("Join the community"))}
+                            onClick={() => dispatch(chatbotActions.chatbotResourcesTabSet("joinTheCommunity"))}
                         >
                             <Icon icon="group" margin="m-0" />
                             Join the Community
@@ -35,7 +35,7 @@ export default function ChatbotPanelResources() {
                             className="action-menu__list-item"
                             role="button"
                             title="Contact support"
-                            onClick={() => dispatch(chatbotActions.chatbotResourcesTabSet("Contact support"))}
+                            onClick={() => dispatch(chatbotActions.chatbotResourcesTabSet("contactSupport"))}
                         >
                             <Icon icon="support" margin="m-0" />
                             Contact support
@@ -51,17 +51,17 @@ export default function ChatbotPanelResources() {
                     </div>
                 </div>
             )}
-            {activeTab === "Join the community" && (
+            {activeTab === "joinTheCommunity" && (
                 <JoinCommunityContent
-                    openFeedbackForm={() => dispatch(chatbotActions.chatbotResourcesTabSet("Submit feedback"))}
+                    openFeedbackForm={() => dispatch(chatbotActions.chatbotResourcesTabSet("submitFeedback"))}
                 />
             )}
-            {activeTab === "Submit feedback" && (
+            {activeTab === "submitFeedback" && (
                 <FeedbackFormContent
-                    goBack={() => dispatch(chatbotActions.chatbotResourcesTabSet("Help and resources"))}
+                    goBack={() => dispatch(chatbotActions.chatbotResourcesTabSet("helpAndResources"))}
                 />
             )}
-            {activeTab === "Contact support" && <ContactSupportContent />}
+            {activeTab === "contactSupport" && <ContactSupportContent />}
         </div>
     );
 }

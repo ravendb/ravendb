@@ -19,7 +19,6 @@
         margin-top: sizes.$gutter-xxs !important;
         padding: 0 !important;
         cursor: default;
-        max-height: 640px;
         overflow-y: auto;
 
         .dropdown-item {
@@ -103,7 +102,7 @@
     }
 
     &__database-col {
-        max-height: 540px;
+        max-height: 400px;
         overflow-y: auto;
 
         &__header {
@@ -124,6 +123,7 @@
             margin: sizes.$gutter-xs sizes.$gutter-sm;
             padding-bottom: sizes.$gutter-xs;
             border-bottom: 1px solid colors.$border-color-light-var;
+            width: auto !important;
 
             &__header {
                 padding: 0 0 sizes.$gutter-xs 0 !important;
@@ -165,7 +165,7 @@
         }
     }
     &__server-col {
-        max-height: 540px;
+        max-height: 400px;
         overflow-y: auto;
 
         @media (min-width: sizes.$screen-sm-max) {

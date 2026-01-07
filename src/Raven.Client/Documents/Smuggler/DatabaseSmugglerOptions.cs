@@ -55,7 +55,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.AiConnectionStrings |
                                                                                   DatabaseRecordItemType.GenAiEtls |
                                                                                   DatabaseRecordItemType.AiAgents | 
-                                                                                  DatabaseRecordItemType.RemoteAttachments;
+                                                                                  DatabaseRecordItemType.RemoteAttachments |
+                                                                                  DatabaseRecordItemType.SchemaValidation;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |
@@ -66,7 +67,8 @@ namespace Raven.Client.Documents.Smuggler
         internal const DatabaseRecordItemType ShardingNotSupportedDatabaseSmugglerOptions = DatabaseRecordItemType.HubPullReplications | 
                                                                                             DatabaseRecordItemType.SinkPullReplications |
                                                                                             DatabaseRecordItemType.PostgreSQLIntegration |
-                                                                                            DatabaseRecordItemType.QueueEtls;
+                                                                                            DatabaseRecordItemType.QueueEtls |
+                                                                                            DatabaseRecordItemType.RemoteAttachments;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

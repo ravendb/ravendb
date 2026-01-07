@@ -276,6 +276,8 @@ namespace Raven.Server.Commercial
 
         public bool HasRemoteAttachments => Enabled(LicenseAttribute.RemoteAttachments);
 
+        public bool HasSchemaValidation => Enabled(LicenseAttribute.SchemaValidation);
+
         public int? MaxNumberOfRevisionsToKeep => GetValue<int?>(LicenseAttribute.MaxNumberOfRevisionsToKeep, agplValue: 2);
 
         public int? MaxNumberOfRevisionAgeToKeepInDays => GetValue<int?>(LicenseAttribute.MaxNumberOfRevisionAgeToKeepInDays, agplValue: 45);
@@ -390,6 +392,7 @@ namespace Raven.Server.Commercial
                 [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster,
                 [nameof(CanSetupDefaultRevisionsConfiguration)] = CanSetupDefaultRevisionsConfiguration,
                 [nameof(HasRemoteAttachments)] = HasRemoteAttachments,
+                [nameof(HasSchemaValidation)] = HasSchemaValidation,
             };
         }
     }

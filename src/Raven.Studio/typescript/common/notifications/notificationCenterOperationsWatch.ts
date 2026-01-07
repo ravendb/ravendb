@@ -13,7 +13,7 @@ class notificationCenterOperationsWatch {
         this.watchedProgresses.clear();
     }
 
-    monitorOperation(operationId: number, onProgress: (progress: unknown) => void = null): JQueryPromise<unknown> {
+    monitorOperation<T = unknown>(operationId: number, onProgress: (progress: unknown) => void = null): JQueryPromise<T> {
         if (onProgress) {
             let progresses = this.watchedProgresses.get(operationId);
             if (!progresses) {
@@ -24,14 +24,14 @@ class notificationCenterOperationsWatch {
             progresses.push(onProgress);
         }
 
-        return this.getOrCreateOperation(operationId).promise();
+        return this.getOrCreateOperation<T>(operationId).promise();
     }
 
-    private getOrCreateOperation(operationId: number): JQueryDeferred<unknown> {
+    private getOrCreateOperation<T = unknown>(operationId: number): JQueryDeferred<T> {
         if (this.operations.has(operationId)) {
-            return this.operations.get(operationId) as JQueryDeferred<unknown>;
+            return this.operations.get(operationId) as JQueryDeferred<T>;
         } else {
-            const task = $.Deferred<unknown>();
+            const task = $.Deferred<T>();
             this.operations.set(operationId, task);
             return task;
         }
