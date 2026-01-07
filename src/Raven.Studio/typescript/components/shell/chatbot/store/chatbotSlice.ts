@@ -47,6 +47,7 @@ export interface ChatbotEndpointItem {
     toolId: string;
     url: string;
     state: ChatbotUserActionState;
+    resultSizeInBytes?: number;
 }
 
 interface ChatbotMessageBase {

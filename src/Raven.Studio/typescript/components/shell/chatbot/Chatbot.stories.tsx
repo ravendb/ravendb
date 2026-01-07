@@ -3,6 +3,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import Chatbot from "./Chatbot";
 import { mockStore } from "test/mocks/store/MockStore";
 import { ChatbotStubs } from "test/stubs/ChatbotStubs";
+import { ChatbotUserActionState } from "components/shell/chatbot/store/chatbotSlice";
 
 export default {
     title: "Shell/Chatbot",
@@ -10,8 +11,9 @@ export default {
 } satisfies Meta;
 
 function commonInit() {
-    const { chatbot, aiAssistant, cluster } = mockStore;
+    const { chatbot, aiAssistant, cluster, license } = mockStore;
 
+    license.with_License();
     cluster.with_ClientVersion("7.2");
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
@@ -54,7 +56,7 @@ function ChatbotInLayout() {
     );
 }
 
-export const Basic: StoryObj<typeof Chatbot> = {
+export const Basic: StoryObj = {
     render: () => {
         commonInit();
 
@@ -65,13 +67,29 @@ export const Basic: StoryObj<typeof Chatbot> = {
     },
 };
 
-export const Endpoints: StoryObj<typeof Chatbot> = {
-    render: () => {
+export const Endpoints: StoryObj<{ actionState: ChatbotUserActionState }> = {
+    render: (args) => {
         commonInit();
 
         const { chatbot } = mockStore;
-        chatbot.with_messages(ChatbotStubs.messagesWithEndpoints());
+        chatbot.with_messages(ChatbotStubs.messagesWithEndpoints(args.actionState));
 
         return <ChatbotInLayout />;
+    },
+    args: {
+        actionState: "waiting",
+    },
+    argTypes: {
+        actionState: {
+            control: { type: "radio" },
+            options: [
+                "waiting",
+                "allowed",
+                "alwaysAllowed",
+                "skipped",
+                "denied",
+                "error",
+            ] satisfies ChatbotUserActionState[],
+        },
     },
 };

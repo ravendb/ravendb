@@ -14,6 +14,7 @@ import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
 import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstants";
 import "./ChatbotAskAiMessageEndpoints.scss";
+import genUtils from "common/generalUtils";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -26,6 +27,7 @@ interface EndpointResult {
     url: string;
     status: "success" | "error";
     resultText: string;
+    resultSizeInBytes?: number;
 }
 
 export default function ChatbotAskAiMessageEndpoints({
@@ -98,7 +100,8 @@ export default function ChatbotAskAiMessageEndpoints({
 
                 const textResult = await tryCatch(() => response.data.text());
                 if (textResult.status === "success") {
-                    return { ...baseResult, status: "success", resultText: textResult.data };
+                    const resultSizeInBytes = new Blob([textResult.data]).size;
+                    return { ...baseResult, status: "success", resultText: textResult.data, resultSizeInBytes };
                 }
 
                 return { ...baseResult, status: "error", resultText: "Failed to parse the response" };
@@ -145,6 +148,7 @@ export default function ChatbotAskAiMessageEndpoints({
                             toolId: x.toolId,
                             url: x.url,
                             state: getEndpointState(x.status),
+                            resultSizeInBytes: x.resultSizeInBytes,
                         })),
                     },
                 })
@@ -307,14 +311,19 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
 
     return (
         <div>
-            <div className="hstack w-100">
+            <div className="hstack w-100 gap-1">
                 <span className="text-nowrap">
                     <EndpointItemStateIcon state={endpoint.state} />
                     GET
                 </span>
-                <a href={endpoint.url} target="_blank" className="ms-1 text-truncate no-decor" title={endpoint.url}>
+                <a href={endpoint.url} target="_blank" className="text-truncate no-decor" title={endpoint.url}>
                     {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
                 </a>
+                {endpoint.resultSizeInBytes != null && (
+                    <Badge className="ms-auto text-nowrap" bg="secondary" pill>
+                        {genUtils.formatBytesToSize(endpoint.resultSizeInBytes)}
+                    </Badge>
+                )}
             </div>
             {urlWithParamToDisplay?.paramToDisplay && (
                 <ul>
