@@ -10,7 +10,7 @@ public class DisableParallelTestBase : ReplicationTestBase
     private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
     private readonly MultipleUseFlag _concurrentTestsSemaphoreTaken = new();
     
-    public DisableParallelTestBase(ITestOutputHelper output) : base(output)
+    protected DisableParallelTestBase(ITestOutputHelper output) : base(output)
     {
     }
     
