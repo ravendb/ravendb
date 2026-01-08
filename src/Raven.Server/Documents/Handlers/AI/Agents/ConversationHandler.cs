@@ -362,7 +362,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             if (FindToolFrom(_configuration, call.Name) is not AiAgentToolAction)
                 continue;
 
-            _document.OpenActionCalls.TryAdd(call.Id, new AiAgentActionRequest
+            _document.OpenActionCalls.Add(call.Id, new AiAgentActionRequest
             {
                 ToolId = call.Id,
                 Name = call.Name,
@@ -429,8 +429,8 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
     }
 
-    private bool TryCloseSubAgentCall(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall, 
-        List<BlittableJsonReaderObject> messages, List<string> openToolCallsToRemove, ref int toolsIterations)
+    private bool TryCloseSubAgentCall(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
+        SubConversationResult result)
     {
         if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string agentConversationId) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ConversationId)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
@@ -441,7 +441,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         if (requestResult.TryGet(nameof(ConversationResult<object>.ToolsIterations), out int callToolsIterations) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ToolsIterations)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
-        toolsIterations += callToolsIterations;
+        result.ToolsIterations += callToolsIterations;
 
         if (actionRequests?.Length > 0)
         {
@@ -456,25 +456,13 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                     Arguments = actionRequest.Arguments,
                 };
 
-                if (_childUserCalls.TryAdd(actionRequest.ToolId, // Sub call
-                        newActionCall) == false)
-                {
-                    // Already exists
-                    var existingActionCall = _childUserCalls[actionRequest.ToolId];
-                    Debug.Assert(newActionCall.IsEqual(existingActionCall),
-                        $"Mismatch detected in OpenActionCalls for key '{actionRequest.ToolId}'.\n" +
-                        $"--- NEW ACTION CALL ---\n{newActionCall}\n\n" +
-                        $"--- EXISTING ACTION CALL ---\n{existingActionCall}\n\n" +
-                        "The existing ActionCall does not match the newly attempted ActionCall insertion.\n" +
-                        "If this mismatch is valid, ensure higher-level logic prevents conflicting ActionCalls with the same ToolId."
-                        );
-                }
+                AddChildrenUserCall(result.ChildUserCalls, actionRequest.ToolId, newActionCall);
             }
 
             return false;
         }
 
-        messages.Add(context.ReadObject(
+        result.Messages.Add(context.ReadObject(
             new DynamicJsonValue
             {
                 ["tool_call_id"] = currentCall.Id,
@@ -483,9 +471,26 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 ["subConversation"] = agentConversationId,
             }, "tool-call/response"));
 
-        openToolCallsToRemove.Add(currentCall.Id);
+        result.OpenToolCallsToRemove.Add(currentCall.Id);
 
         return true;
+    }
+
+    private static void AddChildrenUserCall(Dictionary<string, AiAgentActionRequest> childUserCalls, string subToolId, AiAgentActionRequest newActionCall)
+    {
+        if (childUserCalls.TryAdd(subToolId, // Sub call
+                newActionCall) == false)
+        {
+            // Already exists
+            var existingActionCall = childUserCalls[subToolId];
+            Debug.Assert(newActionCall.IsEqual(existingActionCall),
+                $"Mismatch detected in OpenActionCalls for key '{subToolId}'.\n" +
+                $"--- NEW ACTION CALL ---\n{newActionCall}\n\n" +
+                $"--- EXISTING ACTION CALL ---\n{existingActionCall}\n\n" +
+                "The existing ActionCall does not match the newly attempted ActionCall insertion.\n" +
+                "If this mismatch is valid, ensure higher-level logic prevents conflicting ActionCalls with the same ToolId."
+            );
+        }
     }
 
     private static void RemoveNonEssentialFieldsFromMetadata(BlittableJsonReaderArray queryResult)
@@ -663,7 +668,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
                 if (action.SubConversation == null)
                 {
-                    _document.OpenActionCalls.Remove(rootToolId, out _);
+                    _document.OpenActionCalls.Remove(rootToolId);
                     _document.AddMessage(context, context.ReadObject(
                         new DynamicJsonValue
                         {
@@ -815,7 +820,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
     private async Task<int> ExecuteMultiAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
-        List<Task<(IDisposable Disposable, List<BlittableJsonReaderObject> Messages, List<string> OpenToolCallsToRemove, int ToolsIterations)>> tasks = [];
+        List<Task<SubConversationResult>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
         {
             tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs));
@@ -851,6 +856,11 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                     {
                         _document.OpenActionCalls.Remove(callId, out _);
                     }
+
+                    foreach (var (key, value) in r.ChildUserCalls)
+                    {
+                        AddChildrenUserCall(_childUserCalls, key, value);
+                    }
                 }
             }
             catch (Exception ex)
@@ -866,7 +876,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return toolsIterations;
     }
 
-    private async Task<(IDisposable Disposable, List<BlittableJsonReaderObject> Messages, List<string> OpenToolCallsToRemove, int ToolsIterations)> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
+    private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
     {
         IDisposable disposable = null;
 
@@ -874,9 +884,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         {
             disposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-            var messages = new List<BlittableJsonReaderObject>();
-            var openToolCallsToRemove = new List<string>();
-            int iterations = 0;
+            var result = new SubConversationResult(disposable);
 
             await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
             {
@@ -888,14 +896,14 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 switch (toolCall)
                 {
                     case AiAgentToolSubAgent:
-                        if (TryCloseSubAgentCall(context, requestResult, currentCall, messages, openToolCallsToRemove, ref iterations) == false)
-                            return (disposable, messages, openToolCallsToRemove, iterations);
+                        if (TryCloseSubAgentCall(context, requestResult, currentCall, result) == false)
+                            return result;
                         break;
                     case AiAgentToolQuery:
                         if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                             throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
-                        messages.Add(context.ReadObject(
+                        result.Messages.Add(context.ReadObject(
                             new DynamicJsonValue
                             {
                                 ["tool_call_id"] = currentCall.Id,
@@ -910,12 +918,26 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 }
             }
 
-            return (disposable, messages, openToolCallsToRemove, iterations);
+            return result;
         }
         catch
         {
             disposable?.Dispose();
             throw;
+        }
+    }
+
+    private sealed class SubConversationResult
+    {
+        public IDisposable Disposable { get; }
+        public List<BlittableJsonReaderObject> Messages { get; } = new();
+        public List<string> OpenToolCallsToRemove { get; } = new();
+        public Dictionary<string, AiAgentActionRequest> ChildUserCalls { get; } = new();
+        public int ToolsIterations { get; set; }
+
+        public SubConversationResult(IDisposable disposable)
+        {
+            Disposable = disposable;
         }
     }
 
@@ -987,7 +1009,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         await InitializeDocument(context);
 
         if (await TryHandleActionResponses(context) is false)
-            return default;
+            return AiInternalConversationResult.Default;
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>
@@ -1021,7 +1043,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         };
     }
 
-    private readonly ConcurrentDictionary<string, AiAgentActionRequest> _childUserCalls = [];
+    private readonly Dictionary<string, AiAgentActionRequest> _childUserCalls = [];
 
     private IEnumerable<DynamicJsonValue> GetUserActions()
     {
