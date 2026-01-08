@@ -510,7 +510,7 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
     }
 
     [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Counters | RavenTestCategory.TimeSeries)]
-    public async Task AddingAttachmentsCountersTimeSeriesShouldWork()
+    public async Task UpdatingAttachmentsCountersTimeSeriesShouldWork()
     {
         using (var store = GetDocumentStore())
         {
@@ -565,12 +565,19 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
                     session.Advanced.Attachments.Store(documentId, attachmentName, stream, "application/zip");
                     await session.SaveChangesAsync();
                 }
+
+                session.Advanced.Attachments.Delete(documentId, attachmentName);
+                await session.SaveChangesAsync();
             }
 
             using (var session = store.OpenAsyncSession())
             {
                 var counters = session.CountersFor(documentId);
-                counters.Increment("likes");
+                const string counterName = "likes";
+                counters.Increment(counterName);
+                await session.SaveChangesAsync();
+
+                counters.Delete(counterName);
                 await session.SaveChangesAsync();
             }
 
@@ -581,7 +588,9 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
 
                 tsf.Append(baseline, new List<double> { 10 }, "herz");
                 tsf.Append(baseline.AddMinutes(10), new List<double> { 20 }, "herz");
-
+                await session.SaveChangesAsync();
+                
+                tsf.Delete();
                 await session.SaveChangesAsync();
             }
         }
