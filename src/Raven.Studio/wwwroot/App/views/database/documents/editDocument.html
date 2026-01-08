@@ -117,6 +117,15 @@
                             <i class="icon-ai-agents"></i>
                             <span data-bind="text: isAiAgentHistory() ? 'See conversation' : 'Continue conversation'"></span>
                         </a>
+
+                        <button type="button" class="btn btn-default"
+                                data-bind="click: validateDocumentSchema,
+                                           visible: canValidateDocument()"
+                                title="Validate document">
+                            <i class="icon-start"></i>
+                            <span>Validate document</span>
+                        </button>
+
                         <button type="button" class="btn btn-default" data-bind="click: copyDocumentBodyToClipboard, enable: !showHugeDocumentWarning()" title="Copy document content to clipboard">
                             <i class="icon-copy-to-clipboard"></i>
                             <span>Copy to Clipboard</span>

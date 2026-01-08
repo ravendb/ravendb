@@ -54,6 +54,9 @@ import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.Remot
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
 import popoverUtils = require("common/popoverUtils");
+import validateDocumentSchemaCommand = require("commands/database/documents/validateDocumentSchemaCommand");
+import getSchemaValidationCommand = require("commands/database/settings/getSchemaValidationCommand");
+import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 
 class editDocument extends shardViewModelBase {
     view = require("views/database/documents/editDocument.html");
@@ -194,6 +197,8 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
+    canValidateDocument: KnockoutComputed<boolean>;
+    schemaValidationConfig = ko.observable<SchemaValidationConfiguration>(null);
 
     isFullScreenEditor = ko.observable(false);
 
@@ -315,6 +320,8 @@ class editDocument extends shardViewModelBase {
 
         this.setupDisableReasons();
         this.focusOnEditor();
+
+        this.loadSchemaValidationConfiguration();
 
         this.watchFullScreenCommand();
 
@@ -834,6 +841,20 @@ class editDocument extends shardViewModelBase {
 
             return this.document().__metadata.collection === "@conversations-history";
         });
+
+        this.canValidateDocument = ko.pureComputed(() => {
+            const collection = this.document().getCollection();
+            if (collection === "@empty") {
+                return false;
+            }
+
+            const schemaConfig = this.schemaValidationConfig();
+            if (!schemaConfig || !schemaConfig.ValidatorsPerCollection) {
+                return false;
+            }
+
+            return Object.hasOwn(schemaConfig.ValidatorsPerCollection, collection);
+        });
     }
 
     async onDiffModeChanged(newMode: "previous" | "manual") {
@@ -964,6 +985,15 @@ class editDocument extends shardViewModelBase {
 
     copyDocumentBodyToClipboard() {
         copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
+    }
+
+    validateDocumentSchema() {
+        if (!this.isValid(this.globalValidationGroup)) {
+            return;
+        }
+
+        eventsCollector.default.reportEvent("document", "validate-document");
+        this.validateDocumentInternal();
     }
 
     copyDocumentIdToClipboard() {
@@ -1321,6 +1351,44 @@ class editDocument extends shardViewModelBase {
             target["@collection"] || document.getCollectionFromId(id, this.collectionTracker.getCollectionNames());
     }
 
+    private validateDocumentInternal() {
+        let updatedDocDto: documentDto;
+        try {
+            updatedDocDto = JSON.parse(documentHelpers.escapeNewlinesAndTabsInTextFields(this.documentText()));
+        } catch (error) {
+            messagePublisher.reportError("Failed to parse document JSON", error.message);
+            return;
+        }
+
+        const documentToValidate = new document(updatedDocDto);
+        const db = this.db;
+        new validateDocumentSchemaCommand(db, documentToValidate.toDto(true))
+            .execute()
+            .done((result) => {
+                switch (result.Status) {
+                    case "Valid":
+                        messagePublisher.reportSuccess("Document is valid");
+                        break;
+                    case "Invalid":
+                        messagePublisher.reportError("Document validation failed", JSON.stringify({
+                            Message: result.ErrorMessages.join(" "),
+                            Error: result.ErrorMessages.join("\n")
+                        }));
+                        break;
+                    case "MissingSchema":
+                        messagePublisher.reportError("Document schema is missing");
+                        break;
+                    default:
+                        messagePublisher.reportError("Unknown validation result status");
+                        break;
+                }
+            })
+            .fail((error) => {
+                console.error("Validation failed:", error);
+                messagePublisher.reportError("Document validation failed");
+            });
+    }
+
     private loadDocument(id: string): JQueryPromise<document> {
         this.isBusy(true);
 
@@ -1386,6 +1454,17 @@ class editDocument extends shardViewModelBase {
             })
             .fail(() => {
                 this.remoteAttachmentDisabledReason("Remote attachments configuration could not be retrieved.");
+            });
+    }
+
+    private loadSchemaValidationConfiguration() {
+        new getSchemaValidationCommand(this.db)
+            .execute()
+            .done((schemaValidationConfig: SchemaValidationConfiguration) => {
+                this.schemaValidationConfig(schemaValidationConfig);
+            })
+            .fail(() => {
+                this.schemaValidationConfig(null);
             });
     }
 

@@ -39,12 +39,12 @@ internal abstract class AbstractStudioDocumentHandlerProcessorForValidateDocumen
                 var errorBuilder = new ErrorBuilder();
                 if (cache.Validate(collectionName, document, errorBuilder))
                 {
-                    result.Status = ValidateDocumentResult.ValidationStatus.Invalid;
-                    result.ErrorMessages = errorBuilder.GetErrors().ToList();
+                    result.Status = ValidateDocumentResult.ValidationStatus.Valid;
                 }
                 else
                 {
-                    result.Status = ValidateDocumentResult.ValidationStatus.Valid;
+                    result.Status = ValidateDocumentResult.ValidationStatus.Invalid;
+                    result.ErrorMessages = errorBuilder.GetErrors().ToList();
                 }
             }
 
