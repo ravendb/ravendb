@@ -2,6 +2,7 @@
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
@@ -61,6 +62,9 @@ public class SchemaValidatorCache : IDisposable
             SchemaValidator schemaValidator;
             try
             {
+                if (collection.StartsWith("@") && collection != Constants.Documents.Collections.EmptyCollection)
+                    throw new InvalidOperationException($"Schema validation cannot be defined for system collections other than '{Constants.Documents.Collections.EmptyCollection}'. Invalid collection name: '{collection}'.");
+
                 var blittable = _context.Sync.ReadForMemory(validator.Schema, "schema-validation");
                 schemaValidator = SchemaValidationHelper.InitValidatorForDocument(_context, blittable, validator.Schema, _configuration, validator.Disabled);
             }

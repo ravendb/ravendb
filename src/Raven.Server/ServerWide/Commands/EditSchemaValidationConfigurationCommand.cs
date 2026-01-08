@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.SchemaValidation;
+﻿using Raven.Client;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Sparrow.Json.Parsing;
@@ -28,7 +29,21 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
     {
         record.SchemaValidation = Configuration;
 
-        if (Configuration == null || Configuration.HasEnabledConfiguration() == false || record.Indexes == null)
+        if (Configuration == null || Configuration.HasEnabledConfiguration() == false)
+            return;
+
+        foreach (var keyValue in Configuration.ValidatorsPerCollection)
+        {
+            if (keyValue.Value.Disabled)
+                continue;
+
+            if (keyValue.Key.StartsWith("@") && keyValue.Key != Constants.Documents.Collections.EmptyCollection)
+            {
+                throw new RachisApplyException($"Schema validation cannot be defined for system collections other than '{Constants.Documents.Collections.EmptyCollection}'. Invalid collection name: '{keyValue.Key}'.");
+            }
+        }
+
+        if (record.Indexes == null)
             return;
 
         foreach (var index in record.Indexes.Values)

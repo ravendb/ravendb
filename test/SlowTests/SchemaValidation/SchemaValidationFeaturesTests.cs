@@ -18,6 +18,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -449,6 +450,53 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
             Assert.Contains("names1", schemaError.Message);
             Assert.DoesNotContain("companies1", error.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ExpirationRefresh)]
+    public async Task CollectionsThatStartWithReservedCollectionName()
+    {
+        using (var store = GetDocumentStore())
+        {
+            string schemaDefinition;
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                schemaDefinition =
+                    context.ReadObject(
+                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                        "schema-validation-configuration").ToString();
+            }
+
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        CollectionName.HiLoCollection, new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    }
+                }
+            };
+
+            var error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("Invalid collection name: '@hilo'", error.Message);
+
+            configuration.ValidatorsPerCollection.Remove(CollectionName.HiLoCollection);
+            configuration.ValidatorsPerCollection["@companies"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("Invalid collection name: '@companies'", error.Message);
+
+            configuration.ValidatorsPerCollection.Remove("@companies");
+            configuration.ValidatorsPerCollection["@empty"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
         }
     }
 
