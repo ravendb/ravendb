@@ -1365,7 +1365,7 @@ class editDocument extends shardViewModelBase {
         new getRemoteAttachmentsConfigurationCommand(this.db)
             .execute()
             .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
-                this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration.Disabled);
+                this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration?.Disabled);
             })
             .fail(() => {
                 this.remoteAttachmentsDisabled(false);
