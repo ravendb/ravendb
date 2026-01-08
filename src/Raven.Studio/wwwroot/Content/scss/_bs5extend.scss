@@ -711,3 +711,11 @@ $filtering-input-bg: $toggle-bg !default;
 .text-muted {
     color: colors.$text-muted-var !important;
 }
+
+.tokens-usage-progress-bar {
+    background-color: colors.$gray-700;
+
+    .progress-bar {
+        background: linear-gradient(135deg, #2fb4d2 0%, #6972ee 100%);
+    }
+}

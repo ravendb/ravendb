@@ -141,6 +141,7 @@ function initRedux() {
         (value) => {
             if (value?.Id !== prevLicenseId) {
                 globalDispatch(aiAssistantActions.checkConsent());
+                globalDispatch(aiAssistantActions.checkUsage());
             }
         },
         licenseModel.licenseStatus,
@@ -149,6 +150,7 @@ function initRedux() {
 
     accessManager.clientCertificateThumbprint.subscribe(() => {
         globalDispatch(aiAssistantActions.checkConsent());
+        globalDispatch(aiAssistantActions.checkUsage());
     });
 
     router.activeInstruction.subscribe((instruction) => {

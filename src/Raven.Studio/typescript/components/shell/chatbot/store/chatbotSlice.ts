@@ -16,7 +16,7 @@ import moment from "moment";
 
 let chatAbortController: AbortController = null;
 
-type ChatbotTab = "askAi" | "resources";
+type ChatbotTab = "aiAssistant" | "resources";
 type ChatbotResourcesTab = "helpAndResources" | "joinTheCommunity" | "contactSupport" | "submitFeedback";
 export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
 
@@ -107,7 +107,7 @@ const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelecto
 const initialState: ChatbotState = {
     isOpen: false,
     isPinned: true,
-    chatbotTab: "askAi",
+    chatbotTab: "aiAssistant",
     chatbotResourcesTab: "helpAndResources",
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),

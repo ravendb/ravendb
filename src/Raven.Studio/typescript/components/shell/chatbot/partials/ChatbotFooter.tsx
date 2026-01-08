@@ -34,9 +34,9 @@ export default function ChatbotFooter() {
             >
                 <FooterItem
                     icon="ask-ai"
-                    title="Ask AI"
-                    isActive={chatbotTab === "askAi"}
-                    handleClick={() => dispatch(chatbotActions.chatbotTabSet("askAi"))}
+                    title="AI Assistant"
+                    isActive={chatbotTab === "aiAssistant"}
+                    handleClick={() => dispatch(chatbotActions.chatbotTabSet("aiAssistant"))}
                     isDisabled={isAiAssistantSettingsDisabled || !hasAiAssistant}
                 />
             </ConditionalPopover>

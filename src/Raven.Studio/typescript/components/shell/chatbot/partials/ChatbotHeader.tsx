@@ -1,9 +1,7 @@
-import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { useAppDispatch, useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import { chatbotSelectors, chatbotActions } from "../store/chatbotSlice";
-import AiAssistantUsagePercentageCircle from "components/common/aiAssistant/AiAssistantUsagePercentageCircle";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { Switch } from "components/common/Checkbox";
@@ -24,7 +22,7 @@ export default function ChatbotHeader() {
                 <HeaderTitle />
             </h4>
             <div className="hstack gap-2">
-                {chatbotTab === "askAi" && <AskAiActions />}
+                {chatbotTab === "aiAssistant" && <AskAiActions />}
                 <Button
                     variant="link"
                     size="sm"
@@ -141,14 +139,11 @@ function HeaderTitle() {
         dispatch(chatbotActions.chatbotResourcesTabSet("helpAndResources"));
     };
 
-    if (chatbotTab === "askAi") {
+    if (chatbotTab === "aiAssistant") {
         return (
-            <div className="d-flex align-items-center gap-2">
-                <div>
-                    <Icon icon="ask-ai" className="ai-gradient" />
-                    Ask AI
-                </div>
-                <AiAssistantUsagePercentageCircle />
+            <div>
+                <Icon icon="ask-ai" className="ai-gradient" />
+                AI Assistant
             </div>
         );
     }
