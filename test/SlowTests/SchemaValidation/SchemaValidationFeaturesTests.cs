@@ -481,7 +481,7 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             };
 
             var error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
-            Assert.Contains("Invalid collection name: '@hilo'", error.Message);
+            Assert.Contains($"Invalid collection name: '{CollectionName.HiLoCollection}'", error.Message);
 
             configuration.ValidatorsPerCollection.Remove(CollectionName.HiLoCollection);
             configuration.ValidatorsPerCollection["@companies"] = new SchemaDefinition
@@ -490,8 +490,16 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             };
             error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
             Assert.Contains("Invalid collection name: '@companies'", error.Message);
-
+            
             configuration.ValidatorsPerCollection.Remove("@companies");
+            configuration.ValidatorsPerCollection[Constants.Documents.Collections.AiAgentConversationCollection] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains($"Invalid collection name: '{Constants.Documents.Collections.AiAgentConversationCollection}'", error.Message);
+
+            configuration.ValidatorsPerCollection.Remove(Constants.Documents.Collections.AiAgentConversationCollection);
             configuration.ValidatorsPerCollection["@empty"] = new SchemaDefinition
             {
                 Schema = schemaDefinition
