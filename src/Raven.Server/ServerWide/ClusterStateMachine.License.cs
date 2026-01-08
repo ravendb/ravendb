@@ -1241,7 +1241,7 @@ public sealed partial class ClusterStateMachine
         if (licenseStatus.HasRemoteAttachments)
             return;
 
-        if (databaseRecord.RemoteAttachments == null || databaseRecord.RemoteAttachments.HasDestination())
+        if (databaseRecord.RemoteAttachments == null || databaseRecord.RemoteAttachments.HasDestination() == false)
             return;
 
         throw new LicenseLimitException(LimitType.RemoteAttachments, "Your license doesn't support adding the remote attachments configuration.");
