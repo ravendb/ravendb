@@ -5,9 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -224,6 +226,27 @@ namespace FastTests
                 pull.Disabled = disabled;
                 store.Maintenance.Send(new PutPullReplicationAsHubOperation(pull));
                 return pull;
+            }
+
+            internal async Task CreateRemoteAttachmentsConfiguration(string dbName, DocumentStore store, bool disabled = false)
+            {
+                var c1 = new RemoteAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "S3-Users", new RemoteAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new RemoteAttachmentsS3Settings() { BucketName = "testS3Bucket-Users" },
+                                Disabled = false
+                            }
+                        }
+                    },
+                    CheckFrequencyInSec = 1000
+                };
+
+                var result = await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(c1));
+                Assert.NotNull(result.RaftCommandIndex);
             }
 
             internal RavenEtlConfiguration CreateRavenEtlConfiguration(string csName, string dbName, DocumentStore store, out AddEtlOperationResult etl, bool disabled = false)
