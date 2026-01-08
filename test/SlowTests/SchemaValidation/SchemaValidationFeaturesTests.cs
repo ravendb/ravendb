@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -505,6 +506,84 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
                 Schema = schemaDefinition
             };
             await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Counters | RavenTestCategory.TimeSeries)]
+    public async Task AddingAttachmentsCountersTimeSeriesShouldWork()
+    {
+        using (var store = GetDocumentStore())
+        {
+            const string documentId = "users/1-A";
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = "Grisha" };
+                await session.StoreAsync(user, documentId);
+                await session.SaveChangesAsync();
+            }
+
+            string schemaDefinition;
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                schemaDefinition =
+                    context.ReadObject(
+                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                        "schema-validation-configuration").ToString();
+            }
+
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        "Users", new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    }
+                }
+            };
+
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(documentId);
+                user.Name += "Kotler";
+                await Assert.ThrowsAsync<SchemaValidationException>(async () => await session.SaveChangesAsync());
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var rnd = new Random();
+                var b = new byte[8];
+                rnd.NextBytes(b);
+
+                const string attachmentName = "test";
+                using (var stream = new MemoryStream(b))
+                {
+                    session.Advanced.Attachments.Store(documentId, attachmentName, stream, "application/zip");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var counters = session.CountersFor(documentId);
+                counters.Increment("likes");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var baseline = DateTime.Now;
+                var tsf = session.TimeSeriesFor(documentId, "heartbeat");
+
+                tsf.Append(baseline, new List<double> { 10 }, "herz");
+                tsf.Append(baseline.AddMinutes(10), new List<double> { 20 }, "herz");
+
+                await session.SaveChangesAsync();
+            }
         }
     }
 

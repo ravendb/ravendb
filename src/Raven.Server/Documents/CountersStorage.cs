@@ -2194,7 +2194,7 @@ namespace Raven.Server.Documents
             if (newData == null)
                 return null;
 
-            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
+            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags | NonPersistentDocumentFlags.SkipSchemaValidation);
             return putResult.ChangeVector;
         }
 
