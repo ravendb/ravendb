@@ -1,7 +1,10 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.AI.AiAssistant.Handlers;
 
@@ -33,5 +36,21 @@ public class AiAssistantHandler : ServerRequestHandler
     {
         using (var processor = new AiAssistantCheckUsageProcessor(this))
             await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/assistant/settings", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetSettings()
+    {
+        var aiSettings = ServerStore.Configuration.Ai;
+        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        using (var token = CreateHttpRequestBoundOperationToken())
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), token.Token))
+        {
+            writer.WriteObject(context.ReadObject(new DynamicJsonValue
+            {
+                [nameof(AiConfiguration.DisableAiAssistant)] = aiSettings.DisableAiAssistant,
+                [nameof(AiConfiguration.DisableDataSubmission)] = aiSettings.DisableDataSubmission
+            }, "ai-settings"));
+        }
     }
 }

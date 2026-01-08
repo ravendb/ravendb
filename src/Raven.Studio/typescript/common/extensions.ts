@@ -246,12 +246,14 @@ class extensions {
                         ? react.createElement(SplitView.SplitViewProvider, null, component)
                         : component;
                     
-                    const dirtyFlagWrapper = react.createElement(useDirtyFlag.DirtyFlagProvider, options.dirtyFlag, splitViewProvider);
-                    const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, dirtyFlagWrapper);
-                    const confirmDialogProvider = react.createElement(ConfirmDialog.ConfirmDialogProvider, null, reduxWrapper);
+                    const confirmDialogProvider = react.createElement(ConfirmDialog.ConfirmDialogProvider, null, splitViewProvider);
                     const dialogProvider = react.createElement(Dialog.DialogProvider, null, confirmDialogProvider);
+                    const dirtyFlagWrapper = react.createElement(useDirtyFlag.DirtyFlagProvider, options.dirtyFlag, dialogProvider);
 
-                    root.render(dialogProvider);
+                    // Keep it as last wrapper
+                    const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, dirtyFlagWrapper);
+
+                    root.render(reduxWrapper);
                 }
             }
         }

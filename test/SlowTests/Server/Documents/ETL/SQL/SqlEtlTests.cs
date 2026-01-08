@@ -1444,7 +1444,12 @@ loadToOrdersWithDot(orderData);
             }
         }
 
-        protected void SetupSqlEtl(DocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null, List<SqlEtlTable> tables = null)
+        private void SetupSqlEtl(DocumentStore store, string connectionString, string script, bool insertOnly = false, List<string> collections = null, List<SqlEtlTable> tables = null)
+        {
+            SetupSqlEtlInternal(store, Etl, connectionString, script, insertOnly, collections, tables);
+        }
+
+        internal static void SetupSqlEtlInternal(DocumentStore store, RavenTestBase.EtlTestBase etl, string connectionString, string script, bool insertOnly = false, List<string> collections = null, List<SqlEtlTable> tables = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to SQL DB";
 
@@ -1454,7 +1459,7 @@ loadToOrdersWithDot(orderData);
                 new SqlEtlTable { TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = insertOnly },
             };
             
-            Etl.AddEtl(store, new SqlEtlConfiguration()
+            etl.AddEtl(store, new SqlEtlConfiguration()
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,

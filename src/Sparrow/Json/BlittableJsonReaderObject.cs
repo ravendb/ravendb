@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Sparrow.Json
 {
@@ -74,6 +75,16 @@ namespace Sparrow.Json
             _isRoot = true;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
+        }
+        
+        public void WriteJsonTo(Stream stream)
+        {
+            AssertContextNotDisposed();
+
+            using (var writer = new BlittableJsonTextWriter(_context, stream))
+            {
+                writer.WriteObject(this);
+            }
         }
         
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
@@ -252,7 +263,7 @@ namespace Sparrow.Json
 
             return propertyNames;
         }
-
+        
         private LazyStringValue GetPropertyName(int propertyId)
         {
             AssertContextNotDisposed();
@@ -646,12 +657,6 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetMember(string name, out object result)
-        {
-            return TryGetMember(new StringSegment(name), out result);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryGetObjectByIndex(int index, BlittableJsonToken expectedToken, out object result)
         {
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
@@ -715,6 +720,26 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool TryGetMember(LazyStringValue name, out object result)
+        {
+            AssertContextNotDisposed();
+
+            if (_mem == null)
+                ThrowObjectDisposed();
+            
+            var propId = GetPropertyIndex(name);
+            if (propId == -1)
+            {
+                result = null;
+                return false;
+            }
+            var prop = default(PropertyDetails);
+            GetPropertyByIndex(propId, ref prop);
+            result = prop.Value;
+            return true;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddToCache(StringSegment name, object result, int index)
         {
             if (_objectsPathCache == null)
@@ -776,6 +801,26 @@ namespace Sparrow.Json
             }
 
             prop.Value = value;
+        }
+
+        internal LazyStringValue GetPropertyNameByIndex(int index)
+        {
+            AssertContextNotDisposed();
+
+            if (_mem == null)
+                ThrowObjectDisposed();
+
+            if (index < 0 || index >= _propCount)
+                ThrowOutOfRangeException(index);
+
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+
+            GetPropertyTypeAndPosition(index, metadataSize,
+                out var token,
+                out var position,
+                out var propertyId);
+
+            return GetPropertyName(propertyId);
         }
 
         private static void ThrowOutOfRangeException(int indexValue)
@@ -1077,8 +1122,10 @@ namespace Sparrow.Json
             return context.ReadObject(this, null);
         }
 
+        //https://issues.hibernatingrhinos.com/issue/RavenDB-25633/Implement-CloneForConcurrentRead-to-work-with-nested-objects
         public BlittableJsonReaderObject CloneForConcurrentRead(JsonOperationContext externalContext)
         {
+            Debug.Assert(HasParent == false);
             // when we read a blittable we do also some allocations and use context's path cache (e.g. InsertionOrderProperties, ReadStringLazily, GetPropertyByIndex)
             // we cannot use internal BlittableJsonReaderBase._context for that purpose since it must not be used concurrently
             // we have to provide external context that will be used for that purpose during the read action
@@ -1453,6 +1500,12 @@ namespace Sparrow.Json
             }
 
             return true;
+        }
+
+        public bool Contains(string propertyName)
+        {
+            var lazyName = _context.GetLazyStringForFieldWithCaching(propertyName);
+            return Contains(lazyName);
         }
 
         private int _hashCode;

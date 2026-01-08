@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -10,7 +11,8 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Extensions;
+using Raven.Server.Documents.SchemaValidation;
+using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -28,6 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadAttachmentStats;
         private IndexingStatsScope _loadCompareExchangeValueStats;
         private JavaScriptUtils _javaScriptUtils;
+        private ErrorBuilder _schemaValidationErrorBuilder;
         private readonly DocumentsStorage _documentsStorage;
         public readonly QueryOperationContext QueryContext;
 
@@ -276,6 +279,38 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        public string[] SchemaGetErrorsFor(BlittableJsonReaderObject doc)
+        {
+            _schemaValidationErrorBuilder ??= new ErrorBuilder(Current.IndexContext);
+            _schemaValidationErrorBuilder.Reset();
+            
+            var enumerable = ValidateSchema(doc, _schemaValidationErrorBuilder)
+                ? []
+                : _schemaValidationErrorBuilder.GetErrors().ToArray();
+            
+            return enumerable;
+        }
+
+        private bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
+        {
+            var collection = CollectionName.GetCollectionName(doc);
+            
+            var validators = Current.Index._schemaValidators;
+            if (validators == null)
+            {
+                var schemaValidatorCache = QueryContext.Documents.DocumentDatabase.SchemaValidatorCache;
+                if (schemaValidatorCache == null)
+                    return true;
+
+                return schemaValidatorCache.Validate(collection, doc, errorBuilder);
+            }
+
+            if (validators.TryGet(collection, out var validator) == false)
+                return true;
+            
+            return validator.Validate(doc, errorBuilder);
         }
 
         private Slice GetIdSlice(LazyStringValue id)

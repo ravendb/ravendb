@@ -50,6 +50,7 @@ import queryPlan = require("viewmodels/database/query/queryPlan");
 import store = require("components/store");
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import aiAssistantSlice = require("components/common/shell/aiAssistantSlice");
 
 type queryResultTab = "results" | "explanations" | "queryPlan" | "timings" | "revisions";
 
@@ -129,6 +130,12 @@ class includedRevisions {
     items: Array<includedRevisionItem> = [];
 }
 
+interface AdditionalParameters {
+    database: string;
+    openGraph: boolean;
+    sourceView?: "chatbot" | "regular";
+}
+
 class query extends shardViewModelBase {
 
     static readonly clientQueryId = "studio_" + new Date().getTime();
@@ -151,7 +158,7 @@ class query extends shardViewModelBase {
 
     static readonly maxSpatialResultsToFetch = 5000;
     
-    autoOpenGraph = false;
+    additionalParameters?: AdditionalParameters;
 
     saveQueryFocus = ko.observable<boolean>(false);
 
@@ -578,17 +585,15 @@ class query extends shardViewModelBase {
             }); 
     }
 
-    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: { database: string; openGraph: boolean; sourceView?: "chatbot" }) {
+    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: AdditionalParameters) {
         super.activate(indexNameOrRecentQueryHash, additionalParameters);
-        
-        if (additionalParameters && additionalParameters.openGraph) {
-            this.autoOpenGraph = true;
-        }
+
+        this.additionalParameters = additionalParameters;
         
         this.updateHelpLink('KCIMJK');
 
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
-        
+
         const db = this.db;
         
         return this.fetchAllIndexes(db)
@@ -1186,38 +1191,43 @@ class query extends shardViewModelBase {
                         this.saveRecentQueryToStorage(criteriaDto, optionalSavedQueryName);
                         
                         this.setupDisableReasons(); 
-                        
-                        if (this.autoOpenGraph) {
+
+                        if (this.additionalParameters?.openGraph) {
                             const firstItem = this.gridController().findItem(() => true);
                             if (firstItem) {
                                 this.gridController().setSelectedItems([firstItem]);
                                 this.plotTimeSeries();
                             }
                             
-                            this.autoOpenGraph = false;
+                            this.additionalParameters.openGraph = false;
                         }
 
+                        const storeState = store.default.getState();
+                        const isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
+                        const isChatbotDataSubmissionEnabled = chatbotSlice.chatbotSelectors.isDataSubmissionEnabled(storeState);
+
                         // Attach query first page result to chatbot context
-                        if (skip === 0) {
-                            const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id" | "state"> = {
+                        if (skip === 0 && !isAiAssistantDisabled && isChatbotDataSubmissionEnabled) {
+                            const attachedContextBase: Omit<chatbotSlice.ChatbotAttachedContext, "id"> = {
                                 type: "QueryResult",
                                 label: criteriaForFetcher.queryText().replaceAll("\r\n", " "),
                                 query: criteriaForFetcher.queryText(),
                                 value: queryResults.items?.map(doc => doc?.toDto(true)) ?? [],
+                                state: "excluded",
                             };
                             
-                            if (store.default.getState().chatbot.isRunQueryFromChatbot) {
+                            if (this.additionalParameters?.sourceView === "chatbot") {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
                                     id: `QueryResult-from-chatbot-${_.uniqueId()}}`,
-                                    state: "included",
                                 }));
-                                storeCompat.globalDispatch(chatbotSlice.chatbotActions.isRunQueryFromChatbotSet(false));
+
+                                // Reset source view to avoid duplications on next queries
+                                this.additionalParameters.sourceView = "regular";
                             } else {
                                 storeCompat.globalDispatch(chatbotSlice.chatbotActions.attachedContextUpserted({
                                     ...attachedContextBase,
                                     id: "QueryResult-regular",
-                                    state: "excluded",
                                 }));
                             }
                         }
@@ -1229,25 +1239,30 @@ class query extends shardViewModelBase {
                         this.rawJsonUrl(null);
                         this.queryStats(null);
                         this.totalResultsForUi(0);
-                        resultsTask.reject(request);
 
-                        const errorMessage = request.responseJSON?.Message;
-                        const isQueryErrorInContext = !!Object.values(
-                            store.default.getState().chatbot.attachedContexts.entities
-                        ).find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
+                        const storeState = store.default.getState();
+                        const isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
 
-                        if (errorMessage && !isQueryErrorInContext) {
-                            storeCompat.globalDispatch(
-                                chatbotSlice.chatbotActions.attachedContextUpserted({
-                                    id: `QueryError-${_.uniqueId()}}`,
-                                    type: "QueryError",
-                                    label: errorMessage.replaceAll("\r\n", " "),
-                                    value: errorMessage,
-                                    state: "included",
-                                    query: criteriaForFetcher.queryText(),
-                                })
-                            );
+                        if (!isAiAssistantDisabled) {
+                            const errorMessage = request.responseJSON?.Message;
+                            const isQueryErrorInContext = chatbotSlice.chatbotSelectors.attachedContexts(storeState)
+                                .find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
+                            
+                            if (errorMessage && !isQueryErrorInContext) {
+                                storeCompat.globalDispatch(
+                                    chatbotSlice.chatbotActions.attachedContextUpserted({
+                                        id: `QueryError-${_.uniqueId()}}`,
+                                        type: "QueryError",
+                                        label: errorMessage.replaceAll("\r\n", " "),
+                                        value: errorMessage,
+                                        state: "included",
+                                        query: criteriaForFetcher.queryText(),
+                                    })
+                                );
+                            }
                         }
+
+                        resultsTask.reject(request);
                     });
                 
                 return resultsTask;

@@ -24,6 +24,7 @@ using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Json.Serialization;
@@ -499,6 +500,22 @@ namespace Raven.Server.ServerWide
                     _documentsCompressionConfiguration = JsonDeserializationCluster.DocumentsCompressionConfiguration(config);
 
                 return _documentsCompressionConfiguration;
+            }
+        }
+
+        private SchemaValidationConfiguration _schemaValidationConfiguration;
+
+        public SchemaValidationConfiguration SchemaValidationConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.SchemaValidation;
+
+                if (_schemaValidationConfiguration == null && _record.TryGet(nameof(DatabaseRecord.SchemaValidation), out BlittableJsonReaderObject config) && config != null)
+                    _schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(config);
+
+                return _schemaValidationConfiguration;
             }
         }
 
@@ -1713,6 +1730,30 @@ namespace Raven.Server.ServerWide
                     return new Dictionary<string, T> { { connectionStringName, value } };
 
                 return null;
+            }
+        }
+
+        private HashSet<string> _unusedDatabaseIds;
+
+        public HashSet<string> UnusedDatabaseIds
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.UnusedDatabaseIds;
+
+                if (_unusedDatabaseIds == null)
+                {
+                    _unusedDatabaseIds = new HashSet<string>(StringComparer.Ordinal);
+                    if (_record.TryGet(nameof(DatabaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (LazyStringValue id in bjra)
+                        {
+                            _unusedDatabaseIds.Add(id);
+                        }
+                    }
+                }
+                return _unusedDatabaseIds;
             }
         }
 

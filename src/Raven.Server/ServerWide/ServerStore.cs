@@ -25,6 +25,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -44,6 +45,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
@@ -52,6 +54,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -83,6 +86,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -102,6 +106,7 @@ using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
 using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
+using SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.ServerWide
@@ -2081,6 +2086,28 @@ namespace Raven.Server.ServerWide
 
             var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
             return SendToLeaderAsync(editDocumentsCompression);
+        }
+
+        public Task<(long Index, object Result)> ModifySchemaValidation(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(configurationJson);
+            ValidateSchemaConfiguration(context, schemaValidationConfiguration);            
+            
+            var editSchemaValidation = new EditSchemaValidationConfigurationCommand(schemaValidationConfiguration, databaseName, raftRequestId);
+            return SendToLeaderAsync(editSchemaValidation);
+        }
+
+        private void ValidateSchemaConfiguration(JsonOperationContext context, SchemaValidationConfiguration definitions)
+        {
+            if (definitions.ValidatorsPerCollection == null)
+                throw new InvalidOperationException($"'{nameof(SchemaValidationConfiguration.ValidatorsPerCollection)}' cannot be null");
+
+            foreach (var item in definitions.ValidatorsPerCollection)
+            {
+                using var schema = context.Sync.ReadForMemory(item.Value.Schema, "schema-validation");
+                SchemaValidator.ValidateInit(schema);
+                SchemaValidationHelper.ValidateSchemaDefinitionForDocument(schema);
+            }
         }
 
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)

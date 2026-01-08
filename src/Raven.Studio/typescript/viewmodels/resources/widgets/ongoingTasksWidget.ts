@@ -335,6 +335,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "SnowflakeEtl";
             case "EmbeddingsGenerationCount":
                 return "EmbeddingsGeneration";
+            case "GenAiCount":
+                return "GenAi";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }

@@ -121,9 +121,9 @@ namespace Raven.Server.Commercial
             _licenseHelper = new LicenseHelper(serverStore);
             _skipLeasingErrorsLogging = serverStore.Configuration.Licensing.SkipLeasingErrorsLogging;
         }
-        
+
         public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
-        
+
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
             try
@@ -562,7 +562,7 @@ namespace Raven.Server.Commercial
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
-                throw GenerateLicenseLimit(LimitType.InvalidLicense, 
+                throw GenerateLicenseLimit(LimitType.InvalidLicense,
                     $"Failed to activate the license. The license update for Let's Encrypt encountered an issue: {responseString}", addNotification: false);
             }
         }
@@ -802,7 +802,7 @@ namespace Raven.Server.Commercial
                     LicenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
                 }
 
-                return licenseChanged ? (leasedLicense.License, true) : (null,false);
+                return licenseChanged ? (leasedLicense.License, true) : (null, false);
             }
             catch (HttpRequestException)
             {
@@ -1097,8 +1097,8 @@ namespace Raven.Server.Commercial
             X509Certificate2 certificate = null;
             if (_serverStore.Server.Certificate.ServerCertificate != null)
             {
-                certificateNotBefore  = _serverStore.Server.Certificate.ServerCertificate.NotBefore.ToUniversalTime(); 
-                certificateNotAfter  = _serverStore.Server.Certificate.ServerCertificate.NotAfter.ToUniversalTime(); 
+                certificateNotBefore = _serverStore.Server.Certificate.ServerCertificate.NotBefore.ToUniversalTime();
+                certificateNotAfter = _serverStore.Server.Certificate.ServerCertificate.NotAfter.ToUniversalTime();
                 certificate = _serverStore.Server.Certificate.ServerCertificate;
             }
 
@@ -1153,6 +1153,7 @@ namespace Raven.Server.Commercial
             var additionalAssembliesFromNuGetCount = 0;
             var revisionCompressionCount = 0;
             var remoteAttachmentsCount = 0;
+            var schemaValidationCount = 0;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -1194,7 +1195,7 @@ namespace Raven.Server.Commercial
                         timeSeriesRollupsAndRetentionCount++;
 
                     if (HasRavenEtl(databaseRecord.RavenEtls,
-                        databaseRecord.RavenConnectionStrings))
+                            databaseRecord.RavenConnectionStrings))
                         ravenEtlCount++;
 
                     if (HasAdditionalAssembliesFromNuGet(databaseRecord.Indexes))
@@ -1215,7 +1216,7 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.QueueEtls != null &&
                         databaseRecord.QueueEtls.Count > 0)
                         queueEtlCount++;
-                    
+
                     if (databaseRecord.SnowflakeEtls != null &&
                         databaseRecord.SnowflakeEtls.Count > 0)
                         snowflakeEtlCount++;
@@ -1235,6 +1236,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.RemoteAttachments != null &&
                         databaseRecord.RemoteAttachments.HasDestination())
                         remoteAttachmentsCount++;
+
+                    if (databaseRecord.SchemaValidation != null &&
+                        databaseRecord.SchemaValidation.Disabled == false)
+                        schemaValidationCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1319,7 +1324,7 @@ namespace Raven.Server.Commercial
                 var message = GenerateDetails(queueEtlCount, "Queue ETL");
                 throw GenerateLicenseLimit(LimitType.QueueEtl, message);
             }
-            
+
             if (snowflakeEtlCount > 0 && newLicenseStatus.HasSnowflakeEtl == false)
             {
                 var message = GenerateDetails(snowflakeEtlCount, "Snowflake ETL");
@@ -1382,8 +1387,14 @@ namespace Raven.Server.Commercial
 
             if (remoteAttachmentsCount > 0 && newLicenseStatus.HasRemoteAttachments == false)
             {
-                var  message = GenerateDetails(remoteAttachmentsCount, "Remote attachments");
+                var message = GenerateDetails(remoteAttachmentsCount, "Remote attachments");
                 throw GenerateLicenseLimit(LimitType.RemoteAttachments, message);
+            }
+
+            if (schemaValidationCount > 0 && newLicenseStatus.HasSchemaValidation == false)
+            {
+                var message = GenerateDetails(schemaValidationCount, "Schema Validation");
+                throw GenerateLicenseLimit(LimitType.SchemaValidation, message);
             }
         }
 
@@ -1702,7 +1713,7 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the Queue ETL feature";
             throw GenerateLicenseLimit(LimitType.QueueEtl, message);
         }
-        
+
         public void AssertCanAddSnowflakeEtl(SnowflakeEtlConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
@@ -1725,7 +1736,7 @@ namespace Raven.Server.Commercial
 
             if (LicenseStatus.HasEmbeddingsGeneration)
                 return;
-            
+
             if (aiConnectionString == null || aiConnectionString.GetActiveProvider() == AiConnectorType.Embedded)
                 return;
 
@@ -1748,7 +1759,7 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.GenAi, message);
         }
 
-        public void AssertCanAddAiAgentTask(AiAgentConfiguration  aiAgentConfiguration)
+        public void AssertCanAddAiAgentTask(AiAgentConfiguration aiAgentConfiguration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
@@ -1839,6 +1850,18 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.RemoteAttachments, details);
         }
 
+        public void AssertCanAddSchemaValidation()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasSchemaValidation)
+                return;
+
+            const string details = "Your current license doesn't include the schema validation feature";
+            throw GenerateLicenseLimit(LimitType.SchemaValidation, details);
+        }
+
         public bool CanUseOpenTelemetryMonitoring(bool withNotification, bool metersRegistered)
         {
             if (IsValid(out _) == false)
@@ -1847,22 +1870,22 @@ namespace Raven.Server.Commercial
             switch (MetersRegistered: metersRegistered, LicenceHasMonitoringEndpoints: LicenseStatus.HasMonitoringEndpoints)
             {
                 case (MetersRegistered: true, LicenceHasMonitoringEndpoints: true):
-                {
-                    DismissLicenseLimit(LimitType.MonitoringEndpoints);
-                    return true;
-                }
+                    {
+                        DismissLicenseLimit(LimitType.MonitoringEndpoints);
+                        return true;
+                    }
                 case (MetersRegistered: false, LicenceHasMonitoringEndpoints: true):
-                {
-                    const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
-                    GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
-                    return false;
-                }
+                    {
+                        const string details = "Your license allows you to run OpenTelemetry meters, but OpenTelemetry is initialized at process startup. To enable the OpenTelemetry feature, you must restart the process.";
+                        GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: true);
+                        return false;
+                    }
                 case (MetersRegistered: _, LicenceHasMonitoringEndpoints: false):
-                {
-                    const string details = "Your current license doesn't include the OpenTelemetry feature.";
-                    GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
-                    return false;
-                }
+                    {
+                        const string details = "Your current license doesn't include the OpenTelemetry feature.";
+                        GenerateLicenseLimit(LimitType.MonitoringEndpoints, details, addNotification: withNotification);
+                        return false;
+                    }
             }
         }
 

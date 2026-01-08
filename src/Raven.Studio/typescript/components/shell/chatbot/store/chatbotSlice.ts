@@ -14,8 +14,10 @@ import { RootState } from "components/store";
 import { processStreamingResponse } from "components/utils/aiAssistStreamingUtils";
 import moment from "moment";
 
-type ChatbotTab = "Ask AI" | "What's new" | "News" | "Resources";
-type ChatbotResourcesTab = "Help and resources" | "Join the community" | "Contact support" | "Submit feedback";
+let chatAbortController: AbortController = null;
+
+type ChatbotTab = "askAi" | "resources";
+type ChatbotResourcesTab = "helpAndResources" | "joinTheCommunity" | "contactSupport" | "submitFeedback";
 export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
 
 interface ChatbotRunChatData {
@@ -80,12 +82,12 @@ interface ChatbotState {
     conversationId: string;
     messages: EntityState<ChatbotMessage, string>;
     lastRunData: ChatbotRunChatData;
-    attachedContexts: EntityState<ChatbotAttachedContext, string>;
+    attachedContexts: EntityState<ChatbotAttachedContext, ChatbotAttachedContextId>;
     isNewContextOpen: boolean;
     newContextTab: ChatbotAttachedContext["type"];
     deniedEndpoints: string[];
     isAlwaysAllowEndpointCalls: boolean;
-    isRunQueryFromChatbot: boolean;
+    isDataSubmissionEnabled: boolean;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -94,7 +96,7 @@ const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
 
 const chatbotMessagesSelectors = chatbotMessagesAdapter.getSelectors();
 
-const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, string>({
+const chatbotAttachedContextAdapter = createEntityAdapter<ChatbotAttachedContext, ChatbotAttachedContextId>({
     selectId: (context) => context.id,
 });
 
@@ -103,8 +105,8 @@ const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelecto
 const initialState: ChatbotState = {
     isOpen: false,
     isPinned: true,
-    chatbotTab: "Ask AI",
-    chatbotResourcesTab: "Help and resources",
+    chatbotTab: "askAi",
+    chatbotResourcesTab: "helpAndResources",
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
     lastRunData: null,
@@ -113,7 +115,7 @@ const initialState: ChatbotState = {
     isNewContextOpen: false,
     newContextTab: null,
     isAlwaysAllowEndpointCalls: true,
-    isRunQueryFromChatbot: false,
+    isDataSubmissionEnabled: true,
 };
 
 export const chatbotSlice = createSlice({
@@ -193,12 +195,10 @@ export const chatbotSlice = createSlice({
             );
         },
         isNewContextOpenToggled: (state) => {
-            const newState = !state.isNewContextOpen;
-            state.isNewContextOpen = newState;
-
-            if (!newState) {
-                state.newContextTab = null;
-            }
+            state.isNewContextOpen = !state.isNewContextOpen;
+        },
+        isNewContextOpenSet: (state, action: PayloadAction<boolean>) => {
+            state.isNewContextOpen = action.payload;
         },
         newContextTabSet: (state, action: PayloadAction<ChatbotAttachedContext["type"]>) => {
             state.newContextTab = action.payload;
@@ -209,8 +209,8 @@ export const chatbotSlice = createSlice({
         isAlwaysAllowEndpointCallsSet: (state, action: PayloadAction<boolean>) => {
             state.isAlwaysAllowEndpointCalls = action.payload;
         },
-        isRunQueryFromChatbotSet: (state, action: PayloadAction<boolean>) => {
-            state.isRunQueryFromChatbot = action.payload;
+        isDataSubmissionEnabledSet: (state, action: PayloadAction<boolean>) => {
+            state.isDataSubmissionEnabled = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -227,6 +227,8 @@ const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
         const { aiAssistant, chatbot } = getState() as RootState;
+
+        chatAbortController = new AbortController();
 
         dispatch(chatbotActions.lastRunDataSet(payload));
 
@@ -273,12 +275,15 @@ const runChat = createAsyncThunk(
 
         const result = await processStreamingResponse<RunChatbotAiAssistantResultDto>({
             promiseFn: () =>
-                services.aiAssistantService.runChatbot({
-                    Message: payload.message,
-                    ConversationId: chatbot.conversationId,
-                    ActionsResponses: payload.actionResponses,
-                    AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),
-                }),
+                services.aiAssistantService.runChatbot(
+                    {
+                        Message: payload.message,
+                        ConversationId: chatbot.conversationId,
+                        ActionsResponses: payload.actionResponses,
+                        AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),
+                    },
+                    chatAbortController.signal
+                ),
             streamPropertyPath: "Response.Answer",
             onChunksCombined(text) {
                 dispatch(
@@ -288,6 +293,7 @@ const runChat = createAsyncThunk(
                     })
                 );
             },
+            abortSignal: chatAbortController.signal,
         });
 
         if (result.status !== "Success") {
@@ -384,10 +390,18 @@ const retryRunChat = createAsyncThunk(chatbotSlice.name + "/retryRunChat", async
     return await dispatch(runChat(lastRunData));
 });
 
+const abortChat = createAsyncThunk(chatbotSlice.name + "/abortChat", async () => {
+    if (chatAbortController) {
+        chatAbortController.abort();
+        chatAbortController = null;
+    }
+});
+
 export const chatbotActions = {
     ...chatbotSlice.actions,
     runChat,
     retryRunChat,
+    abortChat,
     exportConversation,
 };
 
@@ -409,11 +423,11 @@ export const chatbotSelectors = {
     conversationId: (state: RootState) => state.chatbot.conversationId,
     lastRunData: (state: RootState) => state.chatbot.lastRunData,
     attachedContexts: (state: RootState) => chatbotAttachedContextSelectors.selectAll(state.chatbot.attachedContexts),
-    attachedContextById: (state: RootState, id: string) =>
+    attachedContextById: (state: RootState, id: ChatbotAttachedContextId) =>
         chatbotAttachedContextSelectors.selectById(state.chatbot.attachedContexts, id),
     isNewContextOpen: (state: RootState) => state.chatbot.isNewContextOpen,
     newContextTab: (state: RootState) => state.chatbot.newContextTab,
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
     isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
-    isRunQueryFromChatbot: (state: RootState) => state.chatbot.isRunQueryFromChatbot,
+    isDataSubmissionEnabled: (state: RootState) => state.chatbot.isDataSubmissionEnabled,
 };

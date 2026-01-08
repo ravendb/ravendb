@@ -34,7 +34,7 @@ export interface RunChatbotAiAssistantResultDto {
 }
 
 export default class runChatbotAiAssistantCommand extends commandBase {
-    constructor(private viewData: RunChatbotAiAssistantViewData) {
+    constructor(private viewData: RunChatbotAiAssistantViewData, private abortSignal?: AbortSignal) {
         super();
     }
 
@@ -52,6 +52,7 @@ export default class runChatbotAiAssistantCommand extends commandBase {
             options: {
                 method: "POST",
                 body: JSON.stringify(dto),
+                signal: this.abortSignal,
             },
         });
     }

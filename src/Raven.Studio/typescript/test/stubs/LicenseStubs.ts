@@ -131,6 +131,7 @@ export class LicenseStubs {
             HasRevisionsInSubscriptions: true,
             HasMultiNodeSharding: true,
             HasRemoteAttachments: true,
+            HasSchemaValidation: true,
             MaxNumberOfRevisionsToKeep: null,
             MaxNumberOfRevisionAgeToKeepInDays: null,
             MinPeriodForExpirationInHours: null,

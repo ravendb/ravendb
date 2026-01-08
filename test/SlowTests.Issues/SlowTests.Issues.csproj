@@ -99,6 +99,7 @@
     <PackageReference Include="FubarDev.FtpServer" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="xunit.runner.visualstudio">

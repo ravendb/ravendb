@@ -36,8 +36,8 @@
     <PackageVersion Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageVersion Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageVersion Include="libsodium" Version="1.0.20.1" />
-    <PackageVersion Include="Lucene.Net" Version="3.0.60014" />
-    <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60014" />
+    <PackageVersion Include="Lucene.Net" Version="3.0.60015" />
+    <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60015" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
@@ -89,6 +89,7 @@
     <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageVersion Include="NLog" Version="5.5.1" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="5.5.0" />
+    <PackageVersion Include="NJsonSchema" Version="11.3.2" />
     <PackageVersion Include="NodaTime" Version="3.2.2" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
     <PackageVersion Include="NuGet.Commands" Version="7.0.0" />

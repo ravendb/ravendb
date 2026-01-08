@@ -32,6 +32,7 @@ using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
@@ -205,6 +206,10 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsBinCleanerOperationResult> ConfigureRevisionsBinCleanerOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsBinCleanerOperationResult>();
         
         internal static readonly Func<BlittableJsonReaderObject, ConfigureDataArchivalOperationResult> ConfigureDataArchivalOperationResult = GenerateJsonDeserializationRoutine<ConfigureDataArchivalOperationResult>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureSchemaValidationOperationResult> ConfigureSchemaValidationOperationResult = GenerateJsonDeserializationRoutine<ConfigureSchemaValidationOperationResult>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, StartValidateSchemaOperationResult> StartValidateSchemaOperationResult = GenerateJsonDeserializationRoutine<StartValidateSchemaOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, DocumentCompressionConfigurationResult> DocumentCompressionConfigurationOperationResult = GenerateJsonDeserializationRoutine<DocumentCompressionConfigurationResult>();
 
@@ -277,7 +282,7 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolverConfiguration = GenerateJsonDeserializationRoutine<ConflictSolver>();
-
+        
         internal static readonly Func<BlittableJsonReaderObject, S3Settings> S3Settings = GenerateJsonDeserializationRoutine<S3Settings>();
 
         internal static readonly Func<BlittableJsonReaderObject, GlacierSettings> GlacierSettings = GenerateJsonDeserializationRoutine<GlacierSettings>();
@@ -304,7 +309,9 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, GetRevisionsCountOperation.DocumentRevisionsCount> DocumentRevisionsCount = GenerateJsonDeserializationRoutine<GetRevisionsCountOperation.DocumentRevisionsCount>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseSettings> DatabaseSettings = GenerateJsonDeserializationRoutine<DatabaseSettings>();
-        
+
+        internal static readonly Func<BlittableJsonReaderObject, SchemaValidationConfiguration> SchemaValidationConfiguration = GenerateJsonDeserializationRoutine<SchemaValidationConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, PutTrafficWatchConfigurationOperation.Parameters> GetTrafficWatchConfigurationResult = GenerateJsonDeserializationRoutine<PutTrafficWatchConfigurationOperation.Parameters>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigurePostgreSqlOperationResult> ConfigurePostgreSqlOperationResult = GenerateJsonDeserializationRoutine<ConfigurePostgreSqlOperationResult>();
@@ -348,7 +355,6 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, EmbeddingsGeneration> GetOngoingTaskEmbeddingsGenerationResult = GenerateJsonDeserializationRoutine<EmbeddingsGeneration>();
 
         public static readonly Func<BlittableJsonReaderObject, GenAi> GetOngoingTaskGenAiResult = GenerateJsonDeserializationRoutine<GenAi>();
-
         public static readonly Func<BlittableJsonReaderObject, AiAgentConfiguration> AiAgentConfiguration = GenerateJsonDeserializationRoutine<AiAgentConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, GetAiAgentsResponse> GetAiAgentsResponse = GenerateJsonDeserializationRoutine<GetAiAgentsResponse>();

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -990,7 +991,7 @@ namespace SlowTests.Sharding.Backup
             Assert.Equal(0, shardedRestoreResults[2].Result.Counters.ReadCount);
             Assert.Equal(1, shardedRestoreResults[2].Result.TimeSeries.ReadCount);
             Assert.Equal(6, shardedRestoreResults[2].Result.RevisionDocuments.ReadCount);
-            Assert.Equal(1, shardedRestoreResults[2].Result.RevisionDocuments.Attachments.ReadCount);
+            Assert.Equal(2, shardedRestoreResults[2].Result.RevisionDocuments.Attachments.ReadCount);
             Assert.Equal(0, shardedRestoreResults[2].Result.Tombstones.ReadCount);
             Assert.Equal(1, shardedRestoreResults[2].Result.Identities.ReadCount);
             Assert.Equal(1, shardedRestoreResults[2].Result.Indexes.ReadCount);
@@ -1263,6 +1264,39 @@ namespace SlowTests.Sharding.Backup
                             Assert.Null(order);
                         }
                     }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Attachments)]
+        public async Task CanImportAttachmentsToShardedDatabase()
+        {
+            using (var store = GetDocumentStore())
+            using (var sharded = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/2");
+
+                    using (var s1 = new MemoryStream("1"u8.ToArray()))
+                    using (var s11 = new MemoryStream("1"u8.ToArray())) // same attachment as s1
+                    using (var s2 = new MemoryStream("2"u8.ToArray()))
+                    {
+                        session.Advanced.Attachments.Store("users/1", "1.txt", s1, "text");
+                        session.Advanced.Attachments.Store("users/2", "1.txt", s11, "text"); 
+                        session.Advanced.Attachments.Store("users/2", "2.txt", s2, "text");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var dest = new MemoryStream())
+                {
+                    var export = await store.Smuggler.ExportToStreamAsync(new DatabaseSmugglerExportOptions(), s => s.CopyToAsync(dest));
+                    await export.WaitForCompletionAsync();
+                    dest.Position = 0;
+                    var import = await sharded.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), dest);
+                    await import.WaitForCompletionAsync();
                 }
             }
         }

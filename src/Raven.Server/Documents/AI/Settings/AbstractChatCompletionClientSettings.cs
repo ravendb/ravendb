@@ -78,6 +78,14 @@ internal abstract class AbstractChatCompletionClientSettings
     }
 
     public abstract AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response);
+
+    public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
+    {
+        _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
+            || message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal);
+
+        return refusal;
+    }
 }
 
 public class AiError

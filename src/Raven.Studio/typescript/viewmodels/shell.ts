@@ -63,6 +63,9 @@ import ProtractedRequestMessage = require("components/shell/partials/ProtractedR
 import typeUtils = require("common/typeUtils");
 import Chatbot = require("components/shell/chatbot/Chatbot");
 import ChatbotNavIcon = require("components/shell/chatbot/ChatbotNavIcon");
+import getSettingsAiAssistantCommand = require("commands/aiAssistant/getSettingsAiAssistantCommand");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import aiAssistantSlice = require("components/common/shell/aiAssistantSlice");
 
 class shell extends viewModelBase {
     private router = router;
@@ -320,6 +323,8 @@ class shell extends viewModelBase {
         this.fetchClientBuildVersion();
         const buildVersionTask = this.fetchServerBuildVersion();
         const latestVersionInfoTask = this.fetchLatestVersionInfo();
+
+        this.fetchAiAssistantSettings();
 
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
@@ -656,6 +661,30 @@ class shell extends viewModelBase {
     fetchClientBuildVersion() {
         new getClientBuildVersionCommand().execute().done((result: clientBuildVersionDto) => {
             this.clientBuildVersion(result);
+        });
+    }
+
+    fetchAiAssistantSettings() {
+        new getSettingsAiAssistantCommand.default().execute().done((result) => {
+            storeCompat.globalDispatch(
+                aiAssistantSlice.aiAssistantActions.settingsSet({
+                    isDisabled: result.DisableAiAssistant,
+                    isDataSubmissionDisabled: result.DisableDataSubmission,
+                })
+            );
+
+            if (result.DisableAiAssistant) {
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.chatbotTabSet("resources"));
+            }
+
+            if (result.DisableDataSubmission) {
+                storeCompat.globalDispatch(chatbotSlice.chatbotActions.isDataSubmissionEnabledSet(false));
+            } else {
+                studioSettings.default.globalSettings().done((globalSettings) => {
+                    const isEnabledInLocalStorage = globalSettings.isChatbotDataSubmissionEnabled.getValue();
+                    storeCompat.globalDispatch(chatbotSlice.chatbotActions.isDataSubmissionEnabledSet(isEnabledInLocalStorage));
+                });
+            }
         });
     }
 

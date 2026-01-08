@@ -19,7 +19,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
@@ -39,6 +38,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected readonly AsyncManualResetEvent _waitForChanges;
         internal readonly ReplicationLoader _parent;
         internal DateTime _lastDocumentSentTime;
+        private readonly int _replicationMinimalHeartbeatInMs;
 
         public event Action<DatabaseOutgoingReplicationHandler, Exception> Failed;
 
@@ -53,7 +53,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             _parent = parent;
             _database = database;
-            _waitForChanges = new AsyncManualResetEvent(_database.DatabaseShutdown);
+            _waitForChanges = new AsyncManualResetEvent(database.DatabaseShutdown);
+            _replicationMinimalHeartbeatInMs = (int)database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
             _tcpConnectionOptions = new TcpConnectionOptions
             {
                 DocumentDatabase = database,
@@ -85,7 +86,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             return Destination.Equals(other.Destination);
         }
-
 
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 OnSuccessfulReplication();
 
                 //if this returns false, this means either timeout or canceled token is activated
-                while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
+                while (WaitForChanges(_replicationMinimalHeartbeatInMs, _cts.Token) == false)
                 {
                     //If we got cancelled we need to break right away
                     if (_cts.IsCancellationRequested)
@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     // those up with the remove side, so we'll start the replication loop again.
                     // We don't care if they are locally modified or not, because we filter documents that
                     // the other side already have (based on the change vector).
-                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _parent.MinimalHeartbeatInterval)
+                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _replicationMinimalHeartbeatInMs)
                         _waitForChanges.Set();
                 }
             }

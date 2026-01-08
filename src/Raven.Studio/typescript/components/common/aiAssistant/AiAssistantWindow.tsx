@@ -26,9 +26,18 @@ interface AiAssistWindowProps {
     acceptResult: (text: string) => void;
     data: RefinePromptAiAssistantViewData;
     successMessage: ReactNode;
+    right?: string;
+    bottom?: string;
 }
 
-export default function AiAssistantWindow({ closeWindow, data, acceptResult, successMessage }: AiAssistWindowProps) {
+export default function AiAssistantWindow({
+    closeWindow,
+    data,
+    acceptResult,
+    successMessage,
+    right = "14px",
+    bottom = "14px",
+}: AiAssistWindowProps) {
     const dispatch = useAppDispatch();
     const { aiAssistantService } = useServices();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
@@ -45,7 +54,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
         setAssistResult(createLoadingState());
 
         const result = await processStreamingResponse<RefinePromptAiAssistantResultDto>({
-            promiseFn: () => aiAssistantService.refinePrompt(data, abortController),
+            promiseFn: () => aiAssistantService.refinePrompt(data, abortController.signal),
             streamPropertyPath: "RefinedPrompt",
             onChunksCombined: (text) => {
                 setAssistResult((prev) => {
@@ -63,6 +72,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     }
                 });
             },
+            abortSignal: abortController.signal,
         });
 
         if (result.status === "Error") {
@@ -98,8 +108,8 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
         <div
             className="ai-assistant-window position-absolute rounded-2 text-reset"
             style={{
-                right: "10px",
-                bottom: "10px",
+                right,
+                bottom,
                 zIndex: 10,
                 width: "500px",
             }}

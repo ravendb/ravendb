@@ -18,7 +18,7 @@ export interface RefinePromptAiAssistantResultDto {
 }
 
 export default class refinePromptAiAssistantCommand extends commandBase {
-    constructor(private viewData: RefinePromptAiAssistantViewData, private abortController: AbortController) {
+    constructor(private viewData: RefinePromptAiAssistantViewData, private abortSignal?: AbortSignal) {
         super();
     }
 
@@ -35,7 +35,7 @@ export default class refinePromptAiAssistantCommand extends commandBase {
             options: {
                 method: "POST",
                 body: JSON.stringify(dto),
-                signal: this.abortController.signal,
+                signal: this.abortSignal,
             },
         });
     }

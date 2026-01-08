@@ -1,4 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -46,7 +50,7 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocumentDeletion(store2, "users/1"));
-                await Task.Delay((int)(documentDatabase.ReplicationLoader.MinimalHeartbeatInterval * 2.5));
+                await Task.Delay((int)(documentDatabase.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds * 2.5));
 
                 using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -499,6 +503,70 @@ namespace SlowTests.Server.Replication
                 Assert.Contains("foo/bar", tombstoneIDs);
 
                 Assert.False(WaitForDocument(store1, "foo/bar", 100));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        public async Task Tombstones_Should_Be_Cleaned_On_Passive_Node_With_Pinned_External_Replication()
+        {
+            var cluster1 = await CreateRaftCluster(numberOfNodes: 2);
+            var srcDbName = GetDatabaseName();
+            await CreateDatabaseInCluster(srcDbName, replicationFactor: 2, cluster1.Leader.WebUrl);
+
+            var nodeA = cluster1.Nodes.OrderBy(x => x.ServerStore.NodeTag).First();
+            var nodeB = cluster1.Nodes.OrderBy(x => x.ServerStore.NodeTag).Last();
+
+            Assert.Equal("A", nodeA.ServerStore.NodeTag);
+            Assert.Equal("B", nodeB.ServerStore.NodeTag);
+
+            var destServer = GetNewServer();
+            using (var storeDest = GetDocumentStore(new Options { Server = destServer }))
+            using (var storeA = new DocumentStore { Urls = [nodeA.WebUrl], Database = srcDbName, Conventions = { DisableTopologyUpdates = true } }.Initialize())
+            using (var storeB = new DocumentStore { Urls = [nodeB.WebUrl], Database = srcDbName, Conventions = { DisableTopologyUpdates = true } }.Initialize())
+            {
+                var externalReplicationTask = new ExternalReplication(storeDest.Database, connectionStringName: "ExternalReplication_To_Dest_Node")
+                {
+                    MentorNode = nodeB.ServerStore.NodeTag,
+                    PinToMentorNode = true
+                };
+
+                await AddWatcherToReplicationTopology(storeA, externalReplicationTask, storeDest.Urls);
+
+                const string docId = "users/1";
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Test" }, docId);
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(storeB, docId), "Document did not replicate to Node B");
+                Assert.True(WaitForDocument(storeDest, docId), "Document did not replicate to Dest Cluster");
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Delete(docId);
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocumentDeletion(storeB, docId), "Deletion did not replicate to Node B");
+                Assert.True(WaitForDocumentDeletion(storeDest, docId), "Deletion did not replicate to Dest Cluster");
+
+                var tombstonesOnB = GetTombstones(storeB);
+                var dbB = await nodeB.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDbName);
+
+                Assert.True(tombstonesOnB.Count > 0, "Tombstones should exist on Node B before cleanup");
+
+                await WaitForValueAsync(async () =>
+                    {
+                        await dbB.TombstoneCleaner.ExecuteCleanup();
+                        tombstonesOnB = GetTombstones(storeB);
+                        return tombstonesOnB.Count;
+                    },
+                    expectedVal: 0,
+                    timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds);
+
+                Assert.Equal(0, tombstonesOnB.Count);
             }
         }
     }

@@ -102,5 +102,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlConnectionString_DeprecatedFactoryReplaced,
         Attachments_RemoteAttachmentWithoutIdentifier,
         Attachments_RemoteAttachmentErroredIdentifier,
+        
+        SchemaValidationConfiguration_Error,
     }
 }

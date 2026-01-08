@@ -55,6 +55,13 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Agent.Tools.TokenUsageThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int ToolsTokenUsageThreshold { get; set; }
 
+
+    [Description("Maximum number of seconds GenAi 'SendToModel' batch will take.")]
+    [DefaultValue(60)]
+    [TimeUnit(TimeUnit.Seconds)]
+    [ConfigurationEntry("Ai.GenAi.GenAiSendToModelTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public TimeSetting GenAiSendToModelTimeout { get; set; }
+
     [Description("Disable the AI Assistant features.")]
     [DefaultValue(false)]
     [ConfigurationEntry("Ai.Assistant.Disable", ConfigurationEntryScope.ServerWideOnly)]

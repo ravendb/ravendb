@@ -32,6 +32,10 @@ namespace Raven.Server.Json.Sync
             else
                 writer.WriteNull();
             writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.SchemaDefinitions));
+            writer.WriteIndexSchemaDefinitions(indexDefinition.SchemaDefinitions);
+            writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));
             if (indexDefinition.LockMode.HasValue)

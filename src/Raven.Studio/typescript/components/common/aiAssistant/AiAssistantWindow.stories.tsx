@@ -57,6 +57,8 @@ function AiAssistantWindowStoryComponent() {
                     acceptResult={setAssistantResultText}
                     data={{ View: "AI Agents", Message: textToRefine }}
                     successMessage="AI refined your prompt based on your input."
+                    right="0px"
+                    bottom="0px"
                 />
             </div>
 

@@ -77,7 +77,9 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Hl7.Fhir.R4" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NJsonSchema" />
     <PackageReference Include="NodaTime" />
     <PackageReference Include="Spatial4n" />
     <PackageReference Include="xunit.runner.visualstudio">

@@ -8,14 +8,24 @@ import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkCons
 import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
 import { aiAssistantConstants } from "../aiAssistant/aiAssistantConstants";
 
+interface AiAssistantSettings {
+    isDisabled: boolean;
+    isDataSubmissionDisabled: boolean;
+}
+
 interface AiAssistantState {
     consentStatus: loadableData<CheckConsentAiAssistantResultDto["Status"]>;
     usage: loadableData<CheckUsageAiAssistantResultDto>;
+    settings: AiAssistantSettings;
 }
 
 const initialState: AiAssistantState = {
     consentStatus: createIdleState("ConsentRequired"),
     usage: createIdleState(),
+    settings: {
+        isDisabled: false,
+        isDataSubmissionDisabled: false,
+    },
 };
 
 export const aiAssistantSlice = createSlice({
@@ -30,6 +40,9 @@ export const aiAssistantSlice = createSlice({
                 Status: "Success",
                 UsagePercentage: action.payload,
             });
+        },
+        settingsSet: (state, action: PayloadAction<AiAssistantSettings>) => {
+            state.settings = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -90,4 +103,7 @@ export const aiAssistantActions = {
 export const aiAssistantSelectors = {
     consentStatus: (store: RootState) => store.aiAssistant.consentStatus,
     usage: (store: RootState) => store.aiAssistant.usage,
+    isDataSubmissionDisabled: (store: RootState) => store.aiAssistant.settings.isDataSubmissionDisabled,
+    isDisabled: (store: RootState) => store.aiAssistant.settings.isDisabled || !store.license.status?.HasAiAssistant,
+    settings: (store: RootState) => store.aiAssistant.settings,
 };

@@ -235,6 +235,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.ExpiringThresholdInDays", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CertificateExpiringThreshold { get; set; }
 
+        [Description("Restrict the usage of an external script for non cluster admins.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Security.RestrictExternalScriptUsageForNonClusterAdmin", ConfigurationEntryScope.ServerWideOnly)]
+        public bool RestrictExternalScriptUsageForNonClusterAdmin { get; set; }
+
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 
         internal string UnsecureAccessWarningMessage { get; private set; }

@@ -28,6 +28,7 @@
   <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="JunitXml.TestLogger" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="xRetry" />
     <PackageReference Include="xunit" />

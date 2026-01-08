@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -429,6 +432,46 @@ namespace FastTests.Server.Documents.Attachments
                 // Verify no compilation errors
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(0, indexStats.ErrorsCount);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Sharding, LicenseRequired = true)]
+        public async Task ShouldSkipRemoteAttachmentsConfigOnImportToShardedDatabase()
+        {
+            using (var store = GetDocumentStore())
+            using (var sharded = Sharding.GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new ConfigureRemoteAttachmentsOperation(new RemoteAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RemoteAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "S3-uSeRs", new RemoteAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new RemoteAttachmentsS3Settings()
+                                {
+                                    BucketName = "testS3Bucket-Users"
+                                },
+                                Disabled = false,
+                            }
+                        }
+                    },
+                    MaxItemsToProcess = 1,
+                }));
+
+                using (var dest = new MemoryStream())
+                {
+                    var export = await store.Smuggler.ExportToStreamAsync(new DatabaseSmugglerExportOptions(), s => s.CopyToAsync(dest));
+                    await export.WaitForCompletionAsync();
+                    dest.Position = 0;
+                    var import = await sharded.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
+                    {
+                    }, dest);
+                    await import.WaitForCompletionAsync();
+                }
+
+                var shardedRecord = await sharded.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(sharded.Database));
+                Assert.Null(shardedRecord.RemoteAttachments);
             }
         }
 

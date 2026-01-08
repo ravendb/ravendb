@@ -83,6 +83,7 @@ export default function EditGenAiTaskModelFields() {
                             acceptResult={(text) => setValue("prompt", text)}
                             successMessage="AI refined your prompt based on your input and information from the previous steps."
                             closeWindow={toggleIsAiAssistOpen}
+                            right="48px"
                         />
                     )}
                 </div>

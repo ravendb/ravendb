@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -28,6 +29,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private static readonly string AttachmentsEtag = "AttachmentsEtag";
         private static readonly string AttachmentsHash = "AttachmentsHash";
         private static readonly string AttachmentsFlagAndHash = "AttachmentsFlagAndHash";
+        private static readonly int _oldSchemaSize = 7;
 
         internal static int NumberOfAttachmentsToMigrateInSingleTransaction = PlatformDetails.Is32Bits ? 2048 : 32768;
 
@@ -42,6 +44,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             using var o = Slice.From(ctx.Allocator, AttachmentsHash, out var attachmentsHashSlice);
             using var r = Slice.From(ctx.Allocator, AttachmentsFlagAndHash, out var attachmentsFlagAndHashSlice);
 
+            var isSharded = step.DocumentsStorage is ShardedDocumentsStorage;
             step.WriteTx.CreateTree(attachmentsFlagAndHashSlice, isIndexTree: true);
 
             TableSchema attachmentsSchemaBase = new TableSchema();
@@ -71,6 +74,36 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 SupportDuplicateKeys = true
             };
 
+            attachmentsSchemaBase.DefineIndex(dynamicIndex);
+
+            if (isSharded)
+            {
+                attachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = AttachmentsStorage.GenerateBucketAndHashForAttachments,
+                    IsGlobal = true,
+                    Name = Raven.Server.Documents.Schemas.Attachments.AttachmentsBucketAndHashSlice,
+                    SupportDuplicateKeys = true
+                });
+
+                attachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
+                    OnEntryChanged = AttachmentsStorage.UpdateBucketStatsForAttachments,
+                    IsGlobal = true,
+                    Name = Raven.Server.Documents.Schemas.Attachments.AttachmentsBucketAndEtagSlice
+                });
+            }
+
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate);
+
+            return true;
+        }
+
+        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex, bool isSharded,
+            Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update)
+        {
             var skip = 0L;
             var processed = 0L;
             var done = false;
@@ -79,6 +112,13 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    if (isSharded)
+                    {
+                        step.WriteTx.Owner = context;
+                        step.WriteTx.OnBeforeCommit += ((ShardedDocumentsStorage)step.DocumentsStorage).OnBeforeCommit;
+                        step.WriteTx.LowLevelTransaction.OnRollBack += ((ShardedDocumentsStorage)step.DocumentsStorage).OnFailure;
+                    }
+
                     context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
                     var commit = false;
                     var readTable = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
@@ -97,15 +137,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 using (scope)
                                 using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
                                 {
-                                    writeTable.DeleteByKey(pkSlice);
-
-                                    var id = writeTable.Insert(tvb);
-
-                                    using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
-                                    {
-                                        var indexTree = writeTable.GetTree(dynamicIndex);
-                                        writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
-                                    }
+                                    update.Invoke(dynamicIndex, writeTable, pkSlice, tvb);
                                 }
                             }
 
@@ -127,9 +159,38 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                         done = true;
                     }
+
+                    if (isSharded)
+                    {
+                        // for sharded we need to manually commit here, since it is using the context in the tx.OnBeforeCommit event
+                        step.Commit(context);
+                        step.RenewTransactions();
+                        step.WriteTx.Owner = null;
+                        step.WriteTx.OnBeforeCommit -= ((ShardedDocumentsStorage)step.DocumentsStorage).OnBeforeCommit;
+                        step.WriteTx.LowLevelTransaction.OnRollBack -= ((ShardedDocumentsStorage)step.DocumentsStorage).OnFailure;
+                    }
+                }
+            }
+        }
+
+        private static bool PopulateAttachmentsFlagAndHashDynamicIndex(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
+        {
+            if (writeTable.TryFindIdFromPrimaryKey(pkSlice, out var id))
+            {
+                // populate value into the new dynamic index
+                using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
+                {
+                    var indexTree = writeTable.GetTree(dynamicIndex);
+                    writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
                 }
             }
 
+            return true;
+        }
+
+        private bool AttachmentsTableSchemaUpdate(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
+        {
+            writeTable.Set(tvb, forceUpdate: true);
             return true;
         }
 
@@ -198,8 +259,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 
-            var flags = *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
-            Debug.Assert(size == sizeof(int));
+            int flags = tvr.Count == _oldSchemaSize ? (int)RemoteAttachmentFlags.None : *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
             var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
             var span = new Span<byte>(buffer.Ptr, buffer.Length);

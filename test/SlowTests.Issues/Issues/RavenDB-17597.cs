@@ -27,7 +27,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes)]
         public void CopyToIndexDefinitionWorksProperly()
         {
-            IndexDefinition a = GetNonDefaultIndexDefinition();
+            var a = GetNonDefaultIndexDefinition();
 
 
             var defaultIndexDefinition = new IndexDefinition();
@@ -80,14 +80,16 @@ namespace SlowTests.Issues
                 PatternReferencesCollectionName = "abcdef",
                 DeploymentMode = IndexDeploymentMode.Rolling,
                 AdditionalSources = new Dictionary<string, string>() { { "a", "A" }, { "b", "B" } },
-                AdditionalAssemblies = new HashSet<AdditionalAssembly>(){
+                AdditionalAssemblies = new HashSet<AdditionalAssembly>()
+                {
                     asm1,
                     asm2,
                 },
                 Maps = new HashSet<string>() { "m1", "m2" },
                 Fields = new Dictionary<string, IndexFieldOptions>()
                 {
-                    {"x", new IndexFieldOptions()
+                    {
+                        "x", new IndexFieldOptions()
                         {
                             Analyzer = "x1",
                             Spatial = new SpatialOptions()
@@ -101,7 +103,8 @@ namespace SlowTests.Issues
                             TermVector = FieldTermVector.WithPositions
                         }
                     },
-                    {"y", new IndexFieldOptions()
+                    {
+                        "y", new IndexFieldOptions()
                         {
                             Analyzer = "y1",
                             Spatial = new SpatialOptions()
@@ -117,8 +120,9 @@ namespace SlowTests.Issues
                     }
                 },
                 Configuration = conf,
-                CompoundFields = new List<string[]> {new []{"Name","Age"}},
-                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ExcludeArchived
+                CompoundFields = new List<string[]> { new[] { "Name", "Age" } },
+                ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ExcludeArchived,
+                SchemaDefinitions = new IndexSchemaDefinitions{{"Users", "{ 'type': 'object', 'properties': { 'Name': { 'type': 'string' } } }"}}
             };
         }
 

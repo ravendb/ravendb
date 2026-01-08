@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
-                        if (it.Segment.End > rangeSpec.End || _individualValuesOnly || IsLastDuplicate(it.Segment.Summary, aggregationHolder))
+                        if (it.Segment.End >= rangeSpec.End || _individualValuesOnly || IsLastDuplicate(it.Segment.Summary, aggregationHolder))
                         {
                             foreach (var value in AggregateIndividualItems(it.Segment.Values))
                             {

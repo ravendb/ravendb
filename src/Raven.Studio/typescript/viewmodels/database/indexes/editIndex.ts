@@ -23,6 +23,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
 import additionalAssembly = require("models/database/index/additionalAssemblyModel");
+import schemaDefinitionModel = require("models/database/index/schemaDefinitionModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
 import fileDownloader = require("common/fileDownloader");
@@ -65,6 +66,7 @@ import indexingDatabaseSettingsTypes = require("models/database/index/types")
 import genUtils = require("common/generalUtils");
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class editIndex extends shardViewModelBase {
     
@@ -104,6 +106,8 @@ class editIndex extends shardViewModelBase {
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
     
+    collections = ko.pureComputed(() => collectionsTracker.default.collections().filter(x => x.name !== "@hilo" && !x.isAllDocuments && x.name !== "@empty"))
+
     indexHistory = ko.observableArray<Raven.Client.ServerWide.IndexHistoryEntry>([]);
     showIndexHistory = ko.observable<boolean>(false);
     loadedIndexHistory = ko.observable<boolean>(false);
@@ -172,7 +176,10 @@ class editIndex extends shardViewModelBase {
             "loadFullIndexDefinitionFromHistory",
             "loadOnlyMapAndReduceFromHistory",
             "useIndexRevisionItem",
-            "previewIndex");
+            "previewIndex",
+            "addSchemaDefinition",
+            "removeSchemaDefinition",
+            "formatSchemaDefinition");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -822,6 +829,7 @@ class editIndex extends shardViewModelBase {
             indexDef.collectionNameForReferenceDocuments,
             indexDef.additionalSources,
             indexDef.additionalAssemblies,
+            indexDef.schemaDefinitions,
             indexDef.archivedDataProcessingBehavior,
             hasAnyDirtyField,
             hasAnyDirtyCompoundField,
@@ -1260,6 +1268,20 @@ class editIndex extends shardViewModelBase {
         const reduceToFormat = index.reduce;
 
         this.setFormattedText(reduceToFormat);
+    }
+
+    addSchemaDefinition() {
+        eventsCollector.default.reportEvent("index", "add-schema-definition");
+        this.editedIndex().addSchemaDefinition();
+    }
+
+    removeSchemaDefinition(item: schemaDefinitionModel) {
+        eventsCollector.default.reportEvent("index", "remove-schema-definition");
+        this.editedIndex().removeSchemaDefinition(item);
+    }
+
+    formatSchemaDefinition(schemaItem: schemaDefinitionModel) {
+        schemaItem.schemaText(generalUtils.prettifyJson(schemaItem.schemaText()));
     }
 
     private setFormattedText(textToFormat: KnockoutObservable<string>) {

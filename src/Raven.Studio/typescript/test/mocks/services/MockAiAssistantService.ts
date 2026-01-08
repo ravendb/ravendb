@@ -11,7 +11,7 @@ export default class MockAiAssistantService extends AutoMockService<AiAssistantS
     }
 
     withRefinePrompt(dto?: MockedValue<RefinePromptAiAssistantResultDto>) {
-        return this.mockResolvedValue(this.mocks.refinePrompt, dto, AiAssistantStubs.refinePromptSuccess());
+        return this.mockFetchResponse(this.mocks.refinePrompt, dto, AiAssistantStubs.refinePromptSuccess());
     }
 
     withCheckConsent(dto?: MockedValue<CheckConsentAiAssistantResultDto>) {

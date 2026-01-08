@@ -17,40 +17,6 @@ import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinitio
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 
 export class DatabasesStubs {
-    private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
-        return {
-            Name: name,
-            IsEncrypted: false,
-            LockMode: "Unlock",
-            DeletionInProgress: {},
-            Sharding: null,
-            IndexesCount: 0,
-            NodesTopology: {
-                PriorityOrder: [],
-                Members: [
-                    {
-                        NodeTag: "A",
-                        ResponsibleNode: null,
-                        NodeUrl: "http://a.ravendb",
-                    },
-                ],
-                Promotables: [],
-                Rehabs: [],
-                Status: {
-                    A: DatabasesStubs.statusOk(),
-                },
-                DynamicNodesDistribution: false,
-            },
-            IsDisabled: false,
-            HasRefreshConfiguration: false,
-            HasExpirationConfiguration: false,
-            HasDataArchivalConfiguration: false,
-            HasRevisionsConfiguration: false,
-            StudioEnvironment: "None",
-            IsSharded: false,
-        };
-    }
-
     static nonShardedSingleNodeDatabaseDto() {
         return DatabasesStubs.genericDatabaseInfo("db1");
     }
@@ -312,13 +278,6 @@ export class DatabasesStubs {
         };
     }
 
-    private static statusOk(): DatabaseGroupNodeStatus {
-        return {
-            LastStatus: "Ok",
-            LastError: null,
-        };
-    }
-
     static refreshConfiguration(): RefreshConfiguration {
         return {
             Disabled: false,
@@ -465,6 +424,7 @@ export class DatabasesStubs {
             CompressRevisions: true,
         };
     }
+
     static emptyConnectionStrings(): Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult {
         return {
             ElasticSearchConnectionStrings: {},
@@ -1139,6 +1099,180 @@ return docs[0];`,
             MaxItemsToProcess: null,
             CheckFrequencyInSec: null,
             Destinations: {},
+        };
+    }
+
+    static schemaValidators(): Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration {
+        return {
+            Disabled: false,
+            ValidatorsPerCollection: {
+                TestObjs: {
+                    Disabled: false,
+                    Schema: '{"properties":{"Prop":{"const":"12212213"}}}',
+                    LastModifiedTime: "2025-09-19T14:08:13.2913345Z",
+                },
+                UserProfiles: {
+                    Disabled: false,
+                    Schema: '{"properties":{"Username":{"type":"string"},"Email":{"format":"email"}}}',
+                    LastModifiedTime: "2025-09-20T09:22:47.1234567Z",
+                },
+                Orders: {
+                    Disabled: false,
+                    Schema: '{"properties":{"OrderId":{"type":"string"},"Amount":{"type":"number"}}}',
+                    LastModifiedTime: "2025-09-18T11:15:33.9876543Z",
+                },
+                Products: {
+                    Disabled: false,
+                    Schema: '{"properties":{"ProductName":{"type":"string"},"Price":{"type":"number","minimum":0}}}',
+                    LastModifiedTime: "2025-09-21T07:45:00.0000000Z",
+                },
+                Logs: {
+                    Disabled: false,
+                    Schema: '{"properties":{"Timestamp":{"type":"string","format":"date-time"},"Message":{"type":"string"}}}',
+                    LastModifiedTime: "2025-09-22T13:00:00.1234567Z",
+                },
+                Inventory: {
+                    Disabled: false,
+                    Schema: '{"properties":{"ItemId":{"type":"string"},"Quantity":{"type":"integer","minimum":0}}}',
+                    LastModifiedTime: "2025-09-17T16:30:25.6543210Z",
+                },
+                Payments: {
+                    Disabled: false,
+                    Schema: '{"properties":{"PaymentId":{"type":"string"},"Amount":{"type":"number","minimum":0}}}',
+                    LastModifiedTime: "2025-09-23T10:00:00.0000000Z",
+                },
+                Shipments: {
+                    Disabled: false,
+                    Schema: '{"properties":{"ShipmentId":{"type":"string"},"Status":{"enum":["pending","shipped","delivered"]}}}',
+                    LastModifiedTime: "2025-09-22T08:15:22.1234567Z",
+                },
+                Reviews: {
+                    Disabled: false,
+                    Schema: '{"properties":{"ReviewId":{"type":"string"},"Rating":{"type":"integer","minimum":1,"maximum":5}}}',
+                    LastModifiedTime: "2025-09-21T11:45:12.6543210Z",
+                },
+                Coupons: {
+                    Disabled: false,
+                    Schema: '{"properties":{"CouponCode":{"type":"string"},"Discount":{"type":"number","minimum":0}}}',
+                    LastModifiedTime: "2025-09-20T09:00:00.0000000Z",
+                },
+                Categories: {
+                    Disabled: false,
+                    Schema: '{"properties":{"CategoryId":{"type":"string"},"CategoryName":{"type":"string"}}}',
+                    LastModifiedTime: "2025-09-19T14:30:00.1234567Z",
+                },
+                Tags: {
+                    Disabled: false,
+                    Schema: '{"properties":{"TagId":{"type":"string"},"TagName":{"type":"string"}}}',
+                    LastModifiedTime: "2025-09-18T17:22:15.9876543Z",
+                },
+                Sessions: {
+                    Disabled: false,
+                    Schema: '{"properties":{"SessionId":{"type":"string"},"UserId":{"type":"string"},"ExpiresAt":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-22T12:00:00.0000000Z",
+                },
+                Notifications: {
+                    Disabled: false,
+                    Schema: '{"properties":{"NotificationId":{"type":"string"},"Message":{"type":"string"},"Read":{"type":"boolean"}}}',
+                    LastModifiedTime: "2025-09-21T09:30:00.0000000Z",
+                },
+                Settings: {
+                    Disabled: false,
+                    Schema: '{"properties":{"SettingKey":{"type":"string"},"SettingValue":{"type":"string"}}}',
+                    LastModifiedTime: "2025-09-20T15:45:00.0000000Z",
+                },
+                LogsArchive: {
+                    Disabled: false,
+                    Schema: '{"properties":{"LogId":{"type":"string"},"ArchivedAt":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-19T13:00:00.0000000Z",
+                },
+                AuditTrails: {
+                    Disabled: false,
+                    Schema: '{"properties":{"Action":{"type":"string"},"PerformedAt":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-23T08:00:00.0000000Z",
+                },
+                Feedback: {
+                    Disabled: false,
+                    Schema: '{"properties":{"FeedbackId":{"type":"string"},"Comment":{"type":"string"},"Rating":{"type":"integer","minimum":1,"maximum":5}}}',
+                    LastModifiedTime: "2025-09-22T14:45:00.0000000Z",
+                },
+                LogsTemp: {
+                    Disabled: false,
+                    Schema: '{"properties":{"TempLogId":{"type":"string"},"Data":{"type":"string"}}}',
+                    LastModifiedTime: "2025-09-21T18:15:00.0000000Z",
+                },
+                Events: {
+                    Disabled: false,
+                    Schema: '{"properties":{"EventId":{"type":"string"},"EventName":{"type":"string"},"Date":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-20T11:00:00.0000000Z",
+                },
+                Analytics: {
+                    Disabled: false,
+                    Schema: '{"properties":{"Metric":{"type":"string"},"Value":{"type":"number"}}}',
+                    LastModifiedTime: "2025-09-19T09:00:00.0000000Z",
+                },
+                Messages: {
+                    Disabled: false,
+                    Schema: '{"properties":{"MessageId":{"type":"string"},"Content":{"type":"string"},"SentAt":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-18T22:00:00.0000000Z",
+                },
+                Tasks: {
+                    Disabled: false,
+                    Schema: '{"properties":{"TaskId":{"type":"string"},"Description":{"type":"string"},"DueDate":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-17T20:00:00.0000000Z",
+                },
+                Subscriptions: {
+                    Disabled: false,
+                    Schema: '{"properties":{"SubscriptionId":{"type":"string"},"Plan":{"type":"string"},"StartDate":{"type":"string","format":"date-time"}}}',
+                    LastModifiedTime: "2025-09-22T07:00:00.0000000Z",
+                },
+                AuditLogs: {
+                    Disabled: false,
+                    Schema: '{"properties":{"LogId":{"type":"string"},"Action":{"type":"string"},"PerformedBy":{"type":"string"}}}',
+                    LastModifiedTime: "2025-09-21T07:30:00.0000000Z",
+                },
+            },
+        };
+    }
+
+    private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
+        return {
+            Name: name,
+            IsEncrypted: false,
+            LockMode: "Unlock",
+            DeletionInProgress: {},
+            Sharding: null,
+            IndexesCount: 0,
+            NodesTopology: {
+                PriorityOrder: [],
+                Members: [
+                    {
+                        NodeTag: "A",
+                        ResponsibleNode: null,
+                        NodeUrl: "http://a.ravendb",
+                    },
+                ],
+                Promotables: [],
+                Rehabs: [],
+                Status: {
+                    A: DatabasesStubs.statusOk(),
+                },
+                DynamicNodesDistribution: false,
+            },
+            IsDisabled: false,
+            HasRefreshConfiguration: false,
+            HasExpirationConfiguration: false,
+            HasDataArchivalConfiguration: false,
+            HasRevisionsConfiguration: false,
+            StudioEnvironment: "None",
+            IsSharded: false,
+        };
+    }
+
+    private static statusOk(): DatabaseGroupNodeStatus {
+        return {
+            LastStatus: "Ok",
+            LastError: null,
         };
     }
 }

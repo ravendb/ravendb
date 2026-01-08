@@ -87,9 +87,26 @@ namespace Sparrow.Json
                 ? _parent.Clone(context) 
                 : context.ReadObject(new DynamicJsonValue { [RootArrayHolderPropertyName] = this }, "array holder", usageMode);
             
-            if(arrayHolder.TryGet(RootArrayHolderPropertyNameSegment, out BlittableJsonReaderArray array) == false)
+            return GetRootArrayFromParent(arrayHolder);
+        }
+        
+        public BlittableJsonReaderArray CloneForConcurrentRead(JsonOperationContext externalContext)
+        {
+            // when we read a blittable we do also some allocations and use context's path cache (e.g. InsertionOrderProperties, ReadStringLazily, GetPropertyByIndex)
+            // we cannot use internal BlittableJsonReaderBase._context for that purpose since it must not be used concurrently
+            // we have to provide external context that will be used for that purpose during the read action
+            // note that we don't copy the blittable data but still read from the original pointer
+            AssertContextNotDisposed(externalContext);
+            
+            var parent = _parent.CloneForConcurrentRead(externalContext);
+            return GetRootArrayFromParent(parent);
+        }
+
+        private static BlittableJsonReaderArray GetRootArrayFromParent(BlittableJsonReaderObject parent)
+        {
+            if (parent.TryGet(RootArrayHolderPropertyNameSegment, out BlittableJsonReaderArray array) == false)
                 throw new InvalidOperationException("Couldn't find array");
-                
+
             array.ArrayIsRoot();
             return array;
         }

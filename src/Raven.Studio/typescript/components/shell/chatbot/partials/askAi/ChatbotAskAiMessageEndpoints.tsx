@@ -12,6 +12,8 @@ import { CustomDropdownToggle } from "components/common/Dropdown";
 import { useAsyncCallback } from "react-async-hook";
 import messagePublisher from "common/messagePublisher";
 import Badge from "react-bootstrap/Badge";
+import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstants";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -35,18 +37,40 @@ export default function ChatbotAskAiMessageEndpoints({
 
     const deniedEndpoints = useAppSelector(chatbotSelectors.deniedEndpoints);
     const isAlwaysAllowEndpointCalls = useAppSelector(chatbotSelectors.isAlwaysAllowEndpointCalls);
+    const isDataSubmissionEnabled = useAppSelector(chatbotSelectors.isDataSubmissionEnabled);
 
     const hasOnlyDeniedEndpoints = endpoints.map((x) => x.url).every((endpoint) => deniedEndpoints.includes(endpoint));
+
+    const isOnWhitelist = (url: string) => {
+        return chatbotConstants.whitelistRegexEndpoints.some(({ regex }) =>
+            regex.test(new URL(url, window.location.origin).pathname)
+        );
+    };
+
+    const isWithDataSubmission = (url: string) => {
+        return chatbotConstants.dataSubmissionRegexEndpoints.some(({ regex }) =>
+            regex.test(new URL(url, window.location.origin).pathname)
+        );
+    };
 
     const asyncHandleAllow = useAsyncCallback(
         async () => {
             const actionResponses: Record<string, any> = {};
 
             const endpointPromises = endpoints.map(async ({ toolId, url }): Promise<EndpointResult> => {
-                const baseResult: Omit<EndpointResult, "status" | "resultText"> = {
-                    toolId,
-                    url,
-                };
+                const baseResult: Pick<EndpointResult, "toolId" | "url"> = { toolId, url };
+
+                if (!isOnWhitelist(url)) {
+                    return { ...baseResult, status: "error", resultText: "Endpoint is not whitelisted" };
+                }
+
+                if (!isDataSubmissionEnabled && isWithDataSubmission(url)) {
+                    return {
+                        ...baseResult,
+                        status: "error",
+                        resultText: "Data submission is disabled",
+                    };
+                }
 
                 const response = await tryCatch(() => fetch(url));
                 if (response.status === "error") {
@@ -134,46 +158,40 @@ export default function ChatbotAskAiMessageEndpoints({
         }
     );
 
+    const createActionResponsesWithSingleValue = (value: string): Record<string, any> => {
+        const actionResponses: Record<string, any> = {};
+
+        for (const endpoint of endpoints) {
+            if (!actionResponses[endpoint.toolId]) {
+                actionResponses[endpoint.toolId] = {
+                    [endpoint.url]: value,
+                };
+            } else {
+                actionResponses[endpoint.toolId][endpoint.url] = value;
+            }
+        }
+
+        return actionResponses;
+    };
+
     const handleAlwaysAllow = async () => {
         dispatch(chatbotActions.isAlwaysAllowEndpointCallsSet(true));
         asyncHandleAllow.execute();
     };
 
     const handleSkip = () => {
-        const actionResponses: Record<string, any> = {};
-
-        for (const endpoint of endpoints) {
-            if (!actionResponses[endpoint.toolId]) {
-                actionResponses[endpoint.toolId] = {
-                    [endpoint.url]: "Skipped",
-                };
-            } else {
-                actionResponses[endpoint.toolId][endpoint.url] = "Skipped";
-            }
-        }
-
         dispatch(
             chatbotActions.messageUpdated({
                 id,
                 changes: { userActionState: "skipped", endpoints: endpoints.map((x) => ({ ...x, state: "skipped" })) },
             })
         );
+
+        const actionResponses = createActionResponsesWithSingleValue("Skipped");
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
     const handleDeny = () => {
-        const actionResponses: Record<string, any> = {};
-
-        for (const endpoint of endpoints) {
-            if (!actionResponses[endpoint.toolId]) {
-                actionResponses[endpoint.toolId] = {
-                    [endpoint.url]: "Denied",
-                };
-            } else {
-                actionResponses[endpoint.toolId][endpoint.url] = "Denied";
-            }
-        }
-
         dispatch(
             chatbotActions.messageUpdated({
                 id,
@@ -181,6 +199,8 @@ export default function ChatbotAskAiMessageEndpoints({
             })
         );
         dispatch(chatbotActions.deniedEndpointsAdded(endpoints.map((x) => x.url)));
+
+        const actionResponses = createActionResponsesWithSingleValue("Denied");
         dispatch(chatbotActions.runChat({ actionResponses }));
     };
 
@@ -282,20 +302,55 @@ interface EndpointItemProps {
 }
 
 function EndpointItem({ endpoint }: EndpointItemProps) {
+    const urlObject = new URL(endpoint.url, window.location.origin);
+    const urlWithParamToDisplay = chatbotConstants.paramToDisplayRegexEndpoints.find(({ regex }) =>
+        regex.test(urlObject.pathname)
+    );
+
     return (
-        <div className="hstack w-100">
-            <span className="text-nowrap">
-                {endpoint.state === "waiting" && <span className="me-1">-</span>}
-                {endpoint.state === "allowed" ||
-                    (endpoint.state === "alwaysAllowed" && <Icon icon="check" color="success" />)}
-                {endpoint.state === "error" && <Icon icon="warning" color="danger" />}
-                {endpoint.state === "skipped" && <Icon icon="skip" />}
-                {endpoint.state === "denied" && <Icon icon="cancel" />}
-                GET
-            </span>
-            <a href={endpoint.url} target="_blank" className="ms-1 text-emphasis text-truncate" title={endpoint.url}>
-                {endpoint.url}
-            </a>
+        <div>
+            <div className="hstack w-100">
+                <span className="text-nowrap">
+                    <EndpointItemStateIcon state={endpoint.state} />
+                    GET
+                </span>
+                <a
+                    href={endpoint.url}
+                    target="_blank"
+                    className="ms-1 text-emphasis text-truncate"
+                    title={endpoint.url}
+                >
+                    {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
+                </a>
+            </div>
+            {urlWithParamToDisplay?.paramToDisplay && (
+                <ul>
+                    {urlObject.searchParams.getAll(urlWithParamToDisplay.paramToDisplay).map((id) => (
+                        <li key={id}>
+                            <span className="d-block text-truncate" title={id}>
+                                {id}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
+}
+
+function EndpointItemStateIcon({ state }: Pick<ChatbotEndpointItem, "state">) {
+    switch (state) {
+        case "allowed":
+        case "alwaysAllowed":
+            return <Icon icon="check" color="success" />;
+        case "error":
+            return <Icon icon="warning" color="danger" />;
+        case "skipped":
+            return <Icon icon="skip" />;
+        case "denied":
+            return <Icon icon="cancel" />;
+        case "waiting":
+        default:
+            return <span className="me-1">-</span>;
+    }
 }

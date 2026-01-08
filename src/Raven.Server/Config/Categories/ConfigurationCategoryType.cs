@@ -43,6 +43,8 @@ namespace Raven.Server.Config.Categories
         [Description("Export & Import")]
         ExportImport,
         Debug,
-        Ai
+        Ai,
+        [Description("Schema Validation")]
+        SchemaValidation
     }
 }

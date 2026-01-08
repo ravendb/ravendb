@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.AI;
@@ -147,8 +149,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         
         // Prevent database unloading during long-running AI operations
         using (Database.PreventFromUnloadingByIdleOperations())
+        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken))
         {
-            exceptions = SendToModel(results, context, scope);
+            cts.CancelAfter(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan);
+            exceptions = SendToModel(results, context, scope, cts.Token);
         }
 
         ApplyUpdateScript(context, results, scope);
@@ -170,7 +174,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results.Count;
     }
 
-    private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope)
+    private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope, CancellationToken batchToken)
     {
         using (var statsScope = scope.For(GenAiOperations.LoadToModel))
         {
@@ -219,7 +223,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 handler.SetClient(_chatCompletionClient);
                 try
                 {
-                    task = handler.HandleRequest(CancellationToken);
+                    task = handler.HandleRequest(batchToken);
                 }
                 catch (Exception e)
                 {
@@ -314,7 +318,16 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         Exception HandleItemError(Task<GenAiHandlerResult> task, GenAiResultItem item)
         {
-            var singleEx = task.Exception.ExtractSingleInnerException();
+            Debug.Assert(task.IsCompletedSuccessfully == false);
+            Exception singleEx = null;
+            try
+            {
+                task.GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                singleEx = e.ExtractSingleInnerException();
+            }
 
             if (Configuration.TestMode)
                 throw new InvalidOperationException("Failed to run test", singleEx);
@@ -437,7 +450,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     ReloadAttachmentsData(context, items);
 
                 _chatCompletionClient ??= GetClient();
-                List<Exception> exceptions = SendToModel(items, context, scope);
+                List<Exception> exceptions = null;
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken))
+                    exceptions = SendToModel(items, context, scope, cts.Token);
                 if (exceptions is not null)
                     throw new AggregateException(exceptions);
 

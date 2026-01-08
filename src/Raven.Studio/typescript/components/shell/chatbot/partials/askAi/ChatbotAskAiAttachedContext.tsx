@@ -108,7 +108,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
                 onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
             >
                 <Icon icon={getIconName()} color={getIconColor()} />
-                <span className="text-truncate">{item.label}</span>
+                <span className="text-truncate text-body">{item.label}</span>
                 {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
                 {canRemove && (
                     <Button
@@ -133,7 +133,7 @@ interface TooltipContentProps {
 function TooltipContent({ type, sizeInBytes }: TooltipContentProps) {
     return (
         <>
-            <div className="small-label mb-1">{tooltipTitles[type]}</div>
+            <div className="fs-6 text-uppercase mb-1">{tooltipTitles[type]}</div>
             <div>Size: {genUtils.formatBytesToSize(sizeInBytes)}</div>
         </>
     );
