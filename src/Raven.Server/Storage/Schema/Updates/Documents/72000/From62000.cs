@@ -39,7 +39,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
          */
         public bool Update(UpdateStep step)
         {
-            using var e = step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
+            using var e = step.AllocateDocumentsOperationContext(out DocumentsOperationContext ctx);
             using var g = Slice.From(ctx.Allocator, AttachmentsEtag, out var attachmentsEtagSlice);
             using var o = Slice.From(ctx.Allocator, AttachmentsHash, out var attachmentsHashSlice);
             using var r = Slice.From(ctx.Allocator, AttachmentsFlagAndHash, out var attachmentsFlagAndHashSlice);
@@ -110,7 +110,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             while (done == false)
             {
-                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (step.AllocateDocumentsOperationContext(out DocumentsOperationContext context))
                 {
                     if (isSharded)
                     {
