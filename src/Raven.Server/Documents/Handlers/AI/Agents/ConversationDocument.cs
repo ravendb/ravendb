@@ -274,7 +274,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
             var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
-            openTools.TryAdd(callId, call);
+            openTools.Add(callId, call);
         }
 
         var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())

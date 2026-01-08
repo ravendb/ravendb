@@ -429,16 +429,29 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
     }
 
-    private bool TryCloseSubAgentCall(JsonOperationContext context, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
+    private bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, object requestResult, AiToolCall currentCall,
         SubConversationResult result)
     {
-        if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string agentConversationId) is false)
-            throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ConversationId)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-        if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
+        if (requestResult is ExceptionDispatchInfo ede)
+        {
+            result.Messages.Add(context.ReadObject(
+                new DynamicJsonValue
+                {
+                    ["tool_call_id"] = currentCall.Id,
+                    ["role"] = "tool",
+                    ["content"] = "Error has been occurred during the tool call execution: " + ede.SourceException,
+                    ["subConversation"] = conversationId,
+                }, "tool-call/response"));
+            result.OpenToolCallsToRemove.Add(currentCall.Id);
+            return true;
+        }
+
+        var subAgentResult = requestResult as BlittableJsonReaderObject;
+        if (subAgentResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.Response)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-        if (requestResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
+        if (subAgentResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ActionRequests)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-        if (requestResult.TryGet(nameof(ConversationResult<object>.ToolsIterations), out int callToolsIterations) is false)
+        if (subAgentResult.TryGet(nameof(ConversationResult<object>.ToolsIterations), out int callToolsIterations) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ToolsIterations)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
         result.ToolsIterations += callToolsIterations;
@@ -468,7 +481,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 ["tool_call_id"] = currentCall.Id,
                 ["role"] = "tool",
                 ["content"] = agentResult.ToString(),
-                ["subConversation"] = agentConversationId,
+                ["subConversation"] = conversationId,
             }, "tool-call/response"));
 
         result.OpenToolCallsToRemove.Add(currentCall.Id);
@@ -894,19 +907,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 switch (toolCall)
                 {
                     case AiAgentToolSubAgent:
-                        if (requestResult is ExceptionDispatchInfo ede)
-                        {
-                            result.Messages.Add(context.ReadObject(
-                                new DynamicJsonValue
-                                {
-                                    ["tool_call_id"] = currentCall.Id,
-                                    ["role"] = "tool",
-                                    ["content"] = "Error has been occurred during the tool call execution: " + ede.SourceException,
-                                    ["subConversation"] = conversationId,
-                                }, "tool-call/response"));
-                            result.OpenToolCallsToRemove.Add(currentCall.Id);
-                        }
-                        else if (TryCloseSubAgentCall(context, requestResult as BlittableJsonReaderObject, currentCall, result) == false)
+                        if (TryCloseSubAgentCall(context, conversationId, requestResult, currentCall, result) == false)
                             return result;
                         break;
                     case AiAgentToolQuery:
