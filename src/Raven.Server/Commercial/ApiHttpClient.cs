@@ -30,24 +30,22 @@ namespace Raven.Server.Commercial
 
         private static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy;
 
-        public static Task<HttpResponseMessage> SendAsync(HttpContent content, CancellationToken token = default)
+        public static Task<HttpResponseMessage> PostAsync(string relativeUri, HttpContent content, HttpCompletionOption completionOption, CancellationToken token = default)
         {
-            return RetryPolicy.ExecuteAsync(async t =>
+            return RetryPolicy.ExecuteAsync(t =>
             {
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
                     Content = content,
-                    RequestUri = new Uri("/api/v1/ai/assist", UriKind.Relative)
+                    RequestUri = new Uri(relativeUri, UriKind.Relative)
                 };
-                return await Instance.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, t);
+                return Instance.SendAsync(request, completionOption, t);
             }, token, continueOnCapturedContext: false);
         }
 
-        public static Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken token = default)
-        {
-            return RetryPolicy.ExecuteAsync(t => Instance.PostAsync(requestUri, content, t), token, continueOnCapturedContext: false);
-        }
+        public static Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken token = default) =>
+            PostAsync(requestUri, content, completionOption: HttpCompletionOption.ResponseContentRead, token);
 
         public static Task<HttpResponseMessage> GetAsync(string requestUri, CancellationToken token = default)
         {
