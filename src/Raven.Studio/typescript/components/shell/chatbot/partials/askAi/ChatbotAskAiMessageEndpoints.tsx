@@ -15,6 +15,7 @@ import Badge from "react-bootstrap/Badge";
 import { chatbotConstants } from "components/shell/chatbot/utils/chatbotConstants";
 import "./ChatbotAskAiMessageEndpoints.scss";
 import genUtils from "common/generalUtils";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface ChatbotAskAiMessageEndpointsProps {
     id: string;
@@ -57,8 +58,6 @@ export default function ChatbotAskAiMessageEndpoints({
 
     const asyncHandleAllow = useAsyncCallback(
         async () => {
-            const actionResponses: Record<string, any> = {};
-
             const endpointPromises = endpoints.map(async ({ toolId, url }): Promise<EndpointResult> => {
                 const baseResult: Pick<EndpointResult, "toolId" | "url"> = { toolId, url };
 
@@ -117,6 +116,8 @@ export default function ChatbotAskAiMessageEndpoints({
 
             const results = await Promise.all(endpointPromises);
 
+            const actionResponses: Record<string, any> = {};
+
             for (const { toolId, url, resultText } of results) {
                 if (!actionResponses[toolId]) {
                     actionResponses[toolId] = {
@@ -147,24 +148,72 @@ export default function ChatbotAskAiMessageEndpoints({
                 return "allowed";
             };
 
+            let messageEndpoints: ChatbotEndpointItem[] = results.map((x) => ({
+                toolId: x.toolId,
+                url: x.url,
+                state: getEndpointState(x.status),
+                resultSizeInBytes: x.resultSizeInBytes,
+            }));
+
             dispatch(
                 chatbotActions.messageUpdated({
                     id,
                     changes: {
                         userActionState: getUserActionState(),
-                        endpoints: results.map((x) => ({
-                            toolId: x.toolId,
-                            url: x.url,
-                            state: getEndpointState(x.status),
-                            resultSizeInBytes: x.resultSizeInBytes,
-                        })),
+                        endpoints: messageEndpoints,
                     },
                 })
             );
-            dispatch(chatbotActions.runChat({ actionResponses }));
+
+            const actionResponsesKeys = Object.keys(actionResponses);
+
+            // Process action responses one by one to avoid RequestTooLarge error
+            // If single action response is RequestTooLarge, send error message + size
+            for (let i = 0; i < actionResponsesKeys.length; i++) {
+                const isLastAction = i === actionResponsesKeys.length - 1;
+
+                const [toolId, value] = Object.entries(actionResponses)[i];
+
+                const runResult = await dispatch(
+                    chatbotActions.runChat({ actionResponses: { [toolId]: value } })
+                ).unwrap();
+
+                if (!isLastAction || runResult.state === "RequestTooLarge") {
+                    dispatch(chatbotActions.messageRemoved(runResult.id));
+                }
+
+                if (runResult.state === "RequestTooLarge") {
+                    messageEndpoints = messageEndpoints.map((endpoint) =>
+                        endpoint.toolId === toolId ? { ...endpoint, isRequestTooLarge: true } : endpoint
+                    );
+
+                    dispatch(
+                        chatbotActions.messageUpdated({
+                            id,
+                            changes: {
+                                endpoints: messageEndpoints,
+                            },
+                        })
+                    );
+
+                    const toolSizeInBytes = new Blob([JSON.stringify(value)]).size;
+                    const retryRunResult = await dispatch(
+                        chatbotActions.runChat({
+                            actionResponses: {
+                                [toolId]: `Error: Request too large to process (${genUtils.formatBytesToSize(toolSizeInBytes)})`,
+                            },
+                        })
+                    ).unwrap();
+
+                    if (!isLastAction) {
+                        dispatch(chatbotActions.messageRemoved(retryRunResult.id));
+                    }
+                }
+            }
         },
         {
-            onError: () => {
+            onError: (e) => {
+                console.error(e);
                 messagePublisher.reportError("Failed to retrieve endpoints");
             },
         }
@@ -328,13 +377,17 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
                     {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
                 </a>
                 {endpoint.resultSizeInBytes != null && (
-                    <Badge
-                        className="ms-auto text-nowrap"
-                        bg={endpoint.resultSizeInBytes > 1024 ? "warning" : "secondary"}
-                        pill
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: endpoint.isRequestTooLarge,
+                            message: "Request too large to process",
+                        }}
+                        className="ms-auto"
                     >
-                        {genUtils.formatBytesToSize(endpoint.resultSizeInBytes)}
-                    </Badge>
+                        <Badge className="text-nowrap" bg={endpoint.isRequestTooLarge ? "danger" : "secondary"} pill>
+                            {genUtils.formatBytesToSize(endpoint.resultSizeInBytes)}
+                        </Badge>
+                    </ConditionalPopover>
                 )}
             </div>
             {urlWithParamToDisplay?.paramToDisplay && (

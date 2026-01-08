@@ -48,6 +48,7 @@ export interface ChatbotEndpointItem {
     url: string;
     state: ChatbotUserActionState;
     resultSizeInBytes?: number;
+    isRequestTooLarge?: boolean;
 }
 
 interface ChatbotMessageBase {
@@ -147,6 +148,9 @@ export const chatbotSlice = createSlice({
         messageUpdated: (state, action: PayloadAction<Update<ChatbotMessage, string>>) => {
             chatbotMessagesAdapter.updateOne(state.messages, action.payload);
         },
+        messageRemoved: (state, action: PayloadAction<string>) => {
+            chatbotMessagesAdapter.removeOne(state.messages, action.payload);
+        },
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
@@ -226,7 +230,7 @@ export const chatbotSlice = createSlice({
 
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
-    async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
+    async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotAssistantMessage> => {
         const { aiAssistant, chatbot } = getState() as RootState;
 
         chatAbortController = new AbortController();
