@@ -8,6 +8,7 @@ using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
@@ -163,10 +164,11 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
                 [Constants.Documents.Metadata.ArchiveAt] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
             };
 
+            const string docId = "users/1-A";
             using (var session = store.OpenAsyncSession())
             {
                 var user = new User { Name = "Grisha" };
-                await session.StoreAsync(user);
+                await session.StoreAsync(user, docId);
                 var metadataFromDoc = session.Advanced.GetMetadataFor(user);
                 metadataFromDoc[Constants.Documents.Metadata.ArchiveAt] = metadata[Constants.Documents.Metadata.ArchiveAt];
                 await session.SaveChangesAsync();
@@ -188,12 +190,30 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
 
-            await Indexes.WaitForIndexingAsync(store);
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(docId);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                Assert.True(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
+                Assert.Equal(true, metadataFromDoc[Constants.Documents.Metadata.Archived]);
+            }
+
+            string patchByQuery = @"
+  from Users
+  update 
+  {
+      archived.unarchive(this)
+  }";
+
+            var patchByQueryOp = new PatchByQueryOperation(patchByQuery);
+            var operation = await store.Operations.SendAsync(patchByQueryOp);
+            await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromSeconds(30));
 
             using (var session = store.OpenAsyncSession())
             {
-                var count = await session.Query<User>().Where(x => x.Name == "Grisha").CountAsync();
-                Assert.Equal(0, count);
+                var user = await session.LoadAsync<User>(docId);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                Assert.False(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
             }
         }
     }
