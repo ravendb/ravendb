@@ -629,15 +629,43 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
 
         // error
         throwEx = true;
-        chat.SetUserPrompt("Whats my name and my favorite genres?");
-        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<MoviesSampleObject>());
-        Assert.Contains($"Failed to 'talk' with the agent '{userAgentId}'", e.Message);
+        chat.SetUserPrompt("Hey, Im the user, Whats my name and my favorite genres?");
+        var r = await chat.RunAsync<MoviesSampleObject>();
+
+        // check if the sub-agent "user-info-agent" error is consumed
+        Assert.Equal(AiConversationResult.Done, r.Status);
+        Assert.NotNull(r.Answer);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc1 = await session.LoadAsync<Chat>("chats/1/movies-agent-1/Vsy3aOyNusK5fwwmHq4j4kuYQgrH1whMJWuce86epm8=");
+            var toolCallsAnswers1 = doc1.Messages.Where(m => m.Role == "tool").ToList();
+            Assert.True(toolCallsAnswers1.Any(a => a.Content is string content && content.Contains($"Failed to 'talk' with the agent '{userAgentId}'")));
+
+            var doc0 = await session.LoadAsync<Chat>("chats/1");
+            var toolCallsAnswers0 = doc0.Messages.Where(m => m.Role == "tool").ToList();
+            Assert.False(toolCallsAnswers0.Any(a => a.Content is string content && content.Contains($"Failed to 'talk' with the agent '{userAgentId}'")));
+        }
 
         // Resume execution after an error
         throwEx = false;
         chat.SetUserPrompt("Whats my name and my favorite genres?");
-        var r = await chat.RunAsync<MoviesSampleObject>();
+        r = await chat.RunAsync<MoviesSampleObject>();
         Assert.Equal(AiConversationResult.Done, r.Status);
+    }
+
+    private class Chat
+    {
+        public List<Message> Messages { get; set; }
+    }
+
+    private class Message
+    {
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("content")]
+        public object Content { get; set; }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

@@ -280,10 +280,33 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         var chat = store.AI.Conversation(identifier, "chats/1",
             new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name and my favorite genres?");
-        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<MoviesSampleObject>());
-        Assert.Contains("Failed to 'talk' with the agent 'movies-agent'", e.Message);
-        Assert.True(e.Message.Contains("Failed to 'talk' with the agent 'user-info-agent'") ||
-                    e.Message.Contains("Failed to 'talk' with the agent 'recommendation-agent'"), e.Message);
+        var r = await chat.RunAsync<MoviesSampleObject>();
+
+        //check if the sub-agent "user-info-agent" error is consumed
+        Assert.Equal(AiConversationResult.Done, r.Status);
+        Assert.NotNull(r.Answer);
+
+        const string expectedFailingToolCallAnswer = "Error has been occurred during the tool call execution: Raven.Client.Exceptions.AiException: Raven.Client.Exceptions.AiException: Failed to 'talk' with the agent 'user-info-agent'";
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc = await session.LoadAsync<Chat>("chats/1");
+            var toolCallsAnswers = doc.Messages.Where(m => m.Role == "tool");
+            Assert.True(toolCallsAnswers.Any(a => a.Content is string content && content.StartsWith(expectedFailingToolCallAnswer)));
+        }
+    }
+
+    private class Chat
+    {
+        public List<Message> Messages { get; set; }
+    }
+
+    private class Message
+    {
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("content")]
+        public object Content { get; set; }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -1212,10 +1235,16 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         // error
         throwEx = true;
         chat.SetUserPrompt("Whats my name and my favorite genres?");
-        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<MoviesSampleObject>());
-        Assert.Contains("Failed to 'talk' with the agent 'movies-agent'", e.Message);
-        Assert.True(e.Message.Contains("Failed to 'talk' with the agent 'user-info-agent'") ||
-                    e.Message.Contains("Failed to 'talk' with the agent 'recommendation-agent'"), e.Message);
+        r = await chat.RunAsync<MoviesSampleObject>();
+        Assert.Equal(AiConversationResult.Done, r.Status);
+        Assert.NotNull(r.Answer);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc = await session.LoadAsync<Chat>("chats/1");
+            var toolCallsAnswers = doc.Messages.Where(m => m.Role == "tool").ToList();
+            Assert.True(toolCallsAnswers.Any(a => a.Content is string content && content.Contains("Failed to 'talk' with the agent 'user-info-agent'")));
+        }
 
         // Resume execution after an error
         throwEx = false;

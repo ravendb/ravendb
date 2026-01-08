@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -845,8 +845,6 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 toolsIterations += r.ToolsIterations;
                 using (r.Disposable)
                 {
-                    if (exceptions.Count > 0)
-                        continue; // only dispose
                     foreach (var m in r.Messages)
                     {
                         _document.AddMessage(context, m.Clone(context), usage: null);
@@ -896,11 +894,29 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 switch (toolCall)
                 {
                     case AiAgentToolSubAgent:
-                        if (TryCloseSubAgentCall(context, requestResult, currentCall, result) == false)
+                        if (requestResult is ExceptionDispatchInfo ede)
+                        {
+                            result.Messages.Add(context.ReadObject(
+                                new DynamicJsonValue
+                                {
+                                    ["tool_call_id"] = currentCall.Id,
+                                    ["role"] = "tool",
+                                    ["content"] = "Error has been occurred during the tool call execution: " + ede.SourceException,
+                                    ["subConversation"] = conversationId,
+                                }, "tool-call/response"));
+                            result.OpenToolCallsToRemove.Add(currentCall.Id);
+                        }
+                        else if (TryCloseSubAgentCall(context, requestResult as BlittableJsonReaderObject, currentCall, result) == false)
                             return result;
                         break;
                     case AiAgentToolQuery:
-                        if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                        if (requestResult is ExceptionDispatchInfo ede1)
+                        {
+                            // The original stack trace is preserve.
+                            ede1.Throw();
+                        }
+
+                        if (((BlittableJsonReaderObject)requestResult).TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                             throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
                         result.Messages.Add(context.ReadObject(
@@ -941,7 +957,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
     }
 
-    private async IAsyncEnumerable<(BlittableJsonReaderObject, int)> ExecuteMultiRequests(JsonOperationContext context, DynamicJsonArray reqs)
+    private async IAsyncEnumerable<(object, int)> ExecuteMultiRequests(JsonOperationContext context, DynamicJsonArray reqs)
     {
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext
@@ -973,10 +989,19 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
                 if (statusCode != 200)
                 {
-                    throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+                    ExceptionDispatchInfo edi;
+                    try
+                    {
+                        throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+                    }
+                    catch (Exception e)
+                    {
+                        edi = ExceptionDispatchInfo.Capture(e);
+                    }
+                    yield return (edi, i);
                 }
-
-                yield return (requestResult, i);
+                else
+                    yield return (requestResult, i);
             }
         }
     }
