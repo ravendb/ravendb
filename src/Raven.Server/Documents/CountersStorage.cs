@@ -2113,7 +2113,7 @@ namespace Raven.Server.Documents
                         using (document.Data = document.Data.Clone(context))
                         {
                             _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, document.Data, flags: document.Flags,
-                                nonPersistentFlags: document.NonPersistentFlags);
+                                nonPersistentFlags: document.NonPersistentFlags | NonPersistentDocumentFlags.SkipSchemaValidation);
                         }
                     }
                     catch (InvalidOperationException e)
