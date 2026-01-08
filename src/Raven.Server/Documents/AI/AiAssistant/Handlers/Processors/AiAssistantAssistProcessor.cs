@@ -23,15 +23,8 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
             FulfillRequestMetadata(modifications);
 
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-            var content = new StringContent(context.ReadObject(requestBody, "ai-assist").ToString(), Encoding.UTF8, "application/json");
-            using var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post,
-                Content = content,
-                RequestUri = new Uri("/api/v1/ai/assist", UriKind.Relative)
-            };
-
-            using var response = await ApiHttpClient.SendAsync(request, token.Token).ConfigureAwait(false);
+            using var content = new StringContent(context.ReadObject(requestBody, "ai-assist").ToString(), Encoding.UTF8, "application/json");
+            using var response = await ApiHttpClient.SendAsync(content, token.Token).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
