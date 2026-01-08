@@ -463,7 +463,11 @@ function LicenseExpirationInfoPopover({ date, children }: { date: moment.Moment;
 function AiAssistantReviewConsentButton() {
     return (
         <Col className="d-flex align-items-center justify-content-end">
-            <a href="#TODO" target="_blank" className="btn btn-outline-secondary rounded-pill">
+            <a
+                href="https://ravendb.net/legal/ravendb/ai-assistant-terms-of-use"
+                target="_blank"
+                className="btn btn-outline-secondary rounded-pill"
+            >
                 Review the consent
                 <Icon icon="newtab" margin="ms-1" />
             </a>
