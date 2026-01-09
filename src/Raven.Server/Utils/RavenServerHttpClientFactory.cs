@@ -82,7 +82,7 @@ internal class RavenServerHttpClientFactory : IRavenHttpClientFactory
             {
                 var h = (SocketsHttpHandler)builder.PrimaryHandler;
 
-                DefaultRavenHttpClientFactory.ConfigureHttpMessageHandler(h, key.Certificate, setSslProtocols: true, key.UseHttpDecompression, key.HasExplicitlySetDecompressionUsage, key.PooledConnectionLifetime, key.PooledConnectionIdleTimeout);
+                DefaultRavenHttpClientFactory.ConfigureHttpMessageHandler(h, key.Certificate, setSslProtocols: true, key.UseHttpDecompression, key.HasExplicitlySetDecompressionUsage, key.PooledConnectionLifetime, key.PooledConnectionIdleTimeout, key.ConfigureHttpMessageHandler);
             });
         }
     }

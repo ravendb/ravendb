@@ -146,7 +146,7 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
     }
 
 #if NETCOREAPP3_1_OR_GREATER
-    internal static void ConfigureHttpMessageHandler(SocketsHttpHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
+    internal static void ConfigureHttpMessageHandler(SocketsHttpHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null, Action<HttpMessageHandler> configureHttpMessageHandler = null)
     {
         httpMessageHandler.MaxConnectionsPerServer = RequestExecutor.DefaultConnectionLimit;
 
@@ -176,6 +176,8 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
             ValidateClientKeyUsages(certificate);
         }
+        
+        configureHttpMessageHandler?.Invoke(httpMessageHandler);
     }
 #endif
 
