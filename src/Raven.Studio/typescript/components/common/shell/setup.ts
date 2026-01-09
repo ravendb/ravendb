@@ -148,11 +148,6 @@ function initRedux() {
         "change"
     );
 
-    accessManager.clientCertificateThumbprint.subscribe(() => {
-        globalDispatch(aiAssistantActions.checkConsent());
-        globalDispatch(aiAssistantActions.checkUsage());
-    });
-
     router.activeInstruction.subscribe((instruction) => {
         globalDispatch(
             chatbotActions.attachedContextUpserted({

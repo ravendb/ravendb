@@ -115,7 +115,9 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                                                     <Icon icon="info-new" margin="ms-1" />
                                                 </PopoverWithHoverWrapper>
                                             </div>
-                                            <div>Resets {aiUsageResetFormattedDate}</div>
+                                            {aiAssistantUsage.data?.Status === "Success" && (
+                                                <div>Resets {aiUsageResetFormattedDate}</div>
+                                            )}
                                         </div>
                                     }
                                 >
