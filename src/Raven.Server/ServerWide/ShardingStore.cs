@@ -92,12 +92,14 @@ namespace Raven.Server.ServerWide
                 HttpClientType = typeof(ShardingStore),
                 DisableTopologyCache = DocumentConventions.DefaultForServer.DisableTopologyCache,
                 DisposeCertificate = DocumentConventions.DefaultForServer.DisposeCertificate,
-                ConfigureHttpMessageHandler = h =>
-                {
-                    var handler = (HttpClientHandler)h;
-                    handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
-                }
+                ConfigureHttpMessageHandler = ConfigureHttpMessageHandlerForShard
             };
+        
+        private void ConfigureHttpMessageHandlerForShard(HttpMessageHandler h)
+        {
+            var handler = (HttpClientHandler)h;
+            handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
+        }
 
         public DocumentConventions DocumentConventionsForOrchestrator => DocumentConventionsForShard;
 
