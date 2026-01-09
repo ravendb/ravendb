@@ -88,7 +88,7 @@ export default function ChatbotAskAiMessageEndpoints({
                         if (jsonError.data.Error) {
                             resultText = jsonError.data.Error.slice(0, 200);
                         } else if (jsonError.data.Message) {
-                            resultText = jsonError.data.Message;
+                            resultText = jsonError.data.Message.slice(0, 200);
                         }
 
                         return {
