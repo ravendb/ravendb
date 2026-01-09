@@ -1379,14 +1379,9 @@ class editDocument extends shardViewModelBase {
                         messagePublisher.reportError("Document schema is missing");
                         break;
                     default:
-                        messagePublisher.reportError("Unknown validation result status");
-                        break;
+                        assertUnreachable.default(result.Status);
                 }
             })
-            .fail((error) => {
-                console.error("Validation failed:", error);
-                messagePublisher.reportError("Document validation failed");
-            });
     }
 
     private loadDocument(id: string): JQueryPromise<document> {
