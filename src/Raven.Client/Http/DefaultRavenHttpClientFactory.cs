@@ -221,4 +221,21 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
         public readonly DateTime CreatedAt;
     }
+
+#if NETCOREAPP3_1_OR_GREATER
+    internal static void AttachServerCertificateCustomValidationCallback(HttpMessageHandler httpMessageHandler, Func<object, X509Certificate, X509Chain, SslPolicyErrors, bool> serverCertificateCustomValidationCallback)
+    {
+        switch (httpMessageHandler)
+        {
+            case HttpClientHandler httpClientHandler:
+                httpClientHandler.ServerCertificateCustomValidationCallback = serverCertificateCustomValidationCallback;
+                return;
+            case SocketsHttpHandler socketsHttpHandler:
+                socketsHttpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => serverCertificateCustomValidationCallback(sender, certificate, chain, errors);
+                return;
+            default:
+                throw new NotSupportedException($"HttpMessageHandler type {httpMessageHandler.GetType()} is not supported.");
+        }
+    }
+#endif
 }

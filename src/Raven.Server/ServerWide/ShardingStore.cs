@@ -97,8 +97,7 @@ namespace Raven.Server.ServerWide
         
         private void ConfigureHttpMessageHandlerForShard(HttpMessageHandler h)
         {
-            var handler = (HttpClientHandler)h;
-            handler.ServerCertificateCustomValidationCallback = ShardingCustomValidationCallback;
+            DefaultRavenHttpClientFactory.AttachServerCertificateCustomValidationCallback(h, ShardingCustomValidationCallback);
         }
 
         public DocumentConventions DocumentConventionsForOrchestrator => DocumentConventionsForShard;
