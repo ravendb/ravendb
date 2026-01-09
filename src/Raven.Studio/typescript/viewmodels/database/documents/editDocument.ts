@@ -1362,14 +1362,18 @@ class editDocument extends shardViewModelBase {
     }
 
     private loadRemoteAttachmentsConfiguration() {
-        new getRemoteAttachmentsConfigurationCommand(this.db)
-            .execute()
-            .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
-                this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration.Disabled);
-            })
-            .fail(() => {
-                this.remoteAttachmentsDisabled(false);
-            });
+        if (!this.db.isSharded()) {
+            new getRemoteAttachmentsConfigurationCommand(this.db)
+                .execute()
+                .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
+                    this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration.Disabled);
+                })
+                .fail(() => {
+                    this.remoteAttachmentsDisabled(false);
+                });
+        } else {
+            this.remoteAttachmentsDisabled(false);
+        }
     }
 
     async enterCompareModeAndCompareWithPrevious(): Promise<void> {

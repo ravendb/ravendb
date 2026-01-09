@@ -561,7 +561,7 @@
 
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
                         aria-haspopup="true"
-                        data-bind="disable: spinners.upload"
+                        data-bind="disable: spinners.upload, visible: !$root.db.isSharded()"
                         aria-expanded="false"
                 >
                     <span class="caret"></span>
