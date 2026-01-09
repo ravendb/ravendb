@@ -53,6 +53,7 @@ import getRemoteAttachmentsConfigurationCommand = require("commands/database/set
 import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import popoverUtils = require("common/popoverUtils");
 
 class editDocument extends shardViewModelBase {
     view = require("views/database/documents/editDocument.html");
@@ -154,6 +155,8 @@ class editDocument extends shardViewModelBase {
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider);
 
+    remoteAttachmentDisabledReason = ko.observable<string>("");
+
     connectedDocuments = new connectedDocuments(
         this.document,
         this.db,
@@ -163,7 +166,8 @@ class editDocument extends shardViewModelBase {
         this.crudActionsProvider,
         this.inReadOnlyMode,
         this.isReadOnlyAccess,
-        this.isClone
+        this.isClone,
+        this.remoteAttachmentDisabledReason
     );
 
     isSaveEnabled: KnockoutComputed<boolean>;
@@ -190,7 +194,6 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
-    isRemoteAttachmentsDisabled = ko.observable<boolean>(false);
 
     isFullScreenEditor = ko.observable(false);
 
@@ -314,6 +317,13 @@ class editDocument extends shardViewModelBase {
         this.focusOnEditor();
 
         this.watchFullScreenCommand();
+
+        $('.edit-document [data-toggle="tooltip"]').tooltip();
+        popoverUtils.longWithHover($(".add-remote-attachment"),
+            {
+                content: this.remoteAttachmentDisabledReason(),
+                placement: "left",
+            });
     }
 
     detached() {
@@ -1362,13 +1372,20 @@ class editDocument extends shardViewModelBase {
     }
 
     private loadRemoteAttachmentsConfiguration() {
+        if (this.db.isSharded()) {
+            this.remoteAttachmentDisabledReason("Remote attachments are not supported in sharded databases");
+            return;
+        }
+
         new getRemoteAttachmentsConfigurationCommand(this.db)
             .execute()
             .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
-                this.isRemoteAttachmentsDisabled(!!remoteAttachmentsConfiguration?.Disabled);
+                if (remoteAttachmentsConfiguration == null || remoteAttachmentsConfiguration.Disabled) {
+                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings → Remote Attachments and update the configuration accordingly.");
+                }
             })
             .fail(() => {
-                this.isRemoteAttachmentsDisabled(false);
+                this.remoteAttachmentDisabledReason("Remote attachments configuration could not be retrieved.");
             });
     }
 
