@@ -11,7 +11,7 @@ export default function ChatbotNavIcon() {
 
     return (
         <Button
-            title="Chatbot"
+            title="Knowledge Center"
             variant="link"
             className={classNames("chatbot-nav-icon", { active: isOpen })}
             onClick={() => dispatch(chatbotActions.isOpenToggled())}
