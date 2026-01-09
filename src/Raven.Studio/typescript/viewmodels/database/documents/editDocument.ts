@@ -190,7 +190,7 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
-    remoteAttachmentsDisabled = ko.observable<boolean>(false);
+    isRemoteAttachmentsDisabled = ko.observable<boolean>(false);
 
     isFullScreenEditor = ko.observable(false);
 
@@ -1365,10 +1365,10 @@ class editDocument extends shardViewModelBase {
         new getRemoteAttachmentsConfigurationCommand(this.db)
             .execute()
             .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
-                this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration?.Disabled);
+                this.isRemoteAttachmentsDisabled(!!remoteAttachmentsConfiguration?.Disabled);
             })
             .fail(() => {
-                this.remoteAttachmentsDisabled(false);
+                this.isRemoteAttachmentsDisabled(false);
             });
     }
 
