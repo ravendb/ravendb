@@ -146,7 +146,7 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
     }
 
 #if NETCOREAPP3_1_OR_GREATER
-    internal static void ConfigureHttpMessageHandler(SocketsHttpHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null)
+    internal static void ConfigureHttpMessageHandler(SocketsHttpHandler httpMessageHandler, X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false, TimeSpan? pooledConnectionLifetime = null, TimeSpan? pooledConnectionIdleTimeout = null, Action<HttpMessageHandler> configureHttpMessageHandler = null)
     {
         httpMessageHandler.MaxConnectionsPerServer = RequestExecutor.DefaultConnectionLimit;
 
@@ -176,6 +176,8 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
             ValidateClientKeyUsages(certificate);
         }
+        
+        configureHttpMessageHandler?.Invoke(httpMessageHandler);
     }
 #endif
 
@@ -219,4 +221,21 @@ internal sealed class DefaultRavenHttpClientFactory : IRavenHttpClientFactory
 
         public readonly DateTime CreatedAt;
     }
+
+#if NETCOREAPP3_1_OR_GREATER
+    internal static void AttachServerCertificateCustomValidationCallback(HttpMessageHandler httpMessageHandler, Func<object, X509Certificate, X509Chain, SslPolicyErrors, bool> serverCertificateCustomValidationCallback)
+    {
+        switch (httpMessageHandler)
+        {
+            case HttpClientHandler httpClientHandler:
+                httpClientHandler.ServerCertificateCustomValidationCallback = serverCertificateCustomValidationCallback;
+                return;
+            case SocketsHttpHandler socketsHttpHandler:
+                socketsHttpHandler.SslOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => serverCertificateCustomValidationCallback(sender, certificate, chain, errors);
+                return;
+            default:
+                throw new NotSupportedException($"HttpMessageHandler type {httpMessageHandler.GetType()} is not supported.");
+        }
+    }
+#endif
 }

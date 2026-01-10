@@ -30,7 +30,7 @@ function SheetHeader(props: SheetHeaderProps) {
     return (
         <div
             className={classNames(
-                "d-flex justify-content-between align-items-center p-2 border-bottom border-secondary panel-bg-2",
+                "d-flex justify-content-between align-items-center p-2 border-bottom border-color-light panel-bg-2",
                 props.className
             )}
         >

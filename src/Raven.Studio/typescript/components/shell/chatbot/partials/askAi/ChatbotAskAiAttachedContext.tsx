@@ -78,7 +78,7 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             case "IndexName":
                 return "index";
             case "CollectionName":
-                return "document2";
+                return "documents";
             case "DocumentId":
                 return "document";
             case "QueryResult":
@@ -96,28 +96,35 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             wrapperClassName="mw-100"
         >
             <div
-                className={classNames("hstack rounded-2 border border-secondary text-truncate", {
-                    "cursor-pointer hover-filter opacity-50": canInclude,
-                })}
+                className={classNames(
+                    "attached-context hstack rounded-1 border border-color-light lh-base text-truncate",
+                    {
+                        "cursor-pointer hover-filter opacity-50": canInclude,
+                    }
+                )}
                 onMouseEnter={() => setIsHovering(true)}
                 onMouseLeave={() => setIsHovering(false)}
                 style={{
-                    padding: "1px 6px",
-                    fontSize: "12px",
+                    padding: "1px 4.3px",
+                    fontSize: "0.875em",
+                    height: "22px",
+                    maxWidth: "128px",
                 }}
                 onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
             >
                 <Icon icon={getIconName()} color={getIconColor()} />
-                <span className="text-truncate text-body">{item.label}</span>
+                <span className="text-truncate text-body" title={item.label}>
+                    {item.label}
+                </span>
                 {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
                 {canRemove && (
                     <Button
                         variant="link"
-                        className="text-muted p-0"
+                        className="text-muted p-0 hover-filter"
                         onClick={() => dispatch(chatbotActions.attachedContextRemoved(item.id))}
                         size="xs"
                     >
-                        <Icon icon="cancel" margin="ms-1" size="xs" />
+                        <Icon icon="cancel" margin="ms-1" size="xs" title="Remove context" />
                     </Button>
                 )}
             </div>
@@ -133,18 +140,18 @@ interface TooltipContentProps {
 function TooltipContent({ type, sizeInBytes }: TooltipContentProps) {
     return (
         <>
-            <div className="fs-6 text-uppercase mb-1">{tooltipTitles[type]}</div>
+            <div className="fw-bold">{tooltipTitles[type]}</div>
             <div>Size: {genUtils.formatBytesToSize(sizeInBytes)}</div>
         </>
     );
 }
 
 const tooltipTitles: Record<ChatbotAttachedContext["type"], string> = {
-    View: "Current View",
-    DatabaseName: "Database Name",
+    View: "Current view",
+    DatabaseName: "Database name",
     DocumentId: "Document ID",
-    IndexName: "Index Name",
-    CollectionName: "Collection Name",
-    QueryResult: "Query Result",
-    QueryError: "Query Error",
+    IndexName: "Index name",
+    CollectionName: "Collection name",
+    QueryResult: "Query result",
+    QueryError: "Query error",
 };

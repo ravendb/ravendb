@@ -14,10 +14,9 @@ export default function ChatbotAskAiWelcome() {
     }
 
     return (
-        <div className="pt-2 px-2 text-center">
+        <div className="p-5 text-center">
             <Icon icon="ask-ai" margin="m-0" size="lg" />
-            <h3 className="mt-1">Ask anything about RavenDB or your Database</h3>
-            <div>AI responses may be inaccurate.</div>
+            <h3 className="mt-1">Ask questions about RavenDB, queries, or errors</h3>
         </div>
     );
 }

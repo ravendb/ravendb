@@ -68,6 +68,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         LowDiskSpace,
 
+        // Required for backward compatibility
         UnexpectedIndexingThreadError,
 
         Indexing_UnexpectedIndexingThreadError,

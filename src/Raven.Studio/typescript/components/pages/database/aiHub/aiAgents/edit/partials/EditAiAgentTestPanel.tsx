@@ -238,7 +238,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                         {testFormValues.prompt && (
                             <ButtonWithSpinner
                                 variant="secondary"
-                                icon="arrow-up"
+                                icon="arrow-thin-top"
                                 onClick={testForm.handleSubmit(handleSend)}
                                 isSpinning={isTestDisabled}
                                 className="position-absolute rounded-pill"

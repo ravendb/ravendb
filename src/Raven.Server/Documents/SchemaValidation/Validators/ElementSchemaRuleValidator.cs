@@ -15,7 +15,7 @@ public class ElementSchemaRuleValidator
     private readonly string[] _publicTypesRestriction;
     protected readonly SchemaPath SchemaPath;
     
-    public BlittableJsonReaderObject SchemaDefinition { get; init; }
+    public string SchemaDefinition { get; init; }
 
     // ReSharper disable once ConvertToPrimaryConstructor
     public ElementSchemaRuleValidator(Type[] typesRestriction, ISchemaRuleValidator[] ruleValidators, SchemaPath schemaPath)

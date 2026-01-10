@@ -9,7 +9,7 @@ export default function ChatbotBody() {
 
     return (
         <div className="vstack flex-grow-1" style={{ minHeight: 0 }}>
-            <Activity mode={chatbotTab === "askAi" ? "visible" : "hidden"}>
+            <Activity mode={chatbotTab === "aiAssistant" ? "visible" : "hidden"}>
                 <ChatbotPanelAskAi />
             </Activity>
             <Activity mode={chatbotTab === "resources" ? "visible" : "hidden"}>

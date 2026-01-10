@@ -14,6 +14,7 @@ $prefix: "bs-";
     --panel-bg-2: #{$base-panel-bg-2};
     --panel-bg-3: #{$base-panel-bg-3};
 
+    --body-bg: #{$body-bg};
     --well-bg: #{$base-well-bg};
     --pre-bg: #{$pre-bg};
     --ace-gutter-bg: #{$ace-gutter-bg};
@@ -45,6 +46,10 @@ $prefix: "bs-";
 
     @each $key, $value in $theme-colors {
         --faded-#{$key}: #{color.mix($panel-bg-1, $value, 80%)};
+    }
+
+    @each $key, $value in $theme-colors {
+        --text-faded-#{$key}: #{color.mix($text-emphasis-color, $value, 30%)};
     }
 
     @each $key, $value in $zindexes {

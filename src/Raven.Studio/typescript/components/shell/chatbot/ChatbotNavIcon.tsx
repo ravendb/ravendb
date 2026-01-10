@@ -11,12 +11,12 @@ export default function ChatbotNavIcon() {
 
     return (
         <Button
-            title="Chatbot"
+            title="Knowledge Center"
             variant="link"
             className={classNames("chatbot-nav-icon", { active: isOpen })}
             onClick={() => dispatch(chatbotActions.isOpenToggled())}
         >
-            <Icon icon="ai-assistant" margin="m-0" className="icon-chatbot ai-gradient" />
+            <Icon icon="ai-assistant" margin="m-0" className="icon-chatbot" />
         </Button>
     );
 }

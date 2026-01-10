@@ -1,0 +1,19 @@
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+@use "Content/scss/colors";
+
+.followup-question {
+    padding: sizes.$gutter-xxxs sizes.$gutter-xxs;
+    border-radius: sizes.$border-radius;
+    border: 1px solid colors.$border-color-light-var;
+    font-size: 0.875em;
+    line-height: 1.1em;
+    width: fit-content;
+    cursor: pointer;
+
+    &:hover {
+        background-color: var(--faded-primary);
+        color: var(--text-faded-primary);
+        border-color: var(--primary);
+    }
+}

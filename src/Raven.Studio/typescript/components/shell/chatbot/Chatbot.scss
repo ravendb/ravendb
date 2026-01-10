@@ -20,6 +20,23 @@
         border-left-color: colors.$border-color-var !important;
     }
 
+    .chatbot-body {
+        $headings: (
+            h1: 1.5rem,
+            h2: 1.25rem,
+            h3: 1.125rem,
+            h4: 1rem,
+            h5: 0.875rem,
+            h6: 0.75rem,
+        );
+
+        @each $tag, $size in $headings {
+            #{$tag} {
+                font-size: $size;
+            }
+        }
+    }
+
     .prompt-wrapper {
         display: flex;
         flex-direction: column;
@@ -28,7 +45,6 @@
         border: 1px solid colors.$border-color-light-var;
         background-color: colors.$input-bg-var;
         z-index: 10;
-        box-shadow: 0px -10px 10px var(--bs-body-bg);
         max-height: 40%;
 
         .prompt-wrapper-inner {
@@ -36,7 +52,7 @@
             display: flex;
             flex-direction: column;
             gap: sizes.$gutter-xxs;
-            padding: sizes.$gutter-xs;
+            padding: sizes.$gutter-xxs;
             border-radius: sizes.$border-radius-md;
             overflow-y: auto;
 
@@ -57,6 +73,20 @@
                     box-shadow: none;
                 }
             }
+
+            .icon-cancel {
+                font-size: 0.875em;
+            }
+        }
+    }
+
+    .chatbot-disclaimer {
+        line-height: 1rem;
+    }
+
+    .bg-faded-primary {
+        .attached-context {
+            background-color: colors.$panel-bg-1-var;
         }
     }
 }

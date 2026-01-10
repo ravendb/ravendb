@@ -59,7 +59,7 @@ const markdownComponents: Components = {
         return <Code code={code} language={language} className="mb-2" sourceView="chatbot" />;
     },
     li: ({ children }) => <li className="text-break">{children}</li>,
-    code: ({ children }) => <code style={{ whiteSpace: "pre" }}>{children}</code>,
+    code: ({ children }) => <code style={{ whiteSpace: "break-spaces" }}>{children}</code>,
 };
 
 function getLanguageFromNode(node: Element): string {

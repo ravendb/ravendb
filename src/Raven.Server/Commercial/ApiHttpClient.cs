@@ -30,15 +30,22 @@ namespace Raven.Server.Commercial
 
         private static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy;
 
-        public static Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token = default)
+        public static Task<HttpResponseMessage> PostAsync(string relativeUri, HttpContent content, HttpCompletionOption completionOption, CancellationToken token = default)
         {
-            return RetryPolicy.ExecuteAsync(t => Instance.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, t), token, continueOnCapturedContext: false);
+            return RetryPolicy.ExecuteAsync(t =>
+            {
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = content,
+                    RequestUri = new Uri(relativeUri, UriKind.Relative)
+                };
+                return Instance.SendAsync(request, completionOption, t);
+            }, token, continueOnCapturedContext: false);
         }
 
-        public static Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken token = default)
-        {
-            return RetryPolicy.ExecuteAsync(t => Instance.PostAsync(requestUri, content, t), token, continueOnCapturedContext: false);
-        }
+        public static Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, CancellationToken token = default) =>
+            PostAsync(requestUri, content, completionOption: HttpCompletionOption.ResponseContentRead, token);
 
         public static Task<HttpResponseMessage> GetAsync(string requestUri, CancellationToken token = default)
         {

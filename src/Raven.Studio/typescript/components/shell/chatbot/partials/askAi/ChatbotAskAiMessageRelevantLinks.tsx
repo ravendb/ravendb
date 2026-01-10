@@ -1,5 +1,7 @@
 import { ChatbotRelevantLink } from "commands/aiAssistant/runChatbotAiAssistantCommand";
-import { Icon } from "components/common/Icon";
+import "./ChatbotAskAiMessageRelevantLinks.scss";
+
+const sourceChipFavicon = require("Content/img/source-chip-favicon.svg");
 
 interface ChatbotAskAiMessageRelevantLinksProps {
     links: ChatbotRelevantLink[];
@@ -11,18 +13,22 @@ export default function ChatbotAskAiMessageRelevantLinks({ links }: ChatbotAskAi
     }
 
     return (
-        <div className="hstack gap-1 flex-wrap pb-2">
-            {links.filter(Boolean).map((link) => (
-                <a
-                    key={link.Url}
-                    href={link.Url}
-                    target="_blank"
-                    className="btn btn-sm rounded-pill py-1 px-2 panel-bg-2 border border-secondary text-reset"
-                >
-                    <Icon icon="raven" size="sm" color="info" />
-                    {link.Title}
-                </a>
-            ))}
+        <div className="pb-2 vstack gap-1">
+            <span className="small-label">Sources</span>
+            <div className="hstack gap-1 flex-wrap pb-2">
+                {links.filter(Boolean).map((link) => (
+                    <a
+                        key={link.Url}
+                        href={link.Url}
+                        target="_blank"
+                        className="source-chip no-decor"
+                        title={link.Title}
+                    >
+                        <img src={sourceChipFavicon} width={12} />
+                        <span>{link.Title}</span>
+                    </a>
+                ))}
+            </div>
         </div>
     );
 }

@@ -183,11 +183,19 @@ function LicenseTable(props: LicenseTableProps) {
                                         <React.Fragment key={section.name}>
                                             <th scope="row">
                                                 {section.link ? (
-                                                    <a href={section.link} target="_blank" className="fw-bold">
+                                                    <a
+                                                        href={section.link}
+                                                        target="_blank"
+                                                        className={classNames("fw-bold", section.className)}
+                                                    >
                                                         {section.name} <Icon icon="newtab" margin="m-0" />
                                                     </a>
                                                 ) : (
-                                                    <div className="fw-bold text-light">{section.name}</div>
+                                                    <div
+                                                        className={classNames("fw-bold text-light", section.className)}
+                                                    >
+                                                        {section.name}
+                                                    </div>
                                                 )}
                                             </th>
                                             {columns.map((column) => (
@@ -316,6 +324,43 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 name: "Management Studio (GUI)",
                 ...availableEverywhere,
                 fieldInLicense: null,
+            },
+        ],
+    },
+    {
+        name: "AI",
+        className: "ai-gradient",
+        link: null,
+        items: [
+            {
+                name: "GenAI",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: false },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasGenAi",
+            },
+            {
+                name: "AI Agent",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: false },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasAiAgent",
+            },
+            {
+                name: "AI Assistant",
+                agpl: { value: false },
+                community: { value: true },
+                professional: { value: true },
+                enterprise: { value: true },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasAiAssistant",
             },
         ],
     },
@@ -795,32 +840,6 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
         ],
     },
     {
-        name: "AI",
-        link: null,
-        items: [
-            {
-                name: "GenAI",
-                agpl: { value: false },
-                community: { value: false },
-                professional: { value: false },
-                enterprise: { value: false },
-                developer: { value: true },
-                enterpriseAi: { value: true },
-                fieldInLicense: "HasGenAi",
-            },
-            {
-                name: "AI Agent",
-                agpl: { value: false },
-                community: { value: false },
-                professional: { value: false },
-                enterprise: { value: false },
-                developer: { value: true },
-                enterpriseAi: { value: true },
-                fieldInLicense: "HasAiAgent",
-            },
-        ],
-    },
-    {
         name: "Embeddings Generation",
         link: null,
         items: [
@@ -1212,6 +1231,26 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterpriseAi: { value: true },
                 fieldInLicense: "HasStudioConfiguration",
             },
+            {
+                name: "Document Schema",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: true },
+                enterprise: { value: true },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasSchemaValidation",
+            },
+            {
+                name: "Remote Attachments",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: true },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasRemoteAttachments",
+            },
         ],
     },
 ];
@@ -1350,7 +1389,7 @@ function FeatureValue(props: { value: AvailabilityValue; suffix: string }) {
 interface FeatureAvailabilitySection {
     name: string;
     link: string;
-
+    className?: string;
     items: FeatureAvailabilityItem[];
 }
 

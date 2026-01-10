@@ -1,4 +1,4 @@
-import { ChatbotMessage } from "components/shell/chatbot/store/chatbotSlice";
+import { ChatbotMessage, ChatbotUserActionState } from "components/shell/chatbot/store/chatbotSlice";
 
 export class ChatbotStubs {
     static basicMessages(): ChatbotMessage[] {
@@ -49,7 +49,9 @@ export class ChatbotStubs {
         ];
     }
 
-    static messagesWithEndpoints(): ChatbotMessage[] {
+    static messagesWithEndpoints(actionState: ChatbotUserActionState = "waiting"): ChatbotMessage[] {
+        const isWithSize = actionState === "allowed" || actionState === "alwaysAllowed";
+
         return [
             {
                 id: "1",
@@ -83,15 +85,18 @@ export class ChatbotStubs {
                     {
                         toolId: "call_180MLXGBoOd1yMC79Lq7M1Qt",
                         url: "/databases/AiAssistant/indexes?pageSize=1024",
-                        state: "waiting",
+                        state: actionState,
+                        resultSizeInBytes: isWithSize ? 123 : undefined,
                     },
                     {
                         toolId: "call_wrdx4K9jyZhDjbZaQcZAS047",
                         url: "/databases/test/docs?id=orders%2F830-A&id=orders%2F831313131313131313131313131313131313131313131313131313131313131-A",
-                        state: "waiting",
+                        state: actionState,
+                        resultSizeInBytes: isWithSize ? 12_000 : undefined,
+                        isRequestTooLarge: true,
                     },
                 ],
-                userActionState: "waiting",
+                userActionState: actionState,
                 followUpQuestions: [],
                 relevantLinks: [],
             },

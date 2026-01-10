@@ -8,6 +8,7 @@ import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 import AiAssistantDisabledInSettingsMessage from "components/common/aiAssistant/AiAssistantDisabledInSettingsMessage";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import "./ChatbotFooter.scss";
 
 export default function ChatbotFooter() {
     const dispatch = useAppDispatch();
@@ -17,7 +18,7 @@ export default function ChatbotFooter() {
     const hasAiAssistant = useAppSelector(licenseSelectors.statusValue("HasAiAssistant"));
 
     return (
-        <div className="chatbot-footer panel-bg-2 border-top border-secondary p-2 hstack">
+        <div className="chatbot-footer panel-bg-2 border-top border-color-light gap-2 p-2 hstack">
             <ConditionalPopover
                 conditions={[
                     {
@@ -33,9 +34,9 @@ export default function ChatbotFooter() {
             >
                 <FooterItem
                     icon="ask-ai"
-                    title="Ask AI"
-                    isActive={chatbotTab === "askAi"}
-                    handleClick={() => dispatch(chatbotActions.chatbotTabSet("askAi"))}
+                    title="AI Assistant"
+                    isActive={chatbotTab === "aiAssistant"}
+                    handleClick={() => dispatch(chatbotActions.chatbotTabSet("aiAssistant"))}
                     isDisabled={isAiAssistantSettingsDisabled || !hasAiAssistant}
                 />
             </ConditionalPopover>
@@ -60,11 +61,14 @@ interface FooterItemProps {
 function FooterItem({ icon, title, isActive, handleClick, isDisabled }: FooterItemProps) {
     return (
         <div
-            className={classNames("rounded-2 px-3 py-1 vstack align-items-center justify-content-center", {
-                "panel-bg-3 border border-secondary": isActive,
-                "cursor-pointer": !isActive && !isDisabled,
-                "cursor-not-allowed opacity-50": isDisabled,
-            })}
+            className={classNames(
+                "chatbot-tab rounded-2 px-3 py-1 vstack align-items-center panel-bg-2 justify-content-center",
+                {
+                    "active pe-none": isActive,
+                    "cursor-pointer": !isActive && !isDisabled,
+                    "cursor-not-allowed opacity-50": isDisabled,
+                }
+            )}
             onClick={isDisabled ? undefined : handleClick}
         >
             <div>

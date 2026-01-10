@@ -10,7 +10,7 @@ public static class ElementSchemaRuleValidatorFactory
     public static ElementSchemaRuleValidator CreateElementSchemaRuleValidator(SchemaBuilderContext context, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath)
     {
         return TryReadSchema(context, schemaDefinition, schemaPath, out Type[] typesRestriction, out ISchemaRuleValidator[] ruleValidators)
-            ? new ElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) {SchemaDefinition = schemaDefinition} : 
+            ? new ElementSchemaRuleValidator(typesRestriction, ruleValidators, schemaPath) {SchemaDefinition = schemaDefinition.ToString()} : 
             null;
     }
     
