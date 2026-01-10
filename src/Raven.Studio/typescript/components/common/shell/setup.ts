@@ -141,15 +141,12 @@ function initRedux() {
         (value) => {
             if (value?.Id !== prevLicenseId) {
                 globalDispatch(aiAssistantActions.checkConsent());
+                globalDispatch(aiAssistantActions.checkUsage());
             }
         },
         licenseModel.licenseStatus,
         "change"
     );
-
-    accessManager.clientCertificateThumbprint.subscribe(() => {
-        globalDispatch(aiAssistantActions.checkConsent());
-    });
 
     router.activeInstruction.subscribe((instruction) => {
         globalDispatch(

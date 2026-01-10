@@ -18,7 +18,7 @@ export default function ChatbotPanelResources() {
             {activeTab === "helpAndResources" && (
                 <div className="vstack">
                     <ul className="action-menu__list flex-grow">
-                        <p>
+                        <p className="mb-0">
                             Explore our documentation, engage with community, and connect with our dedicated support
                             channels for all your needs.
                         </p>
@@ -42,6 +42,7 @@ export default function ChatbotPanelResources() {
                         </li>
                         <SeeDocumentationButton />
                     </ul>
+                    <FlexGrow />
                     <div className="action-menu__footer">
                         <div className="d-flex flex-row align-items-center">
                             <small className="lh-1">See our project on GitHub</small>

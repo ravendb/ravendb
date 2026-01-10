@@ -117,6 +117,7 @@ export function ContactSupportContent() {
                     </>
                 )}
             </ul>
+            <FlexGrow />
             <div className="action-menu__footer">
                 <small className="lh-1">
                     <Icon icon="support" />

@@ -68,14 +68,14 @@ $btn-default-dimension: 36px;
             display: flex;
             flex-direction: column;
             gap: sizes.$gutter-xs;
-            padding: sizes.$gutter-sm;
+            padding: sizes.$gutter-xs;
             list-style-type: none;
             margin: 0;
         }
 
         &__header {
             background-color: colors.$panel-header-bg-var;
-            padding: sizes.$gutter-sm;
+            padding: sizes.$gutter-xs;
             border-bottom: 1px solid colors.$border-color-light-var;
             border-top-left-radius: sizes.$border-radius-md;
             border-top-right-radius: sizes.$border-radius-md;
@@ -151,7 +151,7 @@ $btn-default-dimension: 36px;
             display: flex;
             flex-direction: column;
             border-top: 1px solid colors.$border-color-light-var;
-            padding: sizes.$gutter-sm;
+            padding: sizes.$gutter-xs;
             color: colors.$text-muted-var;
         }
     }

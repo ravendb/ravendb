@@ -42,7 +42,7 @@ export function AiAssistantEulaModal({ close, onConsentGiven }: AiAssistantEulaM
                 </div>
                 <Checkbox selected={isAccepted} toggleSelection={toggleAccepted} color="primary">
                     I accept the{" "}
-                    <a href="#TODO" target="_blank">
+                    <a href="https://ravendb.net/legal/ravendb/ai-assistant-terms-of-use" target="_blank">
                         RavenDB AI Assistant EULA
                     </a>
                 </Checkbox>

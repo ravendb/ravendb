@@ -114,11 +114,11 @@ export default function Code(props: CodeProps) {
         <div className={classNames("code", className)}>
             {!isActionsHidden && (
                 <div className="code-actions">
-                    {languageTitle && <div className="fs-6">{languageTitle}</div>}
-                    <div className="hstack">
+                    {languageTitle && <div>{languageTitle}</div>}
+                    <div className="hstack gap-2">
                         <Button
                             variant="link"
-                            className="text-emphasis fs-6"
+                            className="text-emphasis"
                             title="Copy to clipboard"
                             onClick={() => copyToClipboard.copy(`${code}`, `Copied to clipboard`)}
                         >
@@ -126,7 +126,7 @@ export default function Code(props: CodeProps) {
                             Copy
                         </Button>
                         {hasDatabase && props.language === "rql" && (
-                            <Button variant="link" className="text-emphasis fs-6" onClick={handleRunQuery}>
+                            <Button variant="link" className="text-emphasis" onClick={handleRunQuery}>
                                 <Icon icon="rocket" />
                                 Run query
                             </Button>

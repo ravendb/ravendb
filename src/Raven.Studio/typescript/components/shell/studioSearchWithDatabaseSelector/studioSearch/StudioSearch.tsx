@@ -44,15 +44,16 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                     <Row className="m-0">
                         {!isAiAssistantDisabled && !!searchQuery && (
                             <>
-                                <Dropdown.Header className="studio-search__database-col__header--sticky">
+                                <Dropdown.Header className="studio-search__database-col__header--sticky pb-1">
                                     <span className="small-label">Knowledge center</span>
                                 </Dropdown.Header>
-                                <div className="p-2">
+                                <div className="px-2 pb-2 border-bottom border-color-light">
                                     <Dropdown.Item
                                         onClick={handleAskAi}
-                                        className="d-flex align-items-center studio-search__dropdown-item bg-faded-secondary border border-secondary"
+                                        className="d-flex align-items-center studio-search__dropdown-item bg-faded-secondary border border-color-light"
                                         active={false}
                                         id="ask-ai"
+                                        title={"Ask AI about " + searchQuery}
                                     >
                                         <Icon icon="ask-ai" className="ai-gradient" />
                                         <span>
@@ -77,6 +78,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                                 hasDatabaseMatch={matchStatus.hasDatabaseMatch}
                                 databaseResults={results.database}
                                 activeItem={activeItem}
+                                searchQuery={searchQuery}
                             />
                             <StudioSearchSwitchToDatabaseResults
                                 hasSwitchToDatabaseMatch={matchStatus.hasSwitchToDatabaseMatch}

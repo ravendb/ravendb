@@ -33,6 +33,14 @@ export async function processStreamingResponse<T extends object>({
 
         if (!response.ok && contentType.includes("text/plain")) {
             const responseText = await response.text();
+
+            if (response.status === 413) {
+                return {
+                    status: "RequestTooLarge",
+                    error: responseText,
+                };
+            }
+
             return {
                 status: "InternalError",
                 error: responseText,

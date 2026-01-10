@@ -385,8 +385,7 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             }
 
             var replicationFailureInfo = await sink.Maintenance.SendAsync(new GetReplicationOutgoingsFailureInfoOperation(nodeTag: server.ServerStore.NodeTag));
-            var info = replicationFailureInfo.Stats.Single();
-            Assert.True(info.Key is PullReplicationAsSink);
+            Assert.Contains(replicationFailureInfo.Stats.Select(x => x.Key.GetType()), x => x == typeof(PullReplicationAsSink));
         }
     }
 

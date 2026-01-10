@@ -3,7 +3,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ConnectivityStatus, OverallInfoItem } from "components/pages/resources/about/partials/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -47,7 +47,6 @@ function canRenewLicense(licenseType: LicenseType) {
 export function LicenseSummary(props: LicenseSummaryProps) {
     const { recheckConnectivity, asyncCheckLicenseServerConnectivity, asyncGetConfigurationSettings } = props;
 
-    const dispatch = useAppDispatch();
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const licenseType = useAppSelector(licenseSelectors.statusValue("Type"));
@@ -55,14 +54,9 @@ export function LicenseSummary(props: LicenseSummaryProps) {
     const aiAssistantUsage = useAppSelector(aiAssistantSelectors.usage);
     const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
 
-    // Check AI Assistant usage if not checked yet
-    useEffect(() => {
-        if (aiAssistantUsage.status === "idle") {
-            dispatch(aiAssistantActions.checkUsage());
-        }
-    }, [aiAssistantUsage.status]);
-
     const [refreshing, setRefreshing] = useState<boolean>(false);
+
+    const aiUsageResetFormattedDate = moment().add(1, "month").startOf("month").format("MMM D, YYYY");
 
     const refreshConnectivity = async () => {
         setRefreshing(true);
@@ -114,12 +108,17 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                                     icon="ai"
                                     isFullWidth={aiAssistantUsage.status !== "failure"}
                                     label={
-                                        <>
-                                            Tokens usage
-                                            <PopoverWithHoverWrapper message="Each month, your token balance resets. The number of tokens available depends on your license and powers the AI Assistant.">
-                                                <Icon icon="info-new" margin="ms-1" />
-                                            </PopoverWithHoverWrapper>
-                                        </>
+                                        <div className="hstack justify-content-between">
+                                            <div>
+                                                Tokens usage
+                                                <PopoverWithHoverWrapper message="The number of tokens available depends on your license and powers the AI Assistant.">
+                                                    <Icon icon="info-new" margin="ms-1" />
+                                                </PopoverWithHoverWrapper>
+                                            </div>
+                                            {aiAssistantUsage.data?.Status === "Success" && (
+                                                <div>Resets {aiUsageResetFormattedDate}</div>
+                                            )}
+                                        </div>
                                     }
                                 >
                                     <TokensUsageItem usage={aiAssistantUsage} />
@@ -466,7 +465,11 @@ function LicenseExpirationInfoPopover({ date, children }: { date: moment.Moment;
 function AiAssistantReviewConsentButton() {
     return (
         <Col className="d-flex align-items-center justify-content-end">
-            <a href="#TODO" target="_blank" className="btn btn-outline-secondary rounded-pill">
+            <a
+                href="https://ravendb.net/legal/ravendb/ai-assistant-terms-of-use"
+                target="_blank"
+                className="btn btn-outline-secondary rounded-pill"
+            >
                 Review the consent
                 <Icon icon="newtab" margin="ms-1" />
             </a>

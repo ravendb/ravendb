@@ -161,6 +161,7 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                     </ButtonWithSpinner>
                 </div>
             </ul>
+            <FlexGrow />
             <div className="action-menu__footer">
                 <small className="lh-1">
                     <Icon icon="community" />

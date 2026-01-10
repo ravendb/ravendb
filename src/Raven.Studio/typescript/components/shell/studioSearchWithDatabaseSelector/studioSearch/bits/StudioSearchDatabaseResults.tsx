@@ -11,8 +11,9 @@ export default function StudioSearchDatabaseResults(props: {
     hasDatabaseMatch: boolean;
     databaseResults: StudioSearchResult["database"];
     activeItem?: StudioSearchResultItem;
+    searchQuery: string;
 }) {
-    const { hasDatabaseMatch, databaseResults, activeItem } = props;
+    const { hasDatabaseMatch, databaseResults, activeItem, searchQuery } = props;
 
     const activeDatabase = useAppSelector(databaseSelectors.activeDatabase);
 
@@ -20,9 +21,21 @@ export default function StudioSearchDatabaseResults(props: {
         return (
             <Dropdown.Item disabled className="studio-search__database-col__group pt-0">
                 <EmptySet compact>
-                    No results found.
+                    No active database
                     <br />
-                    You can select an active database from the selector or by typing its name.
+                    Choose a database from the selector or by typing its name
+                </EmptySet>
+            </Dropdown.Item>
+        );
+    }
+
+    if (!props.searchQuery) {
+        return (
+            <Dropdown.Item disabled className="studio-search__database-col__group pt-0">
+                <EmptySet compact>
+                    Search <b>{activeDatabase.name}</b>
+                    <br />
+                    Type to find results in this database
                 </EmptySet>
             </Dropdown.Item>
         );
@@ -31,7 +44,13 @@ export default function StudioSearchDatabaseResults(props: {
     if (!hasDatabaseMatch) {
         return (
             <Dropdown.Item disabled className="studio-search__database-col__group pt-0">
-                <EmptySet compact>No results found</EmptySet>
+                <EmptySet compact>
+                    <span>
+                        No matches for <b>{props.searchQuery}</b> in <b>{activeDatabase.name}</b>
+                    </span>
+                    <br />
+                    <span>Refine your search or Ask AI</span>
+                </EmptySet>
             </Dropdown.Item>
         );
     }

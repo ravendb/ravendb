@@ -16,7 +16,7 @@ import moment from "moment";
 
 let chatAbortController: AbortController = null;
 
-type ChatbotTab = "askAi" | "resources";
+type ChatbotTab = "aiAssistant" | "resources";
 type ChatbotResourcesTab = "helpAndResources" | "joinTheCommunity" | "contactSupport" | "submitFeedback";
 export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
 
@@ -47,6 +47,8 @@ export interface ChatbotEndpointItem {
     toolId: string;
     url: string;
     state: ChatbotUserActionState;
+    resultSizeInBytes?: number;
+    isRequestTooLarge?: boolean;
 }
 
 interface ChatbotMessageBase {
@@ -105,7 +107,7 @@ const chatbotAttachedContextSelectors = chatbotAttachedContextAdapter.getSelecto
 const initialState: ChatbotState = {
     isOpen: false,
     isPinned: true,
-    chatbotTab: "askAi",
+    chatbotTab: "aiAssistant",
     chatbotResourcesTab: "helpAndResources",
     conversationId: null,
     messages: chatbotMessagesAdapter.getInitialState(),
@@ -145,6 +147,9 @@ export const chatbotSlice = createSlice({
         },
         messageUpdated: (state, action: PayloadAction<Update<ChatbotMessage, string>>) => {
             chatbotMessagesAdapter.updateOne(state.messages, action.payload);
+        },
+        messageRemoved: (state, action: PayloadAction<string>) => {
+            chatbotMessagesAdapter.removeOne(state.messages, action.payload);
         },
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
@@ -225,7 +230,7 @@ export const chatbotSlice = createSlice({
 
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
-    async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotMessage> => {
+    async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotAssistantMessage> => {
         const { aiAssistant, chatbot } = getState() as RootState;
 
         chatAbortController = new AbortController();

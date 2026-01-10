@@ -33,15 +33,15 @@ export default function ChatbotAskAiAttachedContextNewItem() {
                 isCaretHidden
                 id="chatbot-add-context"
                 variant="link"
-                className="rounded-2 border border-secondary hstack"
+                className="rounded-1 border border-color-light lh-base hstack"
                 style={{
                     padding: "1px 6px",
                     fontSize: "10px",
-                    height: "23px",
+                    height: "22px",
                 }}
                 title="Add context"
             >
-                <Icon icon="plus" margin="m-0" size="xs" />
+                <Icon icon="plus" className="lh-base" margin="m-0" size="xs" />
             </Dropdown.Toggle>
             <Dropdown.Menu style={{ width: 300, height: 350 }} renderOnMount popperConfig={{ strategy: "fixed" }}>
                 <div className="vstack h-100">
@@ -74,7 +74,7 @@ function AllTabs() {
             </Dropdown.Header>
             <AllTabsItem tab="DatabaseName" label="Database Name" iconName="database" />
             <AllTabsItem tab="DocumentId" label="Document ID" iconName="document" isRequiredDatabaseName />
-            <AllTabsItem tab="CollectionName" label="Collection Name" iconName="document2" isRequiredDatabaseName />
+            <AllTabsItem tab="CollectionName" label="Collection Name" iconName="documents" isRequiredDatabaseName />
             <AllTabsItem tab="IndexName" label="Index Name" iconName="index" isRequiredDatabaseName />
         </>
     );
@@ -98,11 +98,11 @@ function AllTabsItem({ tab, label, iconName, isRequiredDatabaseName }: AllTabsIt
             conditions={[
                 {
                     isActive: isRequiredDatabaseName && !databaseNameContext,
-                    message: "Please add Database Name to context.",
+                    message: "First, add Database Name to the context",
                 },
                 {
                     isActive: isRequiredDatabaseName && databaseNameContext?.state === "excluded",
-                    message: "Please include Database Name by clicking on it in attached context.",
+                    message: "First, include Database Name by clicking on it in the attached context",
                 },
             ]}
             popoverPlacement="left"
