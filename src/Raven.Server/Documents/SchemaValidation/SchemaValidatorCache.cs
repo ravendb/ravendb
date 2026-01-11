@@ -62,7 +62,7 @@ public class SchemaValidatorCache : IDisposable
             SchemaValidator schemaValidator;
             try
             {
-                if (collection.StartsWith("@") && collection != Constants.Documents.Collections.EmptyCollection)
+                if (collection.StartsWith('@') && collection != Constants.Documents.Collections.EmptyCollection)
                     throw new InvalidOperationException($"Schema validation cannot be defined for system collections other than '{Constants.Documents.Collections.EmptyCollection}'. Invalid collection name: '{collection}'.");
 
                 var blittable = _context.Sync.ReadForMemory(validator.Schema, "schema-validation");

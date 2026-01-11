@@ -561,7 +561,7 @@ namespace Raven.Server.Documents
                 using (data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     collectionName = extractCollectionName ? _documentsStorage.ExtractCollectionName(context, data) : default;
-                    var nonPersistentDocumentFlags = NonPersistentDocumentFlags.ByAttachmentUpdate | NonPersistentDocumentFlags.SkipSchemaValidation;
+                    const NonPersistentDocumentFlags nonPersistentDocumentFlags = NonPersistentDocumentFlags.ByAttachmentUpdate | NonPersistentDocumentFlags.SkipSchemaValidation;
                     return _documentsStorage.Put(context, documentId, null, data, null, null, null, flags, nonPersistentDocumentFlags).ChangeVector;
                 }
             }
