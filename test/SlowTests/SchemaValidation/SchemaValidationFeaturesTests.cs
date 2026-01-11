@@ -206,14 +206,37 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
 
             var patchByQueryOp = new PatchByQueryOperation(patchByQuery);
             var operation = await store.Operations.SendAsync(patchByQueryOp);
-            await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromSeconds(30));
+            var error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromSeconds(30)));
+            Assert.Contains("The length of the value 'Grisha' at 'Name' should not exceed 1, but its actual length is 6.", error.Message);
 
             using (var session = store.OpenAsyncSession())
             {
                 var user = await session.LoadAsync<User>(docId);
                 var metadataFromDoc = session.Advanced.GetMetadataFor(user);
-                Assert.False(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
+                Assert.True(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
             }
+
+
+            patchByQuery = @"
+  from Users
+  update 
+  {
+      this.Name = ""Grisha Kotler"";
+      archived.unarchive(this)
+  }";
+
+            patchByQueryOp = new PatchByQueryOperation(patchByQuery);
+            operation = await store.Operations.SendAsync(patchByQueryOp);
+            error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromSeconds(30)));
+            Assert.Contains("The length of the value 'Grisha Kotler' at 'Name' should not exceed 1, but its actual length is 13.", error.Message);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(docId);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                Assert.True(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
+            }
+
         }
     }
 

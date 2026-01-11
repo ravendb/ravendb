@@ -215,7 +215,6 @@ namespace Raven.Server.Documents.Patch
                         {
                             originalDocument.Flags &= ~DocumentFlags.Archived;
                             nonPersistentFlags |= NonPersistentDocumentFlags.Unarchive;
-                            nonPersistentFlags |= NonPersistentDocumentFlags.SkipSchemaValidation;
                         }
                         
                         if (_isTest == false || run.PutOrDeleteCalled)
