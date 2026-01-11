@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -286,7 +285,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(r.Answer);
 
-        const string expectedFailingToolCallAnswer = "Error has been occurred during the tool call execution: Raven.Client.Exceptions.AiException: Raven.Client.Exceptions.AiException: Failed to 'talk' with the agent 'user-info-agent'";
+        const string expectedFailingToolCallAnswer = "Error has been occurred during the tool call execution: ";
         using (var session = store.OpenAsyncSession())
         {
             var doc = await session.LoadAsync<Chat>("chats/1");

@@ -429,29 +429,14 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
     }
 
-    private bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, object requestResult, AiToolCall currentCall,
+    private bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
         SubConversationResult result)
     {
-        if (requestResult is ExceptionDispatchInfo ede)
-        {
-            result.Messages.Add(context.ReadObject(
-                new DynamicJsonValue
-                {
-                    ["tool_call_id"] = currentCall.Id,
-                    ["role"] = "tool",
-                    ["content"] = "Error has been occurred during the tool call execution: " + ede.SourceException,
-                    ["subConversation"] = conversationId,
-                }, "tool-call/response"));
-            result.OpenToolCallsToRemove.Add(currentCall.Id);
-            return true;
-        }
-
-        var subAgentResult = requestResult as BlittableJsonReaderObject;
-        if (subAgentResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
+        if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.Response)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-        if (subAgentResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
+        if (requestResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ActionRequests)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-        if (subAgentResult.TryGet(nameof(ConversationResult<object>.ToolsIterations), out int callToolsIterations) is false)
+        if (requestResult.TryGet(nameof(ConversationResult<object>.ToolsIterations), out int callToolsIterations) is false)
             throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.ToolsIterations)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
         result.ToolsIterations += callToolsIterations;
@@ -897,7 +882,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
             var result = new SubConversationResult(disposable);
 
-            await foreach (var (requestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
+            await foreach (var (getRequestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
             {
                 var currentCall = requests[i].Call;
                 var toolCall = FindToolFrom(_configuration, currentCall.Name);
@@ -907,17 +892,28 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                 switch (toolCall)
                 {
                     case AiAgentToolSubAgent:
-                        if (TryCloseSubAgentCall(context, conversationId, requestResult, currentCall, result) == false)
-                            return result;
+                        try
+                        {
+                            var subAgentResult = getRequestResult.Invoke();
+                            if (TryCloseSubAgentCall(context, conversationId, subAgentResult, currentCall, result) == false)
+                                return result;
+                        }
+                        catch (Exception e)
+                        {
+                            result.Messages.Add(context.ReadObject(
+                                    new DynamicJsonValue
+                                    {
+                                        ["tool_call_id"] = currentCall.Id,
+                                        ["role"] = "tool",
+                                        ["content"] = "Error has been occurred during the tool call execution: " + e.Message,
+                                        ["subConversation"] = conversationId,
+                                    }, "tool-call/response"));
+                            result.OpenToolCallsToRemove.Add(currentCall.Id);
+                        }
                         break;
                     case AiAgentToolQuery:
-                        if (requestResult is ExceptionDispatchInfo ede1)
-                        {
-                            // The original stack trace is preserve.
-                            ede1.Throw();
-                        }
-
-                        if (((BlittableJsonReaderObject)requestResult).TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                        var requestResult = getRequestResult.Invoke();
+                        if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                             throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
                         result.Messages.Add(context.ReadObject(
@@ -958,7 +954,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
     }
 
-    private async IAsyncEnumerable<(object, int)> ExecuteMultiRequests(JsonOperationContext context, DynamicJsonArray reqs)
+    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequests(JsonOperationContext context, DynamicJsonArray reqs)
     {
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext
@@ -987,22 +983,13 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                     throw new InvalidOperationException("Missing status code");
                 if (response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult) is false)
                     throw new InvalidOperationException("Missing Result from query request output");
-
-                if (statusCode != 200)
+                
+                yield return (() =>
                 {
-                    ExceptionDispatchInfo edi;
-                    try
-                    {
+                    if (statusCode != 200)
                         throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
-                    }
-                    catch (Exception e)
-                    {
-                        edi = ExceptionDispatchInfo.Capture(e);
-                    }
-                    yield return (edi, i);
-                }
-                else
-                    yield return (requestResult, i);
+                    return requestResult;
+                }, i);
             }
         }
     }
