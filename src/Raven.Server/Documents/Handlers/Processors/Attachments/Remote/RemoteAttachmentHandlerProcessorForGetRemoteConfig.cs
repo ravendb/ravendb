@@ -24,11 +24,6 @@ internal sealed class RemoteAttachmentHandlerProcessorForGetRemoteConfig : Abstr
                 configuration = rawRecord?.RemoteAttachmentsConfiguration;
             }
 
-            if (RavenLogManager.Instance.IsAuditEnabled)
-            {
-                RequestHandler.LogAuditForDatabase("GET", "remote-attachment configurations");
-            }
-
             return ValueTask.FromResult(configuration);
         }
     }
