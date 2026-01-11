@@ -108,7 +108,6 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
-
     [RavenFact(RavenTestCategory.ExpirationRefresh)]
     public async Task RefreshShouldSkipSchemaValidation()
     {
@@ -462,8 +461,10 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             Assert.Contains("companies1", schemaError.Message);
 
             configuration.ValidatorsPerCollection["companies1"].Disabled = true;
-            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+            schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("companies1", schemaError.Message);
 
+            configuration.ValidatorsPerCollection.Remove("companies1");
             configuration.ValidatorsPerCollection["names1"] = new SchemaDefinition
             {
                 Schema = schemaDefinition
@@ -471,6 +472,11 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
             Assert.Contains("names1", schemaError.Message);
             Assert.DoesNotContain("companies1", error.Message);
+
+            configuration.ValidatorsPerCollection["names1"].Disabled = true;
+            configuration.Disabled = true;
+            schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("names1", schemaError.Message);
         }
     }
 

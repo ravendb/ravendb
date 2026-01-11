@@ -29,15 +29,12 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
     {
         record.SchemaValidation = Configuration;
 
-        if (Configuration == null || Configuration.HasEnabledConfiguration() == false)
+        if (Configuration == null || Configuration.ValidatorsPerCollection == null)
             return;
 
         foreach (var keyValue in Configuration.ValidatorsPerCollection)
         {
-            if (keyValue.Value.Disabled)
-                continue;
-
-            if (keyValue.Key.StartsWith("@") && keyValue.Key != Constants.Documents.Collections.EmptyCollection)
+            if (keyValue.Key.StartsWith('@') && keyValue.Key != Constants.Documents.Collections.EmptyCollection)
             {
                 throw new RachisApplyException($"Schema validation cannot be defined for system collections other than '{Constants.Documents.Collections.EmptyCollection}'. Invalid collection name: '{keyValue.Key}'.");
             }
@@ -51,15 +48,13 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
             if (index.Reduce == null || index.OutputReduceToCollection == null)
                 continue;
 
-            if (Configuration.ValidatorsPerCollection.TryGetValue(index.OutputReduceToCollection, out var schemaDefinition) &&
-                schemaDefinition.Disabled == false)
+            if (Configuration.ValidatorsPerCollection.TryGetValue(index.OutputReduceToCollection, out _))
             {
                 throw new RachisApplyException($"Cannot have an index that outputs to collection '{index.OutputReduceToCollection}' which has an active schema validation defined.");
             }
 
             if (index.PatternReferencesCollectionName != null &&
-                Configuration.ValidatorsPerCollection.TryGetValue(index.PatternReferencesCollectionName, out schemaDefinition) &&
-                schemaDefinition.Disabled == false)
+                Configuration.ValidatorsPerCollection.TryGetValue(index.PatternReferencesCollectionName, out _))
             {
                 throw new RachisApplyException($"Cannot have an index that uses the pattern for outputs the pattern to collection '{index.PatternReferencesCollectionName}' which has an active schema validation defined.");
             }

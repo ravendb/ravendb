@@ -289,22 +289,17 @@ namespace Raven.Client.ServerWide
 
         private void ValidateSchemaCollections(IndexDefinition definition)
         {
-            if (SchemaValidation == null || SchemaValidation.HasEnabledConfiguration() == false)
+            if (SchemaValidation == null || definition.Reduce == null || definition.OutputReduceToCollection == null)
                 return;
 
-            if (definition.Reduce == null || definition.OutputReduceToCollection == null)
-                return;
-
-            if (SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.OutputReduceToCollection, out var schemaDefinition) &&
-                schemaDefinition.Disabled == false)
+            if (SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.OutputReduceToCollection, out _))
             {
                 throw new InvalidOperationException($"Cannot create index '{definition.Name}' which outputs to collection " +
                                                     $"'{definition.OutputReduceToCollection}' that has a schema validation configured.");
             }
 
             if (definition.PatternReferencesCollectionName != null &&
-                SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.PatternReferencesCollectionName, out schemaDefinition) &&
-                schemaDefinition.Disabled == false)
+                SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.PatternReferencesCollectionName, out _))
             {
                 throw new InvalidOperationException($"Cannot create index '{definition.Name}' which outputs the pattern to collection " +
                                                     $"'{definition.PatternReferencesCollectionName}' that has a schema validation configured.");
