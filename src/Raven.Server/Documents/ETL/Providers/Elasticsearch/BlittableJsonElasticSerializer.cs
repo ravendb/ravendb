@@ -19,19 +19,25 @@ internal class BlittableJsonElasticSerializer : Serializer
         _context = context;
         return new DisposableAction(() => _context = null);
     }
-    
+
     public override void Serialize<T>(T data, Stream stream, SerializationFormatting formatting = SerializationFormatting.None)
+    {
+        Serialize(data, typeof(T), stream, formatting);
+    }
+
+    public override void Serialize(object? data, Type type, Stream stream, SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
     {
         if (_context is null)
         {
             throw new InvalidOperationException("Context cannot be null");
         }
+
         if (data is not BlittableJsonReaderObject json)
         {
             throw new NotSupportedException(
-                $"Blittable elastic serializer cannot serialize object of type '{data.GetType()}'. Object type needs to be '{typeof(BlittableJsonReaderObject)}'");
+                $"Blittable elastic serializer cannot serialize object of type '{data?.GetType()}'. Object type needs to be '{typeof(BlittableJsonReaderObject)}'");
         }
-        
+
         using (var writer = new BlittableJsonTextWriter(_context, stream))
         {
             writer.WriteObject(json);
@@ -41,14 +47,21 @@ internal class BlittableJsonElasticSerializer : Serializer
     public override async Task SerializeAsync<T>(T data, Stream stream,
         SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
     {
+        await SerializeAsync(data, typeof(T), stream, formatting, cancellationToken);
+    }
+
+    public override async Task SerializeAsync(object? data, Type type, Stream stream,
+        SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
+    {
         if (_context is null)
         {
             throw new InvalidOperationException("Context cannot be null");
         }
+
         if (data is not BlittableJsonReaderObject json)
         {
             throw new NotSupportedException(
-                $"Blittable elastic serializer cannot serialize object of type '{data.GetType()}'. Object type needs to be '{typeof(BlittableJsonReaderObject)}'");
+                $"Blittable elastic serializer cannot serialize object of type '{data?.GetType()}'. Object type needs to be '{typeof(BlittableJsonReaderObject)}'");
         }
 
         await using (var writer = new AsyncBlittableJsonTextWriter(_context, stream))
@@ -56,10 +69,10 @@ internal class BlittableJsonElasticSerializer : Serializer
             writer.WriteObject(json);
         }
     }
-        
+
     public override object Deserialize(Type type, Stream stream) =>
         throw new NotSupportedException();
-    
+
     public override T Deserialize<T>(Stream stream) =>
         throw new NotSupportedException();
 
