@@ -429,9 +429,7 @@ internal class ChatCompletionClient : IDisposable
         public BlittableJsonReaderObject GetContent(JsonOperationContext context)
         {
             // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
-            if (TryGetOrNullIfEmpty(Message, Constants.ResponseFields.Content, out string content) == false &&
-                TryGetOrNullIfEmpty(Message, Constants.ResponseFields.ReasoningContent, out content) == false &&
-                TryGetOrNullIfEmpty(Message, Constants.ResponseFields.Reasoning, out content) == false)
+            if (TryGetDeltaContent(Message, out var content) == false)
             {
                 _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
                 var refusal = client.GetRefusal(_choice0, Message);
@@ -442,17 +440,6 @@ internal class ChatCompletionClient : IDisposable
             }
 
             return context.Sync.ReadForMemory(content, "ai/output");
-        }
-
-        private static bool TryGetOrNullIfEmpty(BlittableJsonReaderObject obj, string propertyName, out string value)
-        {
-            if (obj.TryGet(propertyName, out value) && string.IsNullOrEmpty(value) == false)
-            {
-                return true;
-            }
-
-            value = null;
-            return false;
         }
 
     }
@@ -1105,4 +1092,3 @@ public static class ChatCompletionClientExtensions
         }
     }
 }
-
