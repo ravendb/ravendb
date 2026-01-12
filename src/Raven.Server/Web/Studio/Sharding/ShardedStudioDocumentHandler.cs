@@ -7,7 +7,7 @@ namespace Raven.Server.Web.Studio.Sharding;
 
 public sealed class ShardedStudioDocumentHandler : ShardedDatabaseRequestHandler
 {
-    [RavenAction("/databases/*/studio/validate-schema", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    [RavenShardedAction("/databases/*/studio/validate-schema", "POST")]
     public async Task ValidateSchema()
     {
         using (var processor = new ShardedStudioDocumentHandlerProcessorForValidateDocument(this))
