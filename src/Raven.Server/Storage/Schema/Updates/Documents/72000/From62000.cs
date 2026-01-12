@@ -32,6 +32,20 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private static readonly int _oldSchemaSize = 7;
 
         internal static int NumberOfAttachmentsToMigrateInSingleTransaction = PlatformDetails.Is32Bits ? 2048 : 32768;
+        
+        private static readonly Slice AttachmentsEtagSlice;
+        private static readonly Slice AttachmentsHashSlice;
+        private static readonly Slice AttachmentsFlagAndHashSlice;
+
+        static From62000()
+        {
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, AttachmentsEtag, ByteStringType.Immutable, out AttachmentsEtagSlice);
+                Slice.From(ctx, AttachmentsHash, ByteStringType.Immutable, out AttachmentsHashSlice);
+                Slice.From(ctx, AttachmentsFlagAndHash, ByteStringType.Immutable, out AttachmentsFlagAndHashSlice);
+            }
+        }
 
         /*
          *  We are only updating the attachments table, so we can add missing fields in the table, and correctly populate the dynamic index.
@@ -39,16 +53,11 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
          */
         public bool Update(UpdateStep step)
         {
-            using var e = step.AllocateDocumentsOperationContext(out DocumentsOperationContext ctx);
-            using var g = Slice.From(ctx.Allocator, AttachmentsEtag, out var attachmentsEtagSlice);
-            using var o = Slice.From(ctx.Allocator, AttachmentsHash, out var attachmentsHashSlice);
-            using var r = Slice.From(ctx.Allocator, AttachmentsFlagAndHash, out var attachmentsFlagAndHashSlice);
-
             var isSharded = step.DocumentsStorage is ShardedDocumentsStorage;
-            step.WriteTx.CreateTree(attachmentsFlagAndHashSlice, isIndexTree: true);
-
+            step.WriteTx.CreateTree(AttachmentsFlagAndHashSlice, isIndexTree: true);
+            
             TableSchema attachmentsSchemaBase = new TableSchema();
-
+            
             attachmentsSchemaBase.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
@@ -57,20 +66,20 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             attachmentsSchemaBase.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
             {
                 StartIndex = (int)AttachmentsTable.Etag,
-                Name = attachmentsEtagSlice
+                Name = AttachmentsEtagSlice
             });
             attachmentsSchemaBase.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = (int)AttachmentsTable.Hash,
                 Count = 1,
-                Name = attachmentsHashSlice
+                Name = AttachmentsHashSlice
             });
 
             var dynamicIndex = new TableSchema.DynamicKeyIndexDef
             {
                 GenerateKey = GenerateFlagAndHashForAttachments,
                 IsGlobal = true,
-                Name = attachmentsFlagAndHashSlice,
+                Name = AttachmentsFlagAndHashSlice,
                 SupportDuplicateKeys = true
             };
 
