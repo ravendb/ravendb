@@ -22,7 +22,7 @@
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.18.3" />
-    <PackageVersion Include="FluentFTP" Version="52.1.0" />
+    <PackageVersion Include="FluentFTP" Version="53.0.2" />
     <PackageVersion Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
