@@ -30,13 +30,6 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/docs/validate-schema", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task ValidateSchema()
-        {
-            using (var processor = new DocumentHandlerProcessorForValidateDocument(this))
-                await processor.ExecuteAsync();
-        }
-
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Get()
         {

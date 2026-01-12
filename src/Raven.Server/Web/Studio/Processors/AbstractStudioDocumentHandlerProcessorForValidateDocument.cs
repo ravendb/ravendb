@@ -2,18 +2,20 @@
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers.Processors.Documents;
+namespace Raven.Server.Web.Studio.Processors;
 
-internal abstract class AbstractDocumentHandlerProcessorForValidateDocument<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractStudioDocumentHandlerProcessorForValidateDocument<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractDocumentHandlerProcessorForValidateDocument([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    protected AbstractStudioDocumentHandlerProcessorForValidateDocument([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
