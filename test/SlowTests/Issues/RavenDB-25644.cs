@@ -65,6 +65,7 @@ public class RavenDB_25644 : RavenTestBase
                 
                 var result = session.Advanced.RawQuery<Candidate>(query)
                     .AddParameter("frameworks", frameworks)
+                    .WaitForNonStaleResults()
                     .ToList();
                 
                 Assert.Equal(0, result.Count);
