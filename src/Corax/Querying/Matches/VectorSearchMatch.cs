@@ -250,7 +250,7 @@ public struct VectorSearchMatch : IQueryMatch
     
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
-        if (_resultsNotPersisted)
+        if (_resultsPersisted == false)
         {
             // BinaryMatch may skip the method call if the other node of the AND clause 
             // is empty, the evaluation of this primitive is pointless. In these cases, the call is ignored.

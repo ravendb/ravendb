@@ -168,7 +168,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             var read = query.Fill(ids);
             Assert.Equal(3, read);
             Assert.Equal(new long[] { 1L, 2L, 3L }, ids[..3]);
-            query.Score(ids[..3], scores[..3], 0f);
+            query.Score(ids[..3], scores[..3], 1f);
             Assert.Equal(scores[0], 0.96f, 0.01); // doc 1
             Assert.Equal(scores[1], 1f, 0.01); // doc 2
             Assert.Equal(scores[2], 0.92f, 0.01); // doc3
@@ -178,7 +178,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             read = query.Fill(ids);
             Assert.Equal(3, read);
             Assert.Equal((long)sourceIds[1], ids[0]);
-            query.Score(ids[..3], scores[..3], 0f);
+            query.Score(ids[..3], scores[..3], 1f);
             Assert.True(scores[0] > scores[1]);
             Assert.True(scores[1] > scores[2]);
         }
