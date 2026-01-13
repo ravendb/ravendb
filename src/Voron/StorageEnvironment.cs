@@ -47,6 +47,8 @@ namespace Voron
 
     public sealed class StorageEnvironment : IDisposable
     {
+        public const string MetadataDbId = "db-id";
+
         internal sealed class IndirectReference
         {
             public StorageEnvironment Owner;
@@ -319,7 +321,7 @@ namespace Voron
 
                 Debug.Assert(metadataTree != null);
                 // ReSharper disable once PossibleNullReferenceException
-                var dbId = metadataTree.Read("db-id");
+                var dbId = metadataTree.Read(MetadataDbId);
                 if (dbId == null)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
@@ -339,7 +341,7 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId)
                 {
                     // save the new database id
-                    metadataTree?.Add("db-id", DbId.ToByteArray());
+                    metadataTree?.Add(MetadataDbId, DbId.ToByteArray());
                 }
 
                 tx.Commit();
@@ -457,7 +459,7 @@ namespace Voron
                     FillBase64Id(Guid.NewGuid());
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
-                    metadataTree.Add("db-id", DbId.ToByteArray());
+                    metadataTree.Add(MetadataDbId, DbId.ToByteArray());
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
                     treesTx.PrepareForCommit();
@@ -467,6 +469,28 @@ namespace Voron
             }
 
             Options.AfterDatabaseCreation?.Invoke(this);
+        }
+
+        public void SetDatabaseId(string databaseId)
+        {
+            if (Guid.TryParse(databaseId, out var databaseIdGuid) == false)
+                throw new InvalidOperationException($"Failed to parse the database id '{databaseIdGuid}'");
+
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+            {
+                using (var treesTx = new Transaction(tx))
+                {
+                    FillBase64Id(databaseIdGuid);
+
+                    var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
+                    metadataTree.Add(MetadataDbId, databaseIdGuid.ToByteArray());
+
+                    treesTx.PrepareForCommit();
+
+                    tx.Commit();
+                }
+            }
         }
 
         public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;

@@ -495,7 +495,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             Debug.Assert(metadataTree != null);
             // ReSharper disable once PossibleNullReferenceException
-            var dbId = metadataTree.Read("db-id");
+            var dbId = metadataTree.Read(StorageEnvironment.MetadataDbId);
             if (dbId == null)
                 VoronUnrecoverableErrorException.Raise(step.WriteTx.LowLevelTransaction,
                     "Could not find db id in metadata tree, possible mismatch / corruption?");
