@@ -253,7 +253,8 @@ namespace Raven.Client.Documents.Session
                 case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                     object value;
                     (key, value) = GetKeyAndValue<TKey, TValue>(call);
-                    patchRequest.Script = $"this.{pathScript}.{key} = args.val_{_valsCount};";
+                    var formattedKey = FormatKeyForJavaScript(key);
+                    patchRequest.Script = $"this.{pathScript}[{formattedKey}] = args.val_{_valsCount};";
                     if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
                     {
                         value = Convert.ToInt32(value);
@@ -263,7 +264,8 @@ namespace Raven.Client.Documents.Session
                     break;
                 case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
                     key = GetKey(call);
-                    patchRequest.Script = $"delete this.{pathScript}.{key};";
+                    formattedKey = FormatKeyForJavaScript(key);
+                    patchRequest.Script = $"delete this.{pathScript}[{formattedKey}];";
                     break;
                 default:
                     throw new InvalidOperationException("Unsupported method: " + call.Method.Name);
@@ -400,6 +402,14 @@ namespace Raven.Client.Documents.Session
         private static void ThrowUnsupportedExpression(Expression expression)
         {
             throw new InvalidOperationException("Unsupported expression: " + expression);
+        }
+
+        private static string FormatKeyForJavaScript(object key)
+        {
+            if (key == null)
+                throw new ArgumentNullException(nameof(key), "Dictionary key cannot be null");
+
+            return $"\"{JavascriptConversionExtensions.EscapeForJsString(key.ToString())}\"";
         }
     }
 }

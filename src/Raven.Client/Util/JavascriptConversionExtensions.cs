@@ -2878,19 +2878,72 @@ namespace Raven.Client.Util
                 return flags;
             }
 
-            private static string EscapeForJsString(string pattern)
-            {
-                if (pattern == null)
-                    return string.Empty;
+        }
 
-                return pattern
-                    .Replace("\\", "\\\\")        // Must be first!
-                    .Replace("\"", "\\\"")        // Escape quotes
-                    .Replace("\r", "\\r")         // Escape CR
-                    .Replace("\n", "\\n")         // Escape LF
-                    .Replace("\u2028", "\\u2028") // CRITICAL: Escape Line Separator
-                    .Replace("\u2029", "\\u2029") // CRITICAL: Escape Paragraph Separator
-                    .Replace("\t", "\\t");        // Optional: nice for debugging readablity
+        internal static string EscapeForJsString(string value)
+        {
+            if (value == null)
+                return string.Empty;
+
+            return value
+                .Replace("\\", "\\\\")        // Must be first!
+                .Replace("\"", "\\\"")        // Escape quotes
+                .Replace("\r", "\\r")         // Escape CR
+                .Replace("\n", "\\n")         // Escape LF
+                .Replace("\u2028", "\\u2028") // CRITICAL: Escape Line Separator
+                .Replace("\u2029", "\\u2029") // CRITICAL: Escape Paragraph Separator
+                .Replace("\t", "\\t");        // Optional: nice for debugging readability
+        }
+
+        internal sealed class PatchPathWrappedConstantSupport : JavascriptConversionExtension
+        {
+            public static readonly PatchPathWrappedConstantSupport Instance = new PatchPathWrappedConstantSupport();
+
+            private PatchPathWrappedConstantSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is not MemberExpression memberExpression ||
+                    IsWrappedConstantExpression(memberExpression) == false)
+                    return;
+
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(JavascriptOperationTypes.Literal))
+                {
+                    if (value == null)
+                    {
+                        writer.Write("null");
+                        return;
+                    }
+
+                    // For string values, write them as quoted strings
+                    if (value is string stringValue)
+                    {
+                        writer.Write("\"");
+                        writer.Write(EscapeForJsString(stringValue));
+                        writer.Write("\"");
+                        return;
+                    }
+
+                    // For numeric values, write them directly
+                    if (value is int || value is long || value is short || value is byte ||
+                        value is uint || value is ulong || value is ushort || value is sbyte ||
+                        value is float || value is double || value is decimal)
+                    {
+                        writer.Write(value.ToInvariantString());
+                        return;
+                    }
+
+                    // For any other type, convert to string and quote it
+                    writer.Write("\"");
+                    writer.Write(EscapeForJsString(value.ToString()));
+                    writer.Write("\"");
+                }
             }
         }
 
