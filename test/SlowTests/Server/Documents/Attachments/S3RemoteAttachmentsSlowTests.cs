@@ -490,9 +490,17 @@ namespace SlowTests.Server.Documents.Attachments
                         myExceptions.AddRange(exceptions.Values.SelectMany(x => x.Values));
                     };
 
-                    // move in time & start remote
-                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                    var oldDt = DateTime.UtcNow;
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        oldDt = oldDt.AddMinutes(16);
+
+                        // move in time & start remote
+                        database.Time.UtcDateTime = () => oldDt;
+                        await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+                    }
 
                     // nothing was uploaded because we had a faulty identifier
                     if (uploadAdditional)

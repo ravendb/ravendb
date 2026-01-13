@@ -324,7 +324,7 @@ namespace Raven.Server.Documents
                     exceptions.Add(exception);
                 }
 
-                var msg = $"Failed to upload remote attachment for identifier '{identifier}' after multiple attempts. Skipping further attempts for this attachment. Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for '{identifier}'.";
+                var msg = $"Failed to upload remote attachment for identifier '{identifier}' after multiple attempts. Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'.";
 
                 if (Logger.IsDebugEnabled)
                 {
@@ -341,15 +341,15 @@ namespace Raven.Server.Documents
         private const string AlertTitleError = "Remote attachment upload failed.";
         private long _counter = 0;
         private DateTime _lastAlertTime = DateTime.MinValue;
-        private static readonly long AlertThresholdTicks = TimeSpan.FromMinutes(1).Ticks;
+        private static readonly long AlertThresholdTicks = TimeSpan.FromMinutes(15).Ticks;
 
         private void HandleSkippedItem(string documentId, Attachment item, RemoteAttachmentsDestinationConfiguration destination)
         {
             var now = _database.Time.GetUtcNow();
             var timeSinceLastAlert = now.Ticks - _lastAlertTime.Ticks;
 
-            // on first skip or each 16th time or if last alert was more than a minute ago
-            var shouldAlert = (_counter++ % 16 == 0) || (timeSinceLastAlert > AlertThresholdTicks);
+            // on first skip or each 128th time or if last alert was more than 15 minutes ago
+            var shouldAlert = (_counter++ % 128 == 0) || (timeSinceLastAlert > AlertThresholdTicks);
 
             if (shouldAlert == false && Logger.IsDebugEnabled == false)
             {
@@ -379,20 +379,27 @@ namespace Raven.Server.Documents
             string identifier = info.AttachmentUploader.Identifier;
             var errors = _inMemoryStateErrorsByIdentifier.GetOrAdd(identifier);
 
+            // we always try to retry the upload with delay
+            info.Status = BackgroundWorkInfoStatus.Retry;
+
             var count = errors.GetOrAdd(hash);
             if (count < 3)
             {
                 errors[hash] = ++count;
 
-                info.Status = BackgroundWorkInfoStatus.Retry;
+                if (Logger.IsDebugEnabled)
+                {
+                    Logger.Debug($"Failed to upload remote attachment with identifier '{identifier}' and hash '{hash}' attempt '{count}'. " +
+                                 $"Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'." +
+                                 $"Will retry in the next batch. Affected documents: [{string.Join(", ", info.DocumentIds.Select(x => $"'{x}'"))}]");
+                }
             }
             else
             {
-                // we have tried enough times, we need to remove it from background tree and alert
-                var ex = new UploadAttachmentException($"Failed to upload remote attachment with identifier '{identifier}' and hash '{hash}', the attachment belong to following documents: {string.Join(", ", info.DocumentIds.Select(x => $"{x}"))}", info.Exception);
+                // we have tried enough times, we need to alert
+                var ex = new UploadAttachmentException($"Failed to upload remote attachment with identifier '{identifier}' and hash '{hash}', the attachment belong to following documents: {string.Join(", ", info.DocumentIds.Select(x => $"'{x}'"))}", info.Exception);
                 _batchExceptionsByIdentifier.GetOrAdd(identifier).TryAdd(hash, ex);
                 errors.Remove(hash);
-                info.Status = BackgroundWorkInfoStatus.Skip;
             }
         }
 
