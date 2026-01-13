@@ -144,7 +144,11 @@ interface UserMessageProps {
 }
 
 function UserMessage({ message }: UserMessageProps) {
-    const isMessageWithParameters = message.content?.startsWith("AI Agent Parameters:");
+    const aceRef = useRef<ReactAce>(null);
+    const prettifiedContent = aiAgentsUtils.getPrettifiedContent(message.content);
+    const contentMode = aceEditorUtils.getAceEditorMode(prettifiedContent);
+
+    const isMessageWithParameters = prettifiedContent?.startsWith("AI Agent Parameters:");
 
     if (isMessageWithParameters) {
         return null;
@@ -153,12 +157,22 @@ function UserMessage({ message }: UserMessageProps) {
     return (
         <div>
             <div>Role: user</div>
-            <div
-                className="mt-1 p-2 rounded-2 border border-secondary bg-body overflow-auto"
-                style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}
-            >
-                {message.content}
-            </div>
+            <AceEditor
+                aceRef={aceRef}
+                defaultValue={prettifiedContent}
+                readOnly
+                mode={contentMode}
+                actions={[
+                    { component: <AceEditor.FullScreenAction /> },
+                    { component: <AceEditor.FormatAction /> },
+                    { component: <AceEditor.ToggleNewLinesAction /> },
+                ]}
+                height={aceEditorUtils.getAceEditorHeight(prettifiedContent)}
+                wrapEnabled={contentMode === "text" ? true : false}
+                setOptions={{
+                    indentedSoftWrap: contentMode === "text" ? true : false,
+                }}
+            />
         </div>
     );
 }
