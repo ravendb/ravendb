@@ -155,9 +155,9 @@ public partial class Hnsw
                 if (_currentNode >= indexes.Count)
                 {
                     // Double the difference between accepted and searched number of candidates.
-                    _vectorsSearcher.IncreaseNumberOfCandidates(Math.Max(4, _vectorsSearcher.NumberOfCandidates - _returnedCandidates) * 2);
+                    _vectorsSearcher.IncreaseNumberOfCandidates(_vectorsSearcher.NumberOfCandidates - _returnedCandidates);
                     
-                    if (_vectorsSearcher.CandidatesProcessed > 4 * filter.Count)
+                    if (_vectorsSearcher.ShouldContinueSearch(filter.Count) == false)
                     {
                         break;
                     }

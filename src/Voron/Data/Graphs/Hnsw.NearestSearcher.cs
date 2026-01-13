@@ -30,6 +30,7 @@ public partial class Hnsw
             private readonly HashSet<int> _candidatesProcessed;
 
             public long CandidatesProcessed { get => _candidatesProcessed?.Count ?? 0; }
+            
             public int NumberOfCandidates { get; init; }
 
             public NearestSearcher(SearchState searchState, int startingPointIndex, Memory<byte> vector,
@@ -43,7 +44,10 @@ public partial class Hnsw
                 _vector = vector;
                 _level = level;
                 NumberOfCandidates = numberOfCandidates;
-                _internalNumberOfCandidates = hasFilterMatch ? (int)Math.Min((long)int.MaxValue, (2 * (long)numberOfCandidates)) : numberOfCandidates;
+
+                _internalNumberOfCandidates = hasFilterMatch == false
+                    ? numberOfCandidates
+                    : numberOfCandidates + GetPrefetchExtendSize(numberOfCandidates);
                 _candidates = candidates;
                 _flags = flags;
                 _hasFilterMatch = hasFilterMatch;
@@ -118,7 +122,7 @@ public partial class Hnsw
                         next.Visited = visitedCounter;
 
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
-                            || _hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex);
+                                        || _hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex);
 
                         float nextDist = -_searchState.QueryDistance(_vector.Span, nextIndex);
                         if (nearestEdgesQ.Count < _internalNumberOfCandidates)
@@ -161,10 +165,10 @@ public partial class Hnsw
                 return candidates.Count > 0;
             }
 
-            public void IncreaseNumberOfCandidates(int delta)
+            public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes)
             {
                 Reset();
-                _internalNumberOfCandidates += delta;
+                _internalNumberOfCandidates += GetPrefetchExtendSize(_internalNumberOfCandidates);
             }
 
             // Reset the NearestSearcher state; however, it does not clear the data already stored inside SearchState.
@@ -173,8 +177,12 @@ public partial class Hnsw
             {
                 _searchState._candidatesQ.Clear();
                 _searchState._nearestEdgesQ.Clear();
+
                 for (int nodeIdx = 0; nodeIdx < _searchState._nodes.Count; nodeIdx++)
+                {
                     _searchState._nodes[nodeIdx].Visited = 0;
+                }
+
                 _searchState._visitsCounter = 0;
                 _candidates.Clear();
                 _nodeIds.Clear();
@@ -188,14 +196,46 @@ public partial class Hnsw
 
                 while (_searchState._nearestEdgesQ.TryDequeue(out var edgeId, out var d))
                 {
-                    if (_hasFilterMatch)
-                        _alreadyReturnedEdges.Add(edgeId);
                     // When filtering is enabled, avoid returning the same edge more than once.
+                    Debug.Assert(_hasFilterMatch == false || _alreadyReturnedEdges!.Contains(edgeId) == false);
+
+                    _alreadyReturnedEdges?.Add(edgeId);
                     _candidates.AddUnsafe(edgeId);
                 }
 
                 _candidates.Inner.Reverse();
             }
+            
+            public bool ShouldContinueSearch(long filterDocsCount)
+            {
+                if (_hasFilterMatch == false)
+                    return false;
+
+                const int minCount = 1_048_576;
+                const int maxCount = 8_388_608;
+                const float maxFactor = 4;
+                const float minFactor = 1.5f;
+                
+                switch (filterDocsCount)
+                {
+                    case <= minCount:
+                        return filterDocsCount * maxFactor < CandidatesProcessed;
+                    case >= maxCount:
+                        return filterDocsCount * minFactor < CandidatesProcessed;
+                }
+
+
+                var normalized = (filterDocsCount - minCount) / (float)(maxCount - minCount);
+                var t = (MathF.Cos(normalized * MathF.PI) + 1.0f) / 2f;
+                var factor = minFactor + (maxFactor - minFactor) * t;
+                return filterDocsCount * factor < CandidatesProcessed;
+            }
+
+            private static int GetPrefetchExtendSize(int numberOfCandidates) => numberOfCandidates switch
+            {
+                <= 131_072 => numberOfCandidates,
+                _ => (int)Math.Sqrt(131_072L * numberOfCandidates)
+            };
 
             public void Dispose()
             {

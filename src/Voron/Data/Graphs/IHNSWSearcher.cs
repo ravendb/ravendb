@@ -16,10 +16,12 @@ public interface IHnswSearcher : IDisposable
     // If no new nodes are found, returns false.
     public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates);
 
-    public void IncreaseNumberOfCandidates(int delta);
+    public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes);
 
-    // Returns the number of nodes processed by the searcher as candidates. It does not count nodes that were only queued for consideration.
+    // Returns the number of nodes processed by the searcher as candidates. It does not count nodes only queued for consideration.
     public long CandidatesProcessed { get; }
+
+    public bool ShouldContinueSearch(long filterDocsCount);
     
     // Number of candidates requested by the caller.
     public int NumberOfCandidates { get; }

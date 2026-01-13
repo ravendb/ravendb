@@ -25,7 +25,7 @@ public partial class Hnsw
                 return false;
             }
 
-            public void IncreaseNumberOfCandidates(int delta)
+            public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes)
             {
             }
 
@@ -33,6 +33,11 @@ public partial class Hnsw
             {
                 get => 0L;
                 set => _ = value;
+            }
+
+            public bool ShouldContinueSearch(long filterDocsCount)
+            {
+                return false;
             }
 
             public int NumberOfCandidates { get; private set; } = numberOfCandidates;

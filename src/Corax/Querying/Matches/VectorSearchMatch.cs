@@ -136,14 +136,15 @@ public struct VectorSearchMatch : IQueryMatch
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
         
+        if (_isEmpty)
+            return 0;
+        
         if (CanStreamResults) // case when we do not care about scores.
             return FillDiscardSimilarity(matches);
 
         if (_resultsPersisted == false)
             FillAndPersistResults();
 
-        if (_isEmpty)
-            return 0;
         
         var resultsLeft = _matches.Count - _positionOnPersistedValues;
         if (resultsLeft == 0)
@@ -250,7 +251,7 @@ public struct VectorSearchMatch : IQueryMatch
     
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
-        if (_resultsPersisted == false)
+        if (_isEmpty || _resultsPersisted == false)
         {
             // BinaryMatch may skip the method call if the other node of the AND clause 
             // is empty, the evaluation of this primitive is pointless. In these cases, the call is ignored.

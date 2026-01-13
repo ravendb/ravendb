@@ -17,13 +17,13 @@ public partial class Hnsw
             private readonly bool _hasFilterMatch;
             private ContextBoundNativeList<int> _candidates;
             private readonly ContextBoundNativeList<long>? _nodesToScan;
+            private PriorityQueue<long, float> _pq;
 
             public ExactSearcher(SearchState searchState, Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
             {
                 _searchState = searchState;
                 _vector = vector;
                 _hasFilterMatch = hasFilterMatch;
-                //TODO: more than int32 vectors
                 PortableExceptions.ThrowIf<NotSupportedException>(_searchState.Options.CountOfVectors >= int.MaxValue && hasFilterMatch, $"Cannot have more than {int.MaxValue} vectors and filter match");
                 
                 NumberOfCandidates = numberOfCandidates;
@@ -43,7 +43,7 @@ public partial class Hnsw
 
             public IEnumerable<bool> Search()
             {
-                var pq = new PriorityQueue<long, float>();
+                _pq = new PriorityQueue<long, float>();
                 Span<byte> vector = _vector.Span;
                 IEnumerable<long> toScan = _nodesToScan.HasValue ? _nodesToScan.Value.Iterate() : AllNodes();
                 foreach (long nodeId in toScan)
@@ -57,21 +57,21 @@ public partial class Hnsw
 
                         var curVect = reader.ReadVector(in _searchState);
                         var distance = _searchState.SimilarityCalc(vector, curVect);
-                        if (pq.Count < NumberOfCandidates || _hasFilterMatch)
+                        if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
                         {
-                            pq.Enqueue(nodeId, -distance);
+                            _pq.Enqueue(nodeId, -distance);
                         }
                         else
                         {
-                            pq.EnqueueDequeue(nodeId, -distance);
+                            _pq.EnqueueDequeue(nodeId, -distance);
                         }
                     }
                 }
 
-                while (pq.Count > 0)
+                while (_pq.Count > 0)
                 {
                     _candidates.Count = 0;
-                    while (_candidates.Count < NumberOfCandidates && pq.TryDequeue(out var nodeId, out _))
+                    while (_candidates.Count < NumberOfCandidates && _pq.TryDequeue(out var nodeId, out _))
                     {
                         _candidates.AddByRefUnsafe() = _searchState.GetNodeIndexById(nodeId);
                     }
@@ -101,11 +101,17 @@ public partial class Hnsw
                 return candidates.Count > 0;
             }
 
-            public void IncreaseNumberOfCandidates(int delta)
+            public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes)
             {
             }
 
             public long CandidatesProcessed { get; set; }
+            
+            public bool ShouldContinueSearch(long filterDocsCount)
+            {
+                return _pq is {Count: > 0};
+            }
+
             public int NumberOfCandidates { get; init; }
         }
     }
