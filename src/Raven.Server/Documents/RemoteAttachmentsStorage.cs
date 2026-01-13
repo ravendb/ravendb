@@ -36,7 +36,6 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
     private readonly RavenLogger _logger;
     private const string AttachmentsByRemote = "AttachmentsByRemote";
     private static readonly long TicksPer15Minutes = 15 * TimeSpan.TicksPerMinute;
-    private static readonly long TicksPer14Days = 14 * TimeSpan.TicksPerDay;
 
     public RemoteAttachmentsConfiguration Configuration;
 
@@ -410,24 +409,9 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                         switch (info.Status)
                         {
                             case BackgroundWorkInfoStatus.Retry:
-                                // this upload errored lets add back to the tree
-                                remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.At), out LazyStringValue dateFromMetadata);
-
-                                var dt = ProcessDateUniversalTime(Database, lowerId, dateFromMetadata);
-                                var maxTicks = dt.Ticks + TicksPer14Days;
-                                var currentTicks = currentTime.Ticks;
-
-                                if (currentTicks >= maxTicks)
-                                {
-                                    // we cannot delay this further, lets put the original ticks back, so we make sure the next batch will alert on this
-                                    PutTicksDirectly(context, lowerId, dt.Ticks);
-                                }
-                                else
-                                {
-                                    // put current time ticks increased by 15 minutes
-                                    var newTicks = currentTicks + TicksPer15Minutes;
-                                    PutTicksDirectly(context, lowerId, newTicks);
-                                }
+                                // this upload errored lets add back to the tree and put current time ticks increased by 15 minutes
+                                var newTicks = currentTime.Ticks + TicksPer15Minutes;
+                                PutTicksDirectly(context, lowerId, newTicks);
 
                                 break;
                             case BackgroundWorkInfoStatus.Process:
