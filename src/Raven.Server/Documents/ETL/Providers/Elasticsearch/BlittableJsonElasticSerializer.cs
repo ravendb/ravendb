@@ -25,7 +25,7 @@ internal class BlittableJsonElasticSerializer : Serializer
         Serialize(data, typeof(T), stream, formatting);
     }
 
-    public override void Serialize(object? data, Type type, Stream stream, SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
+    public override void Serialize(object data, Type type, Stream stream, SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
     {
         if (_context is null)
         {
@@ -50,7 +50,7 @@ internal class BlittableJsonElasticSerializer : Serializer
         await SerializeAsync(data, typeof(T), stream, formatting, cancellationToken);
     }
 
-    public override async Task SerializeAsync(object? data, Type type, Stream stream,
+    public override async Task SerializeAsync(object data, Type type, Stream stream,
         SerializationFormatting formatting = SerializationFormatting.None, CancellationToken cancellationToken = default)
     {
         if (_context is null)

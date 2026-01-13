@@ -1,6 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Runtime.Serialization;
-using Elastic.Transport.Extensions;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 .ToList();
 
             Assert.Single(result);
-            Assert.Equal(MyEnum.First.GetStringValue(), result.First().MyEnum.GetStringValue());
+            Assert.Equal(GetDescription(MyEnum.First), GetDescription(result.First().MyEnum));
         }
 
         record MyClass(MyEnum MyEnum);
@@ -41,6 +41,19 @@ namespace SlowTests.Issues
 
             [EnumMember(Value = "second_my_name")]
             Second
+        }
+        
+        private static string GetDescription(Enum value)
+        {
+            var fi = value.GetType().GetField(value.ToString());
+
+            if (fi != null)
+            {
+                var attributes = (EnumMemberAttribute[])fi.GetCustomAttributes(typeof(EnumMemberAttribute), false);
+                return (attributes.Length > 0) ? attributes[0].Value : value.ToString();
+            }
+
+            return value.ToString();
         }
     }
 }
