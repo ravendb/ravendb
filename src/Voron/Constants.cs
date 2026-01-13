@@ -95,6 +95,8 @@ namespace Voron.Global
         public const string DatabaseFilename = "Raven.voron";
         public static readonly Slice DatabaseFilenameSlice;
 
+        public const string MetadataDbId = "db-id";
+
         static Constants()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))

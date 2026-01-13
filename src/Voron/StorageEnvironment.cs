@@ -47,8 +47,6 @@ namespace Voron
 
     public sealed class StorageEnvironment : IDisposable
     {
-        public const string MetadataDbId = "db-id";
-
         internal sealed class IndirectReference
         {
             public StorageEnvironment Owner;
@@ -321,7 +319,7 @@ namespace Voron
 
                 Debug.Assert(metadataTree != null);
                 // ReSharper disable once PossibleNullReferenceException
-                var dbId = metadataTree.Read(MetadataDbId);
+                var dbId = metadataTree.Read(Constants.MetadataDbId);
                 if (dbId == null)
                     VoronUnrecoverableErrorException.Raise(tx,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
@@ -341,7 +339,7 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId)
                 {
                     // save the new database id
-                    metadataTree?.Add(MetadataDbId, DbId.ToByteArray());
+                    metadataTree?.Add(Constants.MetadataDbId, DbId.ToByteArray());
                 }
 
                 tx.Commit();
@@ -459,7 +457,7 @@ namespace Voron
                     FillBase64Id(Guid.NewGuid());
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
-                    metadataTree.Add(MetadataDbId, DbId.ToByteArray());
+                    metadataTree.Add(Constants.MetadataDbId, DbId.ToByteArray());
                     metadataTree.Add("schema-version", EndianBitConverter.Little.GetBytes(Options.SchemaVersion));
 
                     treesTx.PrepareForCommit();
@@ -484,7 +482,7 @@ namespace Voron
                     FillBase64Id(databaseIdGuid);
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
-                    metadataTree.Add(MetadataDbId, databaseIdGuid.ToByteArray());
+                    metadataTree.Add(Constants.MetadataDbId, databaseIdGuid.ToByteArray());
 
                     treesTx.PrepareForCommit();
 

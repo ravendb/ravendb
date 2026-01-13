@@ -29,7 +29,7 @@ namespace FastTests.Voron
             using (var readTx = Env.ReadTransaction())
             {
                 var metadataTree = readTx.ReadTree(Constants.MetadataTreeNameSlice);
-                var dbId = metadataTree.Read(StorageEnvironment.MetadataDbId);
+                var dbId = metadataTree.Read(Constants.MetadataDbId);
                 var buffer = new byte[16];
                 dbId.Reader.Read(buffer, 0, 16);
                 Assert.Equal(guid, new Guid(buffer));
