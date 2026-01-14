@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     continue;
                 }
 
-                if (RestoreConfiguration.SkipIndexes && zipEntries.Key.StartsWith("Indexes"))
+                if (RestoreConfiguration.SkipIndexes && zipEntries.Key.StartsWith(Constants.Documents.PeriodicBackup.Folders.Indexes))
                 {
                     // the indexes folder isn't needed when skipping indexes
                     continue;
