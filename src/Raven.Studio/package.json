@@ -122,7 +122,7 @@
         "bootstrap-select": "^1.13.18",
         "classnames": "^2.5.1",
         "cronstrue": "^2.50.0",
-        "diff": "^5.2.0",
+        "diff": "^8.0.3",
         "draggabilly": "^3.0.0",
         "durandal": "^2.2.0",
         "eonasdan-bootstrap-datetimepicker": "^4.17.49",
