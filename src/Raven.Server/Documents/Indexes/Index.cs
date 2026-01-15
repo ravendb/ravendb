@@ -2728,14 +2728,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual List<IndexingError> GetErrors()
+        public virtual List<IndexingError> GetErrors(int start = 0, int pageSize = int.MaxValue)
         {
             using (CurrentlyInUse(out var valid))
             {
                 if (valid == false)
                     return new List<IndexingError>();
 
-                return _indexStorage.ReadErrors();
+                return _indexStorage.ReadErrors(start, pageSize);
             }
         }
 
