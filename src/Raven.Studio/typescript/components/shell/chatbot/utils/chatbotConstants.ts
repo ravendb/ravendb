@@ -137,7 +137,7 @@ const endpointsWhitelist: EndpointEntry[] = [
     { path: "/topology" },
     { path: "/databases/{database}/task" },
     { path: "/databases/{database}/task" },
-
+    { path: "/databases/{database}/debug/storage/environment/report" },
     // Additional (not listed in debug endpoints)
     { path: "/databases/{database}/docs", paramToDisplay: "id", isDataSubmission: true },
     { path: "/databases/{database}/collections/docs/ids" },

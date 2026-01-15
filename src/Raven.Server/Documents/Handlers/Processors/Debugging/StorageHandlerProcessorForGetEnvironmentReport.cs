@@ -28,6 +28,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentReport : AbstractS
         var name = GetName();
         var type = GetEnvironmentType();
         var details = GetDetails();
+        var flat = UseFlatFormat();
 
         var env = RequestHandler.Database.GetAllStoragesEnvironment()
             .FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase) && x.Type == type);
@@ -42,7 +43,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentReport : AbstractS
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                WriteReport(writer, env, context, details);
+                WriteReport(writer, env, context, details, flat);
             }
         }
     }
@@ -63,8 +64,14 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentReport : AbstractS
         return index.GenerateStorageReport(details);
     }
 
-    protected override DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de)
+    protected override DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de, bool flat)
     {
-        return (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetDetailedReport(env, de));
+        var report = GetDetailedReport(env, de);
+        if (flat)
+        {
+            return (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(FlatStorageReport.From(report));
+        }
+
+        return (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(report);
     }
 }
