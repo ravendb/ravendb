@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
 
             using (doc.Data)
             {
-                PutDocument(context, docId, expectedChangeVector: null, document: doc.Data, nonPersistentFlags: type.ResolveConflictFlag);
+                PutDocument(context, docId, expectedChangeVector: null, document: doc.Data, nonPersistentFlags: type.ResolveConflictFlag | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 

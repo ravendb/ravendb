@@ -548,7 +548,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 storage.Put(ctx, doc.Id, null, newDocumentData, flags: flags,
-                    nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                    nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 
@@ -2240,7 +2240,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (data)
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 
@@ -2311,10 +2311,13 @@ namespace Raven.Server.Documents.TimeSeries
             var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
             flags |= DocumentFlags.HasTimeSeries;
 
+            nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate;
+            nonPersistentFlags |= NonPersistentDocumentFlags.SkipSchemaValidation;
+
             using (data)
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentFlags);
             }
         }
 

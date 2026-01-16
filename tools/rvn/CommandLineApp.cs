@@ -10,6 +10,8 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Voron.Global;
@@ -340,12 +342,19 @@ namespace rvn
                     }
 
                     
+#pragma warning disable SYSLIB0057
                     X509Certificate2 clientCertificate = CertificateLoaderUtil.CreateCertificateFromAny(clientCertificatePathArg.Value);
-                    X509Certificate2 serverCertificate = CertificateLoaderUtil.CreateCertificateFromAny(serverCertificatePathArg.Value);
+                    var serverCertForCommunication = CertificateLoaderUtil.CreateCertificateFromAny(serverCertificatePathArg.Value, null, CertificateLoaderUtil.FlagsForExport);
+                    if (SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(serverCertForCommunication) == false)
+                    {
+                        serverCertForCommunication = CertificateUtils.CreateClientCertificateFromServerCertificate(serverCertForCommunication, out _);
+                    }
+#pragma warning restore SYSLIB0057
+
                     var name = Path.GetFileNameWithoutExtension(clientCertificatePathArg.Value);
                     try
                     {
-                        DocumentStore store = new() {Certificate = serverCertificate, Urls = new[] {ravenServerUrlArg.Value}};
+                        DocumentStore store = new() {Certificate = serverCertForCommunication, Urls = new[] {ravenServerUrlArg.Value}};
                         store.Initialize();
                         var operation = new PutClientCertificateOperation(name, clientCertificate, new Dictionary<string,DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                         store.Maintenance.Server.Send(operation);

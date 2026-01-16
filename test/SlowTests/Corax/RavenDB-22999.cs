@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -83,8 +83,7 @@ namespace SlowTests.Corax
         public void BackwardCompatibilityForOldLowercaseAnalyzer()
         {
             var backupPath = NewDataPath(forceCreateDir: true);
-            var file = Path.Combine(backupPath, "RavenDB_22999.ravendb-snapshot");
-            ExtractFile(file);
+            ExtractFile(backupPath);
             using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
             var db = GetDatabaseName();
             using var _ = Backup.RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = backupPath, DatabaseName = db});
@@ -117,14 +116,14 @@ namespace SlowTests.Corax
             Assert.Contains("book1", terms);
             Assert.Contains("book2 ČĐŽŠĆ", terms);
             Assert.Contains("Ł_asci_Ł", terms);
-            
-            void ExtractFile(string path)
+        }
+
+        private static void ExtractFile(string path)
+        {
+            using (var stream = typeof(RavenDB_22999).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22999.RavenDB-22999.ravendb-snapshot.zip"))
+            using (var zip = new ZipArchive(stream, ZipArchiveMode.Read))
             {
-                using (var fileStream = File.Create(path))
-                using (var stream = typeof(RavenDB_22999).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22999.RavenDB-22999.ravendb-snapshot"))
-                {
-                    stream.CopyTo(fileStream);
-                }
+                zip.ExtractToDirectory(path);
             }
         }
 

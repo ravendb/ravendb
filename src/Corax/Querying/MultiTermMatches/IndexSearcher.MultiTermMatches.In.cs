@@ -113,9 +113,11 @@ public partial class IndexSearcher
         
         const int maximumTermMatchesHandledAsTermMatches = 4;
         var canUseUnaryMatch = field.HasBoost == false;
-        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var terms) == false || allInTerms.Count == 0)
         {
-            // If either the term or the field does not exist the request will be empty. 
+            // The request will be empty if either
+            // - The term or the field does not exist
+            // - List of terms given in query is empty
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 

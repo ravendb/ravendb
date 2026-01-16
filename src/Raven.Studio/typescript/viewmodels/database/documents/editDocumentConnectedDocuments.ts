@@ -100,6 +100,8 @@ class connectedDocuments {
     
     uploader: editDocumentUploader;
 
+    private remoteAttachmentDisabledReason: KnockoutObservable<string>;
+
     constructor(document: KnockoutObservable<document>,
         db: database,
         loadDocument: (docId: string) => void,
@@ -108,7 +110,8 @@ class connectedDocuments {
         crudActionsProvider: () => editDocumentCrudActions,
         inReadOnlyMode: KnockoutObservable<boolean>,
         isReadOnlyAccess: KnockoutComputed<boolean>,
-        isClone: KnockoutObservable<boolean>) {
+        isClone: KnockoutObservable<boolean>,
+        remoteAttachmentDisabledReason: KnockoutObservable<string>) {
 
         _.bindAll(this, ...["toggleStar"] as Array<keyof this & string>);
 
@@ -117,6 +120,7 @@ class connectedDocuments {
         this.isReadOnlyAccess = isReadOnlyAccess;
         this.inReadOnlyMode = inReadOnlyMode;
         this.isClone = isClone;
+        this.remoteAttachmentDisabledReason = remoteAttachmentDisabledReason;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
         this.loadRevisionAction = loadRevision;
@@ -172,8 +176,8 @@ class connectedDocuments {
             }),
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
-                    extraClass: () => 'btn-link',
-                    title: (item: attachmentItem) => "Download file: " + item.name
+                    extraClass: (item) => this.remoteAttachmentDisabledReason() && item?.remoteParameters?.Flags === "Remote" ? 'btn-link disabled' : "btn-link",
+                    title: (item) => this.remoteAttachmentDisabledReason() && item?.remoteParameters?.Flags === "Remote" ? this.remoteAttachmentDisabledReason() : `Download file: ${item.name}`
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "100px"),
@@ -192,10 +196,10 @@ class connectedDocuments {
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters?.Flags ?? "", "Remote flags", "35px", {
                 transformValue: (x: RemoteAttachmentFlags) => x === "Remote" ? `<i class="icon-remote-attachment text-info"></i>` : `<i class="icon-attachment text-primary"></i>`,
             }),
-            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "195px",
+            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
-                    extraClass: () => 'btn-link',
-                    title: () => "Download attachment"
+                    extraClass: (item) => this.remoteAttachmentDisabledReason() && item?.remoteParameters?.Flags === "Remote" ? 'btn-link disabled' : "btn-link",
+                    title: (item) => this.remoteAttachmentDisabledReason() && item?.remoteParameters?.Flags === "Remote" ? this.remoteAttachmentDisabledReason() : `Download file: ${item.name}`
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => x?.remoteParameters, "Remote parameters", "100px"),

@@ -1150,3 +1150,10 @@ interface ValidateSchemaResult {
     LastEtag: number;
     ValidatedCount: number;
 }
+
+type ValidateDocumentStatus = "Valid" | "MissingSchema" | "Invalid";
+
+interface ValidateDocumentResult {
+    Status: ValidateDocumentStatus;
+    ErrorMessages?: string[];
+}

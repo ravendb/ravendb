@@ -3360,13 +3360,30 @@ namespace Raven.Server
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 chain.ChainPolicy.DisableCertificateDownloads = true;
                 chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-                chain.ChainPolicy.CustomTrustStore.Add(knownIssuer);
+                var index = chain.ChainPolicy.CustomTrustStore.Add(knownIssuer);
 
+                log?.AppendLine($"Known issuer {knownIssuer.GetDisplayName()} ({knownIssuer.Thumbprint}) added to CustomTrustStore at index {index}");
+                
+                foreach (var certificate2 in chain.ChainPolicy.CustomTrustStore)
+                {
+                    log?.AppendLine($"CustomTrustStore certificate: {certificate2.GetDisplayName()} ({certificate2.Thumbprint})");
+                }
+                
                 if (chain.Build(cert))
                 {
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
                     log?.AppendLine($"Issuer is a well known issuer: {issuer} for {cert.GetDisplayName()} ({cert.Thumbprint})");
                     return true;
+                }
+
+                foreach (var chainStatus in chain.ChainStatus)
+                {
+                    log?.AppendLine($"Chain status: {chainStatus.Status} - {chainStatus.StatusInformation}");
+                }
+
+                foreach (var element in chain.ChainElements)
+                {
+                    log?.AppendLine($"Chain element: {element.Certificate.GetDisplayName()} ({element.Certificate.Thumbprint})");
                 }
             }
 

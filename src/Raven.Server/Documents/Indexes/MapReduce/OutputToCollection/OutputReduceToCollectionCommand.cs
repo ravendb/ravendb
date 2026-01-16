@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public void ArtificialPut(DocumentsOperationContext context, string key, BlittableJsonReaderObject document)
         {
-            _database.DocumentsStorage.Put(context, key, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+            _database.DocumentsStorage.Put(context, key, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
         }
     }
 

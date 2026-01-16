@@ -1,20 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.SchemaValidation;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
@@ -102,7 +108,6 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
-
     [RavenFact(RavenTestCategory.ExpirationRefresh)]
     public async Task RefreshShouldSkipSchemaValidation()
     {
@@ -158,10 +163,11 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
                 [Constants.Documents.Metadata.ArchiveAt] = expiry.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
             };
 
+            const string docId = "users/1-A";
             using (var session = store.OpenAsyncSession())
             {
                 var user = new User { Name = "Grisha" };
-                await session.StoreAsync(user);
+                await session.StoreAsync(user, docId);
                 var metadataFromDoc = session.Advanced.GetMetadataFor(user);
                 metadataFromDoc[Constants.Documents.Metadata.ArchiveAt] = metadata[Constants.Documents.Metadata.ArchiveAt];
                 await session.SaveChangesAsync();
@@ -183,43 +189,55 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
             var documentsArchiver = database.DataArchivist;
             await documentsArchiver.ArchiveDocs();
 
-            await Indexes.WaitForIndexingAsync(store);
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(docId);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                Assert.True(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
+                Assert.Equal(true, metadataFromDoc[Constants.Documents.Metadata.Archived]);
+            }
+
+            string patchByQuery = @"
+  from Users
+  update 
+  {
+      archived.unarchive(this)
+  }";
+
+            var patchByQueryOp = new PatchByQueryOperation(patchByQuery);
+            var operation = await store.Operations.SendAsync(patchByQueryOp);
+            var error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromSeconds(30)));
+            Assert.Contains("The length of the value 'Grisha' at 'Name' should not exceed 1, but its actual length is 6.", error.Message);
 
             using (var session = store.OpenAsyncSession())
             {
-                var count = await session.Query<User>().Where(x => x.Name == "Grisha").CountAsync();
-                Assert.Equal(0, count);
+                var user = await session.LoadAsync<User>(docId);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                Assert.True(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
             }
-        }
-    }
 
-    private static async Task SetupSchemaValidation(DocumentStore store)
-    {
-        string schemaDefinition;
-        using (var context = JsonOperationContext.ShortTermSingleUse())
-        {
-            schemaDefinition =
-                context.ReadObject(
-                    new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
-                    "schema-validation-configuration").ToString();
-        }
 
-        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
-        {
-            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            patchByQuery = @"
+  from Users
+  update 
+  {
+      this.Name = ""Grisha Kotler"";
+      archived.unarchive(this)
+  }";
+
+            patchByQueryOp = new PatchByQueryOperation(patchByQuery);
+            operation = await store.Operations.SendAsync(patchByQueryOp);
+            error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromSeconds(30)));
+            Assert.Contains("The length of the value 'Grisha Kotler' at 'Name' should not exceed 1, but its actual length is 13.", error.Message);
+
+            using (var session = store.OpenAsyncSession())
             {
-                {"Users", new SchemaDefinition
-                {
-                    Schema = schemaDefinition
-                }}
+                var user = await session.LoadAsync<User>(docId);
+                var metadataFromDoc = session.Advanced.GetMetadataFor(user);
+                Assert.True(metadataFromDoc.ContainsKey(Constants.Documents.Metadata.Archived));
             }
-        }));
-    }
 
-    private class TestObj
-    {
-        public string Id { get; set; }
-        public string Prop { get; set; }
+        }
     }
 
     [RavenFact(RavenTestCategory.Replication)]
@@ -415,7 +433,245 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.ExpirationRefresh)]
+    public async Task MapReduceWithOutputReduceToCollection()
+    {
+        using (var store = GetDocumentStore())
+        {
+            string schemaDefinition;
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                schemaDefinition =
+                    context.ReadObject(
+                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                        "schema-validation-configuration").ToString();
+            }
 
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        "companies", new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    },
+                    {
+                        "Names", new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    }
+                }
+            };
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            var error = await Assert.ThrowsAsync<IndexCreationException>(async () => await new Index("companies", "names").ExecuteAsync(store));
+            Assert.Contains("companies", error.Message);
+            error = await Assert.ThrowsAsync<IndexCreationException>(async () => await new Index("companies1", "names").ExecuteAsync(store));
+            Assert.Contains("names", error.Message);
+            Assert.DoesNotContain("companies", error.Message);
+
+            await new Index("companies1", "names1").ExecuteAsync(store);
+
+            configuration.ValidatorsPerCollection["companies1"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            var schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("companies1", schemaError.Message);
+
+            configuration.ValidatorsPerCollection["companies1"].Disabled = true;
+            schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("companies1", schemaError.Message);
+
+            configuration.ValidatorsPerCollection.Remove("companies1");
+            configuration.ValidatorsPerCollection["names1"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("names1", schemaError.Message);
+            Assert.DoesNotContain("companies1", error.Message);
+
+            configuration.ValidatorsPerCollection["names1"].Disabled = true;
+            configuration.Disabled = true;
+            schemaError = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("names1", schemaError.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ExpirationRefresh)]
+    public async Task CollectionsThatStartWithReservedCollectionName()
+    {
+        using (var store = GetDocumentStore())
+        {
+            string schemaDefinition;
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                schemaDefinition =
+                    context.ReadObject(
+                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                        "schema-validation-configuration").ToString();
+            }
+
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        CollectionName.HiLoCollection, new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    }
+                }
+            };
+
+            var error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains($"Invalid collection name: '{CollectionName.HiLoCollection}'", error.Message);
+
+            configuration.ValidatorsPerCollection.Remove(CollectionName.HiLoCollection);
+            configuration.ValidatorsPerCollection["@companies"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains("Invalid collection name: '@companies'", error.Message);
+            
+            configuration.ValidatorsPerCollection.Remove("@companies");
+            configuration.ValidatorsPerCollection[Constants.Documents.Collections.AiAgentConversationCollection] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration)));
+            Assert.Contains($"Invalid collection name: '{Constants.Documents.Collections.AiAgentConversationCollection}'", error.Message);
+
+            configuration.ValidatorsPerCollection.Remove(Constants.Documents.Collections.AiAgentConversationCollection);
+            configuration.ValidatorsPerCollection["@empty"] = new SchemaDefinition
+            {
+                Schema = schemaDefinition
+            };
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Counters | RavenTestCategory.TimeSeries)]
+    public async Task UpdatingAttachmentsCountersTimeSeriesShouldWork()
+    {
+        using (var store = GetDocumentStore())
+        {
+            const string documentId = "users/1-A";
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = "Grisha" };
+                await session.StoreAsync(user, documentId);
+                await session.SaveChangesAsync();
+            }
+
+            string schemaDefinition;
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                schemaDefinition =
+                    context.ReadObject(
+                        new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                        "schema-validation-configuration").ToString();
+            }
+
+            var configuration = new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    {
+                        "Users", new SchemaDefinition
+                        {
+                            Schema = schemaDefinition
+                        }
+                    }
+                }
+            };
+
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(documentId);
+                user.Name += "Kotler";
+                await Assert.ThrowsAsync<SchemaValidationException>(async () => await session.SaveChangesAsync());
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var rnd = new Random();
+                var b = new byte[8];
+                rnd.NextBytes(b);
+
+                const string attachmentName = "test";
+                using (var stream = new MemoryStream(b))
+                {
+                    session.Advanced.Attachments.Store(documentId, attachmentName, stream, "application/zip");
+                    await session.SaveChangesAsync();
+                }
+
+                session.Advanced.Attachments.Delete(documentId, attachmentName);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var counters = session.CountersFor(documentId);
+                const string counterName = "likes";
+                counters.Increment(counterName);
+                await session.SaveChangesAsync();
+
+                counters.Delete(counterName);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var baseline = DateTime.Now;
+                var tsf = session.TimeSeriesFor(documentId, "heartbeat");
+
+                tsf.Append(baseline, new List<double> { 10 }, "herz");
+                tsf.Append(baseline.AddMinutes(10), new List<double> { 20 }, "herz");
+                await session.SaveChangesAsync();
+                
+                tsf.Delete();
+                await session.SaveChangesAsync();
+            }
+        }
+    }
+
+    private static async Task SetupSchemaValidation(DocumentStore store)
+    {
+        string schemaDefinition;
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            schemaDefinition =
+                context.ReadObject(
+                    new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Name"] = new DynamicJsonValue { [SVC.MaxLength] = 1 } } },
+                    "schema-validation-configuration").ToString();
+        }
+
+        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+        {
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+            {
+                {"Users", new SchemaDefinition
+                {
+                    Schema = schemaDefinition
+                }}
+            }
+        }));
+    }
+
+    private class TestObj
+    {
+        public string Id { get; set; }
+        public string Prop { get; set; }
+    }
 
     private class Category
     {
@@ -477,5 +733,33 @@ public class SchemaValidationFeaturesTests : ReplicationTestBase
         }
     }
 
+    private class Index : AbstractIndexCreationTask<User>
+    {
+        public Index(string outputCollection, string outputCollectionForPattern)
+        {
+            Map = users => from user in users
+                select new
+                {
+                    user.Name,
+                    Count = 1
+                };
 
+            Reduce = results => from result in results
+                group result by result.Name
+                into g
+                select new
+                {
+                    Name = g.Key,
+                    Count = g.Sum(x => x.Count)
+                };
+
+            OutputReduceToCollection = outputCollection;
+
+            if (outputCollectionForPattern != null)
+            {
+                PatternForOutputReduceToCollectionReferences = x => $"patterns/{x.Name}";
+                PatternReferencesCollectionName = outputCollectionForPattern;
+            }
+        }
+    }
 }

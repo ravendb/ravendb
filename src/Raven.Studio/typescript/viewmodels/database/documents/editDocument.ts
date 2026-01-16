@@ -53,6 +53,10 @@ import getRemoteAttachmentsConfigurationCommand = require("commands/database/set
 import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import popoverUtils = require("common/popoverUtils");
+import validateDocumentSchemaCommand = require("commands/database/documents/validateDocumentSchemaCommand");
+import getSchemaValidationCommand = require("commands/database/settings/getSchemaValidationCommand");
+import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 
 class editDocument extends shardViewModelBase {
     view = require("views/database/documents/editDocument.html");
@@ -154,6 +158,8 @@ class editDocument extends shardViewModelBase {
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider);
 
+    remoteAttachmentDisabledReason = ko.observable<string>("");
+
     connectedDocuments = new connectedDocuments(
         this.document,
         this.db,
@@ -163,7 +169,8 @@ class editDocument extends shardViewModelBase {
         this.crudActionsProvider,
         this.inReadOnlyMode,
         this.isReadOnlyAccess,
-        this.isClone
+        this.isClone,
+        this.remoteAttachmentDisabledReason
     );
 
     isSaveEnabled: KnockoutComputed<boolean>;
@@ -190,7 +197,8 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
-    remoteAttachmentsDisabled = ko.observable<boolean>(false);
+    canValidateDocument: KnockoutComputed<boolean>;
+    schemaValidationConfig = ko.observable<SchemaValidationConfiguration>(null);
 
     isFullScreenEditor = ko.observable(false);
 
@@ -313,7 +321,16 @@ class editDocument extends shardViewModelBase {
         this.setupDisableReasons();
         this.focusOnEditor();
 
+        this.loadSchemaValidationConfiguration();
+
         this.watchFullScreenCommand();
+
+        $('.edit-document [data-toggle="tooltip"]').tooltip();
+        popoverUtils.longWithHover($(".add-remote-attachment"),
+            {
+                content: this.remoteAttachmentDisabledReason(),
+                placement: "left",
+            });
     }
 
     detached() {
@@ -824,6 +841,20 @@ class editDocument extends shardViewModelBase {
 
             return this.document().__metadata.collection === "@conversations-history";
         });
+
+        this.canValidateDocument = ko.pureComputed(() => {
+            const collection = this.document().getCollection();
+            if (collection === "@empty") {
+                return false;
+            }
+
+            const schemaConfig = this.schemaValidationConfig();
+            if (!schemaConfig || !schemaConfig.ValidatorsPerCollection) {
+                return false;
+            }
+
+            return Object.hasOwn(schemaConfig.ValidatorsPerCollection, collection);
+        });
     }
 
     async onDiffModeChanged(newMode: "previous" | "manual") {
@@ -954,6 +985,15 @@ class editDocument extends shardViewModelBase {
 
     copyDocumentBodyToClipboard() {
         copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
+    }
+
+    validateDocumentSchema() {
+        if (!this.isValid(this.globalValidationGroup)) {
+            return;
+        }
+
+        eventsCollector.default.reportEvent("document", "validate-document");
+        this.validateDocumentInternal();
     }
 
     copyDocumentIdToClipboard() {
@@ -1311,6 +1351,39 @@ class editDocument extends shardViewModelBase {
             target["@collection"] || document.getCollectionFromId(id, this.collectionTracker.getCollectionNames());
     }
 
+    private validateDocumentInternal() {
+        let updatedDocDto: documentDto;
+        try {
+            updatedDocDto = JSON.parse(documentHelpers.escapeNewlinesAndTabsInTextFields(this.documentText()));
+        } catch (error) {
+            messagePublisher.reportError("Failed to parse document JSON", error.message);
+            return;
+        }
+
+        const documentToValidate = new document(updatedDocDto);
+        const db = this.db;
+        new validateDocumentSchemaCommand(db, documentToValidate.toDto(true))
+            .execute()
+            .done((result) => {
+                switch (result.Status) {
+                    case "Valid":
+                        messagePublisher.reportSuccess("Document is valid");
+                        break;
+                    case "Invalid":
+                        messagePublisher.reportError("Document validation failed", JSON.stringify({
+                            Message: result.ErrorMessages.join(" "),
+                            Error: result.ErrorMessages.join("\n")
+                        }));
+                        break;
+                    case "MissingSchema":
+                        messagePublisher.reportError("Document schema is missing");
+                        break;
+                    default:
+                        assertUnreachable.default(result.Status);
+                }
+            })
+    }
+
     private loadDocument(id: string): JQueryPromise<document> {
         this.isBusy(true);
 
@@ -1362,13 +1435,31 @@ class editDocument extends shardViewModelBase {
     }
 
     private loadRemoteAttachmentsConfiguration() {
+        if (this.db.isSharded()) {
+            this.remoteAttachmentDisabledReason("Remote attachments are not supported in sharded databases");
+            return;
+        }
+
         new getRemoteAttachmentsConfigurationCommand(this.db)
             .execute()
             .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
-                this.remoteAttachmentsDisabled(!!remoteAttachmentsConfiguration.Disabled);
+                if (remoteAttachmentsConfiguration == null || remoteAttachmentsConfiguration.Disabled) {
+                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings → Remote Attachments and update the configuration accordingly.");
+                }
             })
             .fail(() => {
-                this.remoteAttachmentsDisabled(false);
+                this.remoteAttachmentDisabledReason("Remote attachments configuration could not be retrieved.");
+            });
+    }
+
+    private loadSchemaValidationConfiguration() {
+        new getSchemaValidationCommand(this.db)
+            .execute()
+            .done((schemaValidationConfig: SchemaValidationConfiguration) => {
+                this.schemaValidationConfig(schemaValidationConfig);
+            })
+            .fail(() => {
+                this.schemaValidationConfig(null);
             });
     }
 

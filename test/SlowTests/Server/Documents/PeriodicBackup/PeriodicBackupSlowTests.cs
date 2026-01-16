@@ -603,13 +603,35 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.Fastest, ExcludeIndexes = false };
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
-                // check that backup file consist Indexes folder
                 var backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
                 {
+                    // check that backup file consist Indexes folder
                     var backupFile = Directory.GetFiles(backupLocation).First();
                     using (ZipArchive archive = ZipFile.OpenRead(backupFile))
                         Assert.True(archive.Entries.Any(entry => entry.FullName.Contains("Indexes")));
+
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                           {
+                               BackupLocation = backupLocation,
+                               DatabaseName = restoredDatabaseName,
+                               SkipIndexes = true
+                           }))
+                    {
+                        var database = await GetDatabase(restoredDatabaseName);
+                        var pathToIndexes = database.Configuration.Indexing.StoragePath;
+                        Assert.Equal(0, Directory.GetDirectories(pathToIndexes.FullPath).Length);
+
+                        using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                        {
+                            var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                            Assert.NotNull(users["users/1"]);
+                            Assert.NotNull(users["users/2"]);
+                            Assert.True(users.Any(x => x.Value.Name == "Lev1"));
+                            Assert.True(users.Any(x => x.Value.Name == "Lev2"));
+                        }
+                    }
+                    
                 }
 
                 Directory.Delete(backupLocation, true);

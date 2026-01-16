@@ -117,6 +117,15 @@
                             <i class="icon-ai-agents"></i>
                             <span data-bind="text: isAiAgentHistory() ? 'See conversation' : 'Continue conversation'"></span>
                         </a>
+
+                        <button type="button" class="btn btn-default"
+                                data-bind="click: validateDocumentSchema,
+                                           visible: canValidateDocument()"
+                                title="Validate document">
+                            <i class="icon-start"></i>
+                            <span>Validate document</span>
+                        </button>
+
                         <button type="button" class="btn btn-default" data-bind="click: copyDocumentBodyToClipboard, enable: !showHugeDocumentWarning()" title="Copy document content to clipboard">
                             <i class="icon-copy-to-clipboard"></i>
                             <span>Copy to Clipboard</span>
@@ -568,9 +577,9 @@
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
 
-                <ul class="dropdown-menu">
-                    <li >
-                        <a href="#" data-bind="click: () => $root.connectedDocuments.isAddAttachmentWithRemoteParametersModalVisible(true)">
+                <ul class="dropdown-menu uploader-template">
+                    <li class="add-remote-attachment">
+                    <a href="#" data-bind="click: () => $root.connectedDocuments.isAddAttachmentWithRemoteParametersModalVisible(!$root.remoteAttachmentDisabledReason()), css: { 'disabled': $root.remoteAttachmentDisabledReason() }">
                             <i class="icon-cluster"></i>
                             <span>Add attachment to remote storage</span>
                         </a>
@@ -578,9 +587,6 @@
                 </ul>
             </div>
         </div>
-        <div data-bind="visible: $root.remoteAttachmentsDisabled" class="bg-warning margin-top-xxs padding padding-sm">
-            <i class="icon-warning margin-right-xxs"></i><small class="mb-0">Remote attachments feature is
-            disabled</small></div>
     </div>
 </script>
 
