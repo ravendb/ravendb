@@ -31,7 +31,7 @@
     <PackageVersion Include="Hl7.Fhir.R4" Version="5.12.2" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageVersion Include="Jint" Version="3.1.6" />
-    <PackageVersion Include="JunitXml.TestLogger" Version="7.0.2" />
+    <PackageVersion Include="JunitXml.TestLogger" Version="8.0.0" />
     <PackageVersion Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageVersion Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageVersion Include="libsodium" Version="1.0.21" />
