@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using XunitLogger;
+using Xunit;
 
 namespace Tests.Infrastructure
 {

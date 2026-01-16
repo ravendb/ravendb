@@ -3,7 +3,7 @@ using System.IO;
 using Raven.Client.Documents;
 using Raven.Server;
 using Tests.Infrastructure.Operations;
-using XunitLogger;
+using Xunit;
 
 namespace Tests.Infrastructure.Utils
 {

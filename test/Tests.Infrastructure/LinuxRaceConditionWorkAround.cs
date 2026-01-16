@@ -1,17 +1,17 @@
 ﻿using System.Runtime.CompilerServices;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public abstract class LinuxRaceConditionWorkAround : XunitLoggingBase
+    public abstract class LinuxRaceConditionWorkAround : XunitContextBase
     {
         static LinuxRaceConditionWorkAround()
         {
-            XunitLogging.RedirectStreams = false;
-            XunitLogging.Init();
-            XunitLogging.EnableExceptionCapture();
+            XunitContext.Init();
+            XunitContext.EnableExceptionCapture();
             
             if (PlatformDetails.RunningOnPosix)
             {

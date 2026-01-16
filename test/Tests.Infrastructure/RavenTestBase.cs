@@ -38,7 +38,6 @@ using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
-using XunitLogger;
 
 namespace FastTests
 {

@@ -33,7 +33,7 @@
     <PackageReference Include="xRetry" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.utility" />
-    <PackageReference Include="XunitLogger" />
+    <PackageReference Include="XunitContext" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />

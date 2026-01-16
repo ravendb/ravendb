@@ -16,11 +16,6 @@ namespace Tryouts;
 
 public static class Program
 {
-    static Program()
-    {
-        XunitLogging.RedirectStreams = false;
-    }
-
     public static async Task Main(string[] args)
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);

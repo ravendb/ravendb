@@ -43,13 +43,12 @@ using NativeMemory = Sparrow.Utils.NativeMemory;
 namespace Tests.Infrastructure
 {
     [Trait("Category", "Rachis")]
-    public class RachisConsensusTestBase : XunitLoggingBase, IDisposable
+    public class RachisConsensusTestBase : XunitContextBase, IDisposable
     {
         static unsafe RachisConsensusTestBase()
         {
-            XunitLogging.RedirectStreams = false;
-            XunitLogging.Init();
-            XunitLogging.EnableExceptionCapture();
+            XunitContext.Init();
+            XunitContext.EnableExceptionCapture();
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);

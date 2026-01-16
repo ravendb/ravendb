@@ -167,7 +167,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         [RavenFact(RavenTestCategory.Etl)]
         public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow()
         {
-            XunitLogging.EnableExceptionCapture();
+            XunitContext.EnableExceptionCapture();
             const string script = @"
 loadToUsers(this);
 

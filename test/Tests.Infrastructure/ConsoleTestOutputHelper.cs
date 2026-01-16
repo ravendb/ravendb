@@ -1,4 +1,5 @@
 ﻿using System;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
@@ -11,7 +12,7 @@ namespace Tests.Infrastructure
 
         public void Dispose()
         {
-            XunitLogging.Flush();
+            XunitContext.Flush();
         }
     }
 }

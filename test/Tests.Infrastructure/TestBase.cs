@@ -46,8 +46,8 @@ using Sparrow.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
+using Xunit;
 using Xunit.Abstractions;
-using XunitLogger;
 
 namespace FastTests
 {
