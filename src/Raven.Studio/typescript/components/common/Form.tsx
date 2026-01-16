@@ -1,4 +1,4 @@
-import React, { ComponentProps, ReactNode, useEffect, useRef, useState } from "react";
+import React, { ComponentProps, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import {
@@ -32,6 +32,8 @@ import useUniqueId from "hooks/useUniqueId";
 import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
 import useBoolean from "components/hooks/useBoolean";
 import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
+import { MultiRadioToggle } from "./toggles/MultiRadioToggle";
+import "./VerificationCodeInput.scss";
 import { ConditionalPopover } from "./ConditionalPopover";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
@@ -75,6 +77,12 @@ type FormRadioToggleWithIconProps<
     TName extends FieldPath<TFieldValues>,
 > = FormElementProps<TFieldValues, TName> &
     Omit<ComponentProps<typeof RadioToggleWithIcon>, "name" | "selectedValue" | "setSelectedValue">;
+
+type FormMultiRadioToggleProps<
+    TFieldValues extends FieldValues,
+    TName extends FieldPath<TFieldValues>,
+> = FormElementProps<TFieldValues, TName> &
+    Omit<ComponentProps<typeof MultiRadioToggle>, "selectedItem" | "setSelectedItem">;
 
 export function FormInput<
     TFieldValues extends FieldValues = FieldValues,
@@ -203,8 +211,11 @@ export function FormSelect<
     Group extends GroupBase<Option> = GroupBase<Option>,
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: FormElementProps<TFieldValues, TName> & ComponentProps<typeof Select<Option, IsMulti, Group>>) {
-    const { name, control, defaultValue, rules, shouldUnregister, className, ...rest } = props;
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        ComponentProps<typeof Select<Option, IsMulti, Group>> & { selectClassName?: string }
+) {
+    const { name, control, defaultValue, rules, shouldUnregister, className, selectClassName, ...rest } = props;
 
     const {
         field: { onChange, value: formValues },
@@ -234,6 +245,7 @@ export function FormSelect<
                             );
                         }}
                         isDisabled={formState.isSubmitting}
+                        className={classNames(selectClassName, invalid ? "is-invalid" : "")}
                         {...rest}
                     />
                 </div>
@@ -254,9 +266,10 @@ export function FormSelectCreatable<
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
             customOptions?: OptionsOrGroups<Option, Group>;
             optionCreator?: (value: string) => any;
+            addon?: ReactNode | string;
         }
 ) {
-    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+    const { name, control, defaultValue, rules, shouldUnregister, addon, ...rest } = props;
 
     const {
         field: { onChange, value: formValues },
@@ -300,7 +313,7 @@ export function FormSelectCreatable<
 
     return (
         <div className="position-relative flex-grow-1">
-            <div className="d-flex flex-grow-1">
+            <InputGroup className="d-flex flex-grow-1">
                 <SelectCreatable
                     value={selectedOptions}
                     onChange={(options: OnChangeValue<Option, IsMulti>) => {
@@ -312,7 +325,8 @@ export function FormSelectCreatable<
                     disabled={formState.isSubmitting}
                     {...rest}
                 />
-            </div>
+                {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
+            </InputGroup>
             {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
         </div>
     );
@@ -329,6 +343,7 @@ export function FormSelectAutocomplete<
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
             customOptions?: OptionsOrGroups<Option, Group>;
             optionCreator?: (value: string) => any;
+            addon?: ReactNode | string;
         }
 ) {
     const {
@@ -358,9 +373,14 @@ export function FormSelectAutocomplete<
     };
 
     const handleInputChange = (value: string, action: InputActionMeta) => {
-        if (action?.action !== "input-blur" && action?.action !== "menu-close") {
+        if (action?.action === "input-change") {
             onChange(value);
             setIsInitialOpen(false);
+            return;
+        }
+        if (action?.action === "set-value") {
+            // Prevent clearing the input when an option is selected/created.
+            return;
         }
     };
 
@@ -370,18 +390,19 @@ export function FormSelectAutocomplete<
     };
 
     const inputValue = props.isDisabled ? "" : (value ?? "");
+    const components = props.components ? { ...props.components, Input: InputNotHidden } : { Input: InputNotHidden };
 
     return (
         <FormSelectCreatable<Option, IsMulti, Group, TFieldValues, TName>
             inputValue={inputValue}
             onInputChange={handleInputChange}
-            components={{ Input: InputNotHidden }}
             tabSelectsValue
             controlShouldRenderValue={!!props.isDisabled}
             filterOption={handleFilterOption}
             onFocus={handleFocus}
             blurInputOnSelect
             {...props}
+            components={components} // Override to ensure Input is not hidden
         />
     );
 }
@@ -410,6 +431,38 @@ export function FormRadioToggleWithIcon<TFieldValues extends FieldValues, TName 
                     name={name}
                     selectedValue={value}
                     setSelectedValue={onChange}
+                    disabled={formState.isSubmitting}
+                    {...rest}
+                />
+            </div>
+            {invalid && <FormValidationMessage>{error.message}</FormValidationMessage>}
+        </div>
+    );
+}
+
+export function FormMultiRadioToggle<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
+    props: FormMultiRadioToggleProps<TFieldValues, TName>
+) {
+    const { name, control, rules, defaultValue, shouldUnregister, ...rest } = props;
+
+    const {
+        field: { onChange, value },
+        fieldState: { error, invalid },
+        formState,
+    } = useController({
+        name,
+        control,
+        rules,
+        defaultValue,
+        shouldUnregister,
+    });
+
+    return (
+        <div className="position-relative flex-grow-1">
+            <div className="d-flex flex-grow-1">
+                <MultiRadioToggle
+                    selectedItem={value}
+                    setSelectedItem={(x) => onChange(x)}
                     disabled={formState.isSubmitting}
                     {...rest}
                 />
@@ -669,6 +722,7 @@ export function FormPathSelector<
         getPathsProvider,
         getPathDependencies,
         disabled,
+        ...rest
     } = props;
 
     const {
@@ -718,6 +772,7 @@ export function FormPathSelector<
                         disabled={disabled || formState.isSubmitting}
                         buttonClassName={classNames("input-btn", invalid && "me-3")}
                         stateRef={pathSelectorStateRef}
+                        {...rest}
                     />
                 </InputGroup>
             </div>
@@ -750,6 +805,123 @@ export function FormGroup({ marginClass = "mb-3", ...props }: FormGroupProps) {
 }
 
 export const FormLabel = Form.Label;
+
+export function OptionalLabel() {
+    return <small className="text-muted fw-light">(optional)</small>;
+}
+
+interface VerificationCodeInputProps {
+    name: string;
+    control: Control;
+    onLastDigitInsertSubmit?: (code: string) => void;
+}
+
+export const FormVerificationCodeInput = ({ name, control, onLastDigitInsertSubmit }: VerificationCodeInputProps) => {
+    const {
+        field: { onChange, ref },
+        fieldState: { error },
+    } = useController({
+        name,
+        control,
+    });
+
+    const [code, setCode] = useState<string[]>(Array(6).fill(""));
+    const inputRefs = useRef<HTMLInputElement[]>(Array(6).fill(null));
+
+    const firstInputRef = useCallback(
+        (input: HTMLInputElement | null) => {
+            inputRefs.current[0] = input;
+            if (ref) {
+                ref(input);
+            }
+        },
+        [ref]
+    );
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+        const { value } = e.target;
+
+        if (!/^\d$/.test(value) && value !== "") {
+            return;
+        }
+
+        const newCode = [...code];
+        newCode[index] = value;
+        setCode(newCode);
+
+        onChange(newCode.join(""));
+
+        if (value && index < 5) {
+            inputRefs.current[index + 1]?.focus();
+        }
+
+        // Submit when the last digit is entered and onLastDigitInsertSubmit is provided
+        if (value && index === 5 && onLastDigitInsertSubmit) {
+            onLastDigitInsertSubmit(newCode.join(""));
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+        if (e.key === "Backspace" && !code[index] && index > 0) {
+            inputRefs.current[index - 1]?.focus();
+        }
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        e.target.select();
+    };
+
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+        const newCode = [...code];
+
+        for (let i = 0; i < pastedData.length; i++) {
+            newCode[i] = pastedData[i];
+        }
+
+        setCode(newCode);
+        onChange(newCode.join(""));
+
+        if (pastedData.length === 6 && onLastDigitInsertSubmit) {
+            onLastDigitInsertSubmit(newCode.join(""));
+        }
+
+        if (pastedData.length < 6) {
+            inputRefs.current[pastedData.length]?.focus();
+        }
+    };
+
+    return (
+        <div>
+            <div className="verification-code-inputs">
+                {code.map((digit, index) => (
+                    <Form.Control
+                        key={index}
+                        type="text"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(e, index)}
+                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleKeyDown(e, index)}
+                        onFocus={handleFocus}
+                        onPaste={handlePaste}
+                        ref={
+                            index === 0
+                                ? firstInputRef
+                                : (input: HTMLInputElement | null) => {
+                                      inputRefs.current[index] = input;
+                                  }
+                        }
+                        autoComplete="off"
+                        className="text-center"
+                        isInvalid={!!error}
+                    />
+                ))}
+            </div>
+            {error && <FormValidationMessage className="mt-1">{error.message}</FormValidationMessage>}
+        </div>
+    );
+};
 
 interface FormErrorIconProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
                     $"Revert database '{RequestHandler.DatabaseName}' to {configuration.Time} UTC.",
                     detailedDescription: null,
                     (c, shardNumber) => new RevertRevisionsOperation.RevertRevisionsCommand(RequestHandler.ShardExecutor.Conventions, configuration, operationId),
-                    token);
+                    token: token);
 
             _ = task.ContinueWith(_ =>
             {

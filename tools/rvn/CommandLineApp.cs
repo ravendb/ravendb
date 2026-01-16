@@ -159,6 +159,9 @@ namespace rvn
                     var acmeUrlVal = acmeUrl.Value();
                     var acmeProfileVal = acmeProfile.Value();
 
+                    if (Enum.TryParse(modeVal, out SetupMode setupMode) == false)
+                        setupMode = SetupMode.Unsecured;
+                    
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
                         SetupJsonPath = setupParamVal,
@@ -181,7 +184,7 @@ namespace rvn
                             {
                                 Console.Error.WriteLine(tuple.Exception.Message);
                             }
-                        }),
+                        }, setupMode),
                         RegisterTcpDnsRecords = generateHelmValuesVal is not null,
                         CancellationToken = token
                     });

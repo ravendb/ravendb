@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
                 detailedDescription: null,
                 commandFactory: (context, shardNumber) => new BackupOperation.
                     BackupCommand(RequestHandler.ShardExecutor.Conventions, backupConfiguration, startTime, operationId),
-                token);
+                token: token);
 
             var _ = t.ContinueWith(_ =>
             {

@@ -1,11 +1,11 @@
 import IndexesService from "../services/IndexesService";
 import { createContext, useContext } from "react";
 import DatabasesService from "../services/DatabasesService";
-import * as React from "react";
 import TasksService from "../services/TasksService";
 import ManageServerService from "components/services/ManageServerService";
 import LicenseService from "components/services/LicenseService";
 import ResourcesService from "components/services/ResourcesService";
+import SetupWizardService from "components/services/SetupWizardService";
 import AiAgentService from "components/services/AiAgentService";
 import AiAssistantService from "components/services/AiAssistantService";
 
@@ -16,6 +16,7 @@ export interface ServicesContextDto {
     manageServerService: ManageServerService;
     licenseService: LicenseService;
     resourcesService: ResourcesService;
+    setupWizardService: SetupWizardService;
     aiAgentService: AiAgentService;
     aiAssistantService: AiAssistantService;
 }
@@ -27,6 +28,7 @@ export let services = {
     manageServerService: new ManageServerService(),
     licenseService: new LicenseService(),
     resourcesService: new ResourcesService(),
+    setupWizardService: new SetupWizardService(),
     aiAgentService: new AiAgentService(),
     aiAssistantService: new AiAssistantService(),
 };

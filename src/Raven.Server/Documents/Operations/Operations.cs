@@ -52,9 +52,10 @@ namespace Raven.Server.Documents.Operations
             IOperationDetailedDescription detailedDescription,
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             string resourceName = null,
+            bool persistProgressOnFaultedStatus = false,
             OperationCancelToken token = null)
         {
-            var operation = CreateOperationInstance(id, _databaseName ?? resourceName, operationType, description, detailedDescription, token);
+            var operation = CreateOperationInstance(id, _databaseName ?? resourceName, operationType, description, detailedDescription, persistProgressOnFaultedStatus, token);
 
             return AddOperationInternalAsync(operation, taskFactory);
         }

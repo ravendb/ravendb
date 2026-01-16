@@ -57,9 +57,10 @@ public partial class ShardedDatabaseContext
             IOperationDetailedDescription detailedDescription,
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             string resourceName = null,
+            bool persistProgressOnFaultedStatus = false,
             OperationCancelToken token = null)
         {
-            var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
+            var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, persistProgressOnFaultedStatus, token);
 
             return AddOperationInternalAsync(operation, taskFactory);
         }
@@ -70,12 +71,13 @@ public partial class ShardedDatabaseContext
             string description,
             IOperationDetailedDescription detailedDescription,
             Func<JsonOperationContext, int, RavenCommand<TResult>> commandFactory,
+            bool persistProgressOnFaultedStatus = false,
             OperationCancelToken token = null)
             where TResult : OperationIdResult
             where TOrchestratorResult : IOperationResult, new()
             where TOperationProgress : IOperationProgress, new()
         {
-            var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, token);
+            var operation = CreateOperationInstance(id, _context.DatabaseName, operationType, description, detailedDescription, persistProgressOnFaultedStatus, token);
 
             return AddOperationInternalAsync(operation, 
                 onProgress => CreateTaskAsync<TResult, TOrchestratorResult, TOperationProgress>(

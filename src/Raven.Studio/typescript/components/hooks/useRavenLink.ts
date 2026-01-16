@@ -1,7 +1,7 @@
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
 
-type UseRavenLinkProps = {
+export type UseRavenLinkProps = {
     hash: string;
 } & (
     | {

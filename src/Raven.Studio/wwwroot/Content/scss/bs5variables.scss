@@ -535,7 +535,7 @@ $form-text-color: $text-muted-var !default;
 // scss-docs-end form-text-variables
 
 // scss-docs-start form-label-variables
-$form-label-margin-bottom: 0.5rem !default;
+$form-label-margin-bottom: $gutter-xxs !default;
 $form-label-font-size: null !default;
 $form-label-font-style: null !default;
 $form-label-font-weight: null !default;

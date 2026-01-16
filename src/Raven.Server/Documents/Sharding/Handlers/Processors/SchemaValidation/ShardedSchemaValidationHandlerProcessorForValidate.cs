@@ -31,6 +31,7 @@ internal sealed class ShardedSchemaValidationHandlerProcessorForValidate : Abstr
                 $"Schema validation for collection '{Parameters.Collection}' '{RequestHandler.DatabaseName}'",
                 detailedDescription: null,
                 commandFactory: (_, _) => new StartSchemaValidationOperation.StartSchemaValidationCommand(RequestHandler.ShardExecutor.Conventions, Parameters, operationId),
+                persistProgressOnFaultedStatus: false,
                 token)
             .ContinueWith(_ => { token.Dispose(); });
     }

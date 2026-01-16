@@ -80,7 +80,12 @@ async function fillInput(element: HTMLElement, value: string) {
 
 const AllProviders = () => MockProviders;
 
-export function MockProviders({ children }: any) {
+interface MockProvidersProps {
+    children: React.ReactNode;
+    isSplitViewDisabled?: boolean;
+}
+
+export function MockProviders({ children, isSplitViewDisabled }: MockProvidersProps) {
     const [store] = useState(() => createStoreConfiguration());
 
     setEffectiveTestStore(store);
@@ -92,7 +97,11 @@ export function MockProviders({ children }: any) {
                     <DialogProvider>
                         <ServiceProvider services={mockServices.context}>
                             <ChangesProvider changes={mockHooks.useChanges.mock}>
-                                <SplitViewProvider>{children}</SplitViewProvider>
+                                {isSplitViewDisabled ? (
+                                    <>{children}</>
+                                ) : (
+                                    <SplitViewProvider>{children}</SplitViewProvider>
+                                )}
                             </ChangesProvider>
                         </ServiceProvider>
                     </DialogProvider>

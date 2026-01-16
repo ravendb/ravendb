@@ -35,6 +35,7 @@
 }
 
 .item-disabled {
+    cursor: not-allowed;
     filter: contrast(85%);
     mix-blend-mode: luminosity;
     opacity: 0.4;
@@ -633,6 +634,13 @@ $filtering-input-bg: $toggle-bg !default;
     padding-right: $gutter-sm;
 }
 
+.hover-filter {
+    &:hover {
+        filter: $hover-filter-var;
+        transition: $global-easing-in-out;
+    }
+}
+
 .list-group-item {
     &.disabled {
         cursor: unset;
@@ -665,6 +673,27 @@ $filtering-input-bg: $toggle-bg !default;
         + .input-group-text {
             opacity: 0.5;
         }
+    }
+}
+
+.border-dotted {
+    border-style: dotted;
+}
+
+.border-dashed {
+    border-style: dashed;
+}
+
+.icon-info-new {
+    font-size: 100%;
+    opacity: 0.6;
+    transition: $transition-base;
+    margin-left: $gutter-xxxs;
+    margin-right: 0 !important;
+
+    &:hover {
+        opacity: 1;
+        transition: none;
     }
 }
 

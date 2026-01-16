@@ -165,6 +165,8 @@ declare module "yup" {
     interface StringSchema {
         basicUrl(msg?: string): this;
         base64(msg?: string): this;
+        ipv4(msg?: string): this;
+        phone(msg?: string): this;
     }
 }
 
@@ -213,6 +215,21 @@ function initYup() {
 
     yup.addMethod<yup.StringSchema>(yup.string, "base64", function (msg = "Please enter valid base64 string") {
         return this.matches(/^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/, msg);
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "ipv4", function (msg = "Please enter valid IPv4 address") {
+        return this.matches(/(^(\d{1,3}\.){3}(\d{1,3})$)/, msg);
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "phone", function (msg = "Please enter valid phone number") {
+        const phoneRegExp =
+            /^((\\+[1-9]{1,4}[ \\-]*)|(\\([0-9]{2,3}\\)[ \\-]*)|([0-9]{2,4})[ \\-]*)*?[0-9]{3,4}?[ \\-]*[0-9]{3,4}?$/;
+        return this.test("phone", msg, (value) => {
+            if (value && value.length > 0) {
+                return phoneRegExp.test(value);
+            }
+            return true;
+        });
     });
 }
 

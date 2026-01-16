@@ -25,7 +25,7 @@ internal class AiAssistantGiveConsentProcessor([NotNull] RequestHandler requestH
                 RequestHandler.LogAuditForServer("CONSENT", $"Give consent to AI Assistant for license '{RequestHandler.ServerStore.LicenseManager.LicenseStatus.Id}'");
             
             var response = await ApiHttpClient.PostAsync(
-                    requestUri: "/api/v1/ai/give-consent",
+                    relativeUri: "/api/v1/ai/give-consent",
                     content: new StringContent(context.ReadObject(request, "give-consent").ToString(), Encoding.UTF8, "application/json"),
                     token: token.Token)
                 .ConfigureAwait(false);

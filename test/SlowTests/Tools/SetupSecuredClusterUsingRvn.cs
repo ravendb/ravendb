@@ -73,7 +73,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             {
                 Output.WriteLine(tuple.Exception.Message);
             }
-        }), cts.Token);
+        }, SetupMode.Secured), cts.Token);
 
 
         var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
@@ -274,7 +274,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             {
                 Output.WriteLine(tuple.Exception.Message);
             }
-        }), cts.Token);
+        }, SetupMode.Secured), cts.Token);
 
 
         var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
@@ -388,11 +388,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {
                     Output.WriteLine(tuple.Exception.Message);
                 }
-            })
-            {
-                Processed = 0,
-                Total = 4
-            },
+            }, SetupMode.LetsEncrypt)
+        {
+            Processed = 0,
+            Total = 4
+        },
             false,
             StagingAcmeClientUrl,
             DefaultAcmeProfile,
@@ -535,11 +535,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {
                     Output.WriteLine(tuple.Exception.Message);
                 }
-            })
-            {
-                Processed = 0,
-                Total = 4
-            },
+            }, SetupMode.LetsEncrypt)
+        {
+            Processed = 0,
+            Total = 4
+        },
             false,
             StagingAcmeClientUrl,
             DefaultAcmeProfile,

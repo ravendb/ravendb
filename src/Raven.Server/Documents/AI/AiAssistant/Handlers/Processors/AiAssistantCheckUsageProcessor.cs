@@ -21,7 +21,7 @@ internal class AiAssistantCheckUsageProcessor([NotNull] RequestHandler requestHa
             FulfillRequestMetadata(request);
             
             var response = await ApiHttpClient.PostAsync(
-                    requestUri: "/api/v1/ai/check-usage",
+                    relativeUri: "/api/v1/ai/check-usage",
                     content: new StringContent(context.ReadObject(request,"check-usage").ToString(), Encoding.UTF8, "application/json"),
                     token: token.Token)
                 .ConfigureAwait(false);

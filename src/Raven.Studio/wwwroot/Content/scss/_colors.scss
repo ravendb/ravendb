@@ -106,6 +106,8 @@ $token-deleted: $color-1;
 $token-important: $color-2-2;
 
 $developer: #c7ff6b;
+$community: #2e9ef4;
+$experimental: #525fff;
 
 $twofactor: #5537c4;
 
@@ -369,7 +371,6 @@ $table-bg-scale: 30% !default;
 }
 
 $free: $color-4;
-$community: $color-4;
 $professional: $color-4-2;
 $enterprise: $color-5;
 
@@ -454,6 +455,7 @@ $theme-colors: (
     "developer": $developer,
     "cloud": $brand-cloud,
     "2fa": $twofactor,
+    "experimental": $experimental,
 ) !default;
 
 // scss-docs-end theme-colors-map

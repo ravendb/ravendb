@@ -41,6 +41,14 @@ export function withStorybookContexts(Story: StoryFunction) {
     );
 }
 
+export function withStorybookContexts_DisabledSplitView(Story: StoryFunction) {
+    return (
+        <MockProviders isSplitViewDisabled>
+            <Story />
+        </MockProviders>
+    );
+}
+
 const storyTopBarHeight = 40;
 
 export function withBootstrap5(Story: StoryFunction) {

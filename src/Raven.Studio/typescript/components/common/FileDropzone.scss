@@ -9,11 +9,12 @@
     align-items: center;
     text-align: center;
     padding: sizes.$gutter-sm 0;
-    background-color: colors.$well-bg-var;
+    background-color: colors.$input-bg-var;
     border: 2px dashed colors.$border-color-light-var;
     border-radius: sizes.$border-radius-md;
     color: colors.$text-muted-var;
     cursor: pointer;
+    transition: none;
 
     &.isDragging {
         border-color: colors.$border-color-var;
@@ -25,5 +26,10 @@
         inset: 0;
         opacity: 0;
         z-index: 9999;
+    }
+
+    &:hover {
+        filter: colors.$hover-filter-var;
+        transition: bs5variables.$transition-base;
     }
 }

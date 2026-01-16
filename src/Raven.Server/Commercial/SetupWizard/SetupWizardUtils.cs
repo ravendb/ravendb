@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -9,6 +10,7 @@ using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.Commercial.SetupWizard;
 
@@ -23,6 +25,7 @@ public static class SetupWizardUtils
 
             byte[] serverCertBytes;
             X509Certificate2 serverCert;
+            string domain;
             string domainFromCert;
             string publicServerUrl;
             CertificateUtils.CertificateHolder serverCertificateHolder;
@@ -46,6 +49,10 @@ public static class SetupWizardUtils
                     parameters.SetupInfo.NodeSetupInfos[localNodeTag].TcpPort,
                     out _,
                     out domainFromCert);
+                
+                domain = (parameters.SetupMode == SetupMode.Secured)
+                    ? domainFromCert.ToLower()
+                    : parameters.SetupInfo.Domain.ToLower();
 
                 if (parameters.OnBeforeAddingNodesToCluster != null && parameters.SetupInfo.ZipOnly == false)
                         await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
@@ -58,8 +65,10 @@ public static class SetupWizardUtils
                     parameters.CertificateValidationKeyUsages,
                     parameters.Progress);
 
-                if(parameters.SetupInfo.ZipOnly == false)
+                if (parameters.SetupInfo.ZipOnly == false)
                 {
+                    await ValidateCertificateFileWriteAccess();
+                    
                     foreach (var node in parameters.SetupInfo.NodeSetupInfos)
                     {
                         if (node.Key == parameters.SetupInfo.LocalNodeTag)
@@ -67,8 +76,7 @@ public static class SetupWizardUtils
 
                         parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
-
-
+                        
                         parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                             parameters.SetupInfo, node.Key,
                             node.Value.Port,
@@ -85,13 +93,11 @@ public static class SetupWizardUtils
             }
 
             parameters.Progress?.AddInfo("Generating the client certificate.");
+            parameters.Progress?.SetupActionSteps.StepsByConfigurationStepType[ConfigurationStepType.ClientCertificate].SetState(State.InProgress);
+            
             parameters.OnProgress?.Invoke(parameters.Progress);
 
             X509Certificate2 clientCert;
-
-            var domain = (parameters.SetupMode == SetupMode.Secured)
-                ? domainFromCert.ToLower()
-                : parameters.SetupInfo.Domain.ToLower();
 
             byte[] certBytes;
             CertificateDefinition certificateDefinition;
@@ -112,12 +118,15 @@ public static class SetupWizardUtils
             }
             catch (Exception e)
             {
+                parameters.Progress?.SetupActionSteps.SetError(ConfigurationStepType.ClientCertificate, ErrorType.ClientCertificateError, e.Message);
                 throw new InvalidOperationException($"Failed to generate a client certificate for '{domain}'.", e);
             }
 
             if (parameters.SetupInfo.RegisterClientCert)
                 parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
-
+            
+            parameters.Progress?.SetupActionSteps.StepsByConfigurationStepType[ConfigurationStepType.ClientCertificate].SetState(State.Completed);
+            
             return new CompleteClusterConfigurationResult
             {
                 Domain = domain,
@@ -132,6 +141,17 @@ public static class SetupWizardUtils
         catch (Exception e)
         {
             throw new InvalidOperationException("Failed to create settings file(s).", e);
+        }
+
+        async Task ValidateCertificateFileWriteAccess()
+        {
+            var certificateFileName = Guid.NewGuid().ToString();
+            string certPath = parameters.OnGetCertificatePath?.Invoke(certificateFileName);
+            if (certPath != null)
+            {
+                await File.WriteAllTextAsync(certPath, string.Empty);
+                File.Delete(certPath);
+            }
         }
     }
 

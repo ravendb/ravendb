@@ -57,7 +57,7 @@ internal abstract class AbstractShardedOperationQueriesHandlerProcessor : Abstra
                 GetOperationDescription(query),
                 detailedDescription: GetDetailedDescription(query),
                 op.CommandFactory,
-                token);
+                token: token);
 
         _ = task.ContinueWith(_ =>
         {
