@@ -340,6 +340,12 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, AttachmentHandler.MissingAttachmentInfo> MissingAttachmentInfo = GenerateJsonDeserializationRoutine<AttachmentHandler.MissingAttachmentInfo>();
 
+        public static readonly Func<BlittableJsonReaderObject, LicenseHandler.SendFreeLicenseVerificationCodeRequest> SendFreeLicenseVerificationCodeRequest = GenerateJsonDeserializationRoutine<LicenseHandler.SendFreeLicenseVerificationCodeRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, LicenseHandler.DownloadFreeLicenseRequest> DownloadFreeLicenseRequest = GenerateJsonDeserializationRoutine<LicenseHandler.DownloadFreeLicenseRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, LicenseHandler.DownloadFreeLicenseResponse> DownloadFreeLicenseResponse = GenerateJsonDeserializationRoutine<LicenseHandler.DownloadFreeLicenseResponse>();
+
         internal static readonly Func<BlittableJsonReaderObject, OpenAiSettings> OpenAiSettings = GenerateJsonDeserializationRoutine<OpenAiSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, AzureOpenAiSettings> AzureOpenAiSettings = GenerateJsonDeserializationRoutine<AzureOpenAiSettings>();
@@ -395,7 +401,6 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, EnforceRevisionsConfigurationOperation.Parameters> EnforceRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<EnforceRevisionsConfigurationOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, AdoptOrphanedRevisionsOperation.Parameters> AdoptOrphanedRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<AdoptOrphanedRevisionsOperation.Parameters>();
-            
             public static readonly Func<BlittableJsonReaderObject, StartSchemaValidationOperation.Parameters> ValidateSchemaOperationParameters = GenerateJsonDeserializationRoutine<StartSchemaValidationOperation.Parameters>();
         }
     }

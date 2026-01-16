@@ -13,6 +13,10 @@
     border-radius: bs5variables.$input-border-radius;
     flex: 1 1 auto;
 
+    &.is-invalid {
+        border-color: bs5variables.$form-invalid-border-color;
+    }
+
     .react-select__placeholder {
         opacity: 0.5;
     }
@@ -31,6 +35,11 @@
             * {
                 color: bs5variables.$text-color-var;
             }
+
+            .react-select__placeholder {
+                color: bs5variables.$text-muted-color;
+            }
+
             .react-select__multi-value {
                 background-color: bs5variables.$panel-header-bg-var;
 

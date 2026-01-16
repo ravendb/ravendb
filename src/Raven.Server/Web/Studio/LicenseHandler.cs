@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
@@ -9,6 +12,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -154,7 +158,7 @@ namespace Raven.Server.Web.Studio
             {
                 try
                 {
-                    var response = await ApiHttpClient.GetAsync("api/v2/alive", cts.Token);
+                    var response = await ApiHttpClient.GetAsync("api/v2/alive", token: cts.Token);
                     result.StatusCode = response.StatusCode;
                 }
                 catch (Exception e)
@@ -212,6 +216,118 @@ namespace Raven.Server.Web.Studio
                     context.Write(writer, limits.ToJson());
                 }
             }
+        }
+        
+        [RavenAction("/license/free/send-verification-code", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task SendFreeLicenseVerificationCode()
+        {
+            SetupHandler.AssertOnlyInSetupMode(ServerStore);
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "SendFreeLicenseVerificationCodeRequest");
+                var payload = JsonDeserializationServer.SendFreeLicenseVerificationCodeRequest(json);
+                
+                var response = await ApiHttpClient.PostAsync("api/v2/license/free/send-verification-code",
+                    new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json"), shouldRetry: false);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    HttpContext.Response.StatusCode = (int)response.StatusCode;
+                    
+                    if (response.Headers.RetryAfter != null) 
+                        HttpContext.Response.Headers.RetryAfter = response.Headers.RetryAfter.ToString();
+                    
+                    return;
+                }
+                
+                NoContentStatus(response.StatusCode);
+            }
+        }
+        
+        public class SendFreeLicenseVerificationCodeRequest
+        {
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string Email { get; set; }
+            public string Country { get; set; }
+            public string JobTitle { get; set; }
+            public string Company { get; set; }
+            public string Phone { get; set; }
+            public string HowDoYouPlanToUseRavenDb { get; set; }
+            public FreeLicenseType LicenseType { get; set; }
+            public bool MarketingConsent { get; set; }
+            public bool AcceptTheTermsAndConditions { get; set; }
+            public string Industry { get; set; }
+        }
+        
+        [RavenAction("/license/free/download", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task DownloadFreeLicense()
+        {
+            SetupHandler.AssertOnlyInSetupMode(ServerStore);
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var downloadLicensePayloadJson = await context.ReadForMemoryAsync(RequestBodyStream(), "DownloadFreeLicenseRequest");
+                var downloadLicensePayload = JsonDeserializationServer.DownloadFreeLicenseRequest(downloadLicensePayloadJson);
+                    
+                var downloadLicenseResponse = await ApiHttpClient.PostAsync("api/v2/license/free/download",
+                    new StringContent(JsonConvert.SerializeObject(downloadLicensePayload), Encoding.UTF8, "application/json"), shouldRetry: false);
+                
+                if (downloadLicenseResponse.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    HttpContext.Response.StatusCode = (int)downloadLicenseResponse.StatusCode;
+                    
+                    if (downloadLicenseResponse.Headers.RetryAfter != null) 
+                        HttpContext.Response.Headers.RetryAfter = downloadLicenseResponse.Headers.RetryAfter.ToString();
+                    
+                    return;
+                }
+                
+                if (downloadLicenseResponse.IsSuccessStatusCode == false)
+                {
+                    HttpContext.Response.StatusCode = (int)downloadLicenseResponse.StatusCode;
+                    return;
+                }
+                
+                var downloadLicenseContentStream = await downloadLicenseResponse.Content.ReadAsStreamAsync();
+                
+                var json = await context.ReadForMemoryAsync(downloadLicenseContentStream, "DownloadFreeLicenseResponse");
+                var response = JsonDeserializationServer.DownloadFreeLicenseResponse(json);
+
+                context.Write(writer, response.ToJson());
+            }
+        }
+
+        public class DownloadFreeLicenseRequest
+        {
+            public string Email { get; set; }
+            public string VerificationCode { get; set; }
+        }
+
+        public class DownloadFreeLicenseResponse
+        {
+            public License License { get; set; }
+            
+            public FreeLicenseDownloadStatus LicenseDownloadStatus { get; set; }
+            
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(License)] = License?.ToJson(),
+                    [nameof(LicenseDownloadStatus)] = LicenseDownloadStatus
+                };
+            }
+        }
+        
+        public enum FreeLicenseDownloadStatus
+        {
+            Success,
+            InvalidCredentials,
+            CodeExpired,
+            CodeAlreadyUsed
         }
     }
 }

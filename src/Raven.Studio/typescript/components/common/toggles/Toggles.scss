@@ -295,7 +295,6 @@ $separator-color: colors.$border-color-light-var;
                     width: 100%;
                     height: 100%;
                     border-radius: $multi-toggle-border-radius;
-                    background-color: $multi-toggle-knob-bg;
                     top: 0;
                     left: 0;
                     z-index: 0;
@@ -316,10 +315,8 @@ $separator-color: colors.$border-color-light-var;
 
                 &:hover + label {
                     color: $multi-toggle-hover-color !important;
-
+                    opacity: 0.75;
                     &:after {
-                        opacity: 1;
-                        background-color: $multi-toggle-knob-hover-bg !important;
                         transform: scale(1);
                     }
                 }
@@ -332,6 +329,12 @@ $separator-color: colors.$border-color-light-var;
                             opacity: 1;
                             transform: scale(1);
                         }
+                    }
+                }
+
+                &:not(:checked):not(:hover) {
+                    & + label {
+                        background-color: transparent !important;
                     }
                 }
             }
@@ -353,10 +356,6 @@ $separator-color: colors.$border-color-light-var;
 
         &:hover .multi-toggle-item input[type="radio"] + label {
             color: $multi-toggle-color;
-
-            &::after {
-                background-color: $multi-toggle-knob-muted-bg;
-            }
         }
     }
 }

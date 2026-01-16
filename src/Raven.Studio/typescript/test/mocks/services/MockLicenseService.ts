@@ -30,4 +30,8 @@ export default class MockLicenseService extends AutoMockService<LicenseService> 
     withLatestVersion(dto?: MockedValue<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>) {
         return this.mockResolvedValue(this.mocks.getLatestVersion, dto, LicenseStubs.latestVersion());
     }
+
+    withVerifyLicense(dto?: MockedValue<DownloadFreeLicenseResponse>) {
+        return this.mockResolvedValue(this.mocks.verifyLicense, dto, LicenseStubs.getLicenseFreeDownload());
+    }
 }

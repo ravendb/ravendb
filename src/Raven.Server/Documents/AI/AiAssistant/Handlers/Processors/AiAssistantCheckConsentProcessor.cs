@@ -21,7 +21,7 @@ internal class AiAssistantCheckConsentProcessor([NotNull] RequestHandler request
             FulfillRequestMetadata(request);
             
             var response = await ApiHttpClient.PostAsync(
-                    requestUri: "/api/v1/ai/check-consent",
+                    relativeUri: "/api/v1/ai/check-consent",
                     content: new StringContent(context.ReadObject(request,"check-consent").ToString(), Encoding.UTF8, "application/json"),
                     token: token.Token)
                 .ConfigureAwait(false);

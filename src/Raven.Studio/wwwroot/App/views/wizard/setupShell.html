@@ -1,72 +1,11 @@
-<div class="container">
-    <a class="btn btn-primary select-theme-btn" data-bind="click: $root.constructor.chooseTheme">
-        <i class="icon-theme"></i>
-        <span>Select Theme</span>
-    </a>
-    
-    <div class="flex-horizontal margin-top-xs margin-bottom-xs">
         <div>
-            <i class="icon-raven text-info icon-lg"></i>
+  <div class="bs5">
+    <div id="page-host">
+      <div data-bind="react: $root.setupWizardView" style="height: 100vh;"></div>
         </div>
-        <div class="padding">
-            <h2 class="margin-none on-base-background"> <strong>RavenDB Setup Wizard</strong></h2>
         </div>
-        <div class="flex-separator"></div>
-        <div>
             
-            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'Custom', attr: { href: 'https://ravendb.net/l/8H5IPX/' + $root.constructor.clientVersion() }">
-                <div class="label label-info padding padding-sm">
-                    <i class="icon-info"></i>
-                    <span>Need assistance? Click here for detailed walk-through and setup examples.</span>
+  <div data-bind="if: displayUsageStatsInfo()">
+    <div data-bind="compose: usageStatsView" class="bs3"></div>
                 </div>
-            </a>
-            
-            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'AwsLinux', attr: { href: 'https://ravendb.net/l/VPQ69V/' + $root.constructor.clientVersion() }">
-                <div class="label label-info padding padding-sm">
-                    <i class="icon-info"></i>
-                    <span>Need assistance? Click here for detailed instructions for AWS deployment</span>
-                </div>
-            </a>
-            
-            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'AwsWindows', attr: { href: 'https://ravendb.net/l/2QAB8W/' + $root.constructor.clientVersion() }">
-                <div class="label label-info padding padding-sm">
-                    <i class="icon-info"></i>
-                    <span>Need assistance? Click here for detailed instructions for AWS deployment</span>
-                </div>
-            </a>
-
-            <a target="_blank" data-bind="visible: $data.constructor.deploymentEnvironment() === 'Azure', attr: { href: 'https://ravendb.net/l/9GHB89/' + $root.constructor.clientVersion() }">
-                <div class="label label-info padding padding-sm">
-                    <i class="icon-info"></i>
-                    <span>Need assistance? Click here for detailed instructions for Azure deployment</span>
-                </div>
-            </a>
-        </div>
-    </div>
-    <div class="content-container-wrapper">
-        <div id="page-host-root" class="content-container">
-            <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
-        </div>
-    </div>
-
-    <div class="hidden">
-        <form method="post" download target="hidden-form" id="setupForm">
-            <input type="hidden" name="Options"/>
-        </form>
-    </div>
 </div>
-
-<footer class="bs3 status-footer">
-    <div class="footer-right">
-        <div class="footer-item">
-            <div title="Studio Version">
-                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
-            </div>
-        </div>
-        <div class="footer-item">
-            <div title="Server Version">
-                <i class="icon-server"></i> <span data-bind="text: $root.constructor.buildInfo.serverBuildVersion() ? $root.constructor.buildInfo.serverBuildVersion().FullVersion : ''"></span>
-            </div>
-        </div>
-    </div>
-</footer>

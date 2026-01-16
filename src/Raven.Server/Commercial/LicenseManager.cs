@@ -556,7 +556,7 @@ namespace Raven.Server.Commercial
             };
 
             var response = await ApiHttpClient.PostAsync("/api/v2/license/update-lets-encrypt-license",
-                    new StringContent(JsonConvert.SerializeObject(updateInfo), Encoding.UTF8, "application/json"), _serverStore.ServerShutdown)
+                    new StringContent(JsonConvert.SerializeObject(updateInfo), Encoding.UTF8, "application/json"), token: _serverStore.ServerShutdown)
                 .ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
@@ -650,7 +650,7 @@ namespace Raven.Server.Commercial
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense, contextPool);
 
             var response = await ApiHttpClient.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), token)
+                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), token: token)
                 .ConfigureAwait(false);
 
             return response;
@@ -2123,7 +2123,7 @@ namespace Raven.Server.Commercial
                 using (var cts = new CancellationTokenSource(timeoutInSec * 1000))
                 {
                     var response = await ApiHttpClient.PostAsync("/api/v2/license/support",
-                            new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), cts.Token)
+                            new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), token: cts.Token)
                         .ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)

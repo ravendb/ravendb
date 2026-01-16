@@ -1,7 +1,7 @@
 import "./FileDropzone.scss";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import React, { useState, useRef, DragEvent, ChangeEvent } from "react";
+import React, { useState, useRef, DragEvent, ChangeEvent, useEffect } from "react";
 import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
 import Button from "react-bootstrap/Button";
@@ -10,15 +10,25 @@ interface FileDropzoneProps {
     onChange: (files: File[]) => void;
     maxFiles?: number;
     validExtensions?: string[];
+    initialFiles?: File[];
 }
 
-export default function FileDropzone({ onChange, validExtensions = [], maxFiles = Infinity }: FileDropzoneProps) {
+export default function FileDropzone({
+    onChange,
+    validExtensions = [],
+    maxFiles = Infinity,
+    initialFiles = [],
+}: FileDropzoneProps & { [key: string]: any }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { value: isDragging, toggle: toggleIsDragging } = useBoolean(false);
 
     const [files, setFiles] = useState<File[]>([]);
     const [error, setError] = useState<string>();
+
+    useEffect(() => {
+        setFiles(initialFiles);
+    }, [initialFiles]);
 
     const handleDrop = (e: DragEvent<HTMLDivElement>) => {
         toggleIsDragging();
@@ -62,6 +72,7 @@ export default function FileDropzone({ onChange, validExtensions = [], maxFiles 
         <div>
             <div className={classNames("file-dropzone", { isDragging })}>
                 <input
+                    data-testid="file-input"
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileInput}

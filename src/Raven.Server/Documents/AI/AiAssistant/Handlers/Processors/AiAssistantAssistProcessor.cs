@@ -17,14 +17,14 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var requestBody = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "assist request");
-            
+
             var modifications = new DynamicJsonValue(requestBody);
             requestBody.Modifications = modifications;
             FulfillRequestMetadata(modifications);
 
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             using var content = new StringContent(context.ReadObject(requestBody, "ai-assist").ToString(), Encoding.UTF8, "application/json");
-            using var response = await ApiHttpClient.PostAsync("/api/v1/ai/assist", content, HttpCompletionOption.ResponseHeadersRead, token.Token).ConfigureAwait(false);
+            using var response = await ApiHttpClient.PostAsync("/api/v1/ai/assist", content, HttpCompletionOption.ResponseHeadersRead, shouldRetry: true, token.Token).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
                 HttpContext.Response.StatusCode = (int)response.StatusCode;

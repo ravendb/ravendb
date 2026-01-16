@@ -1,5 +1,7 @@
 /// <reference path="../tsd.d.ts"/>
 
+import License = Raven.Server.Commercial.License;
+
 interface disposable {
     dispose(): void;
 }
@@ -148,6 +150,35 @@ type timeSeriesDeleteMode = "all" | "range" | "selection";
 interface timeSeriesDeleteCriteria {
     mode: timeSeriesDeleteMode;
     selection?: Raven.Client.Documents.Session.TimeSeriesValue[];
+}
+
+type FreeLicenseType = "Community" | "Developer"
+
+interface SendFreeLicenseVerificationRequest {
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    Country: string;
+    JobTitle: string;
+    Company: string;
+    HowDoYouPlanToUseRavenDb: string;
+    Type: FreeLicenseType;
+    MarketingConsent: boolean;
+    AcceptTheTermsAndConditions: boolean;
+    Industry: string;
+    LicenseType: Raven.Server.Commercial.LicenseType;
+}
+
+interface DownloadFreeLicenseRequest {
+    Email: string;
+    VerificationCode: string;
+}
+
+type FreeLicenseDownloadStatus = "Success" | "InvalidCredentials" | "CodeExpired" | "CodeAlreadyUsed";
+
+interface DownloadFreeLicenseResponse {
+    License: License;
+    LicenseDownloadStatus: FreeLicenseDownloadStatus;
 }
 
 type postTimeSeriesDeleteAction = "reloadCurrent" | "changeTimeSeries" | "doNothing";
@@ -570,6 +601,11 @@ interface documentBase extends dictionary<any> {
 interface domainAvailabilityResult {
     Available: boolean;
     IsOwnedByMe: boolean;
+}
+
+interface ClaimDomainResult extends Omit<Raven.Server.Commercial.UserDomainsWithIps, "Domains"> {
+    Email: string
+    Domains: Record<string, string[]>
 }
 
 interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>, any> {
@@ -1107,6 +1143,8 @@ interface TrafficWatchPostgresChange extends Raven.Client.Documents.Changes.Traf
     Source: string;
     Query: string;
 }
+
+type Browser = "Chrome" | "Firefox" | "Safari" | "Other";
 
 type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.OpenAiSettings

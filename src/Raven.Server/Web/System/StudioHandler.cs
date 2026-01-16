@@ -252,15 +252,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/wizard/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupIndexFile()
         {
-            if (ServerStore.LicenseManager.IsEulaAccepted == false)
-            {
-                // redirect to studio - if user didn't configured it yet
-                // then studio endpoint redirect to wizard
-                HttpContext.Response.Headers["Location"] = "/eula/index.html";
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
-                return Task.CompletedTask;
-            }
-
             // if user asks for entry point but we are already configured redirect to studio
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.Initial)
             {
@@ -296,13 +287,6 @@ namespace Raven.Server.Web.System
             if (feature?.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
             {
                 HttpContext.Response.Headers["Location"] = "/2fa/index.html";
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
-                return Task.CompletedTask;
-            }
-            
-            if (ServerStore.LicenseManager.IsEulaAccepted == false)
-            {
-                HttpContext.Response.Headers["Location"] = "/eula/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
                 return Task.CompletedTask;
             }
