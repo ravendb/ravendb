@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public RavenStorageClient.ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, string continuationToken = null)
         {
-            var pageable = _client.GetBlobsByHierarchy(prefix: prefix, delimiter: delimiter, cancellationToken: _cancellationToken);
+            var pageable = _client.GetBlobsByHierarchy(BlobTraits.None, BlobStates.None, prefix: prefix, delimiter: delimiter, cancellationToken: _cancellationToken);
             var pages = pageable.AsPages(continuationToken: continuationToken);
 
             var result = new RavenStorageClient.ListBlobResult();
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task<RavenStorageClient.ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, string continuationToken = null)
         {
-            var pageable = _client.GetBlobsByHierarchyAsync(prefix: prefix, delimiter: delimiter, cancellationToken: _cancellationToken);
+            var pageable = _client.GetBlobsByHierarchyAsync(BlobTraits.None, BlobStates.None, prefix: prefix, delimiter: delimiter, cancellationToken: _cancellationToken);
             var pages = pageable.AsPages(continuationToken: continuationToken);
 
             var result = new RavenStorageClient.ListBlobResult();

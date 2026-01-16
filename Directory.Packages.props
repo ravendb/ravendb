@@ -8,9 +8,9 @@
     <PackageVersion Include="AWSSDK.Glacier" Version="4.0.3.2" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.17.1" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
-    <PackageVersion Include="Azure.Identity" Version="1.17.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.26.0" />
-    <PackageVersion Include="Azure.Storage.Queues" Version="12.24.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
+    <PackageVersion Include="Azure.Storage.Queues" Version="12.25.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
