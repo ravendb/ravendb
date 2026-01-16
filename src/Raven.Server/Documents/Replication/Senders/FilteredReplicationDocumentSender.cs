@@ -49,10 +49,10 @@ namespace Raven.Server.Documents.Replication.Senders
                 stats.RecordArtificialDocumentSkip();
                 skippedReplicationItemsInfo.Update(item);
 
-                if (Log.IsInfoEnabled)
+                if (Log.IsDebugEnabled)
                 {
                     string key = validator.GetItemInformation(item);
-                    Log.Info($"Will skip sending {key} ({item.Type}) because it was not allowed according to the incoming .");
+                    Log.Debug($"Will skip sending {key} ({item.Type}) because it was not allowed according to the incoming .");
                 }
 
                 return true;

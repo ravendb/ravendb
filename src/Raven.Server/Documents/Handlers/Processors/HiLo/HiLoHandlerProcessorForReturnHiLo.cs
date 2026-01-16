@@ -58,7 +58,7 @@ internal sealed class HiLoHandlerProcessorForReturnHiLo : AbstractHiLoHandlerPro
 
             using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
-                Database.DocumentsStorage.Put(context, hiLoDocumentId, null, hiloReader);
+                Database.DocumentsStorage.Put(context, hiLoDocumentId, null, hiloReader, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
             }
 
             return 1;

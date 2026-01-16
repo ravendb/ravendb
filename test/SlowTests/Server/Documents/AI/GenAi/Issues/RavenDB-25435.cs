@@ -118,7 +118,7 @@ for(const comment of this.Comments)
             public string Role { get; set; }
 
             [JsonProperty("content")]
-            public string Content { get; set; }
+            public object Content { get; set; }
         }
     }
 }

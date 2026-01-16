@@ -46,6 +46,8 @@
     <EmbeddedResource Include="Data\mssql.basic.insert.sql" />
     <EmbeddedResource Include="Data\mysql.basic.create.sql" />
     <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
+    <None Remove="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
+    <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -64,7 +66,6 @@
     <EmbeddedResource Include="Data\RavenDB_18864\53AutoIndexCoraxImportTest.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_19723\RavenDB_19723.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_22200\OneDamagedBucket.ravendbdump" />
-    <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24644\Hibernating.pdf" />
     <EmbeddedResource Include="Data\RavenDB_24644\Raven.pdf" />
     <EmbeddedResource Include="Data\RavenDB_24645\heart.gif" />

@@ -126,7 +126,7 @@ internal sealed class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerPr
                     };
 
                     using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
+                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
                 }
                 else
                 {
@@ -139,7 +139,7 @@ internal sealed class HiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerPr
                     };
 
                     using (var freshHilo = context.ReadObject(hiloDocReader, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo);
+                        Database.DocumentsStorage.Put(context, hiLoDocumentId, null, freshHilo, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
                 }
 
                 Prefix = prefix;

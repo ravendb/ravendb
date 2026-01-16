@@ -1,16 +1,20 @@
 import moment from "moment";
 import { AiAgentDocMessage, AiAgentMessage } from "./aiAgentsTypes";
 
-function getPrettifiedContent(content: string): string {
+function getPrettifiedContent(content: string | Record<string, any>): string {
     if (content == null) {
         return null;
     }
 
-    try {
-        return JSON.stringify(JSON.parse(content), null, 2);
-    } catch {
-        return content;
+    if (typeof content === "string") {
+        try {
+            return JSON.stringify(JSON.parse(content), null, 2);
+        } catch {
+            return content;
+        }
     }
+
+    return JSON.stringify(content, null, 2);
 }
 
 function getContentFromDoc(docMessage: AiAgentDocMessage): string {

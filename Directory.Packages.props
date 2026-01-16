@@ -21,8 +21,8 @@
     <PackageVersion Include="Confluent.Kafka" Version="2.13.0" />
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.18.3" />
-    <PackageVersion Include="FluentFTP" Version="52.1.0" />
+    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.2.2" />
+    <PackageVersion Include="FluentFTP" Version="53.0.2" />
     <PackageVersion Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
@@ -73,11 +73,11 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.68.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.65.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.HuggingFace" Version="1.65.0-preview" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.MistralAI" Version="1.65.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.65.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.65.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.68.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.HuggingFace" Version="1.68.0-preview" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.MistralAI" Version="1.68.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.68.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.68.0-alpha" />
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.68.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.102" />
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
@@ -97,7 +97,7 @@
     <PackageVersion Include="NuGet.ProjectModel" Version="7.0.1" />
     <PackageVersion Include="NuGet.Protocol" Version="7.0.1" />
     <PackageVersion Include="NuGet.Resolver" Version="7.0.1" />
-    <PackageVersion Include="OllamaSharp" Version="5.3.12" />
+    <PackageVersion Include="OllamaSharp" Version="5.4.12" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
