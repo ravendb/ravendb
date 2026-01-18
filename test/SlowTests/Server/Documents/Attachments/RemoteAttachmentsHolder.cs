@@ -1112,6 +1112,11 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
 
                     GetStorageAttachmentsMetadataFromAllAttachments(database2);
                     Assert.Equal(attachmentsCount, Attachments.Count);
+
+                    // Wait for RemoteAttachmentsSender to be initialized
+                    Assert.True(await WaitForValueAsync(() => database2.RemoteAttachmentsSender != null, true, timeout: 15_000),
+                        "RemoteAttachmentsSender was not initialized after restore");
+
                     // move in time & start remote
                     database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database2.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
