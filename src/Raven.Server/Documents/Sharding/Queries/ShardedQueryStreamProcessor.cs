@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -20,6 +22,7 @@ namespace Raven.Server.Documents.Sharding.Queries
     {
         private readonly string _debug;
         private readonly bool _ignoreLimit;
+        private List<OrderByField> _groupByFields;
 
         public ShardedQueryStreamProcessor(
             TransactionOperationContext context,
@@ -39,7 +42,31 @@ namespace Raven.Server.Documents.Sharding.Queries
             base.AssertQueryExecution();
 
             if (IsAutoMapReduceQuery || IndexType.IsMapReduce())
-                throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
+            {
+                _groupByFields = new List<OrderByField>();
+                var groupByFieldsFromIndex = GetGroupByFields();
+
+                if (Query.Metadata.OrderBy != null)
+                {
+                    foreach (var orderByField in Query.Metadata.OrderBy)
+                    {
+                        if (groupByFieldsFromIndex.Contains(orderByField.Name.Value) == false)
+                        {
+                            throw new NotSupportedInShardingException($"Ordering by field '{orderByField.Name.Value}' which is not part of the 'group by' clause is not supported in sharded streaming queries.");
+                        }
+
+                        _groupByFields.Add(orderByField);
+                    }
+                }
+
+                foreach (var groupByField in groupByFieldsFromIndex)
+                {
+                    if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
+                        continue;
+
+                    _groupByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
+                }
+            }
 
             if (Query.Metadata.HasIncludeOrLoad)
                 throw new NotSupportedInShardingException("Includes and Loads are not supported in sharded streaming queries");
@@ -54,11 +81,11 @@ namespace Raven.Server.Documents.Sharding.Queries
 
             var commands = GetOperationCommands(null);
 
-            var op = new ShardedStreamQueryOperation(RequestHandler.HttpContext, () =>
+            var op = new ShardedStreamQueryOperation(RequestHandler, () =>
             {
                 IDisposable returnToContextPool = RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 return (ctx, returnToContextPool);
-            }, documentsComparer, commands, skip: Query.Offset ?? 0, take: Query.Limit ?? int.MaxValue, Token);
+            }, documentsComparer, commands, _groupByFields, skip: Query.Offset ?? 0, take: Query.Limit ?? int.MaxValue, Token);
 
             var shards = GetShardNumbers(commands);
 

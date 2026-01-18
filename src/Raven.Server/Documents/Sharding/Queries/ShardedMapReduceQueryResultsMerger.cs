@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Sharding.Queries;
 
 public class ShardedMapReduceQueryResultsMerger
 {
-    private static readonly ShardedAutoMapReduceIndexResultsAggregator Aggregator = new();
+    internal static readonly ShardedAutoMapReduceIndexResultsAggregator Aggregator = new();
 
     protected readonly List<BlittableJsonReaderObject> CurrentResults;
     private readonly ShardedDatabaseContext.ShardedIndexesContext _indexesContext;

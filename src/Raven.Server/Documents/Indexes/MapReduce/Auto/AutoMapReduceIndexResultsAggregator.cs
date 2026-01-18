@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -15,7 +14,7 @@ public class AutoMapReduceIndexResultsAggregator
 {
     protected Action<DynamicJsonValue> ModifyOutputToStore;
 
-    internal AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
+    internal AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, JsonOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
     {
         var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 

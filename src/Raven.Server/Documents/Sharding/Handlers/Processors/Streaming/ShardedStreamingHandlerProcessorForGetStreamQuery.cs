@@ -140,27 +140,29 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
     public readonly struct ShardedStreamQueryOperation : IShardedOperation<StreamResult, ShardedStreamQueryResult>
     {
-        private readonly HttpContext _httpContext;
+        private readonly ShardedDatabaseRequestHandler _requestHandler;
         private readonly Func<(JsonOperationContext, IDisposable)> _allocateJsonContext;
         private readonly IComparer<BlittableJsonReaderObject> _comparer;
         private readonly Dictionary<int, PostQueryStreamCommand> _queryStreamCommands;
+        private readonly List<OrderByField> _groupByFields;
         private readonly long _skip;
         private readonly long _take;
         private readonly CancellationToken _token;
 
-        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, long skip, long take, CancellationToken token)
+        public ShardedStreamQueryOperation(ShardedDatabaseRequestHandler requestHandler, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, List<OrderByField> groupByFields, long skip, long take, CancellationToken token)
         {
-            _httpContext = httpContext;
+            _requestHandler = requestHandler;
             _allocateJsonContext = allocateJsonContext;
             _comparer = comparer;
             _queryStreamCommands = queryStreamCommands;
+            _groupByFields = groupByFields;
             _skip = skip;
             _take = take;
             _token = token;
             ExpectedEtag = null;
         }
 
-        public HttpRequest HttpRequest => _httpContext.Request;
+        public HttpRequest HttpRequest => _requestHandler.HttpContext.Request;
 
         public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber) => _queryStreamCommands[shardNumber];
 
@@ -170,7 +172,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         {
             var queryStats = new StreamQueryStatistics();
 
-            var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_comparer);
+            var mergedEnumerator = _groupByFields != null
+                ? new ShardedMapReduceStreamingEnumerator(_groupByFields, _requestHandler, queryStats, _allocateJsonContext, _token)
+                : new MergedEnumerator<BlittableJsonReaderObject>(_comparer);
 
             foreach (var streamResult in results.Values)
             {
