@@ -37,6 +37,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _remotePeriod;
         private readonly OperationCancelToken _token;
+        private static readonly string MisconfigurationAlertMessage = $"Failed to upload the attachments to remote storage due to misconfiguration.";
 
         // Identifier (case in-sensitive) -> (Hash (case sensitive) -> RetryCount): we keep track of how many times we retried uploading an attachment
         private readonly Dictionary<string, Dictionary<string, long>> _inMemoryStateErrorsByIdentifier = new(StringComparer.OrdinalIgnoreCase);
@@ -310,7 +311,7 @@ namespace Raven.Server.Documents
                 Logger.Debug(msg);
             }
 
-            _database.NotificationCenter.RemoteAttachmentsNotifications.AddConfigurationAlerts(new RemoteAttachmentsErrorInfo(msg, item.RemoteParameters.Identifier, item.Base64Hash.ToString(), [documentId]));
+            _database.NotificationCenter.RemoteAttachmentsNotifications.AddUploadErrors(MisconfigurationAlertMessage, item.RemoteParameters.Identifier, new RemoteAttachmentsErrorInfo(msg, item.RemoteParameters.Identifier, item.Base64Hash.ToString(), [documentId]));
         }
 
         private void HandleUploadTaskException(AttachmentRemoteInfo info)
@@ -319,30 +320,24 @@ namespace Raven.Server.Documents
             string identifier = info.AttachmentUploader.Identifier;
             var errors = _inMemoryStateErrorsByIdentifier.GetOrAdd(identifier);
 
+            var count = errors.GetOrAdd(hash);
+            errors[hash] = ++count;
+
             // we always try to retry the upload with delay
             info.Status = BackgroundWorkInfoStatus.Retry;
-            var count = errors.GetOrAdd(hash);
+            info.RetryCount = count;
 
             if (Logger.IsDebugEnabled)
             {
                 Logger.Debug($"Failed to upload remote attachment with identifier '{identifier}' and hash '{hash}' attempt '{count}'. " +
                              $"Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'." +
-                             $"Will retry in the next batch. Affected documents: [{string.Join(", ", info.DocumentIds.Select(x => $"'{x}'"))}]");
+                             $"Will retry in the next batch. Affected documents: [{string.Join(", ", info.DocumentIds.Select(x => $"'{x}'"))}]", info.Exception);
             }
 
-            if (count < 3)
-            {
-                errors[hash] = ++count;
-            }
-            else
-            {
-                // we have tried enough times, we need to alert
-                errors.Remove(hash);
-                var msg = $"Failed to upload remote attachment for identifier '{identifier}' after multiple attempts. Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'.";
-                _database.NotificationCenter.RemoteAttachmentsNotifications.AddUploadErrors(msg, identifier, new RemoteAttachmentsErrorInfo(info.Exception.ToString(), identifier, hash, info.DocumentIds));
+            var msg = $"Failed to upload remote attachment for identifier '{identifier}' after multiple attempts. Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'.";
+            _database.NotificationCenter.RemoteAttachmentsNotifications.AddUploadErrors(msg, identifier, new RemoteAttachmentsErrorInfo(info.Exception.ToString(), identifier, hash, info.DocumentIds));
 
-                ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(msg);
-            }
+            ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(msg);
         }
 
         private async Task<long> CreateUploadTaskAsync(AttachmentUploader uploader, string hash)

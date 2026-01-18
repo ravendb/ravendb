@@ -35,7 +35,6 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
 {
     private readonly RavenLogger _logger;
     private const string AttachmentsByRemote = "AttachmentsByRemote";
-    private static readonly long TicksPer15Minutes = 15 * TimeSpan.TicksPerMinute;
 
     public RemoteAttachmentsConfiguration Configuration;
 
@@ -409,10 +408,21 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
                         switch (info.Status)
                         {
                             case BackgroundWorkInfoStatus.Retry:
-                                // this upload errored lets add back to the tree and put current time ticks increased by 15 minutes
-                                var newTicks = currentTime.Ticks + TicksPer15Minutes;
-                                PutTicksDirectly(context, lowerId, newTicks);
+                                // this upload errored lets add back to the tree with recalculated ticks
+                                var newTicks = CalculateRetryTicks(currentTime, info.RetryCount);
 
+                                if (_logger.IsDebugEnabled)
+                                {
+                                    remoteParamsObject.TryGet(nameof(RemoteAttachmentParameters.At), out LazyStringValue dateFromMetadata);
+                                    var dt = ProcessDateUniversalTime(Database, lowerId, dateFromMetadata);
+                                    var nextRetryTime = new DateTime(newTicks);
+                                    var deltaTicks = currentTime.Ticks - dt.Ticks;
+                                    var deltaTimeSpan = new TimeSpan(deltaTicks);
+                                    _logger.Debug($"Scheduling retry #{info.RetryCount + 1} for attachment '{name}' (hash: '{hash}', identifier: '{identifierFromMetadata}') in document '{doc.Id}'. " +
+                                                  $"Time elapsed since original: {deltaTimeSpan}, Next attempt: {nextRetryTime.GetDefaultRavenFormat()}, original time: {dt.GetDefaultRavenFormat()}.");
+                                }
+
+                                PutTicksDirectly(context, lowerId, newTicks);
                                 break;
                             case BackgroundWorkInfoStatus.Process:
                                 // we uploaded this, we can mark the attachment as remote and delete its stream
@@ -433,5 +443,45 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
         }
 
         return processedCount;
+    }
+
+    private static readonly long TicksPer15Minutes = 15 * TimeSpan.TicksPerMinute;
+    private static readonly long TicksPer1Hour = TimeSpan.TicksPerHour;
+    private static readonly long TicksPer3Hours = 3 * TimeSpan.TicksPerHour;
+    private static readonly long TicksPer12Hours = 12 * TimeSpan.TicksPerHour;
+    private static readonly long TicksPer24Hours = 24 * TimeSpan.TicksPerHour;
+
+    private static long CalculateRetryTicks(DateTime currentTime, long retryCount)
+    {
+        long delay;
+
+        // Simple tiered delays based on retry count
+        if (retryCount < 4)
+        {
+            // First 3 retries: every 15 minutes (likely transient issues)
+            delay = TicksPer15Minutes;
+        }
+        else if (retryCount < 12)
+        {
+            // Retries 4-11: every 1 hour (persistent issue, slow down)
+            delay = TicksPer1Hour;
+        }
+        else if (retryCount < 24)
+        {
+            // Retries 12-23: every 3 hours (long-term issue)
+            delay = TicksPer3Hours;
+        }
+        else if (retryCount < 48)
+        {
+            // Retries 24-47: every 12 hours (very persistent)
+            delay = TicksPer12Hours;
+        }
+        else
+        {
+            // Retry 48+: once per day (maximum backoff)
+            delay = TicksPer24Hours;
+        }
+
+        return currentTime.Ticks + delay;
     }
 }
