@@ -492,14 +492,11 @@ namespace SlowTests.Server.Documents.Attachments
 
                     var oldDt = DateTime.UtcNow;
 
-                    for (int i = 0; i < 4; i++)
-                    {
-                        oldDt = oldDt.AddMinutes(16);
+                        oldDt = oldDt.AddMinutes(15);
 
                         // move in time & start remote
                         database.Time.UtcDateTime = () => oldDt;
                         await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
-                    }
 
                     // nothing was uploaded because we had a faulty identifier
                     if (uploadAdditional)

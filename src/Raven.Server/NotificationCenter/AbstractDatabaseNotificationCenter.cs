@@ -52,6 +52,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
         Indexing?.Dispose();
         RequestLatency?.Dispose();
         SlowWrites?.Dispose();
+        RemoteAttachmentsNotifications?.Dispose();
 
         base.Dispose();
     }

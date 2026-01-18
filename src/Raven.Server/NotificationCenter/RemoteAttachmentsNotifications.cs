@@ -1,65 +1,91 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Threading;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class RemoteAttachmentsNotifications
+    public class RemoteAttachmentsNotifications : IDisposable
     {
         private readonly AbstractDatabaseNotificationCenter _notificationCenter;
+        private Timer _timer;
+        private  AlertRaised _alert;
+        private readonly Lock _locker = new();
+        private volatile bool _needsSync;
+        private readonly RavenLogger _logger;
+        private RemoteAttachmentsErrorsDetails _details;
 
         public RemoteAttachmentsNotifications(AbstractDatabaseNotificationCenter notificationCenter)
         {
             _notificationCenter = notificationCenter;
+            _logger = RavenLogManager.Instance.GetLoggerForDatabase<RemoteAttachmentsNotifications>(notificationCenter.Database);
         }
 
         private static readonly string AlertTitleError = "Remote attachment upload failed.";
-        private static readonly string MisconfigurationAlertMessage = $"Failed to upload the attachments to remote storage due to misconfiguration. (last {RemoteAttachmentsErrorsDetails.MaxNumberOfErrors} errors are shown)";
 
-        public AlertRaised AddConfigurationAlerts(RemoteAttachmentsErrorInfo error)
+        public void AddUploadErrors(string msg, string identifier, RemoteAttachmentsErrorInfo error)
         {
-            var alert = GetOrCreateAlert<RemoteAttachmentsErrorsDetails>(AlertTitleError,
-                MisconfigurationAlertMessage,
-                AlertReason.Attachments_RemoteAttachmentWithoutIdentifier,
-                nameof(AlertReason.Attachments_RemoteAttachmentWithoutIdentifier),
-                identifier: null,
-                out var details);
+            lock (_locker)
+            {
+                if (_alert == null)
+                {
+                    _alert = GetOrCreateAlert(AlertTitleError,
+                        $"{msg} (last {RemoteAttachmentsErrorsDetails.MaxNumberOfErrors} errors are shown)",
+                        AlertReason.Attachments_RemoteAttachmentErroredIdentifier,
+                        nameof(AlertReason.Attachments_RemoteAttachmentErroredIdentifier),
+                        identifier,
+                        out _details);
+                }
 
-            return AddErrorAlert(error, details, alert);
+                _details.Add(error);
+
+                _needsSync = true;
+
+                if (_timer != null)
+                    return;
+
+                _timer = new Timer(PublishErrorAlerts, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            }
+
         }
 
-        public AlertRaised AddUploadErrors(string msg, string identifier, RemoteAttachmentsErrorInfo error)
+        internal void PublishErrorAlerts(object state)
         {
-            var alert = GetOrCreateAlert<RemoteAttachmentsErrorsDetails>($"{AlertTitleError} for '{identifier}'",
-                $"{msg} (last {RemoteAttachmentsErrorsDetails.MaxNumberOfErrors} errors are shown)",
-                AlertReason.Attachments_RemoteAttachmentErroredIdentifier,
-                nameof(AlertReason.Attachments_RemoteAttachmentErroredIdentifier),
-                identifier,
-                out var details);
+            try
+            {
+                if (_needsSync == false)
+                    return;
 
-            return AddErrorAlert(error, details, alert);
+                lock (_locker)
+                {
+                    _needsSync = false;
+
+                    _alert.RefreshCreatedAt();
+                    _notificationCenter.Add(_alert);
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error in a request latency timer", e);
+            }
         }
 
-        private AlertRaised AddErrorAlert(RemoteAttachmentsErrorInfo error, RemoteAttachmentsErrorsDetails details, AlertRaised alert)
-        {
-            details.Add(error);
-
-            _notificationCenter.Add(alert);
-
-            return alert;
-        }
-
-        private AlertRaised GetOrCreateAlert<T>(string title, string message, AlertReason alertReason, string tag, string identifier, out T details) where T : INotificationDetails, new()
+        private AlertRaised GetOrCreateAlert(string title, string message, AlertReason alertReason, string tag, string identifier, out RemoteAttachmentsErrorsDetails details)
         {
             Debug.Assert(alertReason == AlertReason.Attachments_RemoteAttachmentWithoutIdentifier || alertReason == AlertReason.Attachments_RemoteAttachmentErroredIdentifier);
 
-            string key = GetAlertId<T>(alertReason, tag, identifier, out string id);
+            string key = GetAlertId<RemoteAttachmentsErrorsDetails>(alertReason, tag, identifier, out string id);
 
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
-                details = GetDetails<T>(ntv);
+                details = GetDetails<RemoteAttachmentsErrorsDetails>(ntv);
 
                 return AlertRaised.Create(
                     _notificationCenter.Database,
@@ -86,7 +112,6 @@ namespace Raven.Server.NotificationCenter
 
             string key = GetAlertId<T>(alertReason, tag, identifier, out string id);
 
-
             using (_notificationCenter.Storage.Read(id, out NotificationTableValue ntv))
             {
                 return GetDetails<T>(ntv);
@@ -99,6 +124,12 @@ namespace Raven.Server.NotificationCenter
                 return new T();
 
             return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<T>(detailsJson);
+        }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+            _timer = null;
         }
     }
 }

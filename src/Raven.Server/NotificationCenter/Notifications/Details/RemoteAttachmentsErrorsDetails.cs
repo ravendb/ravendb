@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
@@ -7,11 +7,11 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
     {
         public const int MaxNumberOfErrors = 100;
 
-        public Queue<RemoteAttachmentsErrorInfo> Errors { get; set; }
+        public ConcurrentQueue<RemoteAttachmentsErrorInfo> Errors { get; set; }
 
         public RemoteAttachmentsErrorsDetails()
         {
-            Errors = new Queue<RemoteAttachmentsErrorInfo>();
+            Errors = new ConcurrentQueue<RemoteAttachmentsErrorInfo>();
         }
 
         public void Add(RemoteAttachmentsErrorInfo error)
@@ -20,28 +20,6 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
             if (Errors.Count > MaxNumberOfErrors)
                 Errors.TryDequeue(out _);
-        }
-
-        public void Update(List<RemoteAttachmentsErrorInfo> errors)
-        {
-            var local = new Queue<RemoteAttachmentsErrorInfo>();
-
-            foreach (var existing in Errors)
-            {
-                local.Enqueue(existing);
-            }
-
-            foreach (var newError in errors)
-            {
-                local.Enqueue(newError);
-            }
-
-            Errors = local;
-
-            while (Errors.Count > MaxNumberOfErrors)
-            {
-                Errors.TryDequeue(out _);
-            }
         }
 
         public DynamicJsonValue ToJson()
