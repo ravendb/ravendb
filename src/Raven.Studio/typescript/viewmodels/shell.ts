@@ -368,7 +368,9 @@ class shell extends viewModelBase {
                         this.accessManager.secureServer(true);
                         
                     } else {
-                        this.accessManager.securityClearance("ValidUser");
+                        // we are on HTTPS, but no client certificate was found.
+                        // this implies we are behind an SSL termination proxy and the backend is unsecured.
+                        this.accessManager.securityClearance("ClusterAdmin");
                         this.accessManager.secureServer(false);
                     }
                 }
