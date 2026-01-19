@@ -490,7 +490,7 @@ namespace Raven.Server.Utils
 
             // Create the self-signed certificate.
             // The CreateSelfSigned method automatically adds AuthorityKeyIdentifier and SubjectKeyIdentifier.
-            var notBefore = DateTimeOffset.UtcNow.Date;
+            var notBefore = DateTimeOffset.UtcNow.Date.AddDays(-7);
             var notAfter = notBefore.AddYears(2);
             var cert = request.CreateSelfSigned(notBefore, notAfter);
             log?.AppendLine($"Certificate created. NotBefore: {cert.NotBefore}, NotAfter: {cert.NotAfter}");
