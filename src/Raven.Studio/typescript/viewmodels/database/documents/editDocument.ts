@@ -57,6 +57,7 @@ import popoverUtils = require("common/popoverUtils");
 import validateDocumentSchemaCommand = require("commands/database/documents/validateDocumentSchemaCommand");
 import getSchemaValidationCommand = require("commands/database/settings/getSchemaValidationCommand");
 import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
+import licenseModel = require("models/auth/licenseModel");
 
 class editDocument extends shardViewModelBase {
     view = require("views/database/documents/editDocument.html");
@@ -1435,6 +1436,11 @@ class editDocument extends shardViewModelBase {
     }
 
     private loadRemoteAttachmentsConfiguration() {
+        const hasRemoteAttachments = licenseModel.getStatusValue("HasRemoteAttachments");
+        if (!hasRemoteAttachments) {
+            return;
+        }
+
         if (this.db.isSharded()) {
             this.remoteAttachmentDisabledReason("Remote attachments are not supported in sharded databases");
             return;

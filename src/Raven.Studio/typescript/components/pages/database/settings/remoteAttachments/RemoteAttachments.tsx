@@ -33,9 +33,13 @@ import useConfirm from "components/common/ConfirmDialog";
 import { RemoteAttachmentsInfoHub } from "components/pages/database/settings/remoteAttachments/partials/RemoteAttachmentsInfoHub";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import { EmptySet } from "components/common/EmptySet";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 
 export default function RemoteAttachments() {
-    // TODO: Add license restrictions. I cant do that at the moment because the key is missing in `LicenseStatus`
     const { reportEvent } = useEventsCollector();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -55,6 +59,17 @@ export default function RemoteAttachments() {
     });
 
     const { handleSubmit, formState, reset } = form;
+
+    const hasRemoteAttachments = useAppSelector(licenseSelectors.statusValue("HasRemoteAttachments"));
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasRemoteAttachments,
+            },
+        ],
+    });
 
     useDirtyFlag(formState.isDirty || isAnyModified);
 
@@ -96,24 +111,40 @@ export default function RemoteAttachments() {
                 <Form onSubmit={handleSubmit(handleSave)}>
                     <Row className="gy-sm">
                         <Col>
-                            <AboutViewHeading title="Remote Attachments" icon="remote-attachment" />
+                            <AboutViewHeading
+                                title="Remote Attachments"
+                                icon="remote-attachment"
+                                licenseBadgeText={hasRemoteAttachments ? null : "Enterprise"}
+                            />
                             {hasDatabaseAdminAccess && (
-                                <ButtonWithSpinner
-                                    type="submit"
-                                    variant="primary"
-                                    className="mb-3"
-                                    disabled={!isAnyModified && !formState.isDirty}
-                                    icon="save"
-                                    isSpinning={formState.isSubmitting}
+                                <ConditionalPopover
+                                    conditions={{
+                                        isActive: !hasRemoteAttachments,
+                                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                    }}
                                 >
-                                    Save
-                                </ButtonWithSpinner>
+                                    <ButtonWithSpinner
+                                        type="submit"
+                                        variant="primary"
+                                        className="mb-3"
+                                        disabled={!isAnyModified && !formState.isDirty}
+                                        icon="save"
+                                        isSpinning={formState.isSubmitting}
+                                    >
+                                        Save
+                                    </ButtonWithSpinner>
+                                </ConditionalPopover>
                             )}
-                            <RemoteAttachmentsSettingsCard />
-                            <DestinationsList />
+                            <div className={hasRemoteAttachments ? "" : "item-disabled pe-none"}>
+                                <RemoteAttachmentsSettingsCard />
+                                <DestinationsList />
+                            </div>
                         </Col>
                         <Col sm={12} lg={4}>
-                            <RemoteAttachmentsInfoHub />
+                            <RemoteAttachmentsInfoHub
+                                hasRemoteAttachments={hasRemoteAttachments}
+                                featureAvailability={featureAvailability}
+                            />
                         </Col>
                     </Row>
                 </Form>
@@ -307,3 +338,14 @@ const useRemoteAttachmentsSideEffects = ({ watch, setValue }: UseFormReturn<Remo
         return unsubscribe;
     }, [setValue, watch]);
 };
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Remote Attachments",
+        featureIcon: "remote-attachment",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];
+

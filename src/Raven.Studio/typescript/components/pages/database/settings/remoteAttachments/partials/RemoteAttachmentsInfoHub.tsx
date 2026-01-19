@@ -1,9 +1,17 @@
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
 import React from "react";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 
-export function RemoteAttachmentsInfoHub() {
+interface RemoteAttachmentsInfoHubProps {
+    hasRemoteAttachments: boolean;
+    featureAvailability: FeatureAvailabilityData[];
+}
+
+export function RemoteAttachmentsInfoHub({ hasRemoteAttachments, featureAvailability }: RemoteAttachmentsInfoHubProps) {
     return (
-        <AboutViewAnchored>
+        <AboutViewAnchored defaultOpen={hasRemoteAttachments ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -48,6 +56,7 @@ export function RemoteAttachmentsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasRemoteAttachments} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
