@@ -44,13 +44,13 @@ namespace Raven.Server.Documents.Sharding.Queries
             if (IsAutoMapReduceQuery || IndexType.IsMapReduce())
             {
                 _groupByFields = new List<OrderByField>();
-                var groupByFieldsFromIndex = GetGroupByFields();
+                var groupByFieldNames = GetGroupByFields();
 
                 if (Query.Metadata.OrderBy != null)
                 {
                     foreach (var orderByField in Query.Metadata.OrderBy)
                     {
-                        if (groupByFieldsFromIndex.Contains(orderByField.Name.Value) == false)
+                        if (groupByFieldNames.Contains(orderByField.Name.Value) == false)
                         {
                             throw new NotSupportedInShardingException($"Ordering by field '{orderByField.Name.Value}' which is not part of the 'group by' clause is not supported in sharded streaming queries.");
                         }
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Sharding.Queries
                     }
                 }
 
-                foreach (var groupByField in groupByFieldsFromIndex)
+                foreach (var groupByField in groupByFieldNames)
                 {
                     if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
                         continue;

@@ -72,17 +72,17 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
         while (true)
         {
-            var itemStatus = GetNextDocument(out BlittableJsonReaderObject item);
+            var itemStatus = GetNextResult(out BlittableJsonReaderObject item);
             switch (itemStatus)
             {
-                case NextItemStatus.Done:
+                case NextItemStatus.Stop:
                     CurrentItem = null;
                     return false;
 
-                case NextItemStatus.Filter:
+                case NextItemStatus.Continue:
                     continue;
 
-                case NextItemStatus.Found:
+                case NextItemStatus.Yield:
                     if (_isProjectionFromMapReduceIndex == false)
                     {
                         // simple map-reduce (no projection)
@@ -134,17 +134,17 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
     private enum NextItemStatus
     {
-        Done,
-        Filter,
-        Found
+        Yield,
+        Continue,
+        Stop
     }
 
-    private NextItemStatus GetNextDocument(out BlittableJsonReaderObject item)
+    private NextItemStatus GetNextResult(out BlittableJsonReaderObject item)
     {
         if (WorkEnumerators.Count == 0)
         {
             item = null;
-            return NextItemStatus.Done;
+            return NextItemStatus.Stop;
         }
 
         var minEnumerator = WorkEnumerators[0];
@@ -190,14 +190,14 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
             if (filterResult == FilterResult.Skipped)
             {
                 item.Dispose();
-                return NextItemStatus.Filter;
+                return NextItemStatus.Continue;
             }
 
             if (filterResult == FilterResult.LimitReached)
-                return NextItemStatus.Done;
+                return NextItemStatus.Stop;
         }
 
-        return NextItemStatus.Found;
+        return NextItemStatus.Yield;
     }
 
     public override void Dispose()
