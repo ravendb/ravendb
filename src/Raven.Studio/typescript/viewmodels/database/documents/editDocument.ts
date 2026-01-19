@@ -1438,6 +1438,7 @@ class editDocument extends shardViewModelBase {
     private loadRemoteAttachmentsConfiguration() {
         const hasRemoteAttachments = licenseModel.getStatusValue("HasRemoteAttachments");
         if (!hasRemoteAttachments) {
+            this.remoteAttachmentDisabledReason("Remote attachments are not available in your current license");
             return;
         }
 

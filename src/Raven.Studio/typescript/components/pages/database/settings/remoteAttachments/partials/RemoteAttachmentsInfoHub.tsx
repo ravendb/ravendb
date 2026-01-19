@@ -3,13 +3,23 @@ import React from "react";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
-interface RemoteAttachmentsInfoHubProps {
-    hasRemoteAttachments: boolean;
-    featureAvailability: FeatureAvailabilityData[];
-}
+export function RemoteAttachmentsInfoHub() {
+    const hasRemoteAttachments = useAppSelector(licenseSelectors.statusValue("HasRemoteAttachments"));
 
-export function RemoteAttachmentsInfoHub({ hasRemoteAttachments, featureAvailability }: RemoteAttachmentsInfoHubProps) {
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasRemoteAttachments,
+            },
+        ],
+    });
+
     return (
         <AboutViewAnchored defaultOpen={hasRemoteAttachments ? null : "licensing"}>
             <AccordionItemWrapper
@@ -60,3 +70,13 @@ export function RemoteAttachmentsInfoHub({ hasRemoteAttachments, featureAvailabi
         </AboutViewAnchored>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Remote Attachments",
+        featureIcon: "remote-attachment",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

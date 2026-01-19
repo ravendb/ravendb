@@ -56,7 +56,7 @@ describe("RemoteAttachments", () => {
 
     it("keeps Add new enabled after toggling Remote Attachments on", async () => {
         const { screen, fireClick } = await rtlRender_WithWaitForLoad(
-            <DefaultRemoteAttachments hasRemoteAttachments={false} databaseAccess="DatabaseAdmin" />
+            <DefaultRemoteAttachments hasRemoteDestinations={false} databaseAccess="DatabaseAdmin" />
         );
 
         const enableSwitch = screen.getByRole("checkbox", { name: selectors.titles.enableRemoteAttachments });

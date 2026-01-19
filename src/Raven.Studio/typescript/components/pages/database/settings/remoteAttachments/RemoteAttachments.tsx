@@ -34,10 +34,9 @@ import { RemoteAttachmentsInfoHub } from "components/pages/database/settings/rem
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import { EmptySet } from "components/common/EmptySet";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
 export default function RemoteAttachments() {
     const { reportEvent } = useEventsCollector();
@@ -61,15 +60,6 @@ export default function RemoteAttachments() {
     const { handleSubmit, formState, reset } = form;
 
     const hasRemoteAttachments = useAppSelector(licenseSelectors.statusValue("HasRemoteAttachments"));
-    const featureAvailability = useLimitedFeatureAvailability({
-        defaultFeatureAvailability,
-        overwrites: [
-            {
-                featureName: defaultFeatureAvailability[0].featureName,
-                value: hasRemoteAttachments,
-            },
-        ],
-    });
 
     useDirtyFlag(formState.isDirty || isAnyModified);
 
@@ -124,8 +114,7 @@ export default function RemoteAttachments() {
                                     },
                                     {
                                         isActive: !hasDatabaseAdminAccess,
-                                        message:
-                                            "You don't have the required permissions to save changes (Database Admin access required)",
+                                        message: getDatabaseAccessRequiredMessage("DatabaseAdmin"),
                                     },
                                 ]}
                             >
@@ -150,10 +139,7 @@ export default function RemoteAttachments() {
                             </div>
                         </Col>
                         <Col sm={12} lg={4}>
-                            <RemoteAttachmentsInfoHub
-                                hasRemoteAttachments={hasRemoteAttachments}
-                                featureAvailability={featureAvailability}
-                            />
+                            <RemoteAttachmentsInfoHub />
                         </Col>
                     </Row>
                 </Form>
@@ -210,8 +196,7 @@ function DestinationsList() {
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasDatabaseAdminAccess,
-                            message:
-                                "You don't have the required permissions to add destinations (Database Admin access required)",
+                            message: getDatabaseAccessRequiredMessage("DatabaseAdmin"),
                         }}
                     >
                         <Button
@@ -354,13 +339,3 @@ const useRemoteAttachmentsSideEffects = ({ watch, setValue }: UseFormReturn<Remo
         return unsubscribe;
     }, [setValue, watch]);
 };
-
-const defaultFeatureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "Remote Attachments",
-        featureIcon: "remote-attachment",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-];

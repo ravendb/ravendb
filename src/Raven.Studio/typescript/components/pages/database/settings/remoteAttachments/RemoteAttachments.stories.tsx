@@ -18,8 +18,8 @@ export default {
 
 interface RemoteAttachmentsStoryArgs {
     databaseAccess: databaseAccessLevel;
-    hasProperLicense: boolean;
     hasRemoteAttachments: boolean;
+    hasRemoteDestinations: boolean;
 }
 
 export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
@@ -29,8 +29,8 @@ export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
     },
     args: {
         databaseAccess: "DatabaseAdmin",
-        hasProperLicense: true,
         hasRemoteAttachments: true,
+        hasRemoteDestinations: true,
     },
     render: (args) => {
         const { accessManager, license, databases } = mockStore;
@@ -38,10 +38,10 @@ export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         license.with_LicenseLimited({
-            HasRemoteAttachments: args.hasProperLicense,
+            HasRemoteAttachments: args.hasRemoteAttachments,
         });
         databasesService.withRemoteAttachmentsConfiguration(
-            args.hasRemoteAttachments
+            args.hasRemoteDestinations
                 ? DatabasesStubs.remoteAttachmentsConfiguration()
                 : DatabasesStubs.emptyRemoteAttachmentsConfiguration()
         );
