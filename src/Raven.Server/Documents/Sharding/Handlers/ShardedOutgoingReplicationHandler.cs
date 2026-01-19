@@ -27,11 +27,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
         private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly int _protocolVersion;
 
         public readonly string DestinationDatabaseName;
         public string MissingAttachmentMessage { get; set; }
 
-        public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
+        public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId, int protocolVersion) :
             base(connectionInfo, parent.Server, parent.Context.DatabaseName, parent.Context.NotificationCenter, node, parent.Server.ContextPool, parent.Context.DatabaseShutdown)
         {
             _parent = parent;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
             };
             _sourceDatabaseId = sourceDatabaseId;
-
+            _protocolVersion = protocolVersion;
             DestinationDatabaseName = node.Database;
         }
 
@@ -79,6 +80,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 batch?.BatchSent?.TrySetException(e);
                 throw;
             }
+        }
+
+        protected override int GetReplicationTcpVersion()
+        {
+            return _protocolVersion;
         }
 
         private void SendDocumentsBatch(TransactionOperationContext context, ReplicationBatch batch, OutgoingReplicationStatsScope stats)
