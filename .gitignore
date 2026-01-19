@@ -158,3 +158,4 @@ src/Raven.Pal/test-runner
 .agents/
 
 .claude/
+src/.cache/

@@ -71,6 +71,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected InterruptibleRead<TContextPool, TOperationContext> _interruptibleRead;
         protected OutgoingReplicationStatsAggregator _lastStats;
         protected RavenLogger Logger;
+        private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
 
         public ServerStore Server => _server;
         public long LastSentDocumentEtag => _lastSentDocumentEtag;
@@ -111,6 +112,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             _connectionDisposed = new AsyncManualResetEvent(token);
 
             Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), _databaseName);
+            _endOfStreamExceptionLogger = new DeescalatingWarnToDebugLogger(Logger);
             Destination = node;
             Metrics = new ReplicationMetricsCountersManager();
         }
@@ -698,7 +700,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
                     if (e.InnerException is IOException ioe)
                     {
-                        HandleIOException(ioe);
+                        HandleIoException(ioe);
+                    }
+
+                    if (e.InnerException is EndOfStreamException eose)
+                    {
+                        HandleEndOfStreamException(eose);
+                        return;
                     }
                 }
 
@@ -712,9 +720,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 HandleOperationCancelException(e);
             }
+            catch (EndOfStreamException e)
+            {
+                HandleEndOfStreamException(e);
+            }
             catch (IOException e)
             {
-                HandleIOException(e);
+                HandleIoException(e);
             }
             catch (LegacyReplicationViolationException e)
             {
@@ -724,6 +736,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 HandleException(e);
             }
+
+            return;
 
             void HandleOperationCancelException(OperationCanceledException e)
             {
@@ -736,7 +750,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 }
             }
 
-            void HandleIOException(IOException e)
+            void HandleIoException(IOException e)
             {
                 if (Logger.IsDebugEnabled)
                 {
@@ -754,6 +768,17 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 if (Logger.IsWarnEnabled)
                     Logger.Warn($"LegacyReplicationViolationException occurred on replication thread ({FromToString}). " +
                                 "Replication is stopped and will not continue until the violation is resolved. ", e);
+                OnFailed(e);
+            }
+
+            void HandleEndOfStreamException(EndOfStreamException e)
+            {
+                if (_endOfStreamExceptionLogger.IsEnabled)
+                {
+                    _endOfStreamExceptionLogger.Log(
+                        $"Unexpected exception occurred on replication thread ({FromToString}). Replication stopped (will be retried later).",
+                        e);
+                }
                 OnFailed(e);
             }
 

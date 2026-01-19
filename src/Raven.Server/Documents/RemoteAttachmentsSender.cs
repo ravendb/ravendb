@@ -14,9 +14,8 @@ using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Exceptions.Attachments;
 using Raven.Server.Extensions;
-using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -38,9 +37,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _remotePeriod;
         private readonly OperationCancelToken _token;
-
-        // Identifier (case in-sensitive) -> (Hash (case sensitive) -> Exception): we keep the exceptions to alert at the end of the batch
-        private readonly Dictionary<string, Dictionary<string, UploadAttachmentException>> _batchExceptionsByIdentifier = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly string MisconfigurationAlertMessage = $"Failed to upload the attachments to remote storage due to misconfiguration.";
 
         // Identifier (case in-sensitive) -> (Hash (case sensitive) -> RetryCount): we keep track of how many times we retried uploading an attachment
         private readonly Dictionary<string, Dictionary<string, long>> _inMemoryStateErrorsByIdentifier = new(StringComparer.OrdinalIgnoreCase);
@@ -134,8 +131,6 @@ namespace Raven.Server.Documents
                         await UploadAttachmentsBatch(attachmentsToUpload);
                     }
 
-                    AlertAndLogOnBatchErrorsIfNeeded();
-
                     var command = new UpdateRemoteAttachmentsCommand(_database, currentTime, _alreadySeenDocs, _attachmentsToUploadByIdentifier);
                     await _database.TxMerger.Enqueue(command);
 
@@ -144,7 +139,6 @@ namespace Raven.Server.Documents
                         Logger.Debug($"Processed remote attachments batch. Uploaded: {new Size(_totalUploadedInBytes, SizeUnit.Bytes)}, Remote Count: {command.RemoteCount}.");
                     }
 
-                    ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(_batchExceptionsByIdentifier);
                 }
             }
             catch (OperationCanceledException)
@@ -167,7 +161,6 @@ namespace Raven.Server.Documents
             context.Renew();
 
             _totalUploadedInBytes = 0L;
-            _batchExceptionsByIdentifier.Clear();
             _alreadySeenDocs.Clear();
             _attachmentsToUploadByIdentifier.Clear();
         }
@@ -306,55 +299,9 @@ namespace Raven.Server.Documents
             return attachmentsToUpload;
         }
 
-        private void AlertAndLogOnBatchErrorsIfNeeded()
-        {
-            if (_batchExceptionsByIdentifier.Count <= 0) 
-                return;
-
-            foreach (var (identifier, hashPerError) in _batchExceptionsByIdentifier)
-            {
-                _token.ThrowIfCancellationRequested();
-
-                var hashes = new HashSet<string>();
-                var exceptions = new List<Exception>(hashPerError.Count);
-                
-                foreach ((string key, UploadAttachmentException exception) in hashPerError)
-                {
-                    hashes.Add(key);
-                    exceptions.Add(exception);
-                }
-
-                var msg = $"Failed to upload remote attachment for identifier '{identifier}' after multiple attempts. Skipping further attempts for this attachment. Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for '{identifier}'.";
-
-                if (Logger.IsDebugEnabled)
-                {
-                    AggregateException ex = new AggregateException($"Failed to upload remote attachment for identifier '{identifier}' too many times.", exceptions);
-                    Logger.Debug(ex, "{0}{1}Failed Hashes: {2}", msg, Environment.NewLine, string.Join(", ", hashes));
-                }
-
-                var alert = AlertRaised.Create(_database.Name, AlertTitleError, msg, AlertReason.Attachments_RemoteAttachmentErroredIdentifier, NotificationSeverity.Error, key: nameof(AlertReason.Attachments_RemoteAttachmentErroredIdentifier));
-                _database.NotificationCenter.Add(alert);
-            }
-        }
-
-        private const string AlertTitleSkip = "Remote attachment upload was skipped.";
-        private const string AlertTitleError = "Remote attachment upload failed.";
-        private long _counter = 0;
-        private DateTime _lastAlertTime = DateTime.MinValue;
-        private static readonly long AlertThresholdTicks = TimeSpan.FromMinutes(1).Ticks;
-
         private void HandleSkippedItem(string documentId, Attachment item, RemoteAttachmentsDestinationConfiguration destination)
         {
-            var now = _database.Time.GetUtcNow();
-            var timeSinceLastAlert = now.Ticks - _lastAlertTime.Ticks;
-
-            // on first skip or each 16th time or if last alert was more than a minute ago
-            var shouldAlert = (_counter++ % 16 == 0) || (timeSinceLastAlert > AlertThresholdTicks);
-
-            if (shouldAlert == false && Logger.IsDebugEnabled == false)
-            {
-                return;
-            }
+            // for now we just log the skipped item and alert
 
             var destinationStr = destination == null ? "destination is null." : destination.Disabled ? "destination is disabled." : "destination doesn't have uploader configured.";
             var msg = $"Skipping uploading remote attachment '{item.Name}' with identifier '{item.RemoteParameters.Identifier}' for document id '{documentId}'. Reason: {destinationStr}";
@@ -364,13 +311,7 @@ namespace Raven.Server.Documents
                 Logger.Debug(msg);
             }
 
-            if (shouldAlert)
-            {
-                // update the last alert time only if we are sending an alert
-                _lastAlertTime = now;
-                var alert = AlertRaised.Create(_database.Name, AlertTitleSkip, msg, AlertReason.Attachments_RemoteAttachmentWithoutIdentifier, NotificationSeverity.Warning, key: nameof(AlertReason.Attachments_RemoteAttachmentWithoutIdentifier));
-                _database.NotificationCenter.Add(alert);
-            }
+            _database.NotificationCenter.RemoteAttachmentsNotifications.AddUploadErrors(MisconfigurationAlertMessage, item.RemoteParameters.Identifier, new RemoteAttachmentsErrorInfo(msg, item.RemoteParameters.Identifier, item.Base64Hash.ToString(), [documentId]));
         }
 
         private void HandleUploadTaskException(AttachmentRemoteInfo info)
@@ -380,20 +321,23 @@ namespace Raven.Server.Documents
             var errors = _inMemoryStateErrorsByIdentifier.GetOrAdd(identifier);
 
             var count = errors.GetOrAdd(hash);
-            if (count < 3)
-            {
-                errors[hash] = ++count;
+            errors[hash] = ++count;
 
-                info.Status = BackgroundWorkInfoStatus.Retry;
-            }
-            else
+            // we always try to retry the upload with delay
+            info.Status = BackgroundWorkInfoStatus.Retry;
+            info.RetryCount = count;
+
+            if (Logger.IsDebugEnabled)
             {
-                // we have tried enough times, we need to remove it from background tree and alert
-                var ex = new UploadAttachmentException($"Failed to upload remote attachment with identifier '{identifier}' and hash '{hash}', the attachment belong to following documents: {string.Join(", ", info.DocumentIds.Select(x => $"{x}"))}", info.Exception);
-                _batchExceptionsByIdentifier.GetOrAdd(identifier).TryAdd(hash, ex);
-                errors.Remove(hash);
-                info.Status = BackgroundWorkInfoStatus.Skip;
+                Logger.Debug($"Failed to upload remote attachment with identifier '{identifier}' and hash '{hash}' attempt '{count}'. " +
+                             $"Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'." +
+                             $"Will retry in the next batch. Affected documents: [{string.Join(", ", info.DocumentIds.Select(x => $"'{x}'"))}]", info.Exception);
             }
+
+            var msg = $"Failed to upload remote attachment for identifier '{identifier}' after multiple attempts. Please check the {nameof(RemoteAttachmentsConfiguration)}.{nameof(RemoteAttachmentsConfiguration.Destinations)} configuration for identifier '{identifier}'.";
+            _database.NotificationCenter.RemoteAttachmentsNotifications.AddUploadErrors(msg, identifier, new RemoteAttachmentsErrorInfo(info.Exception.ToString(), identifier, hash, info.DocumentIds));
+
+            ForTestingPurposes?.BeforeEndOfTheBatch?.Invoke(msg);
         }
 
         private async Task<long> CreateUploadTaskAsync(AttachmentUploader uploader, string hash)
@@ -519,7 +463,7 @@ namespace Raven.Server.Documents
 
         internal sealed class TestingStuff
         {
-            internal Action<Dictionary<string, Dictionary<string, UploadAttachmentException>>> BeforeEndOfTheBatch;
+            internal Action<string> BeforeEndOfTheBatch;
         }
     }
 

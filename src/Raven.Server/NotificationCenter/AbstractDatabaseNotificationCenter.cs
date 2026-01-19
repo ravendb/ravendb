@@ -18,6 +18,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
     public readonly RequestLatency RequestLatency;
     public readonly EtlNotifications EtlNotifications;
     public readonly QueueSinkNotifications QueueSinkNotifications;
+    public readonly RemoteAttachmentsNotifications RemoteAttachmentsNotifications;
     public readonly SlowWriteNotifications SlowWrites;
 
     protected AbstractDatabaseNotificationCenter(ServerStore serverStore, string database, RavenConfiguration configuration, CancellationToken shutdown)
@@ -37,6 +38,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
         EtlNotifications = new EtlNotifications(this);
         SlowWrites = new SlowWriteNotifications(this);
         QueueSinkNotifications = new QueueSinkNotifications(this);
+        RemoteAttachmentsNotifications = new RemoteAttachmentsNotifications(this);
 
         PostponedNotificationSender = new PostponedNotificationsSender(database, Storage, Watchers, RavenLogManager.Instance.GetLoggerForDatabase<PostponedNotificationsSender>(database), shutdown);
     }
@@ -50,6 +52,7 @@ public abstract class AbstractDatabaseNotificationCenter : AbstractNotificationC
         Indexing?.Dispose();
         RequestLatency?.Dispose();
         SlowWrites?.Dispose();
+        RemoteAttachmentsNotifications?.Dispose();
 
         base.Dispose();
     }

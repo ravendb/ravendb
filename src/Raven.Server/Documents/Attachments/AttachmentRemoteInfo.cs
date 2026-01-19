@@ -14,6 +14,8 @@ public class AttachmentRemoteInfo
 
     public string Hash;
 
+    public long RetryCount;
+
     public AttachmentRemoteInfo()
     {
 

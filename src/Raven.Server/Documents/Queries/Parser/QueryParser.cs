@@ -718,7 +718,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                 QueryExpression expr;
                 if (Field(out var field))
                 {
-                    if (field.FieldValue == TimeSeries)
+                    if (string.Equals(field.FieldValue, TimeSeries, StringComparison.OrdinalIgnoreCase))
                     {
                         expr = GetTimeSeriesExpression(query);
                     }

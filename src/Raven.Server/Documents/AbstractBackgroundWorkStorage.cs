@@ -35,24 +35,35 @@ public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : Abstract
     protected abstract TWorkInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice);
 
     [DoesNotReturn]
-    protected void ThrowWrongDateFormat(Slice treeKey, string expirationDate)
+    protected static void ThrowWrongDateFormat(DocumentDatabase database, Slice treeKey, string expirationDate)
     {
         throw new InvalidOperationException(
-            $"The due date format for document '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
+            $"The due date format for document '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {database.Time.GetUtcNow():O}");
     }
 
     public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
     {
+        DateTime processDateUniversalTime = ProcessDateUniversalTime(Database, lowerId, processDateString);
+        PutTicksDirectly(context, lowerId, processDateUniversalTime.Ticks);
+    }
+
+    internal static DateTime ProcessDateUniversalTime(DocumentDatabase database, Slice lowerId, string processDateString)
+    {
         if (DateTime.TryParseExact(processDateString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                 out DateTime processDate) == false)
-            ThrowWrongDateFormat(lowerId, processDateString);
+            ThrowWrongDateFormat(database, lowerId, processDateString);
 
         // We explicitly enable adding items that have already been expired, we have to, because if the time lag is short, it is possible
         // that we add an item that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
         // and we'll use the normal cleanup routine to clean things up later.
 
         var processDateUniversalTime = processDate.ToUniversalTime();
-        var ticksBigEndian = Bits.SwapBytes(processDateUniversalTime.Ticks);
+        return processDateUniversalTime;
+    }
+
+    internal void PutTicksDirectly(DocumentsOperationContext context, Slice lowerId, long processDateUniversalTimeTicks)
+    {
+        var ticksBigEndian = Bits.SwapBytes(processDateUniversalTimeTicks);
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
