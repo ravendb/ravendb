@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Sharding.Queries
             {
                 IDisposable returnToContextPool = RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 return (ctx, returnToContextPool);
-            }, documentsComparer, commands, _groupByFields, skip: Query.Offset ?? 0, take: Query.Limit ?? int.MaxValue, Token);
+            }, documentsComparer, commands, Query, _groupByFields, IsProjectionFromMapReduceIndex, Context, Token);
 
             var shards = GetShardNumbers(commands);
 

@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsProjection)
                 {
                     RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
-                    var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context, _token);
+                    var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _context, _token);
                     if (result.List != null)
                     {
                         var it = result.List.GetEnumerator();

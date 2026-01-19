@@ -144,20 +144,26 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         private readonly Func<(JsonOperationContext, IDisposable)> _allocateJsonContext;
         private readonly IComparer<BlittableJsonReaderObject> _comparer;
         private readonly Dictionary<int, PostQueryStreamCommand> _queryStreamCommands;
+        private readonly IndexQueryServerSide _query;
         private readonly List<OrderByField> _groupByFields;
+        private readonly bool _isProjectionFromMapReduceIndex;
+        private readonly TransactionOperationContext _context;
         private readonly long _skip;
         private readonly long _take;
         private readonly CancellationToken _token;
 
-        public ShardedStreamQueryOperation(ShardedDatabaseRequestHandler requestHandler, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, List<OrderByField> groupByFields, long skip, long take, CancellationToken token)
+        public ShardedStreamQueryOperation(ShardedDatabaseRequestHandler requestHandler, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, IndexQueryServerSide query, List<OrderByField> groupByFields, bool isProjectionFromMapReduceIndex, TransactionOperationContext context, CancellationToken token)
         {
             _requestHandler = requestHandler;
             _allocateJsonContext = allocateJsonContext;
             _comparer = comparer;
             _queryStreamCommands = queryStreamCommands;
+            _query = query;
             _groupByFields = groupByFields;
-            _skip = skip;
-            _take = take;
+            _isProjectionFromMapReduceIndex = isProjectionFromMapReduceIndex;
+            _context = context;
+            _skip = query.Offset ?? 0;
+            _take = query.Limit ?? int.MaxValue;
             _token = token;
             ExpectedEtag = null;
         }
@@ -173,7 +179,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             var queryStats = new StreamQueryStatistics();
 
             var mergedEnumerator = _groupByFields != null
-                ? new ShardedMapReduceStreamingEnumerator(_groupByFields, _requestHandler, queryStats, _allocateJsonContext, _token)
+                ? new ShardedMapReduceStreamingEnumerator(_query, _groupByFields, _requestHandler, _isProjectionFromMapReduceIndex, queryStats, _context, _token)
                 : new MergedEnumerator<BlittableJsonReaderObject>(_comparer);
 
             foreach (var streamResult in results.Values)

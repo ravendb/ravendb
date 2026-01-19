@@ -292,7 +292,6 @@ select sum(""Count"") as Sum, key() as Name");
                             queryResult.Add(stream.Current.Document);
 
                         Assert.Equal(0, queryResult.Count);
-                        //TODO: Assert.Equal(1, stats.SkippedResults);
                     }
                 }
             }
@@ -637,8 +636,6 @@ group by Name
 order by Count as long desc
 select sum(""Count"") as Sum, key() as Name");
 
-                    var queryResult = new List<UserMapReduce.Result>();
-
                     var error = Assert.Throws<NotSupportedInShardingException>(() => session.Advanced.Stream(query1));
                     Assert.Contains("Ordering by field 'Count' which is not part of the 'group by' clause is not supported in sharded streaming queries.", error.Message);
                 }
@@ -915,11 +912,12 @@ limit 1
                             @"
 from Orders
 group by Company
-order by count() desc
+order by Company desc
 select count() as Count, key() as Company");
 
                     var queryResult = new List<AutoMapReduceResult>();
-                    using (var stream = session.Advanced.Stream(query1, out var stats))
+                    StreamQueryStatistics stats;
+                    using (var stream = session.Advanced.Stream(query1, out stats))
                     {
                         while (stream.MoveNext())
                             queryResult.Add(stream.Current.Document);
@@ -933,8 +931,7 @@ select count() as Count, key() as Company");
 
                     var query2 = session.Advanced.RawQuery<AutoMapReduceResult2>(
                             $@"
-from index '{"123"}' as o
-order by o.Count
+from index '{stats.IndexName}' as o
 select {{
     NewCompanyName: o.Company + '_' + o.Company,
     NewCount: o.Count * 2
@@ -1050,7 +1047,6 @@ select project(o)");
                             x.Sum
                         });
 
-                    // Streaming dynamic/anonymous types
                     var queryResult = new List<dynamic>();
                     using (var stream = session.Advanced.Stream(query))
                     {
@@ -1062,6 +1058,50 @@ select project(o)");
                     Assert.Equal(3, queryResult[0].Sum);
                     Assert.Equal(1, queryResult[1].Sum);
                     Assert.Equal(2, queryResult[2].Sum);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Simple_Map_Reduce_With_Order_By_And_Projection2()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Count = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var query = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
+                        let sum = user.Sum + 1
+                        let name = user.Name + "_" + user.Name
+                        orderby user.Name
+                        select new
+                        {
+                            Sum = sum,
+                            Name = name
+                        });
+
+                    var queryResult = new List<dynamic>();
+                    using (var stream = session.Advanced.Stream(query))
+                    {
+                        while (stream.MoveNext())
+                            queryResult.Add(stream.Current.Document);
+                    }
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(2, queryResult[1].Sum);
+                    Assert.Equal("Egor_Egor", queryResult[0].Name);
+                    Assert.Equal(4, queryResult[0].Sum);
+                    Assert.Equal("Grisha_Grisha", queryResult[1].Name);
+                    Assert.Equal(3, queryResult[2].Sum);
+                    Assert.Equal("Igal_Igal", queryResult[2].Name);
                 }
             }
         }
@@ -1084,7 +1124,6 @@ select project(o)");
 
                     var query = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                                  let sum = user.Sum
-                                 orderby user.Sum
                                  select new
                                  {
                                      Sum = sum

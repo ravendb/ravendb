@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -8,39 +9,143 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Sharding;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results.Sharding;
+using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
 public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJsonReaderObject>
 {
+    private readonly IndexQueryServerSide _query;
     private readonly StreamQueryStatistics _queryStats;
     private readonly ShardedDatabaseRequestHandler _requestHandler;
-    private readonly JsonOperationContext _context;
-    private readonly IDisposable _returnContext;
+    private readonly ShardedQueryFilter _queryFilter;
+    private readonly bool _isProjectionFromMapReduceIndex;
+    private readonly TransactionOperationContext _context;
     private readonly CancellationToken _token;
+
+    private IShardedBatchReducer _reducer;
+    private ShardedMapReduceResultRetriever _retriever;
+
+    private readonly Queue<BlittableJsonReaderObject> _resultsBuffer = new();
     private readonly List<BlittableJsonReaderObject> _currentBatch = new();
     private readonly List<IDisposable> _toDispose = new();
-    private IShardedBatchReducer _reducer;
 
-    public ShardedMapReduceStreamingEnumerator(List<OrderByField> reduceKeys, ShardedDatabaseRequestHandler requestHandler, StreamQueryStatistics queryStats, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, CancellationToken token)
+    public ShardedMapReduceStreamingEnumerator(
+        IndexQueryServerSide query,
+        List<OrderByField> reduceKeys,
+        ShardedDatabaseRequestHandler requestHandler,
+        bool isProjectionFromMapReduceIndex,
+        StreamQueryStatistics queryStats,
+        TransactionOperationContext context,
+        CancellationToken token)
         : base(new ReduceKeyComparer(reduceKeys))
     {
+        _query = query;
         _requestHandler = requestHandler;
+        _isProjectionFromMapReduceIndex = isProjectionFromMapReduceIndex;
         _queryStats = queryStats;
+        _context = context;
         _token = token;
-        (_context, _returnContext) = allocateJsonContext();
+
+        if (query.Metadata.Query.Filter != null)
+            _queryFilter = new ShardedQueryFilter(query, new ShardedQueryResult(), queryTimings: null, _requestHandler.DatabaseContext.Indexes.ScriptRunnerCache, _context);
     }
 
     public override bool MoveNext()
     {
+        if (_resultsBuffer.Count > 0)
+        {
+            CurrentItem = _resultsBuffer.Dequeue();
+            return true;
+        }
+
+        while (true)
+        {
+            var itemStatus = GetNextDocument(out BlittableJsonReaderObject item);
+            switch (itemStatus)
+            {
+                case NextItemStatus.Done:
+                    CurrentItem = null;
+                    return false;
+
+                case NextItemStatus.Filter:
+                    continue;
+
+                case NextItemStatus.Found:
+                    if (_isProjectionFromMapReduceIndex == false)
+                    {
+                        // simple map-reduce (no projection)
+                        CurrentItem = item;
+                        return true;
+                    }
+
+                    _retriever ??= InitializeRetriever();
+
+                    foreach (BlittableJsonReaderObject result in ShardedQueryProcessor.GetProjectionResults(_retriever, item, _context))
+                    {
+                        _resultsBuffer.Enqueue(result);
+                    }
+
+                    if (_resultsBuffer.Count > 0)
+                    {
+                        CurrentItem = _resultsBuffer.Dequeue();
+                        return true;
+                    }
+
+                    continue;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+    }
+
+    private ShardedMapReduceResultRetriever InitializeRetriever()
+    {
+        var index = _requestHandler.DatabaseContext.Indexes.GetIndex(_queryStats.IndexName);
+        if (index == null)
+            IndexDoesNotExistException.ThrowFor(_queryStats.IndexName);
+
+        var fieldsToFetch = new FieldsToFetch(_query, index.Definition, index.Type);
+        return new ShardedMapReduceResultRetriever(
+            _requestHandler.DatabaseContext.Indexes.ScriptRunnerCache,
+            _query,
+            null,
+            SearchEngineType.Lucene,
+            fieldsToFetch,
+            null,
+            _context,
+            null,
+            null,
+            null,
+            _requestHandler.DatabaseContext.IdentityPartsSeparator);
+    }
+
+    private enum NextItemStatus
+    {
+        Done,
+        Filter,
+        Found
+    }
+
+    private NextItemStatus GetNextDocument(out BlittableJsonReaderObject item)
+    {
         if (WorkEnumerators.Count == 0)
-            return false;
+        {
+            item = null;
+            return NextItemStatus.Done;
+        }
 
         var minEnumerator = WorkEnumerators[0];
         for (var index = 1; index < WorkEnumerators.Count; index++)
@@ -56,7 +161,6 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         _toDispose.ForEach(x => x.Dispose());
         _toDispose.Clear();
         _currentBatch.Clear();
-        CurrentItem?.Dispose();
 
         // we iterate backwards so we can easily remove exhausted enumerators
         for (int i = WorkEnumerators.Count - 1; i >= 0; i--)
@@ -78,15 +182,30 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
         // re-reduce on this specific batch
         _reducer ??= CreateBatchReducer();
-        CurrentItem = _reducer.ReduceBatch(_currentBatch);
+        item = _reducer.ReduceBatch(_currentBatch);
 
-        return true;
+        if (_queryFilter != null)
+        {
+            var filterResult = _queryFilter.Apply(item);
+            if (filterResult == FilterResult.Skipped)
+            {
+                item.Dispose();
+                return NextItemStatus.Filter;
+            }
+
+            if (filterResult == FilterResult.LimitReached)
+                return NextItemStatus.Done;
+        }
+
+        return NextItemStatus.Found;
     }
 
     public override void Dispose()
     {
-        base.Dispose();
-        _returnContext.Dispose();
+        using (_reducer)
+        {
+            base.Dispose();
+        }
     }
 
     private sealed class ReduceKeyComparer : IComparer<BlittableJsonReaderObject>
@@ -176,23 +295,24 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         throw new InvalidOperationException($"Index '{_queryStats.IndexName}' is not a map-reduce index");
     }
 
-    private interface IShardedBatchReducer
+    private interface IShardedBatchReducer : IDisposable
     {
         BlittableJsonReaderObject ReduceBatch(List<BlittableJsonReaderObject> batch);
     }
 
     private class ShardedStaticBatchReducer : IShardedBatchReducer
     {
+        private readonly IndexInformationHolder _index;
+        private readonly TransactionOperationContext _context;
+
         private readonly IndexingFunc _reducingFunc;
         private readonly ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper _wrapper;
-        private readonly JsonOperationContext _context;
-        private readonly IndexInformationHolder _index;
+        private readonly UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        // We reuse this list to avoid allocating a new List<object> for every single key
         private readonly List<object> _singleResultContainer = new(1);
         private IPropertyAccessor _propertyAccessor;
 
-        public ShardedStaticBatchReducer(IndexInformationHolder index, JsonOperationContext context)
+        public ShardedStaticBatchReducer(IndexInformationHolder index, TransactionOperationContext context)
         {
             _index = index;
             _context = context;
@@ -204,6 +324,9 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
             // Initialize the wrapper once. We will just feed it new data in the loop.
             _wrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
+
+            _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Sharded//Indexes//{index.Name}");
+            CurrentIndexingScope.Current = new OrchestratorIndexingScope(_context, _unmanagedBuffersPool);
         }
 
         public BlittableJsonReaderObject ReduceBatch(List<BlittableJsonReaderObject> batch)
@@ -214,9 +337,8 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
             foreach (var output in _reducingFunc(_wrapper))
             {
-                _singleResultContainer.Add(output);
-
                 _propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
+                _singleResultContainer.Add(output);
             }
 
             if (_singleResultContainer.Count == 0)
@@ -235,18 +357,26 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
             return null;
         }
+
+        public void Dispose()
+        {
+            using (_unmanagedBuffersPool)
+            using (CurrentIndexingScope.Current)
+            {
+            }
+        }
     }
 
     private class ShardedAutoBatchReducer : IShardedBatchReducer
     {
         private readonly AutoMapReduceIndexDefinition _definition;
         private readonly ShardedAutoMapReduceIndexResultsAggregator _aggregator;
-        private readonly JsonOperationContext _context;
+        private readonly TransactionOperationContext _context;
         private readonly CancellationToken _token;
 
         private BlittableJsonReaderObject _reusableResultBuffer = null;
 
-        public ShardedAutoBatchReducer(IndexInformationHolder index, ShardedAutoMapReduceIndexResultsAggregator aggregator, JsonOperationContext context, CancellationToken token)
+        public ShardedAutoBatchReducer(IndexInformationHolder index, ShardedAutoMapReduceIndexResultsAggregator aggregator, TransactionOperationContext context, CancellationToken token)
         {
             if (index.Type.IsAutoMapReduce() == false)
                 throw new InvalidOperationException($"Index '{index.Name}' is not an auto map-reduce index");
@@ -260,8 +390,12 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         public BlittableJsonReaderObject ReduceBatch(List<BlittableJsonReaderObject> batch)
         {
             _reusableResultBuffer = null;
-            _aggregator.AggregateOn(batch, _definition, _context, null, ref _reusableResultBuffer, _token);
-            return _reusableResultBuffer;
+            var aggregateOn = _aggregator.AggregateOn(batch, _definition, _context, null, ref _reusableResultBuffer, _token);
+            return aggregateOn.GetOutputsToStore().First();
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected readonly DocumentsStorage DocumentsStorage;
 
-        protected readonly FieldsToFetch FieldsToFetch;
+        public readonly FieldsToFetch FieldsToFetch;
 
         protected readonly QueryTimingsScope RetrieverScope;
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Results
                         return default;
                     }
 
-                    return GetProjectionFromDocumentInternal(doc, ref retrieverInput, FieldsToFetch, _context, token);
+                    return GetProjectionFromDocumentInternal(doc, ref retrieverInput, _context, token);
                 }
 
                 var result = new DynamicJsonValue();
@@ -322,22 +322,22 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
-        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
+        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, JsonOperationContext context, CancellationToken token)
         {
             using (RetrieverScope?.Start())
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
-                return GetProjectionFromDocumentInternal(doc, ref retrieverInput, fieldsToFetch, context, token);
+                return GetProjectionFromDocumentInternal(doc, ref retrieverInput, context, token);
             }
         }
 
-        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
+        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, ref RetrieverInput retrieverInput, JsonOperationContext context, CancellationToken token)
         {
             var result = new DynamicJsonValue();
 
-            foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
+            foreach (var fieldToFetch in FieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, ref retrieverInput, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token) == false)
+                if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token) == false)
                 {
                     if (FieldsToFetch.Projection.MustExtractFromDocument)
                     {
@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                 }
 
-                var immediateResult = AddProjectionToResult(doc, ref retrieverInput, fieldsToFetch, result, key, fieldVal);
+                var immediateResult = AddProjectionToResult(doc, ref retrieverInput, FieldsToFetch, result, key, fieldVal);
 
                 if (immediateResult.Document != null || immediateResult.List != null)
                     return immediateResult;

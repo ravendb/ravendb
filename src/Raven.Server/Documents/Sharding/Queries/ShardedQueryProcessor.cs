@@ -215,7 +215,7 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
             var currentResults = result.Results;
             result.Results = new List<BlittableJsonReaderObject>();
 
-            using (var queryFilter = new ShardedQueryFilter(Query, result, scope, RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Context))
+            using (var queryFilter = new ShardedQueryFilter(Query, result, queryTimings: null, RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Context))
             {
                 foreach (var doc in currentResults)
                 {
@@ -252,32 +252,39 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
 
             foreach (var data in currentResults)
             {
-                var retrieverInput = new RetrieverInput();
-                (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
+                foreach (var projected in GetProjectionResults(retriever, data, Context))
                 {
-                    Data = data
-                }, ref retrieverInput, fieldsToFetch, Context, CancellationToken.None);
-
-                var results = result.Results;
-
-                if (document != null)
-                {
-                    AddDocument(document.Data);
-                }
-                else if (documents != null)
-                {
-                    foreach (var doc in documents)
-                    {
-                        AddDocument(doc.Data);
-                    }
-                }
-
-                void AddDocument(BlittableJsonReaderObject documentData)
-                {
-                    var doc = Context.ReadObject(documentData, "modified-map-reduce-result");
-                    results.Add(doc);
+                    result.Results.Add(projected);
                 }
             }
+        }
+    }
+
+    public static IEnumerable<BlittableJsonReaderObject> GetProjectionResults(ShardedMapReduceResultRetriever retriever, BlittableJsonReaderObject item, JsonOperationContext context)
+    {
+        var retrieverInput = new RetrieverInput();
+        (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
+        {
+            Data = item
+        }, ref retrieverInput, context, CancellationToken.None);
+
+        if (document != null)
+        {
+            yield return ProcessDocument(document.Data);
+        }
+        else if (documents != null)
+        {
+            foreach (var doc in documents)
+            {
+                yield return ProcessDocument(doc.Data);
+            }
+        }
+
+        yield break;
+
+        BlittableJsonReaderObject ProcessDocument(BlittableJsonReaderObject data)
+        {
+            return context.ReadObject(data, "modified-map-reduce-result");
         }
     }
 }
