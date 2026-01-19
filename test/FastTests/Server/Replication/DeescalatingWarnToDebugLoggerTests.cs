@@ -103,8 +103,8 @@ namespace FastTests.Server.Replication
 
         private class NLogTestSetup : IDisposable
         {
-            private readonly LoggingConfiguration _previousConfiguration;
             private readonly TestTarget _testTarget;
+            private readonly LoggingConfiguration _config;
 
             public DeescalatingWarnToDebugLogger Logger { get; }
 
@@ -112,38 +112,36 @@ namespace FastTests.Server.Replication
             {
                 minLevel ??= LogLevel.Debug;
 
-                // Store previous configuration to restore later
-                _previousConfiguration = LogManager.Configuration;
+                // Create a pair of factory and config.
+                LogFactory factory = new();
+                _config = new LoggingConfiguration(factory);
 
-                // Create new configuration with test target
-                var configuration = new LoggingConfiguration();
                 _testTarget = new TestTarget { Name = "test" };
-                configuration.AddTarget(_testTarget);
+                _config.AddTarget(_testTarget);
 
                 // Add logging rule
-                configuration.LoggingRules.Add(new LoggingRule("*", minLevel, _testTarget));
+                _config.LoggingRules.Add(new LoggingRule("*", minLevel, _testTarget));
 
-                LogManager.Configuration = configuration;
-                var nlogLogger = LogManager.GetLogger("test");
-                Logger = new DeescalatingWarnToDebugLogger(new RavenLogger(nlogLogger));
+                // Set the configuration in the factory to reload it.
+                factory.Configuration = _config;
+
+                // Use local factory to create it.
+                Logger logger = factory.GetLogger("test");
+                Logger = new DeescalatingWarnToDebugLogger(new RavenLogger(logger));
             }
 
             public List<LogEventInfo> GetLogs()
             {
-                LogManager.Flush();
+                _config.LogFactory.Flush();
                 return _testTarget.LogEvents.ToList();
             }
 
             public void Dispose()
             {
-                LogManager.Flush();
-                // Restore previous configuration
-                LogManager.Configuration = _previousConfiguration;
             }
         }
 
-        [Target("TestTarget")]
-        private class TestTarget : TargetWithLayout
+        private class TestTarget : Target
         {
             public List<LogEventInfo> LogEvents { get; } = new();
 
