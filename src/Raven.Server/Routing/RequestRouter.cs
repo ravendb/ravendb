@@ -163,8 +163,7 @@ namespace Raven.Server.Routing
             {
                 if (RavenLogManager.Instance.IsAuditEnabled)
                 {
-                    var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
-                    auditLog.Audit($"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {twoFactorMsg}");
+                    RequestHandler.LogAuditForServer("AUTH", $"Rejected request {context.Request.Method} {context.Request.GetFullUrl()} because: {twoFactorMsg}", context);
                 }
 
                 feature.WaitingForTwoFactorAuthentication();

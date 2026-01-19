@@ -46,6 +46,6 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
     public void LogAuditForIndex(string indexName, string action, string target, Exception e = null)
     {
         var auditLogger = RavenLogManager.Instance.GetAuditLoggerForIndex(DatabaseName, indexName);
-        LogAuditForInternal(auditLogger, action, target, e);
+        LogAuditForInternal(auditLogger, action, target, HttpContext, e);
     }
 }

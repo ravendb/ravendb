@@ -21,7 +21,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.BackgroundWork;
-using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
@@ -347,10 +346,10 @@ namespace SlowTests.Server.Documents.Attachments
                     GetStorageAttachmentsMetadataFromAllAttachments(database);
                     Assert.Equal(attachmentsCount + 1, Attachments.Count);
 
-                    Dictionary<string, Dictionary<string, UploadAttachmentException>> myExceptions = null;
+                    List<string> myExceptions = new List<string>();
                     database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
                     {
-                        myExceptions = exceptions;
+                        myExceptions.Add(exceptions);
                     };
 
                     // move in time & start remote
@@ -484,15 +483,20 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(attachmentsCount + 1, Attachments.Count);
                     }
 
-                    List<Exception> myExceptions = new List<Exception>();
+                    List<string> myExceptions = new List<string>();
                     database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
                     {
-                        myExceptions.AddRange(exceptions.Values.SelectMany(x => x.Values));
+                        myExceptions.Add(exceptions);
                     };
 
-                    // move in time & start remote
-                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                    await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
+
+                    var oldDt = DateTime.UtcNow;
+
+                        oldDt = oldDt.AddMinutes(15);
+
+                        // move in time & start remote
+                        database.Time.UtcDateTime = () => oldDt;
+                        await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
 
                     // nothing was uploaded because we had a faulty identifier
                     if (uploadAdditional)
@@ -532,7 +536,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     var exception = myExceptions.FirstOrDefault();
                     Assert.NotNull(exception);
-                    Assert.Contains("Failed to upload remote attachment with identifier", exception.Message);
+                    Assert.Contains("Failed to upload remote attachment for identifier", exception);
 
                     using AttachmentResult bad = await store.Operations.SendAsync(new GetAttachmentOperation(id, "att-bad-identifier.png", AttachmentType.Document, null));
 
@@ -626,10 +630,10 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyRemoteAttachmentsConfig = null;
                     identifier = await PutRemoteAttachmentsConfiguration(store, Settings); // rewrite the config without 2nd identifier
 
-                    Dictionary<string, Dictionary<string, UploadAttachmentException>> myExceptions = null;
+                    List<string> myExceptions = new List<string>();
                     database.RemoteAttachmentsSender.ForTestingPurposesOnly().BeforeEndOfTheBatch = exceptions =>
                     {
-                        myExceptions = exceptions;
+                        myExceptions.Add(exceptions);
                     };
 
                     // move in time & start remote

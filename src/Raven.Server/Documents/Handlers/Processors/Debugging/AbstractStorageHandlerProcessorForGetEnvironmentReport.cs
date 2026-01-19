@@ -24,8 +24,9 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
         var name = GetName();
         var type = GetEnvironmentType();
         var details = GetDetails();
+        var flat = UseFlatFormat();
 
-        return new GetEnvironmentStorageReportCommand(name, type, details, nodeTag);
+        return new GetEnvironmentStorageReportCommand(name, type, details, nodeTag, flat);
     }
 
     protected string GetName() => RequestHandler.GetStringQueryString("name");
@@ -41,8 +42,9 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
     }
 
     protected bool GetDetails() => RequestHandler.GetBoolValueQueryString("details", required: false) ?? false;
+    protected bool UseFlatFormat() => RequestHandler.GetBoolValueQueryString("flat", required: false) ?? false;
 
-    protected virtual DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de)
+    protected virtual DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de, bool flat)
     {
         throw new NotSupportedException();
     }
@@ -77,14 +79,14 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
         writer.WriteEndObject();
     }
 
-    public void WriteReport(AsyncBlittableJsonTextWriter writer, StorageEnvironmentWithType env, DocumentsOperationContext context, bool detailed = false)
+    public void WriteReport(AsyncBlittableJsonTextWriter writer, StorageEnvironmentWithType env, DocumentsOperationContext context, bool detailed = false, bool flat = false)
     {
         if (env == null)
             return;
         
         using (var tx = context.OpenWriteTransaction())
         {
-            var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed);
+            var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed, flat);
             writer.WriteStartObject();
             writer.WritePropertyName("Report");
             writer.WriteObject(context.ReadObject(djv, env.Name));

@@ -9,8 +9,8 @@
     <PackageVersion Include="AWSSDK.S3" Version="4.0.17.1" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.26.0" />
-    <PackageVersion Include="Azure.Storage.Queues" Version="12.24.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
+    <PackageVersion Include="Azure.Storage.Queues" Version="12.25.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.2" />
@@ -32,7 +32,7 @@
     <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageVersion Include="Jint" Version="4.4.2" />
-    <PackageVersion Include="JunitXml.TestLogger" Version="7.0.2" />
+    <PackageVersion Include="JunitXml.TestLogger" Version="8.0.0" />
     <PackageVersion Include="Lambda2Js.Signed" Version="3.1.4" />
     <PackageVersion Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageVersion Include="libsodium" Version="1.0.21" />
@@ -83,7 +83,7 @@
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
     <PackageVersion Include="MongoDB.Driver.GridFS" Version="2.30.0" />
     <PackageVersion Include="Mono.Posix.NETStandard" Version="1.0.0" />
-    <PackageVersion Include="MySqlConnector" Version="2.4.0" />
+    <PackageVersion Include="MySqlConnector" Version="2.5.0" />
     <PackageVersion Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />

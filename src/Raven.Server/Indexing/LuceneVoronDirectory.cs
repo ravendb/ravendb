@@ -211,6 +211,13 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
             
+            if (name.EndsWith(IndexFileNames.TERMS_INDEX_EXTENSION, StringComparison.OrdinalIgnoreCase))
+            {
+                // the cache consists only of files with the TERMS_INDEX_EXTENSION.
+                // https://github.com/ravendb/lucenenet/blob/e30e8f94f6895197913d091a61e7e831398ce3fb/src/Lucene.Net/Index/TermInfosReader.cs#L107
+                state.Transaction.LowLevelTransaction.OnRollBack += _ => RemoveFromTermsIndexCache(name);
+            }
+
             return new VoronIndexOutput(_index, _tempFileCache, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 
