@@ -215,7 +215,7 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
             var currentResults = result.Results;
             result.Results = new List<BlittableJsonReaderObject>();
 
-            using (var queryFilter = new ShardedQueryFilter(Query, result, queryTimings: null, RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Context))
+            using (var queryFilter = new ShardedQueryFilter(Query, result, scope, RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Context))
             {
                 foreach (var doc in currentResults)
                 {
