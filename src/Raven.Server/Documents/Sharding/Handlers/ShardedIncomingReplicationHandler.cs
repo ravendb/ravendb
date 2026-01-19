@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 _lastSentEtagPerDestination.Add(shardNumber, 0L);
 
-                _handlers[shardNumber] = new ShardedOutgoingReplicationHandler(parent, node, info, replicatedLastEtag.SourceDatabaseId);
+                _handlers[shardNumber] = new ShardedOutgoingReplicationHandler(parent, node, info, replicatedLastEtag.SourceDatabaseId, tcpConnectionOptions.ProtocolVersion);
                 _handlers[shardNumber].Start();
             }
         }
