@@ -38,6 +38,7 @@ import { remoteAttachmentsConstants } from "components/pages/database/settings/r
 import { remoteAttachmentsUtils } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsUtils";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import { storageClassOptions } from "components/utils/common";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface DestinationPanelProps extends RemoteAttachmentsDestinationFormData {
     onEdit: (id: string) => void;
@@ -69,20 +70,54 @@ export function DestinationPanel({
                             {isModified && <span className="text-warning ms-1">*</span>}
                         </RichPanelName>
                     </RichPanelInfo>
-                    {hasDatabaseAdminAccess && (
-                        <RichPanelActions>
-                            <Button variant={disabled ? "success" : "secondary"} onClick={() => onToggle(identifier)}>
+                    <RichPanelActions>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasDatabaseAdminAccess,
+                                message:
+                                    "You don't have the required permissions to modify destinations (Database Admin access required)",
+                            }}
+                        >
+                            <Button
+                                variant={disabled ? "success" : "secondary"}
+                                onClick={() => onToggle(identifier)}
+                                disabled={!hasDatabaseAdminAccess}
+                            >
                                 <Icon icon={disabled ? "play" : "disable"} />
                                 {disabled ? "Enable" : "Disable"}
                             </Button>
-                            <Button variant="secondary" onClick={() => onEdit(identifier)}>
+                        </ConditionalPopover>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasDatabaseAdminAccess,
+                                message:
+                                    "You don't have the required permissions to edit destinations (Database Admin access required)",
+                            }}
+                        >
+                            <Button
+                                variant="secondary"
+                                onClick={() => onEdit(identifier)}
+                                disabled={!hasDatabaseAdminAccess}
+                            >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
-                            <Button variant="danger" onClick={() => onDelete(identifier)}>
+                        </ConditionalPopover>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasDatabaseAdminAccess,
+                                message:
+                                    "You don't have the required permissions to delete destinations (Database Admin access required)",
+                            }}
+                        >
+                            <Button
+                                variant="danger"
+                                onClick={() => onDelete(identifier)}
+                                disabled={!hasDatabaseAdminAccess}
+                            >
                                 <Icon icon="trash" margin="m-0" />
                             </Button>
-                        </RichPanelActions>
-                    )}
+                        </ConditionalPopover>
+                    </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails>
                     <RichPanelDetailItem size="sm" label="Destination">

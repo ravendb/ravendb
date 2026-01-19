@@ -116,25 +116,34 @@ export default function RemoteAttachments() {
                                 icon="remote-attachment"
                                 licenseBadgeText={hasRemoteAttachments ? null : "Enterprise"}
                             />
-                            {hasDatabaseAdminAccess && (
-                                <ConditionalPopover
-                                    conditions={{
+                            <ConditionalPopover
+                                conditions={[
+                                    {
                                         isActive: !hasRemoteAttachments,
                                         message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                                    }}
+                                    },
+                                    {
+                                        isActive: !hasDatabaseAdminAccess,
+                                        message:
+                                            "You don't have the required permissions to save changes (Database Admin access required)",
+                                    },
+                                ]}
+                            >
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    variant="primary"
+                                    className="mb-3"
+                                    disabled={
+                                        !hasDatabaseAdminAccess ||
+                                        !hasRemoteAttachments ||
+                                        (!isAnyModified && !formState.isDirty)
+                                    }
+                                    icon="save"
+                                    isSpinning={formState.isSubmitting}
                                 >
-                                    <ButtonWithSpinner
-                                        type="submit"
-                                        variant="primary"
-                                        className="mb-3"
-                                        disabled={!isAnyModified && !formState.isDirty}
-                                        icon="save"
-                                        isSpinning={formState.isSubmitting}
-                                    >
-                                        Save
-                                    </ButtonWithSpinner>
-                                </ConditionalPopover>
-                            )}
+                                    Save
+                                </ButtonWithSpinner>
+                            </ConditionalPopover>
                             <div className={hasRemoteAttachments ? "" : "item-disabled pe-none"}>
                                 <RemoteAttachmentsSettingsCard />
                                 <DestinationsList />
@@ -198,18 +207,25 @@ function DestinationsList() {
         <div className="mb-4">
             <HrHeader
                 right={
-                    hasDatabaseAdminAccess && (
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasDatabaseAdminAccess,
+                            message:
+                                "You don't have the required permissions to add destinations (Database Admin access required)",
+                        }}
+                    >
                         <Button
                             size="sm"
                             onClick={() => handleOpenSheet()}
                             variant="info"
                             className="rounded-pill"
                             title="Click to define a new destination"
+                            disabled={!hasDatabaseAdminAccess}
                         >
                             <Icon icon="plus" size="sm" />
                             Add new
                         </Button>
-                    )
+                    </ConditionalPopover>
                 }
                 count={destinationsTotal}
             >
@@ -348,4 +364,3 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         enterprise: { value: true },
     },
 ];
-
