@@ -55,6 +55,11 @@
         background-color: var(--panel-header-bg);
         border-radius: 2px;
         z-index: 10;
+
+        &:has(.bs5) {
+            z-index: 11;
+        }
+
         //box-shadow: 0 0 0 1px @gray-700 inset, 0 0 10px -3px rgba(#000, .4);
 
         .cluster-dashboard-item-header {
@@ -218,7 +223,7 @@
     .property-container {
         margin: @gutter-xxs;
         margin-top: 0;
-        background-color: @well-bg;
+        background-color: var(--panel-bg-1);
 
         h4 {
             margin: 0;
@@ -800,6 +805,7 @@
         display: flex;
         flex-direction: column;
         padding: @gutter-xxs;
+        padding-top: 0;
 
         .databases-summary {
             display: flex;
@@ -810,7 +816,32 @@
 
         .virtual-grid,
         .static-grid {
+            background-color: var(--panel-header-bg);
             padding: 0;
+
+            .viewport {
+                background-color: var(--panel-bg-1);
+            }
+
+            .virtual-row {
+                background-color: var(--panel-bg-1);
+                &.even::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    backdrop-filter: brightness(1.1);
+                    pointer-events: none;
+                    z-index: 0;
+                }
+            }
+
+            .virtual-row:hover {
+                filter: var(--hover-filter);
+                transition: var(--transition-base);
+            }
 
             .token {
                 color: var(--text-color);
@@ -832,61 +863,6 @@
     }
 
     .tasks-list {
-        .external-replication {
-                color: @external-replication-color;
-        }
-        .replication-hub {
-            color: @pull-replication-hub-color;
-        }
-        .replication-sink {
-            color: @pull-replication-sink-color;
-        }
-        .ravendb-etl {
-            color: @ravendb-etl-color;
-        }
-        .olap-etl {
-            color: @olap-etl-color;
-        }
-        .sql-etl {
-            color: @sql-etl-color;
-        }
-        .snowflake-etl {
-            color: @snowflake-etl-color;
-        }
-        .elastic-etl {
-            color: @elastic-etl-color;
-        }
-        .kafka-etl {
-            color: @kafka-etl-color;
-        }
-        .rabbitmq-etl {
-            color: @rabbitmq-etl-color;
-        }
-        .azure-queue-storage-etl {
-            color: @azure-queue-storage-etl-color;
-        }
-        .amazon-sqs-etl {
-            color: @amazon-sqs-etl-color;
-        }
-        .ai-etl {
-            color: @ai-etl-color;
-        }
-        .genai {
-            color: @genai-color;
-        }
-        .kafka-sink {
-            color: @kafka-sink-color;
-        }
-        .rabbitmq-sink {
-            color: @rabbitmq-sink-color;
-        }
-        .periodic-backup {
-            color: @backup-color;
-        }
-        .subscription {
-            color: @subscription-color;
-        }
-        
         .text-bold {
             color: var(--text-emphasis) !important;
         }

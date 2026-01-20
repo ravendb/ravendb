@@ -29,6 +29,7 @@
 
         th {
             border-right: 1px solid colors.$border-color-light-var;
+            color: colors.$text-emphasis-var !important;
 
             * {
                 overflow: hidden;
@@ -161,6 +162,13 @@
                         color: $color;
                     }
                 }
+            }
+        }
+    }
+    .dropdown {
+        &.show {
+            .dropdown-menu {
+                min-width: unset;
             }
         }
     }

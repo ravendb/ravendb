@@ -1,6 +1,6 @@
-<div>
+<div style="z-index: 1;">
     <div class="cluster-dashboard-item-header">
-        <h3><i class="icon-database"></i><span>Databases health overview</span></h3>
+        <h3><i class="icon-database"></i><span>Databases notifications</span></h3>
         <button class="btn btn-warning btn-sm" data-bind="click: remove" title="Remove widget from board">
             <i class="icon-trash"></i>
         </button>
@@ -11,79 +11,5 @@
             ></i>
         </button>
     </div>
-    <div class="d-flex gap-3 margin-left-xxs margin-right-xxs padding-xs panel-bg-1 border-radius-xxs">
-        <div class="small-label">
-            Total notifications:
-            <span data-bind="text: statusSummary()?.total.toLocaleString()"></span>
-            <i class="icon-notifications"></i>
-        </div>
-        <div class="flex-grow"></div>
-        <div class="small-label">
-            Alerts:
-            <span class="badge badge-warning rounded-pill small-label">
-                <i class="icon-warning"></i>
-                <span data-bind="text: statusSummary()?.alerts.toLocaleString()" class="m-0"></span>
-            </span>
-        </div>
-        <div class="small-label">
-            Perf. Hints:
-            <span class="badge badge-info rounded-pill small-label">
-                <i class="icon-info"></i>
-                <span data-bind="text: statusSummary()?.performanceHints.toLocaleString()" class="m-0"></span>
-            </span>
-        </div>
-    </div>
-    <div class="d-flex gap-3 padding-xs">
-        <div>
-            <div class="small-label">Nodes</div>
-            <div class="btn-group">
-                <select
-                    id="visibleNodesSelector"
-                    size="5"
-                    multiple="multiple"
-                    data-bind="options: allNodes, selectedOptions: filteredNodes"
-                ></select>
-            </div>
-        </div>
-        <div>
-            <div class="small-label">Notifications</div>
-            <div class="btn-group">
-                <select
-                    id="visibleNotificationsSelector"
-                    size="5"
-                    multiple="multiple"
-                    data-bind="options: allNotifications, selectedOptions: filteredNotifications"
-                ></select>
-            </div>
-        </div>
-    </div>
-    <div class="databases-list" style="position: relative">
-        <div class="list-container">
-            <div class="list absolute-fill">
-                <virtual-grid
-                    class="resizable no-margin"
-                    params="controller: gridController, condensed: true, disableStripes: true, emptyTemplate: 'empty-notifications-template'"
-                ></virtual-grid>
-                <div class="absolute-center loading" data-bind="visible: $root.spinners.loading">
-                    <div class="global-spinner"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="padding-xxs padding-bottom-xs text-center" style="font-size: 10px;">
-        <i class="icon-info"></i>
-        This list only displays databases that are currently online. Offline databases will not appear.
-    </div>
-    <div data-bind="if: alertsModal() != null">
-        <div data-bind="react: alertsModal"></div>
-    </div>
-    <div data-bind="if: performanceHintsModal() != null">
-        <div data-bind="react: performanceHintsModal"></div>
-    </div>
+    <div data-bind="react: widgetBodyComponent" class="bs5"></div>
 </div>
-
-<script type="text/html" id="empty-notifications-template">
-    <div>
-        No notifications found.
-    </div>
-</script>

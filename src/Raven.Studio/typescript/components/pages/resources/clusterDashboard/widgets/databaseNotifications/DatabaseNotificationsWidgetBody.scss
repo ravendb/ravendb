@@ -1,0 +1,50 @@
+@use "sass:math";
+
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.virtual-table {
+    background-color: colors.$panel-bg-1-var;
+
+    thead {
+        background-color: colors.$panel-header-bg-var;
+    }
+
+    tbody {
+        background-color: colors.$panel-bg-1-var;
+
+        tr {
+            background-color: colors.$panel-bg-1-var !important;
+
+            td {
+                border-top: none !important;
+                padding-top: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            &.is-odd {
+                td {
+                    background-color: transparent;
+                }
+            }
+
+            &.is-odd::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                backdrop-filter: brightness(1.1);
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            &:hover {
+                filter: colors.$hover-filter-var;
+                transition: bs5variables.$transition-base;
+            }
+        }
+    }
+}

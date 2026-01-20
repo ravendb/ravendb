@@ -90,3 +90,30 @@ $global-easing: cubic-bezier(0, 0.5, 0.5, 1);
 $global-easing-in-out: cubic-bezier(0.6, 0, 0.6, 1);
 $global-easing-out: cubic-bezier(0.5, 0, 1, 0.5);
 $easing-rubber: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+// Custom font size and line height classes
+
+@function pxToRem($pxSize) {
+    @return $pxSize / 16 + rem;
+}
+
+$size-list: 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26;
+
+@mixin font-size() {
+    @each $value in $size-list {
+        .font-size-#{$value} {
+            font-size: pxToRem($value) !important;
+        }
+    }
+}
+
+@mixin line-height() {
+    @each $value in $size-list {
+        .line-height-#{$value} {
+            line-height: pxToRem($value) !important;
+        }
+    }
+}
+
+@include font-size();
+@include line-height();
