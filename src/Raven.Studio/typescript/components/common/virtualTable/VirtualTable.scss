@@ -187,12 +187,13 @@
             opacity: 0.5;
             color: colors.$text-emphasis-var !important;
 
-            &:hover, &:focus, &:active {
+            &:hover,
+            &:focus,
+            &:active {
                 background-color: transparent;
                 opacity: 1;
                 transition: bs5variables.$transition-base;
             }
-
         }
     }
 }
