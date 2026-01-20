@@ -17,6 +17,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Sharding.Comparers;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -49,7 +50,7 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         StreamQueryStatistics queryStats,
         TransactionOperationContext context,
         CancellationToken token)
-        : base(new ReduceKeyComparer(reduceKeys))
+        : base(new DocumentsComparer(reduceKeys.ToArray(), extractFromData: true, hasOrderByRandom: false))
     {
         _query = query;
         _requestHandler = requestHandler;
@@ -205,74 +206,6 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         using (_reducer)
         {
             base.Dispose();
-        }
-    }
-
-    private sealed class ReduceKeyComparer : IComparer<BlittableJsonReaderObject>
-    {
-        private readonly List<OrderByField> _reduceKeys;
-
-        public ReduceKeyComparer(List<OrderByField> reduceKeys)
-        {
-            _reduceKeys = reduceKeys;
-        }
-
-        public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
-        {
-            foreach (var reduceKey in _reduceKeys)
-            {
-                if (x.TryGet(reduceKey.Name, out object valX) == false)
-                    ThrowNotFoundReduceKey(reduceKey);
-
-                if (y.TryGet(reduceKey.Name, out object valY) == false)
-                    ThrowNotFoundReduceKey(reduceKey);
-
-                if (valX == null && valY == null)
-                    continue;
-
-                if (valX == null)
-                    return -1;
-
-                if (valY == null)
-                    return 1;
-
-                int result = CompareValues(valX, valY, reduceKey.Ascending);
-                if (result != 0)
-                    return result;
-            }
-
-            return 0;
-        }
-
-        private int CompareValues(object x, object y, bool ascending)
-        {
-            int result;
-
-            if (x is IComparable comparableX)
-            {
-                try
-                {
-                    result = comparableX.CompareTo(y);
-                }
-                catch (ArgumentException)
-                {
-                    // fallback for mixed number types (e.g. comparing int to long)
-                    // this is rare in map-reduce keys but safe to handle.
-                    result = Convert.ToDouble(x).CompareTo(Convert.ToDouble(y));
-                }
-            }
-            else
-            {
-                // fallback for non-comparable types (rare for index keys)
-                result = string.Compare(x.ToString(), y.ToString(), StringComparison.Ordinal);
-            }
-
-            return ascending ? result : -result;
-        }
-
-        private static void ThrowNotFoundReduceKey(OrderByField reduceKey)
-        {
-            throw new InvalidOperationException($"Reduce key '{reduceKey}' not found in the result object.");
         }
     }
 
