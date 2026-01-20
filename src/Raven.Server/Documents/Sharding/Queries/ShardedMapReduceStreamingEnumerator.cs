@@ -28,8 +28,8 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _query;
+    private readonly ShardedDatabaseContext _databaseContext;
     private readonly StreamQueryStatistics _queryStats;
-    private readonly ShardedDatabaseRequestHandler _requestHandler;
     private readonly ShardedQueryFilter _queryFilter;
     private readonly bool _isProjectionFromMapReduceIndex;
     private readonly TransactionOperationContext _context;
@@ -43,8 +43,8 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
     public ShardedMapReduceStreamingEnumerator(
         IndexQueryServerSide query,
+        ShardedDatabaseContext databaseContext,
         List<OrderByField> reduceKeys,
-        ShardedDatabaseRequestHandler requestHandler,
         bool isProjectionFromMapReduceIndex,
         StreamQueryStatistics queryStats,
         TransactionOperationContext context,
@@ -52,14 +52,14 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         : base(new DocumentsComparer(reduceKeys.ToArray(), extractFromData: true, hasOrderByRandom: false))
     {
         _query = query;
-        _requestHandler = requestHandler;
+        _databaseContext = databaseContext;
         _isProjectionFromMapReduceIndex = isProjectionFromMapReduceIndex;
         _queryStats = queryStats;
         _context = context;
         _token = token;
 
         if (query.Metadata.Query.Filter != null)
-            _queryFilter = new ShardedQueryFilter(query, new ShardedQueryResult(), queryTimings: null, _requestHandler.DatabaseContext.Indexes.ScriptRunnerCache, _context);
+            _queryFilter = new ShardedQueryFilter(query, new ShardedQueryResult(), queryTimings: null, _databaseContext.Indexes.ScriptRunnerCache, _context);
     }
 
     public override bool MoveNext()
@@ -174,13 +174,13 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
     private ShardedMapReduceResultRetriever InitializeRetriever()
     {
-        var index = _requestHandler.DatabaseContext.Indexes.GetIndex(_queryStats.IndexName);
+        var index = _databaseContext.Indexes.GetIndex(_queryStats.IndexName);
         if (index == null)
             IndexDoesNotExistException.ThrowFor(_queryStats.IndexName);
 
         var fieldsToFetch = new FieldsToFetch(_query, index.Definition, index.Type);
         return new ShardedMapReduceResultRetriever(
-            _requestHandler.DatabaseContext.Indexes.ScriptRunnerCache,
+            _databaseContext.Indexes.ScriptRunnerCache,
             _query,
             null,
             fieldsToFetch,
@@ -189,7 +189,7 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
             null,
             null,
             null,
-            _requestHandler.DatabaseContext.IdentityPartsSeparator);
+            _databaseContext.IdentityPartsSeparator);
     }
 
     public override void Dispose()
@@ -202,7 +202,7 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
     private IShardedBatchReducer CreateBatchReducer()
     {
-        var index = _requestHandler.DatabaseContext.Indexes.GetIndex(_queryStats.IndexName);
+        var index = _databaseContext.Indexes.GetIndex(_queryStats.IndexName);
         if (index == null)
             IndexDoesNotExistException.ThrowFor(_queryStats.IndexName);
 

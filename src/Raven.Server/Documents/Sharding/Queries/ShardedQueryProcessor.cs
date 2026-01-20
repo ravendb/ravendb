@@ -270,19 +270,19 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
 
         if (document != null)
         {
-            yield return ProcessDocument(document.Data);
+            yield return ReadBlittable(document.Data);
         }
         else if (documents != null)
         {
             foreach (var doc in documents)
             {
-                yield return ProcessDocument(doc.Data);
+                yield return ReadBlittable(doc.Data);
             }
         }
 
         yield break;
 
-        BlittableJsonReaderObject ProcessDocument(BlittableJsonReaderObject data)
+        BlittableJsonReaderObject ReadBlittable(BlittableJsonReaderObject data)
         {
             return context.ReadObject(data, "modified-map-reduce-result");
         }

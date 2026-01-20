@@ -81,11 +81,11 @@ namespace Raven.Server.Documents.Sharding.Queries
 
             var commands = GetOperationCommands(null);
 
-            var op = new ShardedStreamQueryOperation(RequestHandler, () =>
+            var op = new ShardedStreamQueryOperation(RequestHandler.HttpContext, () =>
             {
                 IDisposable returnToContextPool = RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 return (ctx, returnToContextPool);
-            }, documentsComparer, commands, Query, _groupByFields, IsProjectionFromMapReduceIndex, Context, Token);
+            }, documentsComparer, commands, Query, RequestHandler.DatabaseContext, _groupByFields, IsProjectionFromMapReduceIndex, Context, Token);
 
             var shards = GetShardNumbers(commands);
 

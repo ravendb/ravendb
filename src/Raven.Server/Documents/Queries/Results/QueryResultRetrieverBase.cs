@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected readonly DocumentsStorage DocumentsStorage;
 
-        public readonly FieldsToFetch FieldsToFetch;
+        protected readonly FieldsToFetch FieldsToFetch;
 
         protected readonly QueryTimingsScope RetrieverScope;
 
