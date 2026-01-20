@@ -64,6 +64,14 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new CountersBatchCommandData(DocId, counterOp));
             }
+
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache) &&
+                cache.Values != null &&
+                cache.Values.TryGetValue(counter, out var val))
+            {
+                cache.Values[counter] = (val ?? 0) + delta;
+                Session.CountersByDocId[DocId] = cache;
+            }
         }
 
         /// <inheritdoc cref="ISessionDocumentCountersBase.Delete(string)"/> 
@@ -100,9 +108,10 @@ namespace Raven.Client.Documents.Session
                 Session.Defer(new CountersBatchCommandData(DocId, counterOp));
             }
 
-            if (Session.CountersByDocId.TryGetValue(DocId, out var cache))
+            if (Session.CountersByDocId.TryGetValue(DocId, out var cache) && cache.Values != null)
             {
-                cache.Values.Remove(counter);
+                cache.Values[counter] = null;
+                Session.CountersByDocId[DocId] = cache;
             }
 
         }
