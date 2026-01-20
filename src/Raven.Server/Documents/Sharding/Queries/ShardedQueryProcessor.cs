@@ -244,7 +244,7 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
         using (scope?.For(nameof(QueryTimingsScope.Names.Projection)))
         {
             var fieldsToFetch = new FieldsToFetch(Query, indexDefinition, IndexType);
-            var retriever = new ShardedMapReduceResultRetriever(RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Query, null, SearchEngineType.Lucene, fieldsToFetch, null, Context, null, null, null,
+            var retriever = new ShardedMapReduceResultRetriever(RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Query, null, fieldsToFetch, null, Context, null, null, null,
                 RequestHandler.DatabaseContext.IdentityPartsSeparator);
 
             var currentResults = result.Results;

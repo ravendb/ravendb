@@ -122,7 +122,6 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
             _requestHandler.DatabaseContext.Indexes.ScriptRunnerCache,
             _query,
             null,
-            SearchEngineType.Lucene,
             fieldsToFetch,
             null,
             _context,
