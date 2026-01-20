@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     using (CurrentEnumerator)
                     {
                         WorkEnumerators.Remove(CurrentEnumerator);
+                        _enumeratorsToDispose.Add(CurrentEnumerator);
                         CurrentEnumerator = null;
                     }
                 }
