@@ -15,6 +15,9 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import licenseModel = require("models/auth/licenseModel");
 import EditServerWideBackupInfoHub = require("./EditServerWideBackupInfoHub");
+import accessManager = require("common/shell/accessManager");
+import store = require("components/store");
+import databaseSliceSelectors = require("components/common/shell/databaseSliceSelectors");
 
 class editServerWideBackup extends viewModelBase {
 
@@ -45,13 +48,27 @@ class editServerWideBackup extends viewModelBase {
     spinners = {
         save: ko.observable<boolean>(false)
     };
+
+    overrideViaExternalScriptDisableReason: KnockoutComputed<string>;
     
     constructor() {
         super();
         this.bindToCurrentInstance("testCredentials", "setState");
         this.infoHubView = ko.pureComputed(() => ({
             component: EditServerWideBackupInfoHub.EditServerWideBackupInfoHub
-        }))
+        }));
+
+        this.overrideViaExternalScriptDisableReason = ko.pureComputed(() => {
+            const isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode();
+            const storeState = store.default.getState();
+            const isRestricted = databaseSliceSelectors.databaseSelectors.isRestrictExternalScriptUsageForNonClusterAdmin(storeState);
+
+            if (!isClusterAdminOrClusterNode && isRestricted) {
+                return tasksCommonContent.externalScriptNotAllowedForNonClusterAdmins;
+            }
+
+            return null;
+        });
     }
     
     activate(args: any) {
