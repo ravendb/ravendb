@@ -57,9 +57,7 @@ const endpointsWhitelist: ChatbotEndpointEntry[] = [
     { path: "/databases/{database}/admin/backup-data-directory" },
     { path: "/databases/{database}/admin/backup/running" },
     { path: "/databases/{database}/admin/debug/cluster/txinfo" },
-    { path: "/databases/{database}/admin/configuration/settings" },
     { path: "/databases/{database}/admin/tombstones/state" },
-    { path: "/admin/configuration/settings" },
     { path: "/admin/metrics" },
     {
         path: "/admin/configuration/server-wide/backup",
@@ -188,7 +186,6 @@ const endpointsWhitelist: ChatbotEndpointEntry[] = [
     { path: "/databases/{database}/debug/attachments/missing" },
     { path: "/databases/{database}/revisions/collections/stats" },
     { path: "/databases/{database}/indexes/status" },
-    { path: "/admin/databases" },
     { path: "/databases/{database}/revisions/size" },
     { path: "/databases/{database}/docs/class" },
     { path: "/databases/{database}/debug/attachments/metadata" },
