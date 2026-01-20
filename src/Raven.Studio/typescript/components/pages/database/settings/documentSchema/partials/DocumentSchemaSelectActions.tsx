@@ -29,6 +29,9 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { useViewSheet } from "components/common/splitView/ViewSheet";
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 import classNames from "classnames";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 
 export interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
@@ -58,6 +61,7 @@ export default function DocumentSchemaSelectActions() {
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
     const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
     const selectionState = genUtils.getSelectionState(allCollectionNames, selectedCollectionNames);
+    const hasSchemaValidation = useAppSelector(licenseSelectors.statusValue("HasSchemaValidation"));
 
     const handleOpenSheet = () => {
         const validators = allValidators.filter((v) => selectedCollectionNames.includes(v.Name));
@@ -234,20 +238,40 @@ export default function DocumentSchemaSelectActions() {
                     </div>
                 )}
                 <div className="d-flex gap-2 align-items-center">
-                    <a className="btn btn-secondary rounded-pill" href={urls.documentSchemaPlayground()}>
-                        <Icon icon="rocket" />
-                        Schema Playground
-                    </a>
-                    {allCollectionNames.length !== 0 && (
-                        <ButtonWithSpinner
-                            variant={isGlobalDisabled ? "success" : "secondary"}
-                            onClick={() => handleGlobalStatusOperation(!isGlobalDisabled)}
-                            isSpinning={isTogglingGlobalStatus}
-                            className="rounded-pill"
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasSchemaValidation,
+                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                        }}
+                    >
+                        <a
+                            className={classNames("btn btn-secondary rounded-pill", {
+                                disabled: !hasSchemaValidation,
+                            })}
+                            href={urls.documentSchemaPlayground()}
                         >
-                            <Icon icon={isGlobalDisabled ? "play" : "stop"} />
-                            {isGlobalDisabled ? "Enable" : "Disable"} Schema Validation
-                        </ButtonWithSpinner>
+                            <Icon icon="rocket" />
+                            Schema Playground
+                        </a>
+                    </ConditionalPopover>
+                    {allCollectionNames.length !== 0 && (
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasSchemaValidation,
+                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            }}
+                        >
+                            <ButtonWithSpinner
+                                variant={isGlobalDisabled ? "success" : "secondary"}
+                                onClick={() => handleGlobalStatusOperation(!isGlobalDisabled)}
+                                isSpinning={isTogglingGlobalStatus}
+                                disabled={!hasSchemaValidation}
+                                className="rounded-pill"
+                            >
+                                <Icon icon={isGlobalDisabled ? "play" : "stop"} />
+                                {isGlobalDisabled ? "Enable" : "Disable"} Schema Validation
+                            </ButtonWithSpinner>
+                        </ConditionalPopover>
                     )}
                 </div>
             </div>
