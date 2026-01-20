@@ -274,11 +274,13 @@ function useColumns(availableWidthInPx: number): ColumnDef<RowItem>[] {
                 header: ({ table }) => {
                     return (
                         <div className="hstack justify-content-between">
+                            <div>Node</div>
                             <Button
                                 variant="link"
                                 onClick={table.getToggleAllRowsExpandedHandler()}
                                 size="xs"
                                 className="p-0 link-muted font-size-11 line-height-25"
+                                title="Expand all nodes"
                             >
                                 <Icon
                                     icon={table.getIsAllRowsExpanded() ? "collapse-vertical" : "expand-vertical"}
@@ -286,7 +288,6 @@ function useColumns(availableWidthInPx: number): ColumnDef<RowItem>[] {
                                     className="d-flex align-items-center line-height-25"
                                 />
                             </Button>
-                            <div>Node</div>
                         </div>
                     );
                 },
@@ -297,7 +298,7 @@ function useColumns(availableWidthInPx: number): ColumnDef<RowItem>[] {
                     const dbName = row.depth === 0 ? row.original.dbName : row.getParentRow()?.original.dbName;
 
                     return (
-                        <div className="hstack justify-content-between">
+                        <div className="hstack justify-content-between w-100">
                             {value && (
                                 <Button
                                     variant="link"
@@ -314,6 +315,7 @@ function useColumns(availableWidthInPx: number): ColumnDef<RowItem>[] {
                                     onClick={row.getToggleExpandedHandler()}
                                     size="xs"
                                     className="p-0 link-muted"
+                                    title="Expand node"
                                 >
                                     <Icon
                                         icon={row.getIsExpanded() ? "collapse-vertical" : "expand-vertical"}

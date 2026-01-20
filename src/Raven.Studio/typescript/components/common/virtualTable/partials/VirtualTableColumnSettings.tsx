@@ -61,7 +61,7 @@ export default function VirtualTableColumnSettings<T>({ column, isCompact }: Vir
     }
 
     return (
-        <div className="hstack">
+        <div className="hstack flex-shrink-0">
             {column.getCanSort() && (
                 <div className="sorting-controls">
                     <Button
@@ -100,14 +100,14 @@ export default function VirtualTableColumnSettings<T>({ column, isCompact }: Vir
                         className={classNames(
                             column.getFilterValue() ? "active-filtering" : "link-muted",
                             "filtering-controls",
-                            { "fs-5": isCompact }
+                            { "font-size-12": isCompact }
                         )}
                         size="sm"
                     >
                         <Icon icon="filter" margin="m-0" />
                     </Dropdown.Toggle>
                     <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
-                        <div className="px-3 pb-2">
+                        <div className="px-2 pb-1">
                             <FormLabel className="small-label">Filter column</FormLabel>
                             <div className="clearable-input">
                                 <Form.Control
@@ -120,7 +120,12 @@ export default function VirtualTableColumnSettings<T>({ column, isCompact }: Vir
                                 />
                                 {localFilter && (
                                     <div className="clear-button">
-                                        <Button variant="secondary" size="sm" onClick={() => handleFilterChange("")}>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => handleFilterChange("")}
+                                            title="Clear filter"
+                                        >
                                             <Icon icon="clear" margin="m-0" />
                                         </Button>
                                     </div>

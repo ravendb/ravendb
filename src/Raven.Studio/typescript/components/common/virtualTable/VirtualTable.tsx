@@ -94,7 +94,7 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
                                         width: cell.column.getSize(),
                                         padding: isCompact ? "0px 7.5px" : undefined,
                                     }}
-                                    className={classNames("align-content-center", { "font-size-11": isCompact })}
+                                    className={classNames("d-flex align-items-center", { "font-size-11": isCompact })}
                                 >
                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </td>

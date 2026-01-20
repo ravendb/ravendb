@@ -32,7 +32,7 @@ export default function VirtualTableHead<T>({ table, isCompact }: VirtualTableHe
                                 className="position-relative d-flex align-items-center justify-content-between"
                                 title={getHeaderTitle(header.column)}
                             >
-                                <span className="text-truncate">
+                                <span className="text-truncate w-100">
                                     {flexRender(header.column.columnDef.header, header.getContext())}
                                 </span>
 

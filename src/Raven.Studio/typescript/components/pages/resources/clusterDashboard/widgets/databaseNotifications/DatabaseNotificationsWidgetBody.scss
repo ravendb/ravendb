@@ -4,47 +4,82 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-.virtual-table {
-    background-color: colors.$panel-bg-1-var;
-
-    thead {
-        background-color: colors.$panel-header-bg-var;
-    }
-
-    tbody {
+.cluster-dashboard-container {
+    .virtual-table {
         background-color: colors.$panel-bg-1-var;
 
-        tr {
-            background-color: colors.$panel-bg-1-var !important;
+        thead {
+            background-color: colors.$panel-header-bg-var;
 
-            td {
-                border-top: none !important;
-                padding-top: 0 !important;
-                padding-bottom: 0 !important;
+            th {
+                border-bottom: none !important;
             }
+        }
 
-            &.is-odd {
+        tbody {
+            background-color: colors.$panel-bg-1-var;
+
+            tr {
+                background-color: colors.$panel-bg-1-var !important;
+
                 td {
-                    background-color: transparent;
+                    border-top: none !important;
+                    padding-top: 0 !important;
+                    padding-bottom: 0 !important;
+                }
+
+                &.is-odd {
+                    td {
+                        background-color: transparent;
+                    }
+                }
+
+                &.is-odd::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    backdrop-filter: brightness(1.1);
+                    pointer-events: none;
+                    z-index: -1;
+                }
+
+                &:hover {
+                    filter: colors.$hover-filter-var;
+                    transition: bs5variables.$transition-base;
+                }
+            }
+        }
+
+        .dropdown {
+            .filtering-controls {
+                &.show {
+                    display: flex !important;
                 }
             }
 
-            &.is-odd::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                backdrop-filter: brightness(1.1);
-                pointer-events: none;
-                z-index: 0;
+            .dropdown-menu {
+                background-color: colors.$panel-bg-1-var;
+                border: 1px solid colors.$border-color-light-var;
+                border-radius: sizes.$border-radius-md;
+                z-index: bs5variables.$zindex-dropdown;
+
+                .form-control {
+                    border-radius: sizes.$border-radius;
+                    box-shadow: none;
+                }
+
+                label {
+                    margin-bottom: 0;
+                }
+
+                .clear-button {
+                    transform: none;
+                }
             }
 
-            &:hover {
-                filter: colors.$hover-filter-var;
-                transition: bs5variables.$transition-base;
-            }
         }
     }
 }
