@@ -1,11 +1,11 @@
-export type DatabaseAccessLevel = "DatabaseAdmin" | "DatabaseReadWrite" | "DatabaseRead";
+import assertUnreachable from "components/utils/assertUnreachable";
 
-export function getDatabaseAccessRequiredMessage(requiredAccessLevel: DatabaseAccessLevel) {
+export function getDatabaseAccessRequiredMessage(requiredAccessLevel: databaseAccessLevel) {
     const accessLevelText = getAccessLevelDisplayName(requiredAccessLevel);
     return `You don't have the required permissions (${accessLevelText} access required)`;
 }
 
-function getAccessLevelDisplayName(accessLevel: DatabaseAccessLevel) {
+function getAccessLevelDisplayName(accessLevel: databaseAccessLevel) {
     switch (accessLevel) {
         case "DatabaseAdmin":
             return "Database Admin";
@@ -14,6 +14,6 @@ function getAccessLevelDisplayName(accessLevel: DatabaseAccessLevel) {
         case "DatabaseRead":
             return "Database Read";
         default:
-            return accessLevel;
+            assertUnreachable(accessLevel);
     }
 }
