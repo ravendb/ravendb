@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
@@ -13,6 +14,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -38,15 +40,9 @@ namespace Raven.Server.Web.System
             var database = GetStringQueryString("database");
             var databaseGroupId = GetStringQueryString("groupId");
             var remoteTask = GetStringQueryString("remote-task");
-            var tag = GetStringQueryString("tag", false);
 
             if (await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask) == false)
                 return;
-
-            if (ServerStore.IdleDatabases.TryGetValue(database, out _) && (tag == ReplicationLoader.PullReplicationAsSinkTag || string.IsNullOrEmpty(tag)))
-            {
-                throw new DatabaseIdleException($"Cannot GetRemoteTaskTopology for PullReplicationAsSink connection because database '{database}' currently is idle.");
-            }
 
             List<string> nodes;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -55,6 +51,9 @@ namespace Raven.Server.Web.System
                 var pullReplication = ServerStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
                 if (pullReplication.Disabled)
                     throw new InvalidOperationException($"The pull replication '{remoteTask}' is disabled.");
+
+                if (TryGetChangeVectorFromQuery(out string sinkChangeVector))
+                    ThrowIfIdleAndUpToDate(database, sinkChangeVector, pullReplication);
 
                 var topology = ServerStore.Cluster.ReadDatabaseTopology(context, database);
                 nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode, pullReplication.PinToMentorNode);
@@ -81,17 +80,20 @@ namespace Raven.Server.Web.System
         {
             var remoteTask = GetStringQueryString("remote-task");
             var database = GetStringQueryString("database");
-            var verifyDatabase = GetBoolValueQueryString("verify-database", false);
-            var tag = GetStringQueryString("tag", false);
+            var verifyDatabase = GetBoolValueQueryString("verify-database", required: false);
 
             if (ServerStore.IsPassive())
-            {
                 throw new NodeIsPassiveException($"Can't fetch Tcp info from a passive node in url {this.HttpContext.Request.GetFullUrl()}");
-            }
 
-            if (ServerStore.IdleDatabases.TryGetValue(database, out _) && tag == ReplicationLoader.PullReplicationAsSinkTag)
+            if (TryGetChangeVectorFromQuery(out string sinkChangeVector))
             {
-                throw new DatabaseIdleException($"Cannot GetRemoteTaskTcp for PullReplicationAsSink connection because database '{database}' currently is idle.");
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var pullReplication = ServerStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
+                    if (pullReplication.Disabled == false)
+                        ThrowIfIdleAndUpToDate(database, sinkChangeVector, pullReplication);
+                }
             }
 
             if (verifyDatabase.HasValue && verifyDatabase.Value)
@@ -119,6 +121,62 @@ namespace Raven.Server.Web.System
                 var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl(), forExternalUse: true);
                 context.Write(writer, output);
             }
+        }
+
+        private void ThrowIfIdleAndUpToDate(string database, string sinkChangeVector, PullReplicationDefinition pullReplication)
+        {
+            if (ServerStore.IdleDatabases.TryGetValue(database, out _) == false)
+                return;
+
+            if (ServerStore.IdleDatabasesChangeVectors.TryGetValue(database, out var hubChangeVector) == false)
+                return;
+
+            // 1. HubToSink (Pull): Hub MUST wake up if it has strictly more data than Sink.
+            if ((pullReplication.Mode & PullReplicationMode.HubToSink) != 0)
+            {
+                // Status of SINK relative to HUB
+                var sinkStatus = ChangeVectorUtils.GetConflictStatus(remoteAsString: hubChangeVector, localAsString: sinkChangeVector);
+                if (sinkStatus == ConflictStatus.AlreadyMerged)
+                {
+                    // Sink <= Hub.
+                    var hubStatus = ChangeVectorUtils.GetConflictStatus(remoteAsString: sinkChangeVector, localAsString: hubChangeVector);
+                    if (hubStatus is not ConflictStatus.AlreadyMerged)
+                        return; // Hub > Sink (Strictly) -> Wake up.
+
+                    // Else: Already merged.
+                }
+                else
+                {
+                    // Sink > Hub or Diverged -> Wake up.
+                    return;
+                }
+            }
+
+            // 2. SinkToHub (Push): Hub MUST wake up if Sink sends new data.
+            if ((pullReplication.Mode & PullReplicationMode.SinkToHub) != 0)
+            {
+                var hubStatus = ChangeVectorUtils.GetConflictStatus(remoteAsString: sinkChangeVector, localAsString: hubChangeVector);
+                if (hubStatus is not ConflictStatus.AlreadyMerged)
+                    return; // Sink > Hub or Diverged -> Wake up.
+            }
+
+            // No condition forces us to wake up.
+            throw new DatabaseIdleException($"The database '{database}' is currently idle. " +
+                                            $"The request was rejected to avoid waking up the database unnecessarily, " +
+                                            $"as there are no new changes to replicate for the change vector '{sinkChangeVector}'.");
+        }
+
+        private bool TryGetChangeVectorFromQuery(out string changeVector)
+        {
+            const string key = "change-vector";
+            if (HttpContext.Request.Query.ContainsKey(key))
+            {
+                changeVector = GetStringQueryString(key, required: false) ?? string.Empty;
+                return true;
+            }
+
+            changeVector = null;
+            return false;
         }
 
         public static async ValueTask<bool> AuthenticateAsync(HttpContext httpContext, ServerStore serverStore, string database, string remoteTask)

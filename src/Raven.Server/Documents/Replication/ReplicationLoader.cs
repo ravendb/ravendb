@@ -1522,6 +1522,8 @@ namespace Raven.Server.Documents.Replication
         private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsSink pullReplicationAsSink, X509Certificate2 certificate, string database)
         {
             var remoteTask = pullReplicationAsSink.HubName;
+            var (_, currentChangeVector) = Database.ReadLastEtagAndChangeVector();
+
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 string[] remoteDatabaseUrls;
@@ -1530,7 +1532,7 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForShortTermUse(pullReplicationAsSink.ConnectionString.TopologyDiscoveryUrls, pullReplicationAsSink.ConnectionString.Database,
                     certificate, DocumentConventions.DefaultForServer))
                 {
-                    var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask, PullReplicationAsSinkTag);
+                    var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask, changeVector: currentChangeVector);
 
                     try
                     {
@@ -1558,7 +1560,7 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForShortTermUse(remoteDatabaseUrls,
                     pullReplicationAsSink.ConnectionString.Database, certificate, DocumentConventions.DefaultForServer))
                 {
-                    var cmd = new GetTcpInfoForRemoteTaskCommand(PullReplicationAsSinkTag, database, remoteTask);
+                    var cmd = new GetTcpInfoForRemoteTaskCommand(database, remoteTask, changeVector: currentChangeVector);
 
                     try
                     {
@@ -1576,7 +1578,6 @@ namespace Raven.Server.Documents.Replication
         }
 
         private static readonly string ExternalReplicationTag = "external-replication";
-        public static readonly string PullReplicationAsSinkTag = "pull-replication-as-sink";
 
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
@@ -2041,7 +2042,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public int HasActivePullReplicationAsSinkConnections()
+        public int GetNumberActivePullReplicationAsSinkConnections()
         {
             var c = 0;
             foreach (var dest in _externalDestinations)
@@ -2070,6 +2071,28 @@ namespace Raven.Server.Documents.Replication
             }
 
             return c;
+        }
+
+        public int GetNumberOfPullReplicationsPreventingIdle()
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawDatabase = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name))
+            {
+                if (rawDatabase == null)
+                    return 0;
+
+                var count = 0;
+
+                if (rawDatabase.SinkPullReplications != null)
+                {
+                    count += rawDatabase.SinkPullReplications
+                        .Where(asSink => asSink.Disabled == false)
+                        .Count(asSink => (asSink.Mode & PullReplicationMode.HubToSink) != 0);
+                }
+
+                return count;
+            }
         }
     }
 

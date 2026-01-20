@@ -33,7 +33,6 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -125,6 +124,7 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
+        public readonly ConcurrentDictionary<string, string> IdleDatabasesChangeVectors;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _leaderRequestExecutor;
@@ -186,6 +186,8 @@ namespace Raven.Server.ServerWide
             _clusterRequestExecutor = CreateClusterRequestExecutor();
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+
+            IdleDatabasesChangeVectors = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
@@ -2798,6 +2800,8 @@ namespace Raven.Server.ServerWide
                             continue;
 
                         var dbIdEtagDictionary = new Dictionary<string, long>();
+                        (_, string changeVector) = database.ReadLastEtagAndChangeVector();
+
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         using (documentsContext.OpenReadTransaction())
                         {
@@ -2806,7 +2810,12 @@ namespace Raven.Server.ServerWide
                         }
 
                         if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)))
+                        {
                             IdleDatabases[database.Name] = dbIdEtagDictionary;
+
+                            if (changeVector != null)
+                                IdleDatabasesChangeVectors[database.Name] = changeVector;
+                        }
                     }
                 }
                 catch (Exception e)
@@ -2866,10 +2875,8 @@ namespace Raven.Server.ServerWide
             {
                 if (statistics == null)
                     return false;
-                else
-                {
-                    statistics.Explanations.Add($"Cannot unload database because the difference ({diff}) between now ({now}) and last recently used ({lastRecentlyUsed}) is lower or equal to max idle time ({maxTimeDatabaseCanBeIdle}).");
-                }
+
+                statistics.Explanations.Add($"Cannot unload database because the difference ({diff}) between now ({now}) and last recently used ({lastRecentlyUsed}) is lower or equal to max idle time ({maxTimeDatabaseCanBeIdle}).");
             }
 
             if (statistics != null)
@@ -2945,16 +2952,17 @@ namespace Raven.Server.ServerWide
                 statistics.Explanations.Add($"Cannot unload database because number of Subscriptions connections ({numberOfSubscriptionConnections}) is greater than 0");
             }
 
-            var numberOfActivePullReplicationAsSinkConnections = database.ReplicationLoader.HasActivePullReplicationAsSinkConnections();
+            var numberOfActivePullReplicationAsSinkConnections = database.ReplicationLoader.GetNumberActivePullReplicationAsSinkConnections();
             if (statistics != null)
                 statistics.NumberOfActivePullReplicationAsSinkConnections = numberOfActivePullReplicationAsSinkConnections;
 
-            if (numberOfActivePullReplicationAsSinkConnections > 0)
+            var numberOfActiveHubToSinkConfigs = database.ReplicationLoader.GetNumberOfPullReplicationsPreventingIdle();
+            if (numberOfActiveHubToSinkConfigs > 0)
             {
                 if (statistics == null)
                     return false;
 
-                statistics.Explanations.Add($"Cannot unload database because number of active PullReplication as Sink Connections ({numberOfActivePullReplicationAsSinkConnections}) is greater than 0");
+                statistics.Explanations.Add($"Cannot unload database because there are ({numberOfActiveHubToSinkConfigs}) Pull Replication Sink configurations with 'HubToSink' mode enabled. The database must remain active to poll the Hub.");
             }
 
             var hasActiveOperations = database.Operations.HasActive;
@@ -3685,7 +3693,7 @@ namespace Raven.Server.ServerWide
                     };
                     var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
                     if (journalIoStatsResult != null)
-                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);
+                        journalUsage.IoStatsResult = FillIoStatsResult(journalIoStatsResult);
 
                     yield return journalUsage;
                 }
@@ -3711,7 +3719,7 @@ namespace Raven.Server.ServerWide
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
                         if (tempBufferIoStatsResult != null)
-                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);
+                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(tempBufferIoStatsResult);
 
                         yield return tempBuffersUsage;
                     }

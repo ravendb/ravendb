@@ -11,14 +11,14 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly string _remoteDatabase;
         private readonly string _remoteTask;
-        private readonly string _tag;
-        private bool _verifyDatabase;
+        private readonly string _changeVector;
+        private readonly bool _verifyDatabase;
 
-        public GetTcpInfoForRemoteTaskCommand(string tag, string remoteDatabase, string remoteTask, bool verifyDatabase = false)
+        public GetTcpInfoForRemoteTaskCommand(string remoteDatabase, string remoteTask, string changeVector = null, bool verifyDatabase = false)
         {
             _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
-            _tag = tag;
+            _changeVector = changeVector;
             _verifyDatabase = verifyDatabase;
             Timeout = TimeSpan.FromSeconds(15);
         }
@@ -27,12 +27,13 @@ namespace Raven.Client.Documents.Commands
         {
             url = $"{node.Url}/info/remote-task/tcp?" +
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
-                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
-                  $"&tag={Uri.EscapeDataString(_tag)}";
+                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}";
+
+            if (_changeVector != null)
+                url += $"&change-vector={Uri.EscapeDataString(_changeVector)}";
+
             if (_verifyDatabase)
-            {
                 url += "&verify-database=true";
-            }
 
             RequestedNode = node;
             var request = new HttpRequestMessage

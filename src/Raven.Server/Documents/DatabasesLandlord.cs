@@ -919,6 +919,8 @@ namespace Raven.Server.Documents
                         ForTestingPurposes?.AfterDatabaseCreation?.Invoke((t.GetAwaiter().GetResult(), caller));
 
                         _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
+                        _serverStore.IdleDatabasesChangeVectors.TryRemove(databaseName.Value, out _);
+
                         ForTestingPurposes?.AfterDatabaseRemovedFromIdle?.Set();
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }

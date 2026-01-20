@@ -176,7 +176,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         internal async Task<Stream> ConnectToServerAsync(CancellationToken token)
         {
-            var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase: true);
+            var command = new GetTcpInfoForRemoteTaskCommand(_dbName, remoteTask: _options?.SubscriptionName, verifyDatabase: true);
 
             var requestExecutor = GetRequestExecutor();
 
