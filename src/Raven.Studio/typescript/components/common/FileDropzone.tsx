@@ -1,7 +1,7 @@
 import "./FileDropzone.scss";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import React, { useState, useRef, DragEvent, ChangeEvent, useEffect } from "react";
+import React, { useState, useRef, DragEvent, ChangeEvent } from "react";
 import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
 import Button from "react-bootstrap/Button";
@@ -23,12 +23,8 @@ export default function FileDropzone({
 
     const { value: isDragging, toggle: toggleIsDragging } = useBoolean(false);
 
-    const [files, setFiles] = useState<File[]>([]);
+    const [files, setFiles] = useState<File[]>(initialFiles);
     const [error, setError] = useState<string>();
-
-    useEffect(() => {
-        setFiles(initialFiles);
-    }, [initialFiles]);
 
     const handleDrop = (e: DragEvent<HTMLDivElement>) => {
         toggleIsDragging();
