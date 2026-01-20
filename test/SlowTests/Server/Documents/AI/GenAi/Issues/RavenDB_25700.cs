@@ -82,8 +82,6 @@ for(const comment of this.Comments)
         store.Maintenance.Send(new UpdateGenAiOperation(genAiTask.TaskId, config));
 
         // add another post to trigger the ETL again
-        etlDone = Etl.WaitForEtlToComplete(store);
-
         using (var session = store.OpenSession())
         {
             var anotherPost = new GenAiBasics.Post(
@@ -98,16 +96,17 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
-
         // verify that conversation documents were created this time
-        using (var session = store.OpenSession())
+        var docsCount = WaitForValue(() =>
         {
-            var docs = session.Advanced.LoadStartingWith<object>(conversationDocsPrefix);
+            using (var session = store.OpenSession())
+            {
+                var docs = session.Advanced.LoadStartingWith<object>(conversationDocsPrefix);
+                return docs?.Length;
+            }
+        }, expectedVal: 2, timeout: 30_000);
 
-            // two conversation documents should be created when tracing is enabled (one per comment)
-            Assert.Equal(2, docs.Length);
-        }
-
+        // two conversation documents should be created when tracing is enabled (one per comment)
+        Assert.True(docsCount == 2, await Etl.GetEtlDebugInfo(store.Database));
     }
 }
