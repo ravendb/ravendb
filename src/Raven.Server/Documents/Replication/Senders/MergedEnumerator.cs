@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected IEnumerator<T> CurrentEnumerator;
 
+        private readonly List<IDisposable> _enumeratorsToDispose = new();
+
         public MergedEnumerator(IComparer<T> comparer)
         {
             Comparer = comparer;
@@ -69,12 +71,23 @@ namespace Raven.Server.Documents.Replication.Senders
             throw new NotSupportedException();
         }
 
+        protected void RemoveEnumerator(int index)
+        {
+            _enumeratorsToDispose.Add(WorkEnumerators[index]);
+            WorkEnumerators.RemoveAt(index);
+        }
+
         object IEnumerator.Current => Current;
 
         public T Current => CurrentItem;
 
         public virtual void Dispose()
         {
+            foreach (var workEnumerator in _enumeratorsToDispose)
+            {
+                workEnumerator.Dispose();
+            }
+
             foreach (var workEnumerator in WorkEnumerators)
             {
                 workEnumerator.Dispose();

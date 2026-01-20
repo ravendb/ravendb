@@ -40,7 +40,6 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
     private readonly Queue<BlittableJsonReaderObject> _resultsBuffer = new();
     private readonly List<BlittableJsonReaderObject> _currentBatch = new();
-    private readonly List<IDisposable> _toDispose = new();
 
     public ShardedMapReduceStreamingEnumerator(
         IndexQueryServerSide query,
@@ -159,8 +158,6 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
         var minKeyItem = minEnumerator.Current;
 
-        _toDispose.ForEach(x => x.Dispose());
-        _toDispose.Clear();
         _currentBatch.Clear();
 
         // we iterate backwards so we can easily remove exhausted enumerators
@@ -175,8 +172,7 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
                 if (enumerator.MoveNext() == false)
                 {
                     // cannot dispose the WorkEnumerator here until we sent the current batch
-                    _toDispose.Add(WorkEnumerators[i]);
-                    WorkEnumerators.RemoveAt(i);
+                    RemoveEnumerator(i);
                 }
             }
         }
