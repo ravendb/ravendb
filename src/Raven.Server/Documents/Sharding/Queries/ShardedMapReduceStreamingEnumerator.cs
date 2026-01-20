@@ -70,45 +70,106 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
             return true;
         }
 
-        while (true)
+        while (GetNextResult(out var item))
         {
-            var itemStatus = GetNextResult(out BlittableJsonReaderObject item);
-            switch (itemStatus)
+            if (_isProjectionFromMapReduceIndex == false)
             {
-                case NextItemStatus.Stop:
-                    CurrentItem = null;
-                    return false;
-
-                case NextItemStatus.Continue:
-                    continue;
-
-                case NextItemStatus.Yield:
-                    if (_isProjectionFromMapReduceIndex == false)
-                    {
-                        // simple map-reduce (no projection)
-                        CurrentItem = item;
-                        return true;
-                    }
-
-                    _retriever ??= InitializeRetriever();
-
-                    foreach (BlittableJsonReaderObject result in ShardedQueryProcessor.GetProjectionResults(_retriever, item, _context))
-                    {
-                        _resultsBuffer.Enqueue(result);
-                    }
-
-                    if (_resultsBuffer.Count > 0)
-                    {
-                        CurrentItem = _resultsBuffer.Dequeue();
-                        return true;
-                    }
-
-                    continue;
-
-                default:
-                    throw new ArgumentOutOfRangeException();
+                // simple map-reduce (no projection)
+                CurrentItem = item;
+                return true;
             }
+
+            try
+            {
+                _retriever ??= InitializeRetriever();
+
+                foreach (BlittableJsonReaderObject result in ShardedQueryProcessor.GetProjectionResults(_retriever, item, _context))
+                {
+                    _resultsBuffer.Enqueue(result);
+                }
+            }
+            finally
+            {
+                // we are done with the map-reduce key/result 'item', so we must dispose it.
+                // we do not return it to the caller, we return the projected results instead.
+                item.Dispose();
+            }
+
+            if (_resultsBuffer.Count > 0)
+            {
+                CurrentItem = _resultsBuffer.Dequeue();
+                return true;
+            }
+
+            // if buffer is empty (projection yielded no results for this key),
+            // loop again to fetch the next key.
         }
+
+        CurrentItem = null;
+        return false;
+    }
+
+    private bool GetNextResult(out BlittableJsonReaderObject item)
+    {
+        // loop until we find a valid item or run out of data
+        while (WorkEnumerators.Count > 0)
+        {
+            var minEnumerator = WorkEnumerators[0];
+            for (var index = 1; index < WorkEnumerators.Count; index++)
+            {
+                if (Comparer.Compare(WorkEnumerators[index].Current, minEnumerator.Current) < 0)
+                {
+                    minEnumerator = WorkEnumerators[index];
+                }
+            }
+
+            var minKeyItem = minEnumerator.Current;
+
+            _currentBatch.Clear();
+
+            // iterate backwards to easily remove exhausted enumerators
+            for (int i = WorkEnumerators.Count - 1; i >= 0; i--)
+            {
+                var enumerator = WorkEnumerators[i];
+
+                if (Comparer.Compare(enumerator.Current, minKeyItem) == 0)
+                {
+                    _currentBatch.Add(enumerator.Current);
+
+                    if (enumerator.MoveNext() == false)
+                    {
+                        RemoveEnumerator(i);
+                    }
+                }
+            }
+
+            // re-reduce on this specific batch
+            _reducer ??= CreateBatchReducer();
+            item = _reducer.ReduceBatch(_currentBatch);
+
+            if (_queryFilter != null)
+            {
+                var filterResult = _queryFilter.Apply(item);
+
+                if (filterResult == FilterResult.Skipped)
+                {
+                    item.Dispose();
+                    continue;
+                }
+
+                if (filterResult == FilterResult.LimitReached)
+                {
+                    item.Dispose();
+                    item = null;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        item = null;
+        return false;
     }
 
     private ShardedMapReduceResultRetriever InitializeRetriever()
@@ -129,71 +190,6 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
             null,
             null,
             _requestHandler.DatabaseContext.IdentityPartsSeparator);
-    }
-
-    private enum NextItemStatus
-    {
-        Yield,
-        Continue,
-        Stop
-    }
-
-    private NextItemStatus GetNextResult(out BlittableJsonReaderObject item)
-    {
-        if (WorkEnumerators.Count == 0)
-        {
-            item = null;
-            return NextItemStatus.Stop;
-        }
-
-        var minEnumerator = WorkEnumerators[0];
-        for (var index = 1; index < WorkEnumerators.Count; index++)
-        {
-            if (Comparer.Compare(WorkEnumerators[index].Current, minEnumerator.Current) < 0)
-            {
-                minEnumerator = WorkEnumerators[index];
-            }
-        }
-
-        var minKeyItem = minEnumerator.Current;
-
-        _currentBatch.Clear();
-
-        // we iterate backwards so we can easily remove exhausted enumerators
-        for (int i = WorkEnumerators.Count - 1; i >= 0; i--)
-        {
-            var enumerator = WorkEnumerators[i];
-
-            if (Comparer.Compare(enumerator.Current, minKeyItem) == 0)
-            {
-                _currentBatch.Add(enumerator.Current);
-
-                if (enumerator.MoveNext() == false)
-                {
-                    // cannot dispose the WorkEnumerator here until we sent the current batch
-                    RemoveEnumerator(i);
-                }
-            }
-        }
-
-        // re-reduce on this specific batch
-        _reducer ??= CreateBatchReducer();
-        item = _reducer.ReduceBatch(_currentBatch);
-
-        if (_queryFilter != null)
-        {
-            var filterResult = _queryFilter.Apply(item);
-            if (filterResult == FilterResult.Skipped)
-            {
-                item.Dispose();
-                return NextItemStatus.Continue;
-            }
-
-            if (filterResult == FilterResult.LimitReached)
-                return NextItemStatus.Stop;
-        }
-
-        return NextItemStatus.Yield;
     }
 
     public override void Dispose()
