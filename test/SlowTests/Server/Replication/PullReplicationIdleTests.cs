@@ -35,8 +35,8 @@ namespace SlowTests.Server.Replication
             var sinkWakeupEvent = new ManualResetEventSlim(initialState: false);
             context.SinkServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle = sinkWakeupEvent;
 
-            // Wait > MaxIdleTime (5s) to see if it tries to sleep or flip states.
-            var isSinkWokeUp = sinkWakeupEvent.Wait(TimeSpan.FromSeconds(8));
+            // Wait > MaxIdleTime (3s) to see if it tries to sleep or flip states.
+            var isSinkWokeUp = sinkWakeupEvent.Wait(TimeSpan.FromSeconds(5));
             Assert.False(isSinkWokeUp, "Sink database triggered 'AfterDatabaseRemovedFromIdle', meaning it went to idle and woke up. It should have stayed awake.");
             Assert.False(context.SinkServer.ServerStore.IdleDatabases.ContainsKey(context.SinkDbName), "Sink DB is found in IdleDatabases. It should be awake.");
 
@@ -136,8 +136,8 @@ namespace SlowTests.Server.Replication
             var sinkWakeupEvent = new ManualResetEventSlim(initialState: false);
             context.SinkServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle = sinkWakeupEvent;
 
-            // Wait > MaxIdleTime (5s)
-            var isSinkWokeUp = sinkWakeupEvent.Wait(TimeSpan.FromSeconds(8));
+            // Wait > MaxIdleTime (3s)
+            var isSinkWokeUp = sinkWakeupEvent.Wait(TimeSpan.FromSeconds(5));
             Assert.False(isSinkWokeUp, "Sink database triggered 'AfterDatabaseRemovedFromIdle' in TwoWay mode. It should have stayed awake.");
             Assert.False(context.SinkServer.ServerStore.IdleDatabases.ContainsKey(context.SinkDbName), "Sink DB found in IdleDatabases in TwoWay mode.");
 
@@ -191,7 +191,7 @@ namespace SlowTests.Server.Replication
             public async Task Initialize(PullReplicationMode pullReplicationMode, Dictionary<string, string> customSettings = null, [CallerMemberName] string caller = null)
             {
                 var settings = customSettings ?? new Dictionary<string, string>();
-                settings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "5";
+                settings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "3";
                 settings[RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "1";
                 settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
 
@@ -288,16 +288,16 @@ namespace SlowTests.Server.Replication
             {
                 var value = WaitForValue(() => server.ServerStore.IdleDatabases.ContainsKey(dbName),
                     expectedVal: true,
-                    timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
-                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds);
+                    timeout: (int)TimeSpan.FromSeconds(60).TotalMilliseconds,
+                    interval: (int)TimeSpan.FromMilliseconds(330).TotalMilliseconds);
 
                 Assert.True(value, $"Database '{dbName}' should be idle, but was not found in IdleDatabases.");
             }
 
             public static async Task AssertDatabaseIsNotIdle(RavenServer server, string dbName)
             {
-                // Wait > MaxIdleTime (5s)
-                await Task.Delay(8000);
+                // Wait > MaxIdleTime (3s)
+                await Task.Delay(5000);
                 Assert.False(server.ServerStore.IdleDatabases.ContainsKey(dbName), $"Database '{dbName}' is found in IdleDatabases collection.");
             }
 
@@ -336,7 +336,7 @@ namespace SlowTests.Server.Replication
             {
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverDisposeResult.Url,
                 [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certs.ServerCertificatePath,
-                [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "5",
+                [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "3",
                 [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "1",
                 [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
             };

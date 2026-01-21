@@ -79,6 +79,8 @@ namespace Raven.Server.Web.System
 
             public int NumberOfActivePullReplicationAsSinkConnections { get; set; }
 
+            public int NumberOfActiveHubToSinkConfigurations { get; set; }
+
             public bool HasActiveOperations { get; set; }
 
             public List<string> Explanations { get; set; }

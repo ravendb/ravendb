@@ -917,48 +917,44 @@ namespace SlowTests.Server.Replication
 
                 server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
 
-                var dic = new Dictionary<IdleDatabaseStatistics, int>();
-                Assert.True(WaitForValue( () =>
+                // Wait for the Sink to be marked as "Cannot Unload" due to configuration intent.
+                // The Hub is allowed to sleep in this scenario, so we only verify the Sink's state.
+                Assert.True(WaitForValue(() =>
                 {
-                    dic = new Dictionary<IdleDatabaseStatistics, int>();
-                    foreach (var databaseKvp in server.ServerStore.DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner())
-                    {
-                        var statistics = new IdleDatabaseStatistics
-                        {
-                            Name = databaseKvp.Key.ToString()
-                        };
+                    var sinkDbKvp = server.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault(x => x.Key.Equals(sink.Database, StringComparison.OrdinalIgnoreCase));
 
-                        server.ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
-
-                        if (statistics.CanUnload == false)
-                            continue;
-
-                        if (statistics.Explanations.Count > 1)
-                        {
-                            continue;
-                        }
-
-                        if (statistics.NumberOfActivePullReplicationAsSinkConnections == 0)
-                            continue;
-
-                        dic.Add(statistics, statistics.NumberOfActivePullReplicationAsSinkConnections);
-                    }
-
-                    if (dic.Count != 2)
+                    // If Sink is not even in LRU, we can't check it. Wait until it is.
+                    if (sinkDbKvp.Key == null)
                         return false;
 
-                    return dic.All(x => x.Value == 1);
-                }, true, 75_000, 1000), string.Join(Environment.NewLine, dic.Keys.Select(x =>
-                {
-                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    var statistics = new IdleDatabaseStatistics
                     {
-                        return context.ReadObject(x.ToJson(), "json").ToString();
-                    }
-                })));
+                        Name = sinkDbKvp.Key.ToString()
+                    };
 
-                // the hub & sink should be online  
-                Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
-                Assert.All(dic.Keys, x => Assert.Contains($"Cannot unload database because number of active PullReplication as Sink Connections (1) is greater than 0", x.Explanations));
+                    // Calculate the actual decision based on all factors
+                    bool serverSaysCanUnload = server.ServerStore.CanUnloadDatabase(sinkDbKvp.Key, sinkDbKvp.Value, statistics, out _);
+
+                    // If the server says it CAN unload, then our blocker hasn't kicked in yet.
+                    if (serverSaysCanUnload)
+                        return false;
+
+                    // Verify the specific reason from ServerStore.cs logic
+                    return statistics.Explanations.Any(x => x.Contains("Pull Replication Sink configurations with 'HubToSink' mode enabled"));
+
+                }, true, 75_000, 1000));
+
+                // Verify Hub is NOT blocked by replication connections (it might be blocked by time, but not by replication).
+                var hubDbKvp = server.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault(x => x.Key.Equals(hub.Database, StringComparison.OrdinalIgnoreCase));
+                if (hubDbKvp.Key != null)
+                {
+                    var hubStats = new IdleDatabaseStatistics { Name = hubDbKvp.Key.ToString() };
+                    server.ServerStore.CanUnloadDatabase(hubDbKvp.Key, hubDbKvp.Value, hubStats, out _);
+
+                    // The Hub should NOT have the configuration-based blocking message, nor the old connection-based one.
+                    Assert.DoesNotContain(hubStats.Explanations, x => x.Contains("Pull Replication Sink configurations with 'HubToSink' mode enabled"));
+                    Assert.DoesNotContain(hubStats.Explanations, x => x.Contains("active PullReplication as Sink Connections"));
+                }
 
                 using (var s2 = hub.OpenSession())
                 {

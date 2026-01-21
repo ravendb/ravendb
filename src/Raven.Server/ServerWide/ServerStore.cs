@@ -2956,13 +2956,16 @@ namespace Raven.Server.ServerWide
             if (statistics != null)
                 statistics.NumberOfActivePullReplicationAsSinkConnections = numberOfActivePullReplicationAsSinkConnections;
 
-            var numberOfActiveHubToSinkConfigs = database.ReplicationLoader.GetNumberOfPullReplicationsPreventingIdle();
-            if (numberOfActiveHubToSinkConfigs > 0)
+            var numberOfActiveHubToSinkConfigurations = database.ReplicationLoader.GetNumberOfPullReplicationsPreventingIdle();
+            if (statistics != null)
+                statistics.NumberOfActiveHubToSinkConfigurations = numberOfActiveHubToSinkConfigurations;
+
+            if (numberOfActiveHubToSinkConfigurations > 0)
             {
                 if (statistics == null)
                     return false;
 
-                statistics.Explanations.Add($"Cannot unload database because there are ({numberOfActiveHubToSinkConfigs}) Pull Replication Sink configurations with 'HubToSink' mode enabled. The database must remain active to poll the Hub.");
+                statistics.Explanations.Add($"Cannot unload database because there are ({numberOfActiveHubToSinkConfigurations}) Pull Replication Sink configurations with 'HubToSink' mode enabled. The database must remain active to poll the Hub.");
             }
 
             var hasActiveOperations = database.Operations.HasActive;
