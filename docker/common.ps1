@@ -41,7 +41,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):ubuntu-latest",
+                #"$($repo):ubuntu-latest",
 #                "$($repo):ubuntu-latest-lts",
                 "$($repo):7.1-ubuntu-latest"
             )
@@ -55,7 +55,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):ubuntu-arm32v7-latest",
+                #"$($repo):ubuntu-arm32v7-latest",
 #                "$($repo):ubuntu-arm32v7-latest-lts",
                 "$($repo):7.1-ubuntu-arm32v7-latest"
             )
@@ -69,7 +69,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):ubuntu-arm64v8-latest",
+                #"$($repo):ubuntu-arm64v8-latest",
 #                "$($repo):ubuntu-arm64v8-latest-lts",
                 "$($repo):7.1-ubuntu-arm64v8-latest"
                 )
@@ -121,7 +121,7 @@ function GetManifestTags {
     )
 
     return @(
-        "${repo}:latest",
+        #"${repo}:latest",
 #        "${repo}:latest-lts",
         "${repo}:7.1-latest"
     )
