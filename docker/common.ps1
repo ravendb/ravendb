@@ -41,7 +41,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):ubuntu-latest-lts",
+                #"$($repo):ubuntu-latest-lts",
                 "$($repo):6.2-ubuntu-latest"
             )
             break;
@@ -54,7 +54,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):ubuntu-arm32v7-latest-lts",
+                #"$($repo):ubuntu-arm32v7-latest-lts",
                 "$($repo):6.2-ubuntu-arm32v7-latest"
             )
             break;
@@ -67,7 +67,7 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):ubuntu-arm64v8-latest-lts",
+                #"$($repo):ubuntu-arm64v8-latest-lts",
                 "$($repo):6.2-ubuntu-arm64v8-latest"
             )
                 break;
@@ -88,7 +88,7 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):windows-1809-latest-lts",
+                #"$($repo):windows-1809-latest-lts",
                 "$($repo):6.2-windows-1809-latest"
             )
             break;
@@ -101,7 +101,7 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
                 return $versionTags
             }
             return $versionTags + @(
-                "$($repo):windows-ltsc2022-latest-lts",
+                #"$($repo):windows-ltsc2022-latest-lts",
                 "$($repo):6.2-windows-ltsc2022-latest"
             )
             break;
@@ -118,7 +118,7 @@ function GetManifestTags {
     )
 
     return @(
-        "${repo}:latest-lts",
+        #"${repo}:latest-lts",
         "${repo}:6.2-latest"
     )
 }
