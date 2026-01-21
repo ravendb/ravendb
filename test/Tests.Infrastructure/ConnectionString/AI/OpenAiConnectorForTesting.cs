@@ -18,7 +18,8 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOpenAiConnectorForTesting>
 {
-    private const string Model = "gpt-4o-mini";
+    private const string Model = "gpt-5-mini";
+    // private const string Model = "gpt-4o-mini";
 
     public GenAiOpenAiConnectorForTesting()
     {
