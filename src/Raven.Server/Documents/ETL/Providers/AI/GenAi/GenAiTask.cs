@@ -571,7 +571,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 if (attachment == null)
                     throw new InvalidOperationException($"The document '{item.DocumentId}' has no attachment with name '{genAtt.Name}' from type '{genAtt.Type}' anymore");
                 
-                genAtt.Data = GenAiScriptTransformer.GetAttachmentDataAsBase64(attachment, genAtt.Type);
+                genAtt.Data = GenAiScriptTransformer.GetAttachmentDataAsBase64(attachment.Stream, genAtt.Type);
             }
         }
     }

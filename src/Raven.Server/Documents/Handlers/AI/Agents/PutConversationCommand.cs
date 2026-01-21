@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -18,12 +19,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private readonly LazyStringValue _expectedChangeVector;
         private readonly DocumentDatabase _database;
         private readonly AiAgentConfiguration _configuration;
-
+        public MergedBatchCommand Attachments { get; set; }
         private const string AiAgentConversationHistoryIdPrefix = "ConversationHistory";
 
-        public PutConversationCommand(string conversationId, ConversationDocument conversation, List<BlittableJsonReaderObject> history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
+        public PutConversationCommand(ConversationDocument conversation, List<BlittableJsonReaderObject> history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
         {
-            _id = conversationId;
+            _id = conversation.Id;
             _conversation = conversation;
             _historyDocs = history;
             _expectedChangeVector = changeVector;
@@ -33,8 +34,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            _id = _database.DocumentsStorage.DocumentPut.BuildDocumentId(_id, _database.DocumentsStorage.GenerateNextEtag(), out _);
-
             if (_historyDocs != null)
             {
                 foreach (var historyDoc in _historyDocs)
@@ -49,6 +48,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             _conversationDoc = _conversation.ToBlittable(context);
             PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
+
+            if (Attachments is not null)
+            {
+                Attachments.ExecuteDirectly(context);
+                var d = _database.DocumentsStorage.GetDocumentOrTombstone(context, PutResult.Id, DocumentFields.ChangeVector);
+                PutResult.ChangeVector = d.Document.ChangeVector;
+            }
 
             return 1;
         }
@@ -79,7 +85,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             public PutConversationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new PutConversationCommand(_id, _conversation, _historyDocs, _expectedChangeVector, _configuration, _database);
+                return new PutConversationCommand(_conversation, _historyDocs, _expectedChangeVector, _configuration, _database);
             }
         }
     }

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -272,7 +273,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             openTools.Add(callId, call);
         }
 
-        var conversation =  new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
+        var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
             Messages = messages.Items.Select(m => ((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
@@ -314,7 +315,13 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             };
             tools.Add(context.ReadObject(tool, "tool"));
         }
-
+        configuration.Actions.Add(new AiAgentToolAction
+        {
+            Name = "__RetrieveAttachment",
+            Description =
+                $"Retrieves content for one or more attachments by their names. Use this to re-read files. IMPORTANT: To retrieve multiple files, pass the attachments names as an array to this tool.",
+            ParametersSampleObject = "{\"names\": [\"A List with the names of the attachments that you want to load from the conversation document\"]}",
+        });
         foreach (var a in configuration.Actions ?? [])
         {
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);

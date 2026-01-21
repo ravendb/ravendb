@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -28,6 +29,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
     private readonly string _streamPropertyPath;
     private readonly Func<string, Task> _streamedChunksCallback;
+    private readonly List<ICommandData> _attachmentsCommands;
 
     public RunConversationOperation(
         string agentId,
@@ -89,6 +91,21 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _streamedChunksCallback = streamedChunksCallback;
     }
 
+    public RunConversationOperation(string agentId,
+        string conversationId,
+        IEnumerable<ContentPart> promptParts,
+        List<AiAgentActionResponse> actionResponses,
+        List<AiAgentArtificialActionResponse> artificialActions,
+        AiConversationCreationOptions options,
+        string changeVector,
+        List<ICommandData> attachmentsCommands,
+        string streamPropertyPath,
+        Func<string, Task> streamedChunksCallback)
+        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, streamPropertyPath, streamedChunksCallback)
+    {
+        _attachmentsCommands = attachmentsCommands;
+    }
+
     [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
     public RunConversationOperation(
             string agentId,
@@ -114,6 +131,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     {
         private readonly RunConversationOperation<TSchema> _parent;
         private readonly DocumentConventions _conventions;
+        private List<Stream> _attachmentStreams;
+        private HashSet<Stream> _uniqueAttachmentStreams;
 
         public RunConversationOperationCommand(RunConversationOperation<TSchema> parent, DocumentConventions conventions)
         {
@@ -124,6 +143,32 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             {
                 ResponseType = RavenCommandResponseType.Raw;
             }
+
+            if (_parent._conversationId.EndsWith("|"))
+            {
+                _raftId = Guid.NewGuid().ToString();
+            }
+
+            if (_parent._attachmentsCommands != null)
+            {
+                foreach (var command in _parent._attachmentsCommands)
+                {
+                    if (command is PutAttachmentCommandData put)
+                    {
+                        _attachmentStreams ??= new List<Stream>();
+                        _uniqueAttachmentStreams ??= new HashSet<Stream>();
+
+                        var stream = put.Stream;
+
+                        PutAttachmentCommandHelper.TryValidateStream(stream, put.RemoteParameters);
+
+                        if (_uniqueAttachmentStreams.Add(stream) == false)
+                            PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
+
+                        _attachmentStreams.Add(stream);
+                    }
+                }
+            }
         }
 
         public override bool IsReadRequest => false;
@@ -132,11 +177,6 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         {
             url = $"{node.Url}/databases/{node.Database}/ai/agent" +
                   $"?conversationId={Uri.EscapeDataString(_parent._conversationId)}&agentId={Uri.EscapeDataString(_parent._agentId)}";
-
-            if (_parent._conversationId[_parent._conversationId.Length - 1] == '|')
-            {
-                _raftId = Guid.NewGuid().ToString();
-            }
 
             if (_parent._changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_parent._changeVector)}";
@@ -149,7 +189,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 ActionResponses = _parent._actionResponses,
                 ArtificialActions = _parent._artificialActions,
                 UserPrompt = _parent._promptParts,
-                CreationOptions = _parent._options
+                CreationOptions = _parent._options,
+                AttachmentCommands = _parent._attachmentsCommands
             };
 
             var request = new HttpRequestMessage
@@ -160,6 +201,43 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                     await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
                 }, _conventions)
             };
+
+            if (_parent._attachmentsCommands != null)
+            {
+                var commandsAsBlittable = new BlittableJsonReaderObject[_parent._attachmentsCommands.Count];
+                for (var i = 0; i < _parent._attachmentsCommands.Count; i++)
+                {
+                    var command = _parent._attachmentsCommands[i];
+                    var json = command.ToJson(_conventions, ctx);
+                    commandsAsBlittable[i] = ctx.ReadObject(json, "command");
+                }
+
+                var multipartContent = new MultipartContent { request.Content };
+                multipartContent.Add(new BlittableJsonContent(async stream =>
+                    {
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                        {
+
+                            writer.WriteStartObject();
+                            writer.WriteArray("Commands", commandsAsBlittable);
+                            writer.WriteEndObject();
+                        }
+                    }, _conventions)
+                );
+
+                if (_attachmentStreams is { Count: > 0 })
+                {
+                    foreach (var stream in _attachmentStreams)
+                    {
+                        PutAttachmentCommandHelper.PrepareStream(stream);
+                        var streamContent = new AttachmentStreamContent(stream, CancellationToken);
+                        streamContent.Headers.TryAddWithoutValidation("Command-Type", "AttachmentStream");
+                        multipartContent.Add(streamContent);
+                    }
+                }
+
+                request.Content = multipartContent;
+            }
 
             return request;
         }

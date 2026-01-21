@@ -1,15 +1,20 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -34,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 throw new InvalidOperationException($"The AI Agent '{configuration.Identifier}' is currently disabled. Please enable the agent before starting\\continuing a conversation.");
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
-            var body = await ReadRequestBodyAsync(context, token.Token);
+            var body = await ReadRequestBodyAsync(context, conversationId, token.Token);
             var handler = new ConversationHandler(RequestHandler.ServerStore, RequestHandler.Database)
             {
                 Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
@@ -81,9 +86,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task<RequestBody> ReadRequestBodyAsync(JsonOperationContext context, CancellationToken token)
+        public RequestBody ReadJsonBody(BlittableJsonReaderObject body)
         {
-            var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
             body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
             body.TryGet(nameof(ConversionRequestBody.ArtificialActions), out BlittableJsonReaderArray artificialActions);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out object userPrompt);
@@ -105,6 +109,69 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Parameters = parameters,
                 CreationOptions = options
             };
+        }
+
+        public async Task<RequestBody> ReadRequestBodyAsync(DocumentsOperationContext context, string destinationDocumentId, CancellationToken token)
+        {
+
+            var contentType = HttpContext.Request.ContentType;
+            if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
+                contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+            {
+                using (var commandsReader = new DatabaseBatchCommandsReader(RequestHandler, RequestHandler.Database))
+                {
+                    return await ReadMultipartBodyAsync(context, contentType, commandsReader, token);
+                }
+            }
+
+            var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
+            return ReadJsonBody(body);
+        }
+
+        private async Task<RequestBody> ReadMultipartBodyAsync(
+            DocumentsOperationContext context,
+            string contentType,
+            DatabaseBatchCommandsReader commandsReader,
+            CancellationToken token)
+        {
+            var requestBody = await ParseMultipart(commandsReader, context, RequestHandler.RequestBodyStream(), contentType, RequestHandler.IdentityPartsSeparator, token);
+
+            requestBody.AttachmentCommands = await commandsReader.GetCommandAsync(null);
+
+            return requestBody;
+        }
+
+        public async Task<RequestBody> ParseMultipart(DatabaseBatchCommandsReader commandsReader, JsonOperationContext context, Stream stream, string contentType, char separator, CancellationToken token)
+        {
+            var boundary = MultipartRequestHelper.GetBoundary(
+                MediaTypeHeaderValue.Parse(contentType),
+                MultipartRequestHelper.MultipartBoundaryLengthLimit);
+            var reader = new MultipartReader(boundary, stream);
+            RequestBody result = null;
+            for (var i = 0;; i++)
+            {
+                var section = await reader.ReadNextSectionAsync(token).ConfigureAwait(false);
+                if (section == null)
+                    break;
+
+                var bodyStream = RequestHandler.GetBodyStream(section);
+                if (i == 0)
+                {
+                    var body = await context.ReadForMemoryAsync(bodyStream, "ai-agent", token);
+                    result = ReadJsonBody(body);
+                    continue;
+                }
+
+                if (i == 1)
+                {
+                    await commandsReader.BuildCommandsAsync(context, bodyStream, separator, token);
+                    continue;
+                }
+
+                await commandsReader.SaveStreamAsync(context, bodyStream, token);
+            }
+
+            return result;
         }
     }
 }

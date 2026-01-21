@@ -3,6 +3,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -241,7 +242,7 @@ var ai = new AI();
                             }
                             else
                             {
-                                data = DocumentScript.DebugMode ? GetAttachmentPreview(attachment, type) : GetAttachmentDataAsBase64(attachment, type);
+                                data = DocumentScript.DebugMode ? GetAttachmentPreview(attachment, type) : GetAttachmentDataAsBase64(attachment.Stream, type);
                             }
                         }
                         else
@@ -285,17 +286,17 @@ var ai = new AI();
         return $"[Hash:'{attachment.Base64Hash}']";
     }
 
-    public static string GetAttachmentDataAsBase64(Attachment attachment, string type)
+    public static string GetAttachmentDataAsBase64(Stream stream, string type)
     {
         using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
         if (type == AttachmentsRequestConstants.MediaTypeTextPlain)
         {
-            attachment.Stream.CopyTo(memoryStream);
+            stream.CopyTo(memoryStream);
         }
         else // anything but text is using BASE64
         {
             using var transform = new ToBase64Transform();
-            using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
+            using var cryptoStream = new CryptoStream(stream, transform, CryptoStreamMode.Read);
             cryptoStream.CopyTo(memoryStream);
         }
 

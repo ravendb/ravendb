@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -15,6 +19,8 @@ public class RequestBody
     public BlittableJsonReaderArray ArtificialActions { get; set; }
     public AiConversationCreationOptions CreationOptions { get; set; }
 
+    public MergedBatchCommand AttachmentCommands { get; set; }
+
     public List<AiAttachment> Attachments { get; set; }
 
     public object Content
@@ -26,13 +32,18 @@ public class RequestBody
                 return array;
             }
 
-            return UserPrompt?.ToString();
+            var promptText =  UserPrompt?.ToString();
+
+            if (string.IsNullOrEmpty(promptText) && Attachments != null && Attachments.Count > 0)
+                return string.Empty;
+
+            return promptText;
         }
     }
 
     public void ValidateForStart()
     {
-        if (HasUserPrompt(UserPrompt)== false)
+        if (HasUserPrompt(UserPrompt) == false)
             throw new ArgumentException("User prompt is missing.");
 
         if (Parameters == null)
@@ -41,7 +52,11 @@ public class RequestBody
 
     public void ValidateForResume()
     {
-        if (HasUserPrompt(UserPrompt) == false)
+        bool hasPrompt = HasUserPrompt(UserPrompt);
+        bool hasAttachments = Attachments is { Count: > 0 };
+        bool hasCommands = AttachmentCommands is not null;
+        
+        if (hasPrompt == false && hasAttachments == false && hasCommands == false)
             throw new ArgumentException("User prompt is missing.");
 
         if (ActionResponses == null)
@@ -69,8 +84,23 @@ public class RequestBody
                         return false;
                     }
 
-                    if (obj.TryGet(AiMessagePromptTypes.Text, out string textValue) == false || string.IsNullOrEmpty(textValue))
+                    if (obj.TryGet(AiMessagePromptFields.Type, out string typeValue) == false)
                         return false;
+
+                    if (typeValue == AiMessagePromptTypes.Text)
+                    {
+                        if (obj.TryGet(AiMessagePromptFields.Text, out string textValue) == false || string.IsNullOrEmpty(textValue))
+                            return false;
+
+                        continue;
+                    }
+
+                    if (typeValue == AiMessagePromptFields.Image)
+                    {
+                        continue;
+                    }
+
+                    return false;
                 }
                 return true;
             default:

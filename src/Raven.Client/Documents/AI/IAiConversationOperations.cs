@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -242,6 +243,20 @@ public interface IAiConversationOperations
     /// The text of the user’s message.
     /// </param>
     void AddUserPrompt(params IEnumerable<string> userPrompt);
+
+    /// <summary>
+    /// Adds a file attachment as a stream to the conversation turn.
+    /// </summary>
+    /// <param name="fileName">The name of the file to attach.</param>
+    /// <param name="stream">The data stream of the file.</param>
+    void AddAttachment(string fileName, Stream stream);
+
+    /// <summary>
+    /// Copies an existing attachment from a document in RavenDB into the conversation context.
+    /// </summary>
+    /// <param name="fileName">The name to assign to the file in the conversation context.</param>
+    /// <param name="sourceDocumentId">The ID of the document in RavenDB that contains the attachment.</param>
+    void CopyAttachmentFrom(string fileName, string sourceDocumentId);
 
     /// <summary>
     /// This is called if the model invoked an action that has no register handler using

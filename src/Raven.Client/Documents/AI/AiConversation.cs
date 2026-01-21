@@ -10,6 +10,8 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow.Json;
+using System.IO;
+using Raven.Client.Documents.Commands.Batches;
 
 namespace Raven.Client.Documents.AI;
 
@@ -25,6 +27,8 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<AiAgentArtificialActionResponse> _artificialActions = [];
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
+    private readonly List<ICommandData> _attachments = new();
+    
     public string ChangeVector => _changeVector;
 
     private delegate Task HandleActionDelegate(JsonOperationContext context, AiAgentActionRequest actionRequest, CancellationToken token);
@@ -42,6 +46,43 @@ internal class AiConversation : IAiConversationOperations
         _conversationId = conversationId;
         _options = options;
         _changeVector = changeVector;
+    }
+    
+    public void AddAttachment(string fileName, Stream stream)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
+        if (stream == null)
+            throw new ArgumentNullException(nameof(stream));
+
+        string type = GetContentType(fileName);
+        
+        _attachments.Add(new PutAttachmentCommandData("__this__", fileName, stream, type, changeVector: string.Empty));
+    }
+
+    public void CopyAttachmentFrom(string fileName, string sourceDocumentId)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
+        ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
+
+        _attachments.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: string.Empty));
+    }
+
+    private static string GetContentType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrEmpty(extension))
+            return "image/jpeg"; // Default fallback
+
+        return extension.ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            ".pdf" => "application/pdf",
+            ".txt" => "text/plain",
+            _ => "application/octet-stream"
+        };
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
@@ -271,7 +312,7 @@ internal class AiConversation : IAiConversationOperations
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
             _actionRequests != null &&
             // otherwise, we already went to the server and have nothing new to tell it, so we are done
-            _promptParts.Count == 0 && _actionResponses.Count == 0)
+            _promptParts.Count == 0 && _actionResponses.Count == 0 && _attachments.Count == 0)
         {
             return new AiAnswer<TAnswer>
             {
@@ -279,7 +320,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
+var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback);
 
         try
         {
@@ -307,6 +348,7 @@ internal class AiConversation : IAiConversationOperations
             _promptParts.Clear();
             _actionResponses.Clear();
             _artificialActions.Clear();
+            _attachments.Clear();
         }
     }
 

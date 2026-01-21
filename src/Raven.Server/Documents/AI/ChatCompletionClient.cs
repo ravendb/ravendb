@@ -964,8 +964,15 @@ internal class ChatCompletionClient : IDisposable
 
     public static class Constants
     {
+        public static class ToolNames
+        {
+            // Internal RavenDB tool used by agents to fetch attachments from the conversation document.
+            public const string RetrieveAttachment = "__RetrieveAttachment";
+        }
+
         public static class ResponseFields
         {
+            public const string Names = "names";
             public const string Choices = "choices";
             public const string Message = "message";
             public const string Content = "content";
