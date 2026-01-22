@@ -52,10 +52,8 @@ public class RavenDB_25455 : ReplicationTestBase
         var bookId1 = "books/1";
         var bookId2 = "books/2";
 
-
         const string counter1 = "Book1";
         const string counter2 = "Book2";
-
 
         using (var session = store.OpenAsyncSession())
         {
@@ -132,7 +130,6 @@ public class RavenDB_25455 : ReplicationTestBase
             Assert.Null(await session.CountersFor(bookId1).GetAsync(counter));
         }
     }
-
 
     private class Book
     {
