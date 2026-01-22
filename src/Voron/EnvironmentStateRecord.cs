@@ -18,12 +18,8 @@ public record EnvironmentStateRecord(
     // This represent the *current* journal state, which may involve
     // writes from _other_ envs due to shared journals
     (long Number, long Last4KWritePosition) Journal,
+    List<(long Start, long Count)> SparseRegions,
     object ClientState);
-
-public record SparseRegionsRecord(
-    long TransactionId,
-    List<(long Start, long Count)> Regions
-);
 
 internal sealed class EnvironmentStateRecordHolder
 {

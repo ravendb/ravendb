@@ -120,12 +120,9 @@ namespace Voron
 
         internal TestingStuff _forTestingPurposes;
         private EnvironmentStateRecord _currentStateRecord;
-        private SparseRegionsRecord _currentSparseRegionsRecord;
         private readonly ConcurrentQueue<EnvironmentStateRecordHolder> _transactionsToFlush = new();
-        private readonly ConcurrentQueue<SparseRegionsRecord> _sparseRegionsToFlush = new();
 
         internal EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
-        internal SparseRegionsRecord CurrentSparseRegions => _currentSparseRegionsRecord;
 
         public DateTime LastWorkTime;
 
@@ -164,6 +161,7 @@ namespace Voron
                     default(TreeRootHeader), 
                     -1,
                     (-1, -1),
+                    null,
                     null);
                 
                 _lastValidPageAfterLoad = dataPagerState.NumberOfAllocatedPages;
@@ -1672,14 +1670,7 @@ namespace Voron
                 DataPagerState = tx.DataPagerState,
             };
 
-            var ranges = tx.SparseRegionsRecord;
-            if (ranges?.Regions.Count > 0)
-            {
-                _sparseRegionsToFlush.Enqueue(ranges);
-            }
-
             // we don't _have_ to make it using interlocked, but let's publish it immediately
-            Interlocked.Exchange(ref _currentSparseRegionsRecord, ranges);
             Interlocked.Exchange(ref _currentStateRecord, updatedState);
 
             // We only want to flush to data pager transactions that have been flushed to the journal.
@@ -1697,6 +1688,7 @@ namespace Voron
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
 
+            List<(long Start, long Count)> sparseRegions = null;
             var scratchBuffers = _cachedScratchBuffers;
             scratchBuffers.Clear();
             bool found = false;
@@ -1708,8 +1700,15 @@ namespace Voron
                 {
                     if (found == false)
                         return null;
+
                     Debug.Assert(record is not null);
-                    return new ApplyLogsToDataFileState(scratchBuffers,  record);
+
+                    if(sparseRegions is not null)
+                    {
+                        MergeSparseRegions(sparseRegions);
+                    }
+
+                    return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
 
                 if (_transactionsToFlush.TryDequeue(out EnvironmentStateRecordHolder recordHolder) == false)
@@ -1723,6 +1722,12 @@ namespace Voron
                 recordHolder.EnvStateRecord = null; // this way we ensure that _transactionsToFlush won't hold reference in its internal slots preventing GC on EnvironmentStateRecord.ClientState object
 
 
+                if(record.SparseRegions is not null)
+                {
+                    sparseRegions ??= [];
+                    sparseRegions.AddRange(record.SparseRegions);
+                }
+
                 foreach (var (_, pageFromScratch) in record.ScratchPagesTable)
                 {
                     if (pageFromScratch.AllocatedInTransaction != record.TransactionId)
@@ -1734,52 +1739,14 @@ namespace Voron
             }
         }
 
-        private SparseRegionsRecord _lastPeek;
-        internal Span<(long Start, long Count)> TryGetLatestSparseRegionsToFlush(long uptoTxIdExclusive)
+        private static void MergeSparseRegions(List<(long Start, long Count)> sparseRegions)
         {
-            if (uptoTxIdExclusive == 0)
-                uptoTxIdExclusive = long.MaxValue;
-
-            bool found = false;
-            SparseRegionsRecord record = null;
-            var allRegions = new List<(long Start, long Count)>();
-            while (true)
-            {
-                if (_lastPeek is null)
-                {
-                    _sparseRegionsToFlush.TryPeek(out _lastPeek);
-                }
-
-                if (_lastPeek is null || _lastPeek.TransactionId >= uptoTxIdExclusive)
-                {
-                    if (found == false)
-                        return null;
-
-                    Debug.Assert(record is not null);
-                    break;
-                }
-
-                if (_sparseRegionsToFlush.TryDequeue(out record) == false)
-                    throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
-
-                // single thread is reading from this, so we can be sure that peek + take gets the same value
-                Debug.Assert(ReferenceEquals(record, _lastPeek));
-
-                _lastPeek = null;
-
-                allRegions.AddRange(record.Regions);
-
-                found = true;
-            }
-
-            Debug.Assert(allRegions.Count > 0, "allRegions.Count == 0");
-
-            // This sorts first by the start, then by the count, so 
-            allRegions.Sort();
+            // sorts first by the start, then by the count
+            sparseRegions.Sort();
             int used = 0;
-            var span = CollectionsMarshal.AsSpan(allRegions);
+            var span = CollectionsMarshal.AsSpan(sparseRegions);
             ref var prev = ref span[0];
-            for (int i = 1; i < allRegions.Count; i++)
+            for (int i = 1; i < sparseRegions.Count; i++)
             {
                 ref var inUsed = ref span[used];
                 ref var cur = ref span[i];
@@ -1798,9 +1765,7 @@ namespace Voron
                     span[used] = prev;
                 }
             }
-
-            return span.Slice(0, used + 1);
-
+            CollectionsMarshal.SetCount(sparseRegions, used + 1);
         }
 
         internal void UpdateJournal(long journalNumber, long last4KWrite)

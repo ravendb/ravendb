@@ -46,7 +46,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         {
             // delete range of ~14MB - 40MB, expect to free: 16MB - 32MB
             for (int i = 7; i < 20; i++)
-            {
+            { 
                 for (int j = 0; j < 256; j++)
                 {
                     wtx.LowLevelTransaction.FreePage(pages[i] + j);
@@ -55,7 +55,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
             wtx.Commit();
         }
-        Assert.Equal([(2048, 2048), (4096, 1026)], Env.CurrentSparseRegions.Regions);
+        Assert.Equal([(2048, 2048), (4096, 1026)], Env.CurrentStateRecord.SparseRegions);
 
         using (var wtx = Env.WriteTransaction())
         {
@@ -71,7 +71,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             wtx.Commit();
         }
         // proof that we can release regions released across multiple transactions
-        Assert.Equal([(4096, 2048), (6144, 514)], Env.CurrentSparseRegions.Regions);
+        Assert.Equal([(4096, 2048), (6144, 514)], Env.CurrentStateRecord.SparseRegions);
         (_, long beforePhysicalSize) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
 
         Env.FlushLogToDataFile();
@@ -125,6 +125,6 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             wtx.Commit();
         }
         RestartDatabase();
-        Assert.Equal([(2, 2046), (2048, 2048), (4096, 2048), (6144, 2048)], Env.CurrentSparseRegions.Regions);
+        Assert.Equal([(2, 2046), (2048, 2048), (4096, 2048), (6144, 2048)], Env.CurrentStateRecord.SparseRegions);
     }
 }

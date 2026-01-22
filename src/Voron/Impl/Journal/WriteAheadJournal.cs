@@ -792,17 +792,6 @@ namespace Voron.Impl.Journal
                     _waj._env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
                     long uptoTxIdExclusive = _waj._env.ActiveTransactions.OldestTransaction;
 
-                    var sparseRegionsToFlush = _waj._env.TryGetLatestSparseRegionsToFlush(uptoTxIdExclusive);
-                    if (sparseRegionsToFlush != Span<(long Start, long Count)>.Empty)
-                    {
-                        // This needs to happen _before_ we actually write to the disk
-                        // because we _first_ zero a range and then we may write data to that range (filling some of it up).
-                        // That is fine, and means that we don't need to track re-uses. 
-                        MarkSparseRegionsInDataFile(sparseRegionsToFlush);
-                    }
-
-                    _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
-
                     if (_applyLogsToDataFileStateFromPreviousFailedAttempt != null)
                     {
                         // we have to keep this around since TryGetLatestEnvironmentStateToFlush will _consume_ the state
@@ -817,7 +806,18 @@ namespace Voron.Impl.Journal
                         if (_applyLogsToDataFileStateFromPreviousFailedAttempt == null)
                             return; // nothing to do
                     }
-                    
+
+                    if(_applyLogsToDataFileStateFromPreviousFailedAttempt.SparseRegions is {Count: > 0} sparseRegionsToFlush)
+                    {
+                        // This needs to happen _before_ we actually write to the disk
+                        // because we _first_ zero a range and then we may write data to that range (filling some of it up).
+                        // That is fine, and means that we don't need to track re-uses. 
+                        MarkSparseRegionsInDataFile(sparseRegionsToFlush);
+                    }
+
+                    _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
+
+
                     Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt is { Record: not null, Buffers: not null });
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
@@ -1484,7 +1484,7 @@ namespace Voron.Impl.Journal
                 return dataPagerState;
             }
 
-            private void MarkSparseRegionsInDataFile(Span<(long Start, long Count)> sparseRegions)
+            private void MarkSparseRegionsInDataFile(List<(long Start, long Count)> sparseRegions)
             {
                 var currentStateRecord = _waj._env.CurrentStateRecord;
                 var dataPagerState = currentStateRecord.DataPagerState;
