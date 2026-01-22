@@ -77,7 +77,6 @@ namespace Voron.Impl
         public Pager.PagerTransactionState PagerTransactionState;
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
-        private SparseRegionsRecord _sparseRangesInTransaction;
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
         internal sealed class WriteTransactionPool
         {
@@ -1224,21 +1223,24 @@ namespace Voron.Impl
 
             ref readonly var rootHeader = ref _root.ReadHeader();
             _txHeader.Root = rootHeader;
-            _envRecord = _envRecord with { Root = rootHeader };
-
             _txHeader.TxMarker |= TransactionMarker.Commit;
+
+            List<(long Start, long Count)> regions = null;
+            if (_sparsePageRanges != null && _sparsePageRanges.Count != 0)
+            {
+                regions = _freeSpaceHandling.GetSparseRegions(this, _sparsePageRanges);
+            }
+            _envRecord = _envRecord with
+            {
+                Root = rootHeader,
+                SparseRegions = regions
+            };
 
             LastChanceToReadFromWriteTransactionBeforeCommit?.Invoke(this);
 
             _env.Journal.Applicator.OnTransactionCommitted(this);
 
             ModifiedPagesInTransaction = _scratchPagesInUse.ToImmutable();
-
-            if (_sparsePageRanges != null && _sparsePageRanges.Count != 0)
-            {
-                var regions = _freeSpaceHandling.GetSparseRegions(this, _sparsePageRanges);
-                _sparseRangesInTransaction = new SparseRegionsRecord(Id, regions);
-            }
 
 
             if (_dirtyPages.Count > 0 || _hasFreePages)
@@ -1250,7 +1252,6 @@ namespace Voron.Impl
 
         }
 
-        public SparseRegionsRecord SparseRegionsRecord => _sparseRangesInTransaction;
 
         [DoesNotReturn]
         private static void ThrowNextPageNumberCannotBeSmallerOrEqualThanOne([CallerMemberName] string caller = null)
