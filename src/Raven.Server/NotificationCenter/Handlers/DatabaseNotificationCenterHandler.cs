@@ -2,7 +2,6 @@
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Handlers.Processors;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -11,15 +10,8 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/databases/*/notifications", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true, IsDebugInformationEndpoint = true)]
         public async Task GetNotifications()
         {
-            var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;
-            var type = GetStringQueryString("type", required: false);
-            var start = GetIntValueQueryString("pageStart", required: false) ?? 0;
-            var pageSize = GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
-            
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await NotificationCenterHandlerHelper.GetNotificationsFromStorageAsync(Database.NotificationCenter, context, ResponseBodyStream(), postponed, type, start, pageSize);
-            }
+            using (var processor = new DatabaseNotificationCenterHandlerProcessorForNotifications(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]

@@ -6,6 +6,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public sealed class ShardedDatabaseNotificationCenterHandler : ShardedDatabaseRequestHandler
     {
+        [RavenShardedAction("/databases/*/notifications", "GET")]
+        public async Task GetNotifications()
+        {
+            using (var processor = new ShardedDatabaseNotificationCenterHandlerProcessorForNotifications(this))
+                await processor.ExecuteAsync();
+        }
+        
         [RavenShardedAction("/databases/*/notification-center/watch", "GET")]
         public async Task Get()
         {

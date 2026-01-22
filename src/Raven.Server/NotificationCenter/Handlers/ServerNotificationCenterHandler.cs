@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Handlers.Processors;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -27,10 +29,19 @@ namespace Raven.Server.NotificationCenter.Handlers
             var type = GetStringQueryString("type", required: false);
             var start = GetIntValueQueryString("pageStart", required: false) ?? 0;
             var pageSize = GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
-            
+        
+            var filter = NotificationCenterHelper.GetAndEnsureValidTypeParameters(type);
+            var shouldFilter = type != null;
+        
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await NotificationCenterHandlerHelper.GetNotificationsFromStorageAsync(ServerStore.NotificationCenter, context, ResponseBodyStream(), postponed, type, start, pageSize);
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (ServerStore.NotificationCenter.GetStored(out var storedNotifications, postponed))
+                {
+                    var filteredNotifications = shouldFilter ? NotificationCenterHelper.FilterNotifications(storedNotifications, filter) : storedNotifications;
+
+                    writer.WriteNotifications(filteredNotifications, pageSize, start);
+                }
             }
         }
         
