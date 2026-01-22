@@ -1739,32 +1739,38 @@ namespace Voron
             }
         }
 
-        private static void MergeSparseRegions(List<(long Start, long Count)> sparseRegions)
+        public static void MergeSparseRegions(List<(long Start, long Count)> sparseRegions)
         {
-            // sorts first by the start, then by the count
+            if (sparseRegions.Count <= 1)
+                return;
+
+            // Sort Start, Count
+            // Equal Start will sort by smaller Count, we rely on that below
             sparseRegions.Sort();
+
             int used = 0;
             var span = CollectionsMarshal.AsSpan(sparseRegions);
-            ref var prev = ref span[0];
-            for (int i = 1; i < sparseRegions.Count; i++)
+
+            for (int i = 1; i < span.Length; i++)
             {
-                ref var inUsed = ref span[used];
-                ref var cur = ref span[i];
-                if (prev.Start == cur.Start)
+                ref var currentMerged = ref span[used];
+                var next = span[i];
+
+                // Check for overlap or adjacency:
+                if (next.Start <= currentMerged.Start + currentMerged.Count)
                 {
-                    inUsed.Count = cur.Count;
-                }
-                else if (prev.Start + prev.Count >= cur.Start)
-                {
-                    inUsed.Count = Math.Max(prev.Start + prev.Count, cur.Start + cur.Count) - prev.Start;
+                    long currentEnd = currentMerged.Start + currentMerged.Count;
+                    long nextEnd = next.Start + next.Count;
+
+                    currentMerged.Count = Math.Max(currentEnd, nextEnd) - currentMerged.Start;
                 }
                 else
                 {
                     used++;
-                    prev = ref cur;
-                    span[used] = prev;
+                    span[used] = next;
                 }
             }
+
             CollectionsMarshal.SetCount(sparseRegions, used + 1);
         }
 
