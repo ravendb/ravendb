@@ -801,6 +801,8 @@ namespace Voron.Impl.Journal
                         MarkSparseRegionsInDataFile(sparseRegionsToFlush);
                     }
 
+                    _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
+
                     if (_applyLogsToDataFileStateFromPreviousFailedAttempt != null)
                     {
                         // we have to keep this around since TryGetLatestEnvironmentStateToFlush will _consume_ the state
@@ -816,8 +818,6 @@ namespace Voron.Impl.Journal
                             return; // nothing to do
                     }
                     
-                    _forTestingPurposes?.OnApplyLogsToDataFile_AfterSparseRegionsSet_BeforeWritingToDataFile?.Invoke();
-
                     Debug.Assert(_applyLogsToDataFileStateFromPreviousFailedAttempt is { Record: not null, Buffers: not null });
                     var currentTotalCommittedSinceLastFlushPages = TotalCommittedSinceLastFlushPages;
 
