@@ -32,6 +32,7 @@
         padding: 0 !important;
         border: 0 !important;
         background: none !important;
+        position: relative;
 
         &:before {
             content: "search";
@@ -47,6 +48,13 @@
 
         &:after {
             display: none !important;
+        }
+
+        &:has(.studio-search__ask-ai-button) {
+            .studio-search__input {
+                // Add extra padding to avoid overlap with Ask AI button
+                padding-right: 96px !important;
+            }
         }
     }
 
@@ -99,6 +107,24 @@
         border-radius: 0 sizes.$border-radius-pill sizes.$border-radius-pill 0 !important;
         padding: 0 0 0 sizes.$gutter !important;
         min-height: 35px !important;
+    }
+
+    &__ask-ai-button {
+        display: flex;
+        align-items: center;
+        position: absolute !important;
+        top: 5px;
+        right: 5px;
+        bottom: 5px;
+        border-radius: sizes.$border-radius-pill !important;
+        background-color: colors.$panel-bg-2-var !important;
+        border: none !important;
+
+        &:hover,
+        &:focus,
+        &:active {
+            background-color: colors.$panel-bg-3-var !important;
+        }
     }
 
     &__database-col {
