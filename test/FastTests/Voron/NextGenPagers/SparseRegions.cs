@@ -127,4 +127,41 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
         RestartDatabase();
         Assert.Equal([(2, 2046), (2048, 2048), (4096, 2048), (6144, 2048)], Env.CurrentStateRecord.SparseRegions);
     }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void MergeSparseRegions_ShouldReturnMinimumConsolidatedRanges()
+    {
+        var inputSource = new List<(long Start, long Count)>
+        {
+            (4703, 1), (4487, 1), (4704, 1), (4707, 9), (4717, 7), (4703, 1), (4714, 3), (4735, 9),
+            (4718, 6), (4717, 1), (4738, 6), (4787, 7), (4718, 6), (4743, 1), (4787, 7), (4718, 6),
+            (4743, 1), (4787, 7), (4809, 6), (4718, 2), (4720, 4), (4743, 1), (4787, 7), (4809, 2),
+            (4813, 2), (4835, 2), (4722, 2), (4743, 1), (4787, 7), (4809, 2), (4813, 2), (4835, 2),
+            (4853, 2), (4722, 2), (4743, 1), (4787, 7), (4809, 2), (4813, 2), (4835, 2), (4853, 2),
+            (4857, 2), (4788, 6), (4809, 2), (4813, 2), (4835, 2), (4853, 2), (4857, 2), (4875, 2),
+            (4788, 2), (4790, 4), (4809, 2), (4813, 2), (4835, 2), (4853, 2), (4857, 2), (4875, 2),
+            (4879, 2), (4792, 2), (4809, 2), (4813, 2), (4835, 2), (4853, 2), (4857, 2), (4875, 2),
+            (4879, 2), (4897, 2)
+        };
+
+        var expectedResult = new List<(long Start, long Count)>
+        {
+            (4487, 1),
+            (4703, 2),
+            (4707, 17),
+            (4735, 9),
+            (4787, 7),
+            (4809, 6),
+            (4835, 2),
+            (4853, 2),
+            (4857, 2),
+            (4875, 2),
+            (4879, 2),
+            (4897, 2)
+        };
+
+        StorageEnvironment.MergeSparseRegions(inputSource);
+
+        Assert.Equal(expectedResult , inputSource);
+    }
 }
