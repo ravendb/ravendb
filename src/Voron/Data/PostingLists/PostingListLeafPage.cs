@@ -293,10 +293,10 @@ public readonly unsafe struct PostingListLeafPage
             
             encoder.Write(tmpPtr + PageHeader.SizeOf, Constants.Storage.PageSize - PageHeader.SizeOf);
         }
-        mergedList.Dispose();
 
         newHeader->SizeUsed = (ushort)reqSize;
         newHeader->NumberOfEntries =  mergedList.Count;
+        mergedList.Dispose();
 
         Memory.Set((byte*)dest + PageHeader.SizeOf + dest->SizeUsed, 0,
             Constants.Storage.PageSize - (PageHeader.SizeOf + dest->SizeUsed));
