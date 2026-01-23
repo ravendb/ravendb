@@ -227,8 +227,6 @@ public class RavenDB_24424 : RavenTestBase
             
             CreateNotifications(Server, database);
             
-            WaitForUserToContinueTheTest(store);
-            
             var serverUrl = Server.WebUrl;
 
             using (var ws = new ClientWebSocket())
