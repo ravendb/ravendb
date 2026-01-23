@@ -639,6 +639,7 @@ namespace Raven.Server.Dashboard
         private static NotificationCounts GetNotificationCounts(DocumentDatabase database)
         {
             var result = new NotificationCounts();
+            var now = SystemTime.UtcNow;
             
             var storage = database.NotificationCenter.Storage;
             
@@ -647,23 +648,29 @@ namespace Raven.Server.Dashboard
             {
                 foreach (var alert in storage.ReadActionsOfType(context, NotificationType.AlertRaised))
                 {
-                    var reason = Bits.SwapBytes(alert.Reason);
+                    if (alert.PostponedUntil == null || alert.PostponedUntil <= now)
+                    {
+                        var reason = Bits.SwapBytes(alert.Reason);
 
-                    var reasonName = ((AlertReason)reason).ToString();
+                        var reasonName = ((AlertReason)reason).ToString();
                     
-                    result.Increment(NotificationType.AlertRaised, reasonName);
+                        result.Increment(NotificationType.AlertRaised, reasonName);
+                    }
                     
                     alert.Dispose();
                 }
                 
                 foreach (var performanceHint in storage.ReadActionsOfType(context, NotificationType.PerformanceHint))
                 {
-                    var reason = Bits.SwapBytes(performanceHint.Reason);
+                    if (performanceHint.PostponedUntil == null || performanceHint.PostponedUntil <= now)
+                    {
+                        var reason = Bits.SwapBytes(performanceHint.Reason);
 
-                    var reasonName = ((PerformanceHintReason)reason).ToString();
-                    
-                    result.Increment(NotificationType.PerformanceHint, reasonName);
-                    
+                        var reasonName = ((PerformanceHintReason)reason).ToString();
+
+                        result.Increment(NotificationType.PerformanceHint, reasonName);
+                    }
+
                     performanceHint.Dispose();
                 }
             }
