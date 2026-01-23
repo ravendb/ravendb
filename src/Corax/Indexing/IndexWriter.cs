@@ -614,11 +614,15 @@ namespace Corax.Indexing
                 if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
 
-                ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
-                if (exists == false)
+                int termLocation;
+                if (field.Textual.TryGetValue(termSlice, out termLocation) == false)
                 {
-                    termLocation = field.Storage.Count;
+                    // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                    var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
+                    field.Textual[termSlice] = newIndex;
+                    termLocation = newIndex;
+
                     scope = default; // We don't want to reclaim the term name
                 }
 
@@ -629,21 +633,27 @@ namespace Corax.Indexing
                 if (reader.HasNumeric == false)
                     continue;
 
-                termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
-                if (exists == false)
+                if (field.Longs.TryGetValue(reader.CurrentLong, out termLocation) == false)
                 {
-                    termLocation = field.Storage.Count;
+                    // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                    var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
+                    field.Longs[reader.CurrentLong] = newIndex;
+
+                    termLocation = newIndex;
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
-                termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
-                if (exists == false)
+                if (field.Doubles.TryGetValue(reader.CurrentDouble, out termLocation) == false)
                 {
-                    termLocation = field.Storage.Count;
+                    // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                    var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
+                    field.Doubles[reader.CurrentDouble] = newIndex;
+
+                    termLocation = newIndex;
                 }
 
                 term = ref field.Storage.GetAsRef(termLocation);
@@ -653,11 +663,15 @@ namespace Corax.Indexing
 
         private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
-            ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
-            if (exists == false)
+            int termLocation;
+            if (field.Textual.TryGetValue(termSlice, out termLocation) == false)
             {
-                termLocation = field.Storage.Count;
+                // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(1));
+                field.Textual[termSlice] = newIndex;
+
+                termLocation = newIndex;
                 // We dont want to reclaim the term name
             }
 

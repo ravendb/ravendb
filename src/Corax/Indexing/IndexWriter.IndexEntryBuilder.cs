@@ -170,16 +170,20 @@ public partial class IndexWriter
         ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value, InserterMode inserterMode)
         {
             Debug.Assert(field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
-            
+
             ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_parent._entriesAllocator, value, out var slice);
 
-            // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
-            // dictionary we need to close the slice as we are disposing it afterwards. 
-            ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, slice, out var exists);
-            if (exists == false)
+            // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+            // GetValueRefOrAddDefault would add a default entry (0) before we can set the correct index,
+            // which causes IndexOutOfRangeException if AddByRef throws.
+            int termLocation;
+            if (field.Textual.TryGetValue(slice, out termLocation) == false)
             {
-                termLocation = field.Storage.Count;
+                var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(value.Length));
+                field.Textual[slice] = newIndex;
+                termLocation = newIndex;
+
                 scope = null; // We don't want the fieldname (slice) to be returned.
             }
 
@@ -237,20 +241,25 @@ public partial class IndexWriter
 
         void NumericInsert(IndexedField field, long lVal, double dVal)
         {
-            // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-            ref var doublesTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
-            if (fieldDoublesExist == false)
+            int doublesTermsLocation;
+            if (field.Doubles.TryGetValue(dVal, out doublesTermsLocation) == false)
             {
-                doublesTermsLocation = field.Storage.Count;
+                // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
+                // Only add to dictionary AFTER successful Storage.AddByRef
+                field.Doubles[dVal] = newIndex;
+                doublesTermsLocation = newIndex;
             }
-
-            // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
-            ref var longsTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, lVal, out bool fieldLongExist);
-            if (fieldLongExist == false)
+            
+            int longsTermsLocation;
+            if (field.Longs.TryGetValue(lVal, out longsTermsLocation) == false)
             {
-                longsTermsLocation = field.Storage.Count;
+                // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
+                field.Longs[lVal] = newIndex;
+                longsTermsLocation = newIndex;
             }
 
             ref var doublesTerm = ref field.Storage.GetAsRef(doublesTermsLocation);
