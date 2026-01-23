@@ -12,7 +12,7 @@ namespace RequestHandler.Benchmark;
 [MemoryDiagnoser]
 public class RequestContextScopingBenchmark
 {
-    private RavenDbInstance? _instance;
+    private RavenDbInstance _instance;
 
     private const string DocumentId = "users/1-A";
     private readonly QueryString _query = new($"?id={DocumentId}");
