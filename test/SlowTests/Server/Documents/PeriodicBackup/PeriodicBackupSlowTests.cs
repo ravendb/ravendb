@@ -620,7 +620,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var database = await GetDatabase(restoredDatabaseName);
                         var pathToIndexes = database.Configuration.Indexing.StoragePath;
-                        Assert.Equal(0, Directory.GetDirectories(pathToIndexes.FullPath).Length);
+                        var dirs = Directory.GetDirectories(pathToIndexes.FullPath);
+                        dirs = dirs.Where(d => new DirectoryInfo(d).Name != "@SharedJournals").ToArray();
+                        Assert.Equal(0, dirs.Length);
 
                         using (var session = store.OpenAsyncSession(restoredDatabaseName))
                         {
