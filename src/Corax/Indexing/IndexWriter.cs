@@ -614,13 +614,13 @@ namespace Corax.Indexing
                 if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
 
-                int termLocation;
-                if (field.Textual.TryGetValue(termSlice, out termLocation) == false)
+                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
+                if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
                 {
-                    // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                    termLocation = Constants.IndexWriter.InvalidStorageIndex;
                     var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
-                    field.Textual[termSlice] = newIndex;
                     termLocation = newIndex;
 
                     scope = default; // We don't want to reclaim the term name
@@ -633,44 +633,43 @@ namespace Corax.Indexing
                 if (reader.HasNumeric == false)
                     continue;
 
-                if (field.Longs.TryGetValue(reader.CurrentLong, out termLocation) == false)
+                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                ref var longTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
+                if (exists == false || longTermLocation == Constants.IndexWriter.InvalidStorageIndex)
                 {
-                    // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                    longTermLocation = Constants.IndexWriter.InvalidStorageIndex;
                     var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
-                    field.Longs[reader.CurrentLong] = newIndex;
-
-                    termLocation = newIndex;
+                    longTermLocation = newIndex;
                 }
 
-                term = ref field.Storage.GetAsRef(termLocation);
+                term = ref field.Storage.GetAsRef(longTermLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
-                if (field.Doubles.TryGetValue(reader.CurrentDouble, out termLocation) == false)
+                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                ref var doubleTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
+                if (exists == false || doubleTermLocation == Constants.IndexWriter.InvalidStorageIndex)
                 {
-                    // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                    doubleTermLocation = Constants.IndexWriter.InvalidStorageIndex;
                     var newIndex = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
-                    field.Doubles[reader.CurrentDouble] = newIndex;
-
-                    termLocation = newIndex;
+                    field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
+                    doubleTermLocation = newIndex;
                 }
 
-                term = ref field.Storage.GetAsRef(termLocation);
+                term = ref field.Storage.GetAsRef(doubleTermLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
             }
         }
 
         private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
-            int termLocation;
-            if (field.Textual.TryGetValue(termSlice, out termLocation) == false)
+            // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+            ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
+            if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
             {
-                // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                termLocation = Constants.IndexWriter.InvalidStorageIndex;
                 var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(1));
-                field.Textual[termSlice] = newIndex;
-
                 termLocation = newIndex;
                 // We dont want to reclaim the term name
             }

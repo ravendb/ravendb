@@ -173,16 +173,15 @@ public partial class IndexWriter
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_parent._entriesAllocator, value, out var slice);
 
-            // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
-            // GetValueRefOrAddDefault would add a default entry (0) before we can set the correct index,
-            // which causes IndexOutOfRangeException if AddByRef throws.
-            int termLocation;
-            if (field.Textual.TryGetValue(slice, out termLocation) == false)
+            // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+            // If any allocation throws, termLocation remains InvalidStorageIndex, allowing retry on next access.
+            ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, slice, out var exists);
+            if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
             {
+                termLocation = Constants.IndexWriter.InvalidStorageIndex; // Mark as in-progress FIRST
                 var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(value.Length));
-                field.Textual[slice] = newIndex;
-                termLocation = newIndex;
+                termLocation = newIndex; // Commit only after ALL allocations succeed
 
                 scope = null; // We don't want the fieldname (slice) to be returned.
             }
@@ -241,24 +240,23 @@ public partial class IndexWriter
 
         void NumericInsert(IndexedField field, long lVal, double dVal)
         {
-            int doublesTermsLocation;
-            if (field.Doubles.TryGetValue(dVal, out doublesTermsLocation) == false)
+            // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+            ref var doublesTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, dVal, out bool fieldDoublesExist);
+            if (fieldDoublesExist == false || doublesTermsLocation == Constants.IndexWriter.InvalidStorageIndex)
             {
-                // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                doublesTermsLocation = Constants.IndexWriter.InvalidStorageIndex;
                 var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
-                // Only add to dictionary AFTER successful Storage.AddByRef
-                field.Doubles[dVal] = newIndex;
                 doublesTermsLocation = newIndex;
             }
-            
-            int longsTermsLocation;
-            if (field.Longs.TryGetValue(lVal, out longsTermsLocation) == false)
+
+            // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+            ref var longsTermsLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, lVal, out bool fieldLongExist);
+            if (fieldLongExist == false || longsTermsLocation == Constants.IndexWriter.InvalidStorageIndex)
             {
-                // RavenDB-25907: Use TryGetValue pattern to ensure atomic Dictionary+Storage update.
+                longsTermsLocation = Constants.IndexWriter.InvalidStorageIndex;
                 var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
-                field.Longs[lVal] = newIndex;
                 longsTermsLocation = newIndex;
             }
 
