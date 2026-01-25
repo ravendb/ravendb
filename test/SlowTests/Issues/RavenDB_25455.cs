@@ -11,7 +11,7 @@ public class RavenDB_25455 : ReplicationTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.ClientApi)]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
     public async Task CounterIsNotOverridenWhenLoadedOnceAgain()
     {
         using var store = GetDocumentStore();
