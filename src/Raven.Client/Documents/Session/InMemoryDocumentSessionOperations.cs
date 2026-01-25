@@ -1700,19 +1700,19 @@ more responsive application.
             HashSet<string> deletedCounters;
             if (cache.Values.Count == 0 || countersToInclude == null)
             {
-                deletedCounters = new HashSet<string>();
+                deletedCounters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
             else if (countersToInclude.TryGetValue(id, out var included) == false)
             {
-                deletedCounters = new HashSet<string>();
+                deletedCounters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
             else if (included.Length == 0) // IncludeAllCounters
             {
-                deletedCounters = new HashSet<string>(cache.Values.Keys);
+                deletedCounters = new HashSet<string>(cache.Values.Keys, StringComparer.OrdinalIgnoreCase);
             }
             else
             {
-                deletedCounters = new HashSet<string>(included);
+                deletedCounters = new HashSet<string>(included, StringComparer.OrdinalIgnoreCase);
             }
 
             foreach (BlittableJsonReaderObject counterBlittable in counters)
