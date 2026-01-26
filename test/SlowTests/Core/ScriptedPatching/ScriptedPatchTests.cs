@@ -256,5 +256,97 @@ Update
         {
             public List<ProcessRules> ProcessRules { get; set; }
         }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseUuidFunction(Options options)
+        {
+            using var store = GetDocumentStore(options);
+
+            using (var commands = store.Commands())
+            {
+                commands.Put("companies/1", null, new Company
+                {
+                    Name = "Test Company"
+                }, null);
+
+                // Test that uuid() generates a valid UUID
+                store.Operations.Send(new PatchOperation("companies/1", null,
+                    new PatchRequest
+                    {
+                        Script = @"this.Uuid = uuid();"
+                    }));
+
+                dynamic result = commands.Get("companies/1");
+                Assert.NotNull(result.Uuid);
+                
+                // Verify it's a valid GUID format (36 characters with dashes)
+                string uuid = result.Uuid.ToString();
+                Assert.True(Guid.TryParse(uuid, out _), $"uuid() should generate a valid UUID, but got: {uuid}");
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void UuidFunctionGeneratesUniqueValues(Options options)
+        {
+            using var store = GetDocumentStore(options);
+
+            using (var commands = store.Commands())
+            {
+                commands.Put("companies/1", null, new Company
+                {
+                    Name = "Test Company"
+                }, null);
+
+                // Generate multiple UUIDs and ensure they are unique
+                store.Operations.Send(new PatchOperation("companies/1", null,
+                    new PatchRequest
+                    {
+                        Script = @"this.Uuid1 = uuid(); this.Uuid2 = uuid(); this.Uuid3 = uuid();"
+                    }));
+
+                dynamic result = commands.Get("companies/1");
+                Assert.NotNull(result.Uuid1);
+                Assert.NotNull(result.Uuid2);
+                Assert.NotNull(result.Uuid3);
+                
+                string uuid1 = result.Uuid1.ToString();
+                string uuid2 = result.Uuid2.ToString();
+                string uuid3 = result.Uuid3.ToString();
+                
+                // Verify all three are different
+                Assert.NotEqual(uuid1, uuid2);
+                Assert.NotEqual(uuid2, uuid3);
+                Assert.NotEqual(uuid1, uuid3);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void UuidFunctionShouldThrowOnParameters(Options options)
+        {
+            using var store = GetDocumentStore(options);
+
+            using (var commands = store.Commands())
+            {
+                commands.Put("companies/1", null, new Company
+                {
+                    Name = "Test Company"
+                }, null);
+
+                // Test that uuid() throws when called with parameters
+                var exception = Assert.Throws<JavaScriptException>(() =>
+                {
+                    store.Operations.Send(new PatchOperation("companies/1", null,
+                        new PatchRequest
+                        {
+                            Script = @"this.Uuid = uuid('invalid');"
+                        }));
+                });
+
+                Assert.Contains("must be called without arguments", exception.Message);
+            }
+        }
     }
 }
