@@ -3,102 +3,102 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public enum AlertReason
     {
-        Etl_Error,
-        Etl_Warning,
-        Etl_TransformationError,
-        Etl_LoadError,
+        Etl_Error = 0,
+        Etl_Warning = 1,
+        Etl_TransformationError = 2,
+        Etl_LoadError = 3,
         
-        QueueSink_Error,
-        QueueSink_Warning,
-        QueueSink_ScriptError,
-        QueueSink_ConsumeError,
-        QueueSink_ConsumerCreationError,
+        QueueSink_Error = 4,
+        QueueSink_Warning = 5,
+        QueueSink_ScriptError = 6,
+        QueueSink_ConsumeError = 7,
+        QueueSink_ConsumerCreationError = 8,
 
-        AiAgent_ExceededTokenThreshold,
+        AiAgent_ExceededTokenThreshold = 9,
 
-        SqlEtl_ConnectionError,
-        SqlEtl_ProviderError,
+        SqlEtl_ConnectionError = 10,
+        SqlEtl_ProviderError = 11,
         
-        SnowflakeEtl_ConnectionError,
+        SnowflakeEtl_ConnectionError = 12,
 
-        Etl_InvalidScript,
+        Etl_InvalidScript = 13,
 
-        PeriodicBackup,
-        Replication,
-        Server_NewVersionAvailable,
+        PeriodicBackup = 14,
+        Replication = 15,
+        Server_NewVersionAvailable = 16,
 
-        LicenseManager_InitializationError,
-        LicenseManager_LeaseLicenseSuccess,
-        LicenseManager_LeaseLicenseError,
-        LicenseManager_LicenseUpdateMessage,
-        LicenseManager_HighlyAvailableTasks,
-        LicenseManager_LicenseLimit,
-        LicenseManager_AGPL3,
+        LicenseManager_InitializationError = 17,
+        LicenseManager_LeaseLicenseSuccess = 18,
+        LicenseManager_LeaseLicenseError = 19,
+        LicenseManager_LicenseUpdateMessage = 20,
+        LicenseManager_HighlyAvailableTasks = 21,
+        LicenseManager_LicenseLimit = 22,
+        LicenseManager_AGPL3 = 23,
 
-        Certificates_Expiration,
-        Certificates_DeveloperLetsEncryptRenewal,
-        Certificates_EntireClusterReplaceSuccess,
-        Certificates_ReplaceSuccess,
-        Certificates_ReplaceError,
-        Certificates_ReplacePending,
+        Certificates_Expiration = 24,
+        Certificates_DeveloperLetsEncryptRenewal = 25,
+        Certificates_EntireClusterReplaceSuccess = 26,
+        Certificates_ReplaceSuccess = 27,
+        Certificates_ReplaceError = 28,
+        Certificates_ReplacePending = 29,
 
-        IndexStore_IndexCouldNotBeOpened,
-        WarnIndexOutputsPerDocument,
-        ErrorSavingReduceOutputDocuments,
-        CatastrophicDatabaseFailure,
-        RecoverableVoronFailure,
-        NonDurableFileSystem,
-        RecoveryError,
-        RestoreError,
-        DeletionError,
+        IndexStore_IndexCouldNotBeOpened = 30,
+        WarnIndexOutputsPerDocument = 31,
+        ErrorSavingReduceOutputDocuments = 32,
+        CatastrophicDatabaseFailure = 33,
+        RecoverableVoronFailure = 34,
+        NonDurableFileSystem = 35,
+        RecoveryError = 36,
+        RestoreError = 37,
+        DeletionError = 38,
 
-        ClusterTopologyWarning,
-        DatabaseTopologyWarning,
-        SwappingHddInsteadOfSsd,
+        ClusterTopologyWarning = 39,
+        DatabaseTopologyWarning = 40,
+        SwappingHddInsteadOfSsd = 41,
 
-        RevisionsConfigurationNotValid,
-        ArchivalConfigurationNotValid,
+        RevisionsConfigurationNotValid = 42,
+        ArchivalConfigurationNotValid = 43,
 
-        ReplicationMissingAttachments,
+        ReplicationMissingAttachments = 44,
 
-        ClusterTransactionFailure,
+        ClusterTransactionFailure = 45,
 
-        OutOfMemoryException,
+        OutOfMemoryException = 46,
 
-        LowDiskSpace,
+        LowDiskSpace = 47,
 
         // Required for backward compatibility
-        UnexpectedIndexingThreadError,
+        UnexpectedIndexingThreadError = 48,
 
-        Indexing_UnexpectedIndexingThreadError,
-        Indexing_CouldNotGetStats,
-        Indexing_CoraxComplexItem,
+        Indexing_UnexpectedIndexingThreadError = 49,
+        Indexing_CouldNotGetStats = 50,
+        Indexing_CoraxComplexItem = 51,
 
-        CpuUsageExtensionPointError,
-        TcpListenerError,
+        CpuUsageExtensionPointError = 52,
+        TcpListenerError = 53,
 
-        Throttling_CpuCreditsBalance,
+        Throttling_CpuCreditsBalance = 54,
 
-        IntegrityErrorOfAlreadySyncedData,
+        IntegrityErrorOfAlreadySyncedData = 55,
 
-        ConcurrentDatabaseLoadTimeout,
+        ConcurrentDatabaseLoadTimeout = 56,
 
-        HighClientCreationRate,
-        RollupExceedNumberOfValues,
+        HighClientCreationRate = 57,
+        RollupExceedNumberOfValues = 58,
 
-        LowSwapSize,
+        LowSwapSize = 59,
 
-        UnrecoverableClusterError,
+        UnrecoverableClusterError = 60,
         
-        MicrosoftLogsConfigurationLoadError,
+        MicrosoftLogsConfigurationLoadError = 61,
         
-        MismatchedReferenceLoad,
+        MismatchedReferenceLoad = 62,
 
-        BlockingTombstones,
-        ServerLimits,
+        BlockingTombstones = 63,
+        ServerLimits = 64,
 
-        ConflictRevisionsExceeded,
+        ConflictRevisionsExceeded = 65,
         
-        SqlConnectionString_DeprecatedFactoryReplaced,
+        SqlConnectionString_DeprecatedFactoryReplaced = 66,
     }
 }

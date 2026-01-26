@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Raven.Server.NotificationCenter.Notifications;
 using Tests.Infrastructure;
 using Xunit;
@@ -21,6 +22,9 @@ public class RavenDB_25918 : RavenTestBase
         //
         // Make sure new value fulfills the above and update the assertion.
         Assert.Equal(67, Enum.GetNames(typeof(AlertReason)).Length);
+        Assert.Equal(AlertReason.SqlConnectionString_DeprecatedFactoryReplaced, Enum.GetValues(typeof(AlertReason)).Cast<AlertReason>().Last());
+        
         Assert.Equal(10, Enum.GetNames(typeof(PerformanceHintReason)).Length);
+        Assert.Equal(PerformanceHintReason.Indexing_References, Enum.GetValues(typeof(PerformanceHintReason)).Cast<PerformanceHintReason>().Last());
     }
 }
