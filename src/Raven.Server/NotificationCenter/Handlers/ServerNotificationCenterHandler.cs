@@ -22,7 +22,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public sealed class ServerNotificationCenterHandler : ServerNotificationHandlerBase
     {
-        [RavenAction("/server/notifications", "GET", AuthorizationStatus.Operator, SkipUsagesCount = true, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/server/notifications", "GET", AuthorizationStatus.Operator, SkipUsagesCount = true, IsDebugInformationEndpoint = true)]
         public async Task GetNotifications()
         {
             var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;

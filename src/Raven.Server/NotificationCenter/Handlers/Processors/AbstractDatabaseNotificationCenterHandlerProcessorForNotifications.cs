@@ -1,11 +1,11 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Notifications;
 using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Sparrow.Json;
+using GetDatabaseNotificationsCommand = Raven.Server.Documents.Commands.Notifications.GetDatabaseNotificationsCommand;
 
 namespace Raven.Server.NotificationCenter.Handlers.Processors;
 
@@ -22,7 +22,7 @@ internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForNot
     
     protected override RavenCommand<BlittableJsonReaderObject> CreateCommandForNode(string nodeTag)
     {
-        return new GetDatabaseNotificationsOperation.GetDatabaseNotificationsCommand(nodeTag);
+        return new GetDatabaseNotificationsCommand(nodeTag);
     }
 
     protected override async ValueTask HandleCurrentNodeAsync()

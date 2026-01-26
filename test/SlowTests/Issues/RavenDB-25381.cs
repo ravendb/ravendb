@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using FastTests;
-using Raven.Client.Documents.Operations.Notifications;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Documents;
@@ -78,10 +77,51 @@ public class RavenDB_25381 : RavenTestBase
             Result = response;
         }
     }
+    
+    private class GetDatabaseNotificationsCommand : RavenCommand<object>
+    {
+        private readonly int _shardNumber;
+        private readonly bool _isSharded;
+        
+        public override bool IsReadRequest => true;
+        
+        public GetDatabaseNotificationsCommand(bool isSharded = false, int shardNumber = 0)
+        {
+            _isSharded = isSharded;
+            _shardNumber = shardNumber;
+        }
+        
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            if (_isSharded)
+            {
+                url = $"{node.Url}/databases/{node.Database}/notifications?nodeTag={node.ClusterTag}&shardNumber={_shardNumber}";
+            }
+            else
+            {
+                url = $"{node.Url}/databases/{node.Database}/notifications";
+            }
+            
+            return new HttpRequestMessage
+            {
+                Method = HttpMethod.Get
+            };
+        }
+        
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            if (response == null)
+                ThrowInvalidResponse();
+        
+            Result = response;
+        }
+    }
 
     [RavenFact(RavenTestCategory.Monitoring)]
     public void ServerNotificationsShouldBeExtracted()
     {
+        DoNotReuseServer();
+        
         using (var store = GetDocumentStore())
         {
             var database = GetDatabase(store.Database).GetAwaiter().GetResult();
@@ -119,38 +159,82 @@ public class RavenDB_25381 : RavenTestBase
     public void ShardedDatabaseNotificationsShouldBeExtracted(Options options)
     {
         const int shardNumber = 1;
-            
+
         using (var store = GetDocumentStore(options))
         {
             var database = GetDatabase($"{store.Database}${shardNumber}").GetAwaiter().GetResult();
-    
+
             CreateNotifications(Server, database);
 
-            var operation = new GetDatabaseNotificationsOperation();
-            
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var commands = store.Commands())
             {
-                var res = store.Maintenance.ForDatabase(database.Name).Send(ctx, operation);
-                    
+                var cmd = new GetDatabaseNotificationsCommand(isSharded: true, shardNumber);
+                commands.Execute(cmd);
+
+                var res = cmd.Result as BlittableJsonReaderObject;
+
                 Assert.NotNull(res);
-                
+
                 res.TryGet("TotalResults", out int totalResults);
                 Assert.Equal(4, totalResults);
-                
+
                 res.TryGet("Results", out BlittableJsonReaderArray results);
-                    
+
                 var alert = (BlittableJsonReaderObject)results[0];
                 alert.TryGet("Id", out string alertId);
                 Assert.Equal("AlertRaised/Replication/Key", alertId);
-                    
+
                 var performanceHint1 = (BlittableJsonReaderObject)results[1];
                 performanceHint1.TryGet("Id", out string performanceHintId1);
                 Assert.Equal("PerformanceHint/Paging/source_1", performanceHintId1);
-                    
+
                 var performanceHint2 = (BlittableJsonReaderObject)results[2];
                 performanceHint2.TryGet("Id", out string performanceHintId2);
                 Assert.Equal("PerformanceHint/Replication/source_1", performanceHintId2);
-                    
+
+                var performanceHint3 = (BlittableJsonReaderObject)results[3];
+                performanceHint3.TryGet("Id", out string performanceHintId3);
+                Assert.Equal("PerformanceHint/Replication/source_2", performanceHintId3);
+            }
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Monitoring)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+    public void NonShardedDatabaseNotificationsShouldBeExtracted(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            CreateNotifications(Server, database);
+
+            using (var commands = store.Commands())
+            {
+                var cmd = new GetDatabaseNotificationsCommand();
+                commands.Execute(cmd);
+
+                var res = cmd.Result as BlittableJsonReaderObject;
+
+                Assert.NotNull(res);
+
+                res.TryGet("TotalResults", out int totalResults);
+                Assert.Equal(4, totalResults);
+
+                res.TryGet("Results", out BlittableJsonReaderArray results);
+
+                var alert = (BlittableJsonReaderObject)results[0];
+                alert.TryGet("Id", out string alertId);
+                Assert.Equal("AlertRaised/Replication/Key", alertId);
+
+                var performanceHint1 = (BlittableJsonReaderObject)results[1];
+                performanceHint1.TryGet("Id", out string performanceHintId1);
+                Assert.Equal("PerformanceHint/Paging/source_1", performanceHintId1);
+
+                var performanceHint2 = (BlittableJsonReaderObject)results[2];
+                performanceHint2.TryGet("Id", out string performanceHintId2);
+                Assert.Equal("PerformanceHint/Replication/source_1", performanceHintId2);
+
                 var performanceHint3 = (BlittableJsonReaderObject)results[3];
                 performanceHint3.TryGet("Id", out string performanceHintId3);
                 Assert.Equal("PerformanceHint/Replication/source_2", performanceHintId3);
