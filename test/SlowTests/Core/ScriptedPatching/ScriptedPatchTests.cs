@@ -257,36 +257,7 @@ Update
             public List<ProcessRules> ProcessRules { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Patching)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseUuidFunction(Options options)
-        {
-            using var store = GetDocumentStore(options);
-
-            using (var commands = store.Commands())
-            {
-                commands.Put("companies/1", null, new Company
-                {
-                    Name = "Test Company"
-                }, null);
-
-                // Test that uuid() generates a valid UUID
-                store.Operations.Send(new PatchOperation("companies/1", null,
-                    new PatchRequest
-                    {
-                        Script = @"this.Uuid = uuid();"
-                    }));
-
-                dynamic result = commands.Get("companies/1");
-                Assert.NotNull(result.Uuid);
-                
-                // Verify it's a valid GUID format (36 characters with dashes)
-                string uuid = result.Uuid.ToString();
-                Assert.True(Guid.TryParse(uuid, out _), $"uuid() should generate a valid UUID, but got: {uuid}");
-            }
-        }
-
-        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void UuidFunctionGeneratesUniqueValues(Options options)
         {
@@ -314,15 +285,17 @@ Update
                 string uuid1 = result.Uuid1.ToString();
                 string uuid2 = result.Uuid2.ToString();
                 string uuid3 = result.Uuid3.ToString();
-                
+
+                Assert.True(Guid.TryParse(uuid1, out _), $"uuid() should generate a valid UUID, but got: {uuid1}");
+                Assert.True(Guid.TryParse(uuid2, out _), $"uuid() should generate a valid UUID, but got: {uuid2}");
+                Assert.True(Guid.TryParse(uuid3, out _), $"uuid() should generate a valid UUID, but got: {uuid3}");
+
                 // Verify all three are different
-                Assert.NotEqual(uuid1, uuid2);
-                Assert.NotEqual(uuid2, uuid3);
-                Assert.NotEqual(uuid1, uuid3);
+                Assert.Equal(new HashSet<string>() { uuid1, uuid2, uuid3 }.Count, 3);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Patching)]
+        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void UuidFunctionShouldThrowOnParameters(Options options)
         {
