@@ -46,7 +46,7 @@ using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {
-    public sealed class ScriptRunner
+    public sealed partial class ScriptRunner
     {
         private static readonly string MaxStepsForScriptConfigurationKey = RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript);
         private static readonly string AllowStringCompilationKey = RavenConfiguration.GetKey(x => x.Patching.AllowStringCompilation);
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Patch
 
         private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
 
-        public sealed class SingleRun
+        public sealed partial class SingleRun
         {
             private readonly DocumentDatabase _database;
             private readonly RavenConfiguration _configuration;
@@ -395,6 +395,10 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
                 //Attachments
                 ScriptEngine.SetClrFunc("attachments", Attachments);
+
+                InitializeCrypto();
+                InitializeTextDecoder();
+
                 // Clr Functions, apply if any
                 if (runner._clrFunctions != null)
                 {
@@ -961,33 +965,33 @@ namespace Raven.Server.Documents.Patch
 
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
-                
-                if((args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance) == false)
+
+                if ((args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance) == false)
                     throw new InvalidOperationException("archiveAt(doc, utcDateTimeString) must take document object as the first argument");
 
                 if (args[1].IsNull() || args[1].IsUndefined() || args[1].IsString() == false)
                     throw new InvalidOperationException("archiveAt(doc, utcDateTimeString) must take string as the second argument");
-                
+
                 // Validate correct datetime format
                 GetDateArg(args[1].ToString(), "archiveAt(doc, utcDateTimeString)", "utcDateTimeString");
-                
+
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
                 var boi = (BlittableObjectInstance)args[0].AsObject();
-                
-                if(boi.DocumentFlags != null && boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived))
+
+                if (boi.DocumentFlags != null && boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived))
                 {
                     return JsValue.Undefined; // no-op, document already archived
                 }
-                
-                if(boi.TryGetValue(Constants.Documents.Metadata.Key, out var metadataJs) == false)
+
+                if (boi.TryGetValue(Constants.Documents.Metadata.Key, out var metadataJs) == false)
                 {
                     throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
                 }
-                
+
                 // add @archive-at field
                 var metadata = metadataJs.AsObject();
                 metadata.Set(Constants.Documents.Metadata.ArchiveAt, args[1].ToString());
-                
+
                 return JsValue.Undefined;
             }
 
@@ -995,15 +999,15 @@ namespace Raven.Server.Documents.Patch
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("unarchive(doc) must be called with a single argument");
-                 
+
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
-                
+
                 if ((args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance) == false)
                     throw new InvalidOperationException("unarchive(doc) must take document object as the first argument");
-                
+
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
-                
+
                 var boi = (BlittableObjectInstance)args[0].AsObject();
                 if (boi.DocumentFlags.HasValue == false || boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived) == false)
                 {
@@ -1014,12 +1018,12 @@ namespace Raven.Server.Documents.Patch
                 {
                     throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
                 }
-                
+
                 // Remove archived metadata marker, mark UnarchiveCalled (we can't set flags here, removed later)
                 var metadata = metadataJs.AsObject();
                 metadata.Delete(Constants.Documents.Metadata.Archived);
                 UnarchiveCalled = true;
-                
+
                 return JsValue.Undefined;
             }
 
@@ -1313,7 +1317,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     id = $"{Guid.NewGuid()}${OriginalDocumentId}";
                 }
-                
+
                 if (id[^1] != _database.IdentityPartsSeparator)
                 {
                     var config = shardedDocumentDatabase.ShardingConfiguration;
@@ -2337,11 +2341,11 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (val.IsNull())
                         return null;
-                    
+
                     var instance = val.AsObject();
                     if (instance is BlittableObjectInstance boi && boi.TryGetOriginalDocumentIfUnchanged(out var doc))
                         return doc;
-                    
+
                     return JsBlittableBridge.Translate(context, ScriptEngine, instance, modifier, usageMode, isNested);
                 }
                 if (val.IsNumber())
