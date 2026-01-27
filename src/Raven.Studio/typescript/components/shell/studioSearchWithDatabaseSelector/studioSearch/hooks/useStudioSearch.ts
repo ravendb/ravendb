@@ -12,6 +12,9 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 export function useStudioSearch(menuItems: menuItem[]) {
+    const dispatch = useAppDispatch();
+    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
+
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -23,25 +26,6 @@ export function useStudioSearch(menuItems: menuItem[]) {
     const [activeItem, setActiveItem] = useState<StudioSearchResultItem>(null);
 
     const { register, results } = useStudioSearchOmniSearch(searchQuery);
-
-    const dispatch = useAppDispatch();
-
-    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
-
-    const handleAskAi = useCallback(() => {
-        if (isAiAssistantDisabled) {
-            return;
-        }
-
-        if (!searchQuery?.trim()) {
-            return;
-        }
-
-        dispatch(chatbotActions.isOpenSet(true));
-        dispatch(chatbotActions.runChat({ message: searchQuery }));
-        setSearchQuery("");
-        setIsDropdownOpen(false);
-    }, [searchQuery]);
 
     const refs = {
         inputRef,
@@ -68,6 +52,20 @@ export function useStudioSearch(menuItems: menuItem[]) {
         searchQuery,
         goToUrl,
     });
+
+    const handleAskAi = useCallback(() => {
+        if (isAiAssistantDisabled) {
+            return;
+        }
+
+        if (!searchQuery?.trim()) {
+            return;
+        }
+
+        dispatch(chatbotActions.isOpenSet(true));
+        dispatch(chatbotActions.runChat({ message: searchQuery }));
+        resetDropdown();
+    }, [searchQuery]);
 
     useStudioSearchKeyboardEvents({
         refs,

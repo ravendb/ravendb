@@ -21,40 +21,19 @@ export default class MockSetupWizardService extends AutoMockService<SetupWizardS
 
     withRegistrationInfo() {
         return this.mocks.registrationInfo.mockImplementation(async (license) => {
-            if (license.Id === "53f54157-3862-47b6-9dbd-94d323687a90") {
-                return SetupWizardStubs.registrationInfoCommunity();
-            }
+            const baseInfo = SetupWizardStubs.registrationInfoCommunity();
 
-            if (license.Id === "53f54157-3862-47b6-9dbd-94d323687a91") {
-                return {
-                    ...SetupWizardStubs.registrationInfoCommunity(),
-                    LicenseType: "Essential",
-                };
-            }
+            const licenseConfigs: Record<string, Partial<typeof baseInfo>> = {
+                "53f54157-3862-47b6-9dbd-94d323687a90": {},
+                "53f54157-3862-47b6-9dbd-94d323687a91": { LicenseType: "Essential" },
+                "53f54157-3862-47b6-9dbd-94d323687a94": { LicenseType: "Professional", MaxClusterSize: 5 },
+                "53f54157-3862-47b6-9dbd-94d323687a92": { LicenseType: "Enterprise", MaxClusterSize: 2147483647 },
+                "53f54157-3862-47b6-9dbd-94d323687a95": { LicenseType: "EnterpriseAi", MaxClusterSize: 2147483647 },
+                "53f54157-3862-47b6-9dbd-94d323687a93": { LicenseType: "Developer", MaxClusterSize: 5 },
+            };
 
-            if (license.Id === "53f54157-3862-47b6-9dbd-94d323687a92") {
-                return {
-                    ...SetupWizardStubs.registrationInfoCommunity(),
-                    LicenseType: "Enterprise",
-                    MaxClusterSize: 2147483647,
-                };
-            }
-
-            if (license.Id === "53f54157-3862-47b6-9dbd-94d323687a93") {
-                return {
-                    ...SetupWizardStubs.registrationInfoCommunity(),
-                    LicenseType: "Developer",
-                    MaxClusterSize: 5,
-                };
-            }
-
-            if (license.Id === "53f54157-3862-47b6-9dbd-94d323687a94") {
-                return {
-                    ...SetupWizardStubs.registrationInfoCommunity(),
-                    LicenseType: "Professional",
-                    MaxClusterSize: 5,
-                };
-            }
+            const config = licenseConfigs[license.Id];
+            return config ? { ...baseInfo, ...config } : baseInfo;
         });
     }
 

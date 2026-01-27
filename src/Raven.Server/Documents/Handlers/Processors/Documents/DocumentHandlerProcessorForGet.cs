@@ -26,7 +26,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 {
     private readonly OperationCancelToken _cts;
 
-    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler) : base(method, requestHandler)
+    public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(method, requestHandler, ids)
     {
         _cts = RequestHandler.CreateHttpRequestBoundOperationToken();
     }
@@ -73,7 +73,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         if (compareExchangeValues.Count > 0 || clusterWideTx)
         {
             includeCompareExchangeValues = IncludeCompareExchangeValuesCommand.InternalScope(RequestHandler.Database, compareExchangeValues);
-            Disposables.Add(includeCompareExchangeValues);
+            RegisterForDisposal(includeCompareExchangeValues);
         }
 
         long lastModifiedIndex = RequestHandler.Database.ClusterWideTransactionIndexWaiter.LastIndex;

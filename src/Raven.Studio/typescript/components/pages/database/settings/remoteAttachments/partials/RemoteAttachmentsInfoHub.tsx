@@ -1,9 +1,27 @@
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
 import React from "react";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useAppSelector } from "components/store";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function RemoteAttachmentsInfoHub() {
+    const hasRemoteAttachments = useAppSelector(licenseSelectors.statusValue("HasRemoteAttachments"));
+
+    const featureAvailability = useLimitedFeatureAvailability({
+        defaultFeatureAvailability,
+        overwrites: [
+            {
+                featureName: defaultFeatureAvailability[0].featureName,
+                value: hasRemoteAttachments,
+            },
+        ],
+    });
+
     return (
-        <AboutViewAnchored>
+        <AboutViewAnchored defaultOpen={hasRemoteAttachments ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -48,6 +66,17 @@ export function RemoteAttachmentsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasRemoteAttachments} data={featureAvailability} />
         </AboutViewAnchored>
     );
 }
+
+const defaultFeatureAvailability: FeatureAvailabilityData[] = [
+    {
+        featureName: "Remote Attachments",
+        featureIcon: "remote-attachment",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+    },
+];

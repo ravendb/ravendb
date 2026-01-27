@@ -18,3 +18,4 @@
 [assembly: InternalsVisibleTo("Raven.Debug")]
 [assembly: InternalsVisibleTo("SlowTests.Tools")]
 [assembly: InternalsVisibleTo("SlowTests.Issues")]
+[assembly: InternalsVisibleTo("RequestHandler.Benchmark")]

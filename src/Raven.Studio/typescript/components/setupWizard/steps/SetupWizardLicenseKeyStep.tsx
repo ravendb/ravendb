@@ -31,6 +31,8 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
 import { setupWizardFormDefaultValues } from "components/setupWizard/utils/setupWizardFormDefaultValues";
+import classNames from "classnames";
+import LicenseType = Raven.Server.Commercial.LicenseType;
 
 function scrollSetupWizardToTop() {
     const container = document.querySelector<HTMLElement>(".setup-wizard-main");
@@ -45,7 +47,7 @@ export function SetupWizardLicenseKeyStep() {
     } = useWatch({ control });
 
     return (
-        <div>
+        <div className="setup-wizard-license-key-step">
             {licenseTypeToGenerate == null && <NoLicenseToGenerate />}
             {licenseTypeToGenerate === "community" && <GenerateCommunity />}
             {licenseTypeToGenerate === "developer" && <GenerateDeveloper />}
@@ -137,6 +139,35 @@ const keyPlaceholder = `e.g.
 }
 `;
 
+function getLicenseTypeBadgeClass(licenseType: LicenseType) {
+    switch (licenseType) {
+        case "Community":
+        case "Essential":
+            return "bg-info";
+        case "Developer":
+            return "bg-developer";
+        case "Professional":
+            return "bg-professional";
+        case "Enterprise":
+            return "bg-primary";
+        case "EnterpriseAi":
+            return "bg-enterprise-ai";
+        default:
+            return "bg-secondary";
+    }
+}
+
+function getLicenseTypeDisplayName(licenseType: LicenseType) {
+    switch (licenseType) {
+        case "Professional":
+            return "Professional +";
+        case "EnterpriseAi":
+            return "RavenDB AI";
+        default:
+            return licenseType;
+    }
+}
+
 function LicenseKeyBadge() {
     const { control } = useFormContext<SetupWizardFormData>();
 
@@ -173,25 +204,16 @@ function LicenseKeyBadge() {
         return null;
     }
 
-    const bg = (() => {
-        switch (licenseInfo.licenseType) {
-            case "Community":
-            case "Essential":
-                return "info";
-            case "Developer":
-                return "developer";
-            case "Professional":
-                return "professional";
-            case "Enterprise":
-                return "primary";
-            default:
-                return "secondary";
-        }
-    })();
+    const badgeClass = getLicenseTypeBadgeClass(licenseInfo.licenseType);
+    const displayName = getLicenseTypeDisplayName(licenseInfo.licenseType);
 
     return (
-        <Badge bg={bg} pill className="position-absolute bottom-0 end-0 mb-3 me-3" style={{ zIndex: 5 }}>
-            {licenseInfo.licenseType}
+        <Badge
+            pill
+            className={classNames("position-absolute bottom-0 end-0 mb-3 me-3", badgeClass)}
+            style={{ zIndex: 5 }}
+        >
+            {displayName}
         </Badge>
     );
 }

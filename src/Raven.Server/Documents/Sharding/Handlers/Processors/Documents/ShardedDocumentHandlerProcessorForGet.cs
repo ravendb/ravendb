@@ -27,7 +27,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 {
     private readonly OperationCancelToken _operationCancelToken;
 
-    public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler) : base(method, requestHandler)
+    public ShardedDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] ShardedDocumentHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(method, requestHandler, ids)
     {
         _operationCancelToken = requestHandler.CreateHttpRequestBoundOperationToken();
     }
@@ -160,7 +160,7 @@ internal sealed class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHa
 
         var streams = await results.Result.InitializeAsync(RequestHandler.DatabaseContext, CancellationToken);
 
-        Disposables.Add(streams);
+        RegisterForDisposal(streams);
 
         IAsyncEnumerable<ShardStreamItem<BlittableJsonReaderObject>> documents;
         if (startsWith != null)

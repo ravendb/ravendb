@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
@@ -33,18 +34,18 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Get()
         {
-            // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
-            return new DocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsTaskAsync();
+            // Disposal of the processor is done by having it auto-register to the request context disposal mechanism
+            return new DocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsync().AsTask();
         }
 
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostGet()
         {
-            // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                await new DocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync(await DocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this), context);
-            }
+            DocumentsOperationContext context = GetContextScopedToRequest();
+            List<ReadOnlyMemory<char>> ids = await DocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this);
+            
+            // Disposal of the processor is done by having it auto-register to the request context disposal mechanism
+            await new DocumentHandlerProcessorForGet(HttpMethod.Post, this, ids).ExecuteAsync();
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
