@@ -10,27 +10,17 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Post()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post))
-            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
-            using (var tracker = processor.CreateRequestTimeTracker())
-            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
-            {
-                var indexQuery = await processor.ExecuteWithExceptionHandling(processor.ReadIndexQueryForPost(context, tracker, processor.AddSpatialProperties), tracker);
-                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
-            }
+            var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post);
+            await processor.LoadIndexQueryForPost();
+            await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get))
-            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
-            using (var tracker = processor.CreateRequestTimeTracker())
-            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
-            {
-                var indexQuery = processor.ReadIndexQueryForGet(context, tracker, processor.AddSpatialProperties);
-                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
-            }
+            var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get);
+            processor.LoadIndexQueryForGet();
+            return processor.ExecuteAsync().AsTask();
         }
 
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]

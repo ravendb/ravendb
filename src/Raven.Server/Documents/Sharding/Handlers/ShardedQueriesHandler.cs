@@ -10,27 +10,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/queries", "POST")]
         public async Task Post()
         {
-            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post))
-            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
-            using (var tracker = processor.CreateRequestTimeTracker())
-            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
-            {
-                var indexQuery = await processor.ExecuteWithExceptionHandling(processor.ReadIndexQueryForPost(context, tracker, processor.AddSpatialProperties), tracker);
-                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
-            }
+            var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post);
+            await processor.LoadIndexQueryForPost();
+            await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/queries", "GET")]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get))
-            using (processor.AllocateContextForQueryOperation(out var queryContext, out var context))
-            using (var tracker = processor.CreateRequestTimeTracker())
-            using (var token = processor.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())    
-            {
-                var indexQuery = processor.ReadIndexQueryForGet(context, tracker, processor.AddSpatialProperties);
-                await processor.ExecuteQuery(queryContext, context, tracker, indexQuery, token);
-            }
+            var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get);
+            processor.LoadIndexQueryForGet();
+            return processor.ExecuteAsync().AsTask();
         }
 
         [RavenShardedAction("/databases/*/queries", "PATCH")]

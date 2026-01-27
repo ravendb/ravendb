@@ -34,6 +34,11 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 {
     private readonly QueryStringParameters _parameters;
     public bool AddSpatialProperties => _parameters.AddSpatialProperties;
+    protected TQueryContext QueryContext;
+    protected TOperationContext OperationContext;
+    protected RequestTimeTracker Tracker;
+    protected IndexQueryServerSide IndexQuery;
+    protected OperationCancelToken Token;
 
     protected AbstractQueriesHandlerProcessorForGet([NotNull] TRequestHandler requestHandler, QueryMetadataCache queryMetadataCache, HttpMethod method) : base(requestHandler, queryMetadataCache)
     {
@@ -41,35 +46,35 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         _parameters = QueryStringParameters.Create(HttpContext.Request);
     }
 
-    internal abstract IDisposable AllocateContextForQueryOperation(out TQueryContext queryContext, out TOperationContext context);
+    internal abstract void AllocateContextForQueryOperation(out TQueryContext queryContext, out TOperationContext context);
 
-    private ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext context, QueryStringParameters parameters, long? existingResultEtag, OperationCancelToken token)
+    private ValueTask HandleDebugAsync(IndexQueryServerSide query, QueryStringParameters parameters, long? existingResultEtag)
     {
         var debug = parameters.Debug;
         if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
         {
             var ignoreLimit = parameters.IgnoreLimit;
-            return IndexEntriesAsync(queryContext, context, query, existingResultEtag, ignoreLimit, token);
+            return IndexEntriesAsync(query, existingResultEtag, ignoreLimit);
         }
 
         if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
         {
-            return ExplainAsync(queryContext, query, token);
+            return ExplainAsync(query);
         }
 
         if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
         {
-            return ServerSideQueryAsync(context, query);
+            return ServerSideQueryAsync(query);
         }
 
         return ValueTask.FromException(new NotSupportedException($"Not supported query debug operation: '{debug}'"));
     }
 
-    protected abstract Task<IndexEntriesQueryResult> GetIndexEntriesAsync(TQueryContext queryContext, TOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token);
+    protected abstract Task<IndexEntriesQueryResult> GetIndexEntriesAsync(IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit);
 
-    private async ValueTask IndexEntriesAsync(TQueryContext queryContext, TOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token)
+    private async ValueTask IndexEntriesAsync(IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit)
     {
-        var result = await GetIndexEntriesAsync(queryContext, context, query, existingResultEtag, ignoreLimit, token);
+        var result = await GetIndexEntriesAsync(query, existingResultEtag, ignoreLimit);
 
         if (result.NotModified)
         {
@@ -79,27 +84,25 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
+        await using (var writer = new AsyncBlittableJsonTextWriter(OperationContext, RequestHandler.ResponseBodyStream(), Token.Token))
         {
-            var writeIndexEntriesQueryResultsTask = writer.WriteIndexEntriesQueryResultAsync(context, result, token.Token);
+            var writeIndexEntriesQueryResultsTask = writer.WriteIndexEntriesQueryResultAsync(OperationContext, result, Token.Token);
             if (writeIndexEntriesQueryResultsTask.IsCompletedSuccessfully == false)
                 await writeIndexEntriesQueryResultsTask;
         }
     }
 
-    protected abstract ValueTask ExplainAsync(TQueryContext queryContext, IndexQueryServerSide query, OperationCancelToken token);
+    protected abstract ValueTask ExplainAsync(IndexQueryServerSide query);
 
-    protected abstract Task<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
+    protected abstract Task<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, long? existingResultEtag);
 
-    protected abstract Task<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
+    protected abstract Task<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, long? existingResultEtag);
 
-    protected abstract Task<TQueryResultsContainer> GetQueryResultsAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag,
-        bool metadataOnly,
-        OperationCancelToken token);
+    protected abstract Task<TQueryResultsContainer> GetQueryResultsAsync(IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly);
 
     protected override HttpMethod QueryMethod { get; }
 
-    internal async ValueTask<T> ExecuteWithExceptionHandling<T>(ValueTask<T> task, RequestTimeTracker tracker)
+    internal async ValueTask<T> ExecuteWithExceptionHandling<T>(ValueTask<T> task)
     {
         try
         {
@@ -107,29 +110,12 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
         catch (Exception e)
         {
-            if (tracker.Query == null)
-            {
-                string errorMessage;
-                if (e is EndOfStreamException || e is ArgumentException)
-                {
-                    errorMessage = $"Failed: {e.Message}";
-                }
-                else
-                {
-                    errorMessage = $"Failed: {HttpContext.Request.Path.Value} {e}";
-                }
-
-                tracker.Query = errorMessage;
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    RequestHandler.AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
-            }
-
+            ProcessQueryException(e);
             throw;
         }
     }
     
-    internal async ValueTask ExecuteWithExceptionHandling(ValueTask task, RequestTimeTracker tracker)
+    internal async ValueTask ExecuteWithExceptionHandling(ValueTask task)
     {
         try
         {
@@ -137,77 +123,60 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
         catch (Exception e)
         {
-            if (tracker.Query == null)
-            {
-                string errorMessage;
-                if (e is EndOfStreamException || e is ArgumentException)
-                {
-                    errorMessage = $"Failed: {e.Message}";
-                }
-                else
-                {
-                    errorMessage = $"Failed: {HttpContext.Request.Path.Value} {e}";
-                }
-
-                tracker.Query = errorMessage;
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    RequestHandler.AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
-            }
-
+            ProcessQueryException(e);
             throw;
         }
     }
 
-    public ValueTask ExecuteQuery(TQueryContext queryContext, TOperationContext context, RequestTimeTracker tracker, IndexQueryServerSide indexQuery, OperationCancelToken token)
+    private void ProcessQueryException(Exception e)
     {
-        indexQuery.Diagnostics = _parameters.Diagnostics ? new List<string>() : null;
-        indexQuery.AddTimeSeriesNames = _parameters.AddTimeSeriesNames;
-        indexQuery.DisableAutoIndexCreation = _parameters.DisableAutoIndexCreation;
-
-        if (RequestHandler.HttpContext.Request.IsFromOrchestrator())
-            indexQuery.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(indexQuery);
-
-        AssertIndexQuery(indexQuery);
-
-        var existingResultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
-
-        EnsureQueryContextInitialized(queryContext, indexQuery);
-
-        return ExecuteWithExceptionHandling(ProcessQueryAsync(), tracker);
-
-
-        ValueTask ProcessQueryAsync()
+        if (Tracker.Query == null)
         {
-            if (string.IsNullOrWhiteSpace(_parameters.Debug) == false)
+            string errorMessage;
+            if (e is EndOfStreamException || e is ArgumentException)
             {
-                return HandleDebugAsync(indexQuery, queryContext, context, _parameters, existingResultEtag, token);
+                errorMessage = $"Failed: {e.Message}";
             }
+            else
+            {
+                errorMessage = $"Failed: {HttpContext.Request.Path.Value} {e}";
+            }
+
+            Tracker.Query = errorMessage;
 
             if (TrafficWatchManager.HasRegisteredClients)
-                RequestHandler.TrafficWatchQuery(indexQuery);
-
-            if (indexQuery.Metadata.HasFacet)
-            {
-                return HandleFacetedQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
-            }
-
-            if (indexQuery.Metadata.HasSuggest)
-            {
-                return HandleSuggestQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
-            }
-
-            return HandleIndexQueryAsync(indexQuery, queryContext, existingResultEtag, _parameters, token, context);
+                RequestHandler.AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
         }
     }
 
-    private async ValueTask HandleIndexQueryAsync(IndexQueryServerSide indexQuery, TQueryContext queryContext, long? existingResultEtag, QueryStringParameters parameters,
-        OperationCancelToken token, TOperationContext context)
+    public void Initialize()
+    {
+        AllocateContextForQueryOperation(out QueryContext, out OperationContext);
+        Tracker = CreateRequestTimeTracker();
+        Token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
+    }
+
+    public void LoadIndexQueryForGet()
+    {
+        try
+        {
+            IndexQuery = ReadIndexQueryForGet(OperationContext, Tracker, AddSpatialProperties);
+        }
+        catch (Exception e)
+        {
+            ProcessQueryException(e);
+            throw;
+        }
+    }
+
+    public async ValueTask LoadIndexQueryForPost() => IndexQuery = await ExecuteWithExceptionHandling(ReadIndexQueryForPost(OperationContext, Tracker, AddSpatialProperties));
+    
+    private async ValueTask HandleIndexQueryAsync(IndexQueryServerSide indexQuery, long? existingResultEtag, QueryStringParameters parameters)
     {
         TQueryResultsContainer result = null;
         try
         {
-            result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, parameters.MetadataOnly, token);
+            result = await GetQueryResultsAsync(indexQuery, existingResultEtag, parameters.MetadataOnly);
         }
         catch (IndexDoesNotExistException)
         {
@@ -233,12 +202,12 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
             long numberOfResults;
             long totalDocumentsSizeInBytes;
-            var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token);
+            var writer = new AsyncBlittableJsonTextWriter(OperationContext, RequestHandler.ResponseBodyStream(), Token.Token);
             try
             {
                 result.Timings = indexQuery.Timings?.ToTimings();
-                var writeResultsTask = writer.WriteDocumentQueryResultAsync(context, result, parameters.MetadataOnly,
-                    WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), token.Token);
+                var writeResultsTask = writer.WriteDocumentQueryResultAsync(OperationContext, result, parameters.MetadataOnly,
+                    WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), Token.Token);
                 (numberOfResults, totalDocumentsSizeInBytes) = writeResultsTask.IsCompletedSuccessfully ? writeResultsTask.Result : await writeResultsTask;
             }
             finally
@@ -262,7 +231,47 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
     }
 
-    public override ValueTask ExecuteAsync() => throw new NotImplementedException();
+    public override ValueTask ExecuteAsync()
+    {
+        IndexQuery.Diagnostics = _parameters.Diagnostics ? new List<string>() : null;
+        IndexQuery.AddTimeSeriesNames = _parameters.AddTimeSeriesNames;
+        IndexQuery.DisableAutoIndexCreation = _parameters.DisableAutoIndexCreation;
+
+        if (RequestHandler.HttpContext.Request.IsFromOrchestrator())
+            IndexQuery.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(IndexQuery);
+
+        AssertIndexQuery(IndexQuery);
+
+        var existingResultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
+
+        EnsureQueryContextInitialized(QueryContext, IndexQuery);
+
+        return ExecuteWithExceptionHandling(ProcessQueryAsync());
+
+
+        ValueTask ProcessQueryAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_parameters.Debug) == false)
+            {
+                return HandleDebugAsync(IndexQuery, _parameters, existingResultEtag);
+            }
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                RequestHandler.TrafficWatchQuery(IndexQuery);
+
+            if (IndexQuery.Metadata.HasFacet)
+            {
+                return HandleFacetedQueryAsync(IndexQuery, existingResultEtag);
+            }
+
+            if (IndexQuery.Metadata.HasSuggest)
+            {
+                return HandleSuggestQueryAsync(IndexQuery, existingResultEtag);
+            }
+
+            return HandleIndexQueryAsync(IndexQuery, existingResultEtag, _parameters);
+        }
+    }
 
 
     protected virtual void AssertIndexQuery(IndexQueryServerSide indexQuery)
@@ -295,9 +304,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         };
     }
 
-    private async ValueTask ServerSideQueryAsync(TOperationContext context, IndexQueryServerSide indexQuery)
+    private async ValueTask ServerSideQueryAsync(IndexQueryServerSide indexQuery)
     {
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(OperationContext, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
@@ -307,9 +316,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
     }
 
-    private async ValueTask HandleSuggestQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext operationContext, long? existingResultEtag, OperationCancelToken token)
+    private async ValueTask HandleSuggestQueryAsync(IndexQueryServerSide query, long? existingResultEtag)
     {
-        var result = await GetSuggestionQueryResultAsync(query, queryContext, existingResultEtag, token);
+        var result = await GetSuggestionQueryResultAsync(query, existingResultEtag);
 
         if (result.NotModified)
         {
@@ -321,9 +330,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         long numberOfResults;
         long totalDocumentsSizeInBytes;
-        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream(), token.Token))
+        await using (var writer = new AsyncBlittableJsonTextWriter(OperationContext, RequestHandler.ResponseBodyStream(), Token.Token))
         {
-            var writeSuggestionQueryResultTask = writer.WriteSuggestionQueryResultAsync(operationContext, result, token.Token);
+            var writeSuggestionQueryResultTask = writer.WriteSuggestionQueryResultAsync(OperationContext, result, Token.Token);
             (numberOfResults, totalDocumentsSizeInBytes) = writeSuggestionQueryResultTask.IsCompletedSuccessfully
                 ? writeSuggestionQueryResultTask.Result
                 : await writeSuggestionQueryResultTask;
@@ -333,9 +342,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
             RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"SuggestQuery ({result.IndexName})", query.Query, numberOfResults, query.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
     }
 
-    private async ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext operationContext, long? existingResultEtag, OperationCancelToken token)
+    private async ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, long? existingResultEtag)
     {
-        var result = await GetFacetedQueryResultAsync(query, queryContext, existingResultEtag, token);
+        var result = await GetFacetedQueryResultAsync(query, existingResultEtag);
 
         if (result.NotModified)
         {
@@ -346,10 +355,10 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
         long numberOfResults;
-        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream(), token.Token))
+        await using (var writer = new AsyncBlittableJsonTextWriter(OperationContext, RequestHandler.ResponseBodyStream(), Token.Token))
         {
             result.Timings = query.Timings?.ToTimings();
-            numberOfResults = await writer.WriteFacetedQueryResultAsync(operationContext, result, token.Token);
+            numberOfResults = await writer.WriteFacetedQueryResultAsync(OperationContext, result, Token.Token);
         }
 
         QueryMetadataCache.MaybeAddToCache(query.Metadata, result.IndexName);

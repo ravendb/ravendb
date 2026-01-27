@@ -42,12 +42,19 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
 
     internal RequestTimeTracker CreateRequestTimeTracker()
     {
-        return new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
+        var tracker = new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
+        RegisterForDisposal(tracker);
+        return tracker;
     }
 
-    internal OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery() => RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
-    
-    internal ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod queryMethod, RequestTimeTracker tracker, bool addSpatialProperties)
+    internal OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery()
+    {
+        var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
+        RegisterForDisposal(token);
+        return token;
+    }
+
+    protected ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod queryMethod, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         if (QueryMethod == HttpMethod.Get)
             return ValueTask.FromResult(ReadIndexQueryForGet(context, tracker, addSpatialProperties));
@@ -55,11 +62,13 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         return ReadIndexQueryForPost(context, tracker, addSpatialProperties);
     }
     
-    internal async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    protected async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         Debug.Assert(QueryMethod != HttpMethod.Get);
         var readJsonTask = context.ReadForMemoryAsync(_stream, "index/query");
-        var json = readJsonTask.IsCompletedSuccessfully ? readJsonTask.Result : await readJsonTask;
+        var json = readJsonTask.IsCompletedSuccessfully 
+            ? readJsonTask.Result 
+            : await readJsonTask;
             
         if (json == null)
             throw new BadRequestException("Missing JSON content.");
