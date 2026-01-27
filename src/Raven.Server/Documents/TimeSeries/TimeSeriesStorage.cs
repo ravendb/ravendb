@@ -2348,18 +2348,18 @@ namespace Raven.Server.Documents.TimeSeries
             return name;
         }
 
-        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag, bool includeDocumentChangeVector = true)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
             {
-                yield return CreateTimeSeriesSegmentItem(context, ref result.Reader);
+                yield return CreateTimeSeriesSegmentItem(context, ref result.Reader, includeDocumentChangeVector);
             }
         }
 
-        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader, bool includeDocumentChangeVector)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -2389,8 +2389,13 @@ namespace Raven.Server.Documents.TimeSeries
                 item.Name ??= name;
             }
 
-            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector);
-            item.ParentDocChangeVector = context.GetLazyString(doc?.ChangeVector);
+            item.IncludeDocumentChangeVector = includeDocumentChangeVector;
+
+            if (includeDocumentChangeVector)
+            {
+                var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector);
+                item.ParentDocChangeVector = context.GetLazyString(doc?.ChangeVector);
+            }
 
             return item;
         }

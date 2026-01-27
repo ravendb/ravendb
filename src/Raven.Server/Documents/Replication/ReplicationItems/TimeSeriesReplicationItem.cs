@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Raven.Client;
-using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TimeSeries;
@@ -111,6 +110,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
         public LazyStringValue ParentDocChangeVector;
+        public bool IncludeDocumentChangeVector;
 
         public override long Size => base.Size + // common
 
@@ -126,8 +126,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      sizeof(int) + // size of name
                                      Name.Size + // name
 
-                                     sizeof(int) + // size of parent cv
-                                     (ParentDocChangeVector?.Size ?? 0); // parent doc cv
+                                     (IncludeDocumentChangeVector 
+                                        ? sizeof(int) + // size of doc cv
+                                          (ParentDocChangeVector?.Size ?? 0)  // parent doc cv
+                                        : 0);
 
 
         public override DynamicJsonValue ToDebugJson()
@@ -171,14 +173,17 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, Name.Buffer, Name.Size);
                 tempBufferPos += Name.Size;
-                
-                *(int*)(pTemp + tempBufferPos) = ParentDocChangeVector?.Size ?? 0;
-                tempBufferPos += sizeof(int);
 
-                if (ParentDocChangeVector != null)
+                if (IncludeDocumentChangeVector)
                 {
-                    Memory.Copy(pTemp + tempBufferPos, ParentDocChangeVector.Buffer, ParentDocChangeVector.Size);
-                    tempBufferPos += ParentDocChangeVector.Size;
+                    *(int*)(pTemp + tempBufferPos) = ParentDocChangeVector?.Size ?? 0;
+                    tempBufferPos += sizeof(int);
+
+                    if (ParentDocChangeVector != null)
+                    {
+                        Memory.Copy(pTemp + tempBufferPos, ParentDocChangeVector.Buffer, ParentDocChangeVector.Size);
+                        tempBufferPos += ParentDocChangeVector.Size;
+                    }
                 }
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
@@ -205,8 +210,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 SetLazyStringValueFromString(context, out Name);
                 Debug.Assert(Name != null);
 
-                SetLazyStringValueFromString(context, out ParentDocChangeVector);
-                Debug.Assert(ParentDocChangeVector != null);
+                if (IncludeDocumentChangeVector)
+                {
+                    SetLazyStringValueFromString(context, out ParentDocChangeVector);
+                    Debug.Assert(ParentDocChangeVector != null);
+                }
 
                 stats.RecordTimeSeriesRead(Size);
             }

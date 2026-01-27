@@ -8,6 +8,7 @@ using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -57,12 +58,12 @@ namespace Raven.Server.Documents.Replication.Senders
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
-            ReplicationSupportedFeatures replicationSupportedFeatures)
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures replicationSupportedFeatures)
         {
             return GetReplicationItems(_parent._database, ctx, etag, stats, replicationSupportedFeatures);
         }
 
-        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, ReplicationSupportedFeatures replicationSupportedFeatures)
+        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures replicationSupportedFeatures)
         {
             var docs = database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data);
             var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, replicationSupportedFeatures.RevisionTombstonesWithId);
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Replication.Senders
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue, fields: DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data).Select(x => DocumentReplicationItem.From(x, ctx));
             var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1, replicationSupportedFeatures.RemoteAttachments);
             var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, replicationSupportedFeatures.CaseInsensitiveCounters);
-            var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
+            var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1, replicationSupportedFeatures.TimeSeriesWithDocumentChangeVector);
             var deletedTimeSeriesRanges = database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
@@ -137,17 +138,10 @@ namespace Raven.Server.Documents.Replication.Senders
                         CurrentNextReplicateTicks = currentNextReplicateTicks
                     };
 
-                    var replicationSupportedFeatures = new ReplicationSupportedFeatures
-                    {
-                        CaseInsensitiveCounters = _parent.SupportedFeatures.Replication.CaseInsensitiveCounters,
-                        RevisionTombstonesWithId = _parent.SupportedFeatures.Replication.RevisionTombstonesWithId,
-                        RemoteAttachments = _parent.SupportedFeatures.Replication.RemoteAttachments
-                    };
-
                     using (_stats.Storage.Start())
                     {
                         using var enumerator = new PulsedTransactionEnumerator<ReplicationBatchItem, ReplicationBatchState>(documentsContext, _ =>
-                            GetReplicationItems(documentsContext, _lastEtag, _stats, replicationSupportedFeatures), state);
+                            GetReplicationItems(documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication), state);
 
                         while (enumerator.MoveNext())
                         {
@@ -852,13 +846,6 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 return false;
             }
-        }
-
-        protected internal sealed class ReplicationSupportedFeatures
-        {
-            public bool CaseInsensitiveCounters;
-            public bool RevisionTombstonesWithId;
-            public bool RemoteAttachments;
         }
 
         public virtual void Dispose()
