@@ -1,4 +1,4 @@
-import { databaseAccessArgType, licenseArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { mockStore } from "test/mocks/store/MockStore";
 import RemoteAttachments from "components/pages/database/settings/remoteAttachments/RemoteAttachments";
@@ -18,20 +18,19 @@ export default {
 
 interface RemoteAttachmentsStoryArgs {
     databaseAccess: databaseAccessLevel;
-    licenseType: Raven.Server.Commercial.LicenseType;
     hasRemoteAttachments: boolean;
+    hasRemoteDestinations: boolean;
 }
 
 export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
     name: "Remote Attachments",
     argTypes: {
-        licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
     args: {
         databaseAccess: "DatabaseAdmin",
-        licenseType: "Enterprise",
         hasRemoteAttachments: true,
+        hasRemoteDestinations: true,
     },
     render: (args) => {
         const { accessManager, license, databases } = mockStore;
@@ -39,10 +38,10 @@ export const DefaultRemoteAttachments: StoryObj<RemoteAttachmentsStoryArgs> = {
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         license.with_LicenseLimited({
-            Type: args.licenseType,
+            HasRemoteAttachments: args.hasRemoteAttachments,
         });
         databasesService.withRemoteAttachmentsConfiguration(
-            args.hasRemoteAttachments
+            args.hasRemoteDestinations
                 ? DatabasesStubs.remoteAttachmentsConfiguration()
                 : DatabasesStubs.emptyRemoteAttachmentsConfiguration()
         );

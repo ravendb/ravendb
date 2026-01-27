@@ -69,13 +69,13 @@ $gradient: linear-gradient(180deg, rgba($white, 0.15), rgba($white, 0)) !default
 $spacer: $gutter !default;
 $spacer-ratio: 1.618 !default;
 
-$spacer-sm: math.div($spacer, $spacer-ratio);
-$spacer-xs: math.div($spacer-sm, $spacer-ratio);
-$spacer-xxs: math.div($spacer-xs, $spacer-ratio);
+$spacer-sm: math.div(math.round(math.div($spacer, $spacer-ratio) * 100), 100);
+$spacer-xs: math.div(math.round(math.div($spacer-sm, $spacer-ratio) * 100), 100);
+$spacer-xxs: math.div(math.round(math.div($spacer-xs, $spacer-ratio) * 100), 100);
 
-$spacer-md: $spacer * $spacer-ratio;
-$spacer-lg: $spacer-md * $spacer-ratio;
-$spacer-xl: $spacer-lg * $spacer-ratio;
+$spacer-md: math.div(math.round($spacer * $spacer-ratio * 100), 100);
+$spacer-lg: math.div(math.round($spacer-md * $spacer-ratio * 100), 100);
+$spacer-xl: math.div(math.round($spacer-lg * $spacer-ratio * 100), 100);
 
 $spacers: (
     0: 0,

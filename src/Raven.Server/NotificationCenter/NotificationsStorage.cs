@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -120,9 +121,28 @@ namespace Raven.Server.NotificationCenter
             var postponedUntilTicks = postponedUntil != null
                 ? Bits.SwapBytes(postponedUntil.Value.Ticks)
                 : _postponeDateNotSpecified;
+            
+            action.Modifications = new DynamicJsonValue(action)
+            {
+                [nameof(Notification.Type)] = notificationType
+            };
 
+            switch ((NotificationType)notificationType)
+            {
+                case NotificationType.AlertRaised:
+                    action.Modifications[nameof(AlertRaised.Reason)] = notificationReason;
+                    break;
+                case NotificationType.PerformanceHint:
+                    action.Modifications[nameof(PerformanceHint.Reason)] = notificationReason;
+                    break;
+            }
+            
+            using (_ = action)
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (table.Allocate(out TableValueBuilder tvb))
             {
+                action = context.ReadObject(action, null);
+                    
                 tvb.Add(id.Buffer, id.Size);
                 tvb.Add((byte*)&createdAtTicks, sizeof(long));
                 tvb.Add((byte*)&postponedUntilTicks, sizeof(long));
@@ -359,14 +379,52 @@ namespace Raven.Server.NotificationCenter
             var type = reader.ReadLong(Documents.Schemas.Notifications.NotificationsTable.TypeIndex);
             var reason = reader.ReadLong(Documents.Schemas.Notifications.NotificationsTable.ReasonIndex);
 
-            return new NotificationTableValue
+            var json = new BlittableJsonReaderObject(jsonPtr, jsonSize, context);
+
+            // If notification JSON has Type and Reason stored as strings, they can be extracted directly
+            // Maintains backward compatibility due to RavenDB-24424
+            if (json.TryGet(nameof(Notification.Type), out string _))
             {
-                CreatedAt = createdAt,
-                PostponedUntil = postponedUntil,
-                Json = new BlittableJsonReaderObject(jsonPtr, jsonSize, context),
-                Type = type,
-                Reason = reason
+                return new NotificationTableValue
+                {
+                    CreatedAt = createdAt,
+                    PostponedUntil = postponedUntil,
+                    Json = json,
+                    Type = type,
+                    Reason = reason
+                };
+            }
+
+            var typeEnumValue = (NotificationType)Bits.SwapBytes(type);
+            
+            json.Modifications = new DynamicJsonValue
+            {
+                [nameof(Notification.Type)] = typeEnumValue
             };
+
+            switch (typeEnumValue)
+            {
+                case NotificationType.AlertRaised:
+                    json.Modifications[nameof(AlertRaised.Reason)] = (AlertReason)Bits.SwapBytes(reason);
+                    break;
+                case NotificationType.PerformanceHint:
+                    json.Modifications[nameof(PerformanceHint.Reason)] = (PerformanceHintReason)Bits.SwapBytes(reason);
+                    break;
+            }
+
+            using (_ = json)
+            {
+                json = context.ReadObject(json, null);
+                
+                return new NotificationTableValue
+                {
+                    CreatedAt = createdAt,
+                    PostponedUntil = postponedUntil,
+                    Json = json,
+                    Type = type,
+                    Reason = reason
+                };
+            }
         }
 
         public string GetDatabaseFor(string id)

@@ -45,6 +45,7 @@ import pagingDetails = require("viewmodels/common/notificationCenter/detailViewe
 import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
 import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
+import remoteAttachmentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/remoteAttachmentErrorDetails");
 import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
@@ -194,6 +195,7 @@ class notificationCenter {
             conflictExceededDetails,
             complexFieldsAlertDetails,
             aiAgentExceededTokenThreshold,
+            remoteAttachmentErrorDetails,
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );
 

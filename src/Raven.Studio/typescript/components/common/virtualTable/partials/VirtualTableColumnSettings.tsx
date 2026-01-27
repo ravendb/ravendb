@@ -1,6 +1,5 @@
 import { Column, SortDirection } from "@tanstack/react-table";
 import classNames from "classnames";
-import { HStack } from "components/common/utilities/HStack";
 import { Icon } from "components/common/Icon";
 import { useMemo, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
@@ -9,8 +8,13 @@ import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { FormLabel } from "components/common/Form";
 
-export default function VirtualTableColumnSettings<T>({ column }: { column: Column<T, unknown> }) {
-    const [localFilter, setLocalFilter] = useState("");
+interface VirtualTableColumnSettingsProps<T> {
+    column: Column<T, unknown>;
+    isCompact?: boolean;
+}
+
+export default function VirtualTableColumnSettings<T>({ column, isCompact }: VirtualTableColumnSettingsProps<T>) {
+    const [localFilter, setLocalFilter] = useState((column.getFilterValue() as string) ?? "");
 
     const debouncedSetFilter = useMemo(
         () => _.debounce((value: string) => column.setFilterValue(value), 300),
@@ -57,7 +61,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
     }
 
     return (
-        <HStack>
+        <div className="hstack flex-shrink-0">
             {column.getCanSort() && (
                 <div className="sorting-controls">
                     <Button
@@ -66,7 +70,11 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                         title="Sort A to Z"
                         className={classNames(column.getIsSorted() === "asc" && "active-sorting")}
                     >
-                        <Icon icon="arrow-thin-top" margin="m-0" />
+                        <Icon
+                            icon="arrow-thin-top"
+                            margin="m-0"
+                            className={classNames({ "font-size-10": isCompact })}
+                        />
                     </Button>
                     <Button
                         variant="link"
@@ -74,7 +82,11 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                         title="Sort Z to A"
                         className={classNames(column.getIsSorted() === "desc" && "active-sorting")}
                     >
-                        <Icon icon="arrow-thin-bottom" margin="m-0" />
+                        <Icon
+                            icon="arrow-thin-bottom"
+                            margin="m-0"
+                            className={classNames({ "font-size-10": isCompact })}
+                        />
                     </Button>
                 </div>
             )}
@@ -87,14 +99,15 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                         variant="link"
                         className={classNames(
                             column.getFilterValue() ? "active-filtering" : "link-muted",
-                            "filtering-controls"
+                            "filtering-controls",
+                            { "font-size-12": isCompact }
                         )}
                         size="sm"
                     >
                         <Icon icon="filter" margin="m-0" />
                     </Dropdown.Toggle>
                     <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
-                        <div className="px-3 pb-2">
+                        <div className="px-2 pb-1">
                             <FormLabel className="small-label">Filter column</FormLabel>
                             <div className="clearable-input">
                                 <Form.Control
@@ -107,7 +120,12 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                                 />
                                 {localFilter && (
                                     <div className="clear-button">
-                                        <Button variant="secondary" size="sm" onClick={() => handleFilterChange("")}>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => handleFilterChange("")}
+                                            title="Clear filter"
+                                        >
                                             <Icon icon="clear" margin="m-0" />
                                         </Button>
                                     </div>
@@ -117,6 +135,6 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                     </Dropdown.Menu>
                 </Dropdown>
             )}
-        </HStack>
+        </div>
     );
 }

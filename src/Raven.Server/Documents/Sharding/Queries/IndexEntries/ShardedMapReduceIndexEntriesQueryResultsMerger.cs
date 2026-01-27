@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Sharding.Queries.IndexEntries;
 
 public sealed class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQueryResultsMerger
 {
-    private static readonly ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries Aggregator = new();
+    private static readonly ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries AggregatorForIndexEntries = new();
 
     private string _reduceKeyHash;
 
@@ -32,7 +32,7 @@ public sealed class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapR
     internal override AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {
         BlittableJsonReaderObject currentlyProcessedResult = null;
-        return Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, Token);
+        return AggregatorForIndexEntries.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, Token);
     }
 
     protected override List<BlittableJsonReaderObject> AggregateForStaticMapReduce(IndexInformationHolder index)

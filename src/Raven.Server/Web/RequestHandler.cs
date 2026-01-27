@@ -76,6 +76,8 @@ namespace Raven.Server.Web
             get { return _context.RouteMatch; }
         }
 
+        public void RegisterForDisposal(IDisposable disposable) => _context.RegisterForDisposal(disposable);
+
         public X509Certificate2 GetCurrentCertificate()
         {
             return GetCurrentCertificate(HttpContext);

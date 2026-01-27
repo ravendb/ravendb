@@ -13,35 +13,50 @@ const selectors = {
 };
 
 describe("RemoteAttachments", () => {
-    it("shows the Save button for DatabaseAdmin access", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(<DefaultRemoteAttachments databaseAccess="DatabaseAdmin" />);
+    it("shows the Save button enabled for DatabaseAdmin access", async () => {
+        const { screen, fillInput } = await rtlRender_WithWaitForLoad(
+            <DefaultRemoteAttachments databaseAccess="DatabaseAdmin" />
+        );
 
-        expect(screen.queryByRole("button", { name: selectors.titles.save })).toBeInTheDocument();
+        const saveButton = screen.queryByRole("button", { name: selectors.titles.save });
+        const checkFrequencyInput = screen.getByName("checkFrequencyInSec");
+
+        // Save button is disabled, if none of inputs are dirty
+        expect(saveButton).toBeDisabled();
+
+        await fillInput(checkFrequencyInput, "100");
+
+        expect(saveButton).toBeInTheDocument();
+        expect(saveButton).not.toBeDisabled();
     });
 
-    it("hides the Save button for access levels below DatabaseAdmin", async () => {
+    it("shows the Save button but disables it for access levels below DatabaseAdmin", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultRemoteAttachments databaseAccess="DatabaseRead" />);
 
-        expect(screen.queryByRole("button", { name: selectors.titles.save })).not.toBeInTheDocument();
+        const saveButton = screen.queryByRole("button", { name: selectors.titles.save });
+        expect(saveButton).toBeInTheDocument();
+        expect(saveButton).toBeDisabled();
     });
 
-    it("hides the Add new button when user cannot configure defaults (non-admin)", async () => {
+    it("shows the Add new button but disables it when user cannot configure defaults (non-admin)", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultRemoteAttachments databaseAccess="DatabaseRead" />);
 
         const addDefaultButton = screen.queryByRole("button", { name: selectors.titles.addNew });
-        expect(addDefaultButton).not.toBeInTheDocument();
+        expect(addDefaultButton).toBeInTheDocument();
+        expect(addDefaultButton).toBeDisabled();
     });
 
     it("enables the Add new button for admin when configuration is allowed", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<DefaultRemoteAttachments databaseAccess="DatabaseAdmin" />);
 
         const addDefaultButton = screen.getByRole("button", { name: selectors.titles.addNew });
+        expect(addDefaultButton).toBeInTheDocument();
         expect(addDefaultButton).not.toBeDisabled();
     });
 
     it("keeps Add new enabled after toggling Remote Attachments on", async () => {
         const { screen, fireClick } = await rtlRender_WithWaitForLoad(
-            <DefaultRemoteAttachments hasRemoteAttachments={false} databaseAccess="DatabaseAdmin" />
+            <DefaultRemoteAttachments hasRemoteDestinations={false} databaseAccess="DatabaseAdmin" />
         );
 
         const enableSwitch = screen.getByRole("checkbox", { name: selectors.titles.enableRemoteAttachments });

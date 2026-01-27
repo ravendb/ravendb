@@ -43,136 +43,125 @@ internal abstract class
 
     private readonly HttpMethod _method;
 
-    protected readonly List<IDisposable> Disposables = new();
+    [CanBeNull]
+    private readonly List<ReadOnlyMemory<char>> _ids;
 
-    protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    protected AbstractDocumentHandlerProcessorForGet(HttpMethod method, [NotNull] TRequestHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(requestHandler)
     {
         if (method != HttpMethod.Get && method != HttpMethod.Post)
             throw new InvalidOperationException($"The processor is supposed to handle GET and POST methods while '{method}' was specified");
 
         _method = method;
+        _ids = ids;
     }
 
     protected abstract bool SupportsShowingRequestInTrafficWatch { get; }
 
     protected abstract CancellationToken CancellationToken { get; }
 
-    public override ValueTask ExecuteAsync() => throw new NotImplementedException();
-    
-    public Task ExecuteAsTaskAsync([CanBeNull] List<ReadOnlyMemory<char>> ids = null, [CanBeNull] TOperationContext context = null)
+    public sealed override ValueTask ExecuteAsync()
     {
-        // This processor is being disposed here. It means you can execute a command only once per processor instance. 
         // The reason behind this is to avoid awaiting execution in the handler and do it directly in the router code.
         // This reduces AsyncStateMachine size by avoiding creating state in the handler code.
-        using (var @thisScope = this.AllowBorrow())
+        RegisterForDisposal(this);
             
         // For the context, allocate only if it was not previously allocated by the caller.
         // If not provided by the caller, we create one and wrap it in borrowable to pass down to async path, if needed.
         // If provided, we don't scope it cause the caller owns it.
+        TOperationContext context = GetContextScopedToRequest();
+        
+        var sw = Stopwatch.StartNew();
+
+        var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
+
+        if (_method == HttpMethod.Get)
         {
-            using (DisposableBorrow<IDisposable> ctxScope = context == null ? ContextPool.AllocateOperationContext(out context).AllowBorrow() : default)
+            // no-op - this was parses via QueryStringParameters few lines up
+        }
+        else if (_method == HttpMethod.Post)
+            parameters.Ids = _ids;
+        else
+            return ValueTask.FromException(new NotSupportedException($"Unhandled method type: {_method}"));
+
+        if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
+            RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
+
+        int pageSize;
+        string actionName;
+
+        ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> getDocumentsAsync;
+        if (parameters.Ids is { Count: > 0 })
+        {
+            pageSize = parameters.Ids.Count;
+            actionName = nameof(GetDocumentsByIdAsync);
+
+            var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+
+            // includes
+            var revisions = GetRevisionsToInclude(parameters);
+            var timeSeries = GetTimeSeriesToInclude(parameters);
+
+            getDocumentsAsync = GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
+        }
+        else
+        {
+            pageSize = RequestHandler.GetPageSize();
+            actionName = nameof(GetDocumentsAsync);
+
+            var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            var etag = RequestHandler.GetLongQueryString("etag", false);
+
+            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
+
+            StartsWithParams startsWithParams = null;
+
+            if (isStartsWith)
             {
-                var sw = Stopwatch.StartNew();
-
-                var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
-
-                if (_method == HttpMethod.Get)
+                startsWithParams = new StartsWithParams
                 {
-                    // no-op - this was parses via QueryStringParameters few lines up
-                }
-                else if (_method == HttpMethod.Post)
-                    parameters.Ids = ids;
-                else
-                    throw new NotSupportedException($"Unhandled method type: {_method}");
-
-                if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
-                    RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
-
-                int pageSize;
-                string actionName;
-
-                ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> getDocumentsAsync;
-                if (parameters.Ids is { Count: > 0 })
-                {
-                    pageSize = parameters.Ids.Count;
-                    actionName = nameof(GetDocumentsByIdAsync);
-
-                    var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-
-                    // includes
-                    var revisions = GetRevisionsToInclude(parameters);
-                    var timeSeries = GetTimeSeriesToInclude(parameters);
-
-                    getDocumentsAsync = GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
-                }
-                else
-                {
-                    pageSize = RequestHandler.GetPageSize();
-                    actionName = nameof(GetDocumentsAsync);
-
-                    var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-                    var etag = RequestHandler.GetLongQueryString("etag", false);
-
-                    var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
-
-                    StartsWithParams startsWithParams = null;
-
-                    if (isStartsWith)
-                    {
-                        startsWithParams = new StartsWithParams
-                        {
-                            IdPrefix = HttpContext.Request.Query["startsWith"],
-                            Matches = HttpContext.Request.Query["matches"],
-                            Exclude = HttpContext.Request.Query["exclude"],
-                            StartAfterId = HttpContext.Request.Query["startAfter"],
-                        };
-                    }
-
-                    getDocumentsAsync = GetDocumentsAsync(context, etag, startsWithParams, parameters.MetadataOnly, changeVector);
-                }
-
-                if (getDocumentsAsync.IsCompletedSuccessfully)
-                {
-                    HandleGetDocumentResult(getDocumentsAsync.Result, parameters, actionName, pageSize, sw);
-                    return Task.CompletedTask;
-                }
-            
-                // Slow async path requires careful scope considerations:
-                // 1. @thisScope is always created, and we need to borrow it for the async method
-                // 2. ctxScope leverages the fact that the Borrow on the default returns null so it's a null safe.
-                return HandleGetDocumentResultAsync(@thisScope.Borrow(), ctxScope.Borrow(), getDocumentsAsync, parameters, actionName, pageSize, sw);
-            
-                static string IdsToString(List<ReadOnlyMemory<char>> ids)
-                {
-                    if (ids == null || ids.Count == 0)
-                        return string.Empty;
-
-                    var sb = new StringBuilder();
-                    for (int i = 0; i < ids.Count; i++)
-                    {
-                        if (i != 0)
-                            sb.Append(",");
-
-                        ReadOnlyMemory<char> id = ids[i];
-                        sb.Append(id);
-                    }
-
-                    return sb.ToString();
-                }
+                    IdPrefix = HttpContext.Request.Query["startsWith"],
+                    Matches = HttpContext.Request.Query["matches"],
+                    Exclude = HttpContext.Request.Query["exclude"],
+                    StartAfterId = HttpContext.Request.Query["startAfter"],
+                };
             }
+
+            getDocumentsAsync = GetDocumentsAsync(context, etag, startsWithParams, parameters.MetadataOnly, changeVector);
+        }
+
+        if (getDocumentsAsync.IsCompletedSuccessfully)
+        {
+            HandleGetDocumentResult(getDocumentsAsync.Result, parameters, actionName, pageSize, sw);
+            return ValueTask.CompletedTask;
+        }
+            
+        // Slow async path requires careful scope considerations that are delegated with RegisterForDisposal and GetOrLeaseScopedOperationContext
+        return HandleGetDocumentResultAsync(getDocumentsAsync, parameters, actionName, pageSize, sw);
+            
+        static string IdsToString(List<ReadOnlyMemory<char>> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (i != 0)
+                    sb.Append(',');
+
+                ReadOnlyMemory<char> id = ids[i];
+                sb.Append(id);
+            }
+
+            return sb.ToString();
         }
     }
 
-    private async Task HandleGetDocumentResultAsync(AbstractDocumentHandlerProcessorForGet<TRequestHandler, TOperationContext, TDocumentType> instance, [CanBeNull] IDisposable contextScope,
-        ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> responseWriteStats,
+    private async ValueTask HandleGetDocumentResultAsync(ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> responseWriteStats,
         QueryStringParameters parameters, string actionName, int pageSize,
         Stopwatch sw)
     {
-        using (instance)
-        using (contextScope)
-        {
-            HandleGetDocumentResult(await responseWriteStats, parameters, actionName, pageSize, sw);    
-        }
+        HandleGetDocumentResult(await responseWriteStats, parameters, actionName, pageSize, sw);
     }
     
     private void HandleGetDocumentResult((long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats, QueryStringParameters parameters, string actionName, int pageSize,
@@ -512,16 +501,6 @@ internal abstract class
         }
 
         return hs;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-
-        for (int i = Disposables.Count - 1; i >= 0; i--)
-        {
-            Disposables[i].Dispose();
-        }
     }
 
     public static async ValueTask<List<ReadOnlyMemory<char>>> GetIdsFromRequestBodyAsync(TOperationContext context, TRequestHandler requestHandler)

@@ -1,3 +1,4 @@
+@use "Content/scss/bs5variables";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
@@ -29,6 +30,7 @@
 
         th {
             border-right: 1px solid colors.$border-color-light-var;
+            color: colors.$text-emphasis-var !important;
 
             * {
                 overflow: hidden;
@@ -161,6 +163,36 @@
                         color: $color;
                     }
                 }
+            }
+        }
+    }
+
+    .dropdown {
+        &.show {
+            .dropdown-menu {
+                min-width: unset;
+            }
+        }
+    }
+
+    .clear-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        button {
+            margin-top: -1px;
+            background-color: transparent;
+            border: none;
+            opacity: 0.5;
+            color: colors.$text-emphasis-var !important;
+
+            &:hover,
+            &:focus,
+            &:active {
+                background-color: transparent;
+                opacity: 1;
+                transition: bs5variables.$transition-base;
             }
         }
     }

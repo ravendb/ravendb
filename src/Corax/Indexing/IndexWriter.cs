@@ -638,11 +638,15 @@ namespace Corax.Indexing
                 if (field.HasSuggestions)
                     RemoveSuggestions(field, decodedKey);
 
+                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
                 ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
-                if (exists == false)
+                if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
                 {
-                    termLocation = field.Storage.Count;
+                    termLocation = Constants.IndexWriter.InvalidStorageIndex;
+                    var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(decodedKey.Length));
+                    termLocation = newIndex;
+
                     scope = default; // We don't want to reclaim the term name
                 }
 
@@ -653,35 +657,44 @@ namespace Corax.Indexing
                 if (reader.HasNumeric == false)
                     continue;
 
-                termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
-                if (exists == false)
+                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                ref var longTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Longs, reader.CurrentLong, out exists);
+                if (exists == false || longTermLocation == Constants.IndexWriter.InvalidStorageIndex)
                 {
-                    termLocation = field.Storage.Count;
+                    longTermLocation = Constants.IndexWriter.InvalidStorageIndex;
+                    var newIndex = field.Storage.Count;
                     field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
+                    longTermLocation = newIndex;
                 }
 
-                term = ref field.Storage.GetAsRef(termLocation);
+                term = ref field.Storage.GetAsRef(longTermLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
 
-                termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
-                if (exists == false)
+                // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
+                ref var doubleTermLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Doubles, reader.CurrentDouble, out exists);
+                if (exists == false || doubleTermLocation == Constants.IndexWriter.InvalidStorageIndex)
                 {
-                    termLocation = field.Storage.Count;
-                    field.Storage.AddByRef(new EntriesModifications(sizeof(long)));
+                    doubleTermLocation = Constants.IndexWriter.InvalidStorageIndex;
+                    var newIndex = field.Storage.Count;
+                    field.Storage.AddByRef(new EntriesModifications(sizeof(double)));
+                    doubleTermLocation = newIndex;
                 }
 
-                term = ref field.Storage.GetAsRef(termLocation);
+                term = ref field.Storage.GetAsRef(doubleTermLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, freq: 1, InserterMode.Numerical);
             }
         }
 
         private void RemoveMarkerTerm(IndexedField field, EntryTermsReader reader, Slice termSlice, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
+            // RavenDB-25907: Sentinel value pattern for atomic Dictionary+Storage update.
             ref var termLocation = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
-            if (exists == false)
+            if (exists == false || termLocation == Constants.IndexWriter.InvalidStorageIndex)
             {
-                termLocation = field.Storage.Count;
+                termLocation = Constants.IndexWriter.InvalidStorageIndex;
+                var newIndex = field.Storage.Count;
                 field.Storage.AddByRef(new EntriesModifications(1));
+                termLocation = newIndex;
                 // We dont want to reclaim the term name
             }
 

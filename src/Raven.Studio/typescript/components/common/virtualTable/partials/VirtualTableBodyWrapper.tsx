@@ -12,6 +12,9 @@ export interface VirtualTableBodyWrapperProps<T> {
     heightInPx: number;
     isLoading?: boolean;
     tableContainerRef: React.MutableRefObject<HTMLDivElement>;
+    isCompact?: boolean;
+    isRoundingDisabled?: boolean;
+    isPaddingDisabled?: boolean;
 }
 
 export default function VirtualTableBodyWrapper<T>({
@@ -20,17 +23,32 @@ export default function VirtualTableBodyWrapper<T>({
     tableContainerRef,
     isLoading,
     heightInPx,
+    isCompact,
+    isRoundingDisabled,
+    isPaddingDisabled,
     children,
 }: PropsWithChildren<VirtualTableBodyWrapperProps<T>> & ClassNameProps) {
-    const tableHeightInPx = heightInPx - virtualTableConstants.paddingInPx;
+    const paddingInPx = isPaddingDisabled ? 0 : virtualTableConstants.paddingInPx;
+    const tableHeightInPx = heightInPx - paddingInPx;
 
     return (
-        <div className={classNames("virtual-table", className)}>
+        <div
+            className={classNames(
+                "virtual-table",
+                { "p-0": isPaddingDisabled },
+                { "rounded-0": isRoundingDisabled },
+                className
+            )}
+        >
             <VirtualTableState isLoading={isLoading} isEmpty={table.getRowCount() === 0} />
 
-            <div ref={tableContainerRef} className="table-container" style={{ height: tableHeightInPx }}>
+            <div
+                ref={tableContainerRef}
+                className={classNames("table-container", { "rounded-0": isRoundingDisabled })}
+                style={{ height: tableHeightInPx }}
+            >
                 <Table className="m-0" borderless>
-                    <VirtualTableHead table={table} />
+                    <VirtualTableHead table={table} isCompact={isCompact} />
                     {children}
                 </Table>
             </div>

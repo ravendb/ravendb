@@ -87,12 +87,12 @@ public class RavenDB_24424 : RavenTestBase
                     Assert.Equal(NotificationType.PerformanceHint, performanceHintType);
                     Assert.Equal(PerformanceHintReason.Paging, performanceHintReason);
                     
-                    Assert.True(alert.Json.TryGet("Reason", out int alertReasonFromJson));
-                    var alertReasonEnumValue = (AlertReason)alertReasonFromJson;
+                    Assert.True(alert.Json.TryGet("Reason", out string alertReasonFromJson));
+                    var alertReasonEnumValue = Enum.Parse<AlertReason>(alertReasonFromJson);
                     Assert.Equal(alertReasonEnumValue, AlertReason.Replication);
                     
-                    Assert.True(performanceHint.Json.TryGet("Reason", out int performanceHintReasonFromJson));
-                    var performanceHintReasonEnumValue = (PerformanceHintReason)performanceHintReasonFromJson;
+                    Assert.True(performanceHint.Json.TryGet("Reason", out string performanceHintReasonFromJson));
+                    var performanceHintReasonEnumValue = Enum.Parse<PerformanceHintReason>(performanceHintReasonFromJson);
                     Assert.Equal(performanceHintReasonEnumValue, PerformanceHintReason.Paging);
                 }
             }
@@ -170,12 +170,12 @@ public class RavenDB_24424 : RavenTestBase
                 Assert.Equal(NotificationType.PerformanceHint, performanceHintType);
                 Assert.Equal(PerformanceHintReason.Paging, performanceHintReason);
 
-                Assert.True(alert.Json.TryGet("Reason", out int alertReasonFromJson));
-                var alertReasonEnumValue = (AlertReason)alertReasonFromJson;
+                Assert.True(alert.Json.TryGet("Reason", out string alertReasonFromJson));
+                var alertReasonEnumValue = Enum.Parse<AlertReason>(alertReasonFromJson);
                 Assert.Equal(alertReasonEnumValue, AlertReason.Replication);
 
-                Assert.True(performanceHint.Json.TryGet("Reason", out int performanceHintReasonFromJson));
-                var performanceHintReasonEnumValue = (PerformanceHintReason)performanceHintReasonFromJson;
+                Assert.True(performanceHint.Json.TryGet("Reason", out string performanceHintReasonFromJson));
+                var performanceHintReasonEnumValue = Enum.Parse<PerformanceHintReason>(performanceHintReasonFromJson);
                 Assert.Equal(performanceHintReasonEnumValue, PerformanceHintReason.Paging);
             }
         }

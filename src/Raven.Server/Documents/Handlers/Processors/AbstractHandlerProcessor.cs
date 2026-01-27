@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.Handlers.Processors
 
         public abstract ValueTask ExecuteAsync();
 
+        protected void RegisterForDisposal(IDisposable disposable) => RequestHandler.RegisterForDisposal(disposable);
+
         public virtual void Dispose()
         {
             GC.SuppressFinalize(this);
@@ -49,6 +51,8 @@ namespace Raven.Server.Documents.Handlers.Processors
             ContextPool = requestHandler.ContextPool;
             Logger = requestHandler.Logger;
         }
+
+        public TOperationContext GetContextScopedToRequest() => RequestHandler.GetContextScopedToRequest();
     }
 
     internal abstract class AbstractDatabaseHandlerProcessor<TOperationContext> : AbstractDatabaseHandlerProcessor<AbstractDatabaseRequestHandler<TOperationContext>, TOperationContext>

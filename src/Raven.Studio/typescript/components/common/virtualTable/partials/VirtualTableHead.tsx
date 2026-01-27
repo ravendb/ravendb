@@ -6,26 +6,37 @@ import { virtualTableConstants } from "../utils/virtualTableConstants";
 
 interface VirtualTableHeadProps<T> {
     table: TanstackTable<T>;
+    isCompact?: boolean;
 }
 
-export default function VirtualTableHead<T>({ table }: VirtualTableHeadProps<T>) {
+export default function VirtualTableHead<T>({ table, isCompact }: VirtualTableHeadProps<T>) {
+    const height = isCompact ? virtualTableConstants.compactHeaderHeightInPx : virtualTableConstants.headerHeightInPx;
+
     return (
-        <thead style={{ height: virtualTableConstants.headerHeightInPx }}>
+        <thead
+            style={{
+                height,
+            }}
+        >
             {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id} className="d-flex">
                     {headerGroup.headers.map((header) => (
                         <th
                             key={header.id}
-                            className="position-relative align-content-center"
-                            style={{ width: header.getSize() }}
+                            className={classNames("position-relative align-content-center", {
+                                "font-size-11 line-height-25 py-0 px-1": isCompact,
+                            })}
+                            style={{ width: header.getSize(), height }}
                         >
                             <div
                                 className="position-relative d-flex align-items-center justify-content-between"
                                 title={getHeaderTitle(header.column)}
                             >
-                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                <span className="text-truncate w-100">
+                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                </span>
 
-                                <ColumnSettings column={header.column} />
+                                <ColumnSettings column={header.column} isCompact={isCompact} />
                             </div>
                             {header.column.getCanResize() && (
                                 <div

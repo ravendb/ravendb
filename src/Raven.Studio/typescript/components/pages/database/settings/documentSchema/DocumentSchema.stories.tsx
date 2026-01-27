@@ -20,21 +20,26 @@ export default {
     },
     args: {
         databaseAccess: "DatabaseAdmin",
+        hasLicense: true,
     },
 } satisfies Meta;
 
 interface DefaultDocumentSchemaArgs {
     databaseAccess: databaseAccessLevel;
+    hasLicense: boolean;
 }
 
 export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
     name: "Document Schema",
     render: (args) => {
-        const { databases, accessManager, collectionsTracker } = mockStore;
+        const { databases, accessManager, collectionsTracker, license } = mockStore;
         const { databasesService } = mockServices;
 
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
         collectionsTracker.with_Collections();
+        license.with_License({
+            HasSchemaValidation: args.hasLicense,
+        });
         databasesService.withSchemaValidations();
         accessManager.with_databaseAccess({
             [db.name]: args.databaseAccess,
@@ -46,11 +51,14 @@ export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
 
 export const DefaultDocumentSchemaPlayground: StoryObj<DefaultDocumentSchemaArgs> = {
     name: "Document Schema Playground",
-    render: () => {
-        const { databases, accessManager, collectionsTracker } = mockStore;
+    render: (args) => {
+        const { databases, accessManager, collectionsTracker, license } = mockStore;
 
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
         collectionsTracker.with_Collections();
+        license.with_License({
+            HasSchemaValidation: args.hasLicense,
+        });
         accessManager.with_databaseAccess({
             [db.name]: "DatabaseAdmin",
         });

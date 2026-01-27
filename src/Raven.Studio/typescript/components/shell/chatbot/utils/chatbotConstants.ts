@@ -1,10 +1,14 @@
-interface EndpointEntry {
+export interface ChatbotEndpointEntry {
     path: string;
     paramToDisplay?: string;
     isDataSubmission?: boolean;
+    exposedFieldsConfig?: {
+        fields: string[];
+        resultShape: "singleObject" | "resultsArray";
+    };
 }
 
-const endpointsWhitelist: EndpointEntry[] = [
+const endpointsWhitelist: ChatbotEndpointEntry[] = [
     { path: "/databases/{database}/notifications" },
     { path: "/databases/{database}/debug/attachments/hash" },
     { path: "/databases/{database}/data-archival/config" },
@@ -53,12 +57,48 @@ const endpointsWhitelist: EndpointEntry[] = [
     { path: "/databases/{database}/admin/backup-data-directory" },
     { path: "/databases/{database}/admin/backup/running" },
     { path: "/databases/{database}/admin/debug/cluster/txinfo" },
-    { path: "/databases/{database}/admin/configuration/settings" },
     { path: "/databases/{database}/admin/tombstones/state" },
-    { path: "/admin/configuration/settings" },
     { path: "/admin/metrics" },
-    { path: "/admin/configuration/server-wide/backup" },
-    { path: "/admin/configuration/server-wide/tasks" },
+    {
+        path: "/admin/configuration/server-wide/backup",
+        exposedFieldsConfig: {
+            resultShape: "resultsArray",
+            fields: [
+                "ExcludedDatabases",
+                "Name",
+                "TaskId",
+                "Disabled",
+                "MentorNode",
+                "PinToMentorNode",
+                "RetentionPolicy",
+                "AllowOnGoingTasksToUseServerWideConfiguration",
+                "BackupType",
+                "BackupUploadMode",
+                "MaxReadOpsPerSecond",
+            ],
+        },
+    },
+    {
+        path: "/admin/configuration/server-wide/tasks",
+        exposedFieldsConfig: {
+            resultShape: "resultsArray",
+            fields: [
+                "ExcludedDatabases",
+                "Name",
+                "TaskId",
+                "Disabled",
+                "MentorNode",
+                "PinToMentorNode",
+                "RetentionPolicy",
+                "AllowOnGoingTasksToUseServerWideConfiguration",
+                "BackupType",
+                "BackupUploadMode",
+                "MaxReadOpsPerSecond",
+                "DelayReplicationFor",
+                "TopologyDiscoveryUrls",
+            ],
+        },
+    },
     { path: "/admin/server-wide/tasks" },
     { path: "/admin/server-wide/backup-data-directory" },
     { path: "/admin/debug/info/tcp/stats" },
@@ -78,7 +118,27 @@ const endpointsWhitelist: EndpointEntry[] = [
     { path: "/admin/debug/proc/stats" },
     { path: "/license-server/connectivity" },
     { path: "/certificates/whoami" },
-    { path: "/periodic-backup" },
+    {
+        path: "/periodic-backup",
+        exposedFieldsConfig: {
+            resultShape: "singleObject",
+            fields: [
+                "Name",
+                "TaskId",
+                "Disabled",
+                "MentorNode",
+                "PinToMentorNode",
+                "RetentionPolicy",
+                "CreatedAt",
+                "FullBackupFrequency",
+                "IncrementalBackupFrequency",
+                "BackupType",
+                "BackupUploadMode",
+                "SnapshotSettings",
+                "MaxReadOpsPerSecond",
+            ],
+        },
+    },
     { path: "/databases" },
     { path: "/databases/{database}/replication/tombstones" },
     { path: "/databases/{database}/collections/last-change-vector" },
@@ -126,7 +186,6 @@ const endpointsWhitelist: EndpointEntry[] = [
     { path: "/databases/{database}/debug/attachments/missing" },
     { path: "/databases/{database}/revisions/collections/stats" },
     { path: "/databases/{database}/indexes/status" },
-    { path: "/admin/databases" },
     { path: "/databases/{database}/revisions/size" },
     { path: "/databases/{database}/docs/class" },
     { path: "/databases/{database}/debug/attachments/metadata" },
@@ -143,11 +202,11 @@ const endpointsWhitelist: EndpointEntry[] = [
     { path: "/databases/{database}/collections/docs/ids" },
 ] as const;
 
-interface EndpointWithRegex extends EndpointEntry {
+interface EndpointWithRegex extends ChatbotEndpointEntry {
     regex: RegExp;
 }
 
-function getEndpointWithRegex(endpointEntry: EndpointEntry): EndpointWithRegex {
+function getEndpointWithRegex(endpointEntry: ChatbotEndpointEntry): EndpointWithRegex {
     const regexPattern = _.escapeRegExp(endpointEntry.path).replace(/\\{database\\}/g, "[\\w.-]+");
     const regex = new RegExp(`^${regexPattern}$`);
 
@@ -167,8 +226,13 @@ const paramToDisplayRegexEndpoints = endpointsWhitelist
     .filter((endpoint) => endpoint.paramToDisplay)
     .map(getEndpointWithRegex);
 
+const exposingFieldsRegexEndpoints = endpointsWhitelist
+    .filter((endpoint) => endpoint.exposedFieldsConfig)
+    .map(getEndpointWithRegex);
+
 export const chatbotConstants = {
     whitelistRegexEndpoints,
     dataSubmissionRegexEndpoints,
     paramToDisplayRegexEndpoints,
+    exposingFieldsRegexEndpoints,
 };
