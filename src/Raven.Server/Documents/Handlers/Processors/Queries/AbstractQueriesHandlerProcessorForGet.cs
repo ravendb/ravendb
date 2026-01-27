@@ -101,19 +101,6 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
     protected abstract Task<TQueryResultsContainer> GetQueryResultsAsync(IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly);
 
     protected override HttpMethod QueryMethod { get; }
-
-    internal async ValueTask<T> ExecuteWithExceptionHandling<T>(ValueTask<T> task)
-    {
-        try
-        {
-            return await task;
-        }
-        catch (Exception e)
-        {
-            ProcessQueryException(e);
-            throw;
-        }
-    }
     
     internal async ValueTask ExecuteWithExceptionHandling(ValueTask task)
     {
@@ -169,8 +156,19 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
     }
 
-    public async ValueTask LoadIndexQueryForPost() => IndexQuery = await ExecuteWithExceptionHandling(ReadIndexQueryForPost(OperationContext, Tracker, AddSpatialProperties));
-    
+    public async ValueTask LoadIndexQueryForPost()
+    {
+        try
+        {
+            IndexQuery = await ReadIndexQueryForPost(OperationContext, Tracker, AddSpatialProperties);
+        }
+        catch (Exception e)
+        {
+            ProcessQueryException(e);
+            throw;
+        }
+    }
+
     private async ValueTask HandleIndexQueryAsync(IndexQueryServerSide indexQuery, long? existingResultEtag, QueryStringParameters parameters)
     {
         TQueryResultsContainer result = null;
