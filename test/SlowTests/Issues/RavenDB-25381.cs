@@ -61,7 +61,7 @@ public class RavenDB_25381 : RavenTestBase
         
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/server/notifications";
+            url = $"{node.Url}/admin/server/notifications";
 
             return new HttpRequestMessage
             {
