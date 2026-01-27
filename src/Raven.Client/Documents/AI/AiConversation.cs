@@ -140,9 +140,11 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
+    public void Handle<TArgs, TResult>(string actionName, Func<TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError) 
+        where TArgs : class 
+        where TResult : class
     {
-        Handle<TArgs>(actionName, (_, token) => action(token), aiHandleError);
+        Handle<TArgs, TResult>(actionName, (_, token) => action(token), aiHandleError);
     }
 
     public void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
@@ -150,15 +152,14 @@ internal class AiConversation : IAiConversationOperations
         Handle<TArgs>(actionName, (_, token) => action(token), aiHandleError);
     }
 
-    public void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError)
+    public void Handle<TArgs, TResult>(string actionName, Func<AiAgentActionRequest, TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError)
         where TArgs : class
+        where TResult : class
     {
-        Receive<TArgs>(actionName, (request, args) =>
+        Receive<TArgs>(actionName, async (request, args) =>
         {
-            return action(request, args).ContinueWith(t =>
-            {
-                AddActionResponse(request.ToolId, t.Result);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            var result = await action(request, args).ConfigureAwait(false);
+            AddActionResponse(request.ToolId, result);
         }, aiHandleError);
     }
 
