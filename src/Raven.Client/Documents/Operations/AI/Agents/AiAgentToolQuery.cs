@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
 
         /// <summary>
         /// The actual query string (RQL) that represents this tool.
-        /// This query will not be executed by the database when the model requests for this tool.
+        /// This query will be executed by the database when the model requests this tool.
         /// </summary>
         public string Query { get; set; }
 
