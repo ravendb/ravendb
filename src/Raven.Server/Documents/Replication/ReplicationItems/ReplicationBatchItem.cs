@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return item;
         }
 
-        public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader, bool replicationRemoteAttachments)
+        public static unsafe ReplicationBatchItem ReadTypeAndInstantiate(Reader reader, TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures replicationSupportedFeatures)
         {
             var type = *(ReplicationItemType*)reader.ReadExactly(sizeof(byte));
 
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     return new DocumentReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.Attachment:
                 case ReplicationItemType.AttachmentStream:
-                    return new AttachmentReplicationItem { Type = type, Reader = reader, RemoteAttachments = replicationRemoteAttachments };
+                    return new AttachmentReplicationItem { Type = type, Reader = reader, RemoteAttachments = replicationSupportedFeatures.RemoteAttachments };
                 case ReplicationItemType.AttachmentTombstone:
                     return new AttachmentTombstoneReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.RevisionTombstone:
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 case ReplicationItemType.CounterGroup:
                     return new CounterReplicationItem { Type = type, Reader = reader };
                 case ReplicationItemType.TimeSeriesSegment:
-                    return new TimeSeriesReplicationItem { Type = type, Reader = reader };
+                    return new TimeSeriesReplicationItem { Type = type, Reader = reader, IncludeDocumentChangeVector = replicationSupportedFeatures.TimeSeriesWithDocumentChangeVector };
                 case ReplicationItemType.DeletedTimeSeriesRange:
                     return new TimeSeriesDeletedRangeItem { Type = type, Reader = reader };
                 default:

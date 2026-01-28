@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.IO;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;

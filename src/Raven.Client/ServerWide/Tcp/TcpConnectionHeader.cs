@@ -80,6 +80,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationWithDeduplicatedAttachments = 53_001;
         public static readonly int ReplicationWithRevisionTombstones = 60_000;
         public static readonly int ReplicationWithRemoteAttachments = 72_000;
+        public static readonly int ReplicationWithTimeSeriesDocumentChangeVector = 72_001;
 
         public static readonly int TcpConnectionsWithCompression = 53_000;
         public static readonly int SubscriptionBaseLine = 40;
@@ -90,7 +91,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly int ClusterTcpVersion = ClusterWithTcpCompression;
         public static readonly int HeartbeatsTcpVersion = HeartbeatsWithTcpCompression;
-        public static readonly int ReplicationTcpVersion = ReplicationWithRemoteAttachments;
+        public static readonly int ReplicationTcpVersion = ReplicationWithTimeSeriesDocumentChangeVector;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -266,6 +267,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool DeduplicatedAttachments;
                 public bool RevisionTombstonesWithId;
                 public bool RemoteAttachments;
+                public bool TimeSeriesWithDocumentChangeVector;
             }
         }
 
@@ -294,6 +296,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    ReplicationWithTimeSeriesDocumentChangeVector,
                     ReplicationWithRemoteAttachments,
                     ReplicationWithRevisionTombstones,
                     ReplicationWithDeduplicatedAttachments,
@@ -390,6 +393,24 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ReplicationWithTimeSeriesDocumentChangeVector] = new SupportedFeatures(ReplicationWithTimeSeriesDocumentChangeVector)
+                    {
+                        DataCompression = true,
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            TimeSeriesWithDocumentChangeVector = true,
+                            RemoteAttachments = true,
+                            RevisionTombstonesWithId = true,
+                            DeduplicatedAttachments = true,
+                            MissingAttachments = true,
+                            CountersBatch = true,
+                            PullReplication = true,
+                            TimeSeries = true,
+                            CaseInsensitiveCounters = true,
+                            ClusterTransaction = true,
+                            IncrementalTimeSeries = true
+                        }
+                    },
                     [ReplicationWithRemoteAttachments] = new SupportedFeatures(ReplicationWithRemoteAttachments)
                     {
                         DataCompression = true,

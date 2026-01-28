@@ -21,8 +21,8 @@ public class RavenDB_25918 : RavenTestBase
         // Adding new values in between existing values will cause existing notifications to be read with incorrect reason.
         //
         // Make sure new value fulfills the above and update the assertion.
-        Assert.Equal(67, Enum.GetNames(typeof(AlertReason)).Length);
-        Assert.Equal(AlertReason.SqlConnectionString_DeprecatedFactoryReplaced, Enum.GetValues(typeof(AlertReason)).Cast<AlertReason>().Last());
+        Assert.Equal(71, Enum.GetNames(typeof(AlertReason)).Length);
+        Assert.Equal(AlertReason.SchemaValidationConfiguration_Error, Enum.GetValues(typeof(AlertReason)).Cast<AlertReason>().Last());
         
         Assert.Equal(10, Enum.GetNames(typeof(PerformanceHintReason)).Length);
         Assert.Equal(PerformanceHintReason.Indexing_References, Enum.GetValues(typeof(PerformanceHintReason)).Cast<PerformanceHintReason>().Last());
