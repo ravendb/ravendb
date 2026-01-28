@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -120,7 +121,7 @@ namespace Voron
 
         internal TestingStuff _forTestingPurposes;
         private EnvironmentStateRecord _currentStateRecord;
-        private readonly ConcurrentQueue<EnvironmentStateRecordHolder> _transactionsToFlush = new();
+        private readonly ConcurrentQueue<EnvironmentStateRecord> _transactionsToFlush = new();
 
         internal EnvironmentStateRecord CurrentStateRecord => _currentStateRecord;
 
@@ -1350,19 +1351,16 @@ namespace Voron
                     WrittenToJournalNumber = envStateRecord.FlushedToJournal,
                     ClientStateType = envStateRecord.ClientState?.GetType().ToString()
                 },
-                TransactionsToFlush = _transactionsToFlush.ToList().Select(x =>
-                {
-                    var record = x.EnvStateRecord;
-
-                    return new InMemoryStorageState.EnvironmentStateRecordDetails
+                TransactionsToFlush = GetTransactionToFlushList()
+                    .Select(record => new InMemoryStorageState.EnvironmentStateRecordDetails
                     {
                         TransactionId = record.TransactionId,
                         ScratchPagesTable = GetScratchTableSummary(record.ScratchPagesTable),
                         NextPageNumber = record.NextPageNumber,
                         WrittenToJournalNumber = record.FlushedToJournal,
                         ClientStateType = record.ClientState?.GetType().ToString()
-                    };
-                }).ToList(),
+                    })
+                    .ToList(),
                 FlushState = new InMemoryStorageState.FlushStateDetails
                 {
                     LastFlushTime = Journal.Applicator.LastFlushTime,
@@ -1381,6 +1379,17 @@ namespace Voron
             };
 
             return state;
+
+            List<EnvironmentStateRecord> GetTransactionToFlushList()
+            {
+                var transactionToFlushList = _transactionsToFlush.ToList();
+                var peeked = _lastPeekedRecord;
+                if (peeked != null)
+                {
+                    transactionToFlushList.Add(peeked);
+                }
+                return transactionToFlushList;
+            }
         }
 
         private InMemoryStorageState.ScratchTableDetails GetScratchTableSummary(ImmutableDictionary<long, PageFromScratchBuffer> scratchTable)
@@ -1677,17 +1686,20 @@ namespace Voron
             // Transactions that _haven't_ been flushed are mostly book-keeping (updating scratch table, etc)
             if (tx.WrittenToJournalNumber >= 0)
             {
-                _transactionsToFlush.Enqueue(new EnvironmentStateRecordHolder { EnvStateRecord = updatedState });
+                _transactionsToFlush.Enqueue(updatedState);
             }
         }
 
         private readonly List<PageFromScratchBuffer> _cachedScratchBuffers = [];
+        private EnvironmentStateRecord _lastPeekedRecord = null;
 
         internal ApplyLogsToDataFileState TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive)
         {
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
 
+            _journal.Applicator.AssertJournalLockIsHeld();
+            
             List<(long Start, long Count)> sparseRegions = null;
             var scratchBuffers = _cachedScratchBuffers;
             scratchBuffers.Clear();
@@ -1695,8 +1707,11 @@ namespace Voron
             EnvironmentStateRecord record = null;
             while (true)
             {
-                if (_transactionsToFlush.TryPeek(out var maybe) == false ||
-                    maybe.EnvStateRecord.TransactionId >= uptoTxIdExclusive)
+                if (
+                    // we retain peeked record and avoid using TryPeek because of: https://ayende.com/blog/201891-B/the-memory-leak-in-concurrentqueue
+                    _lastPeekedRecord != null ||
+                    _transactionsToFlush.TryDequeue(out _lastPeekedRecord) == false ||
+                    _lastPeekedRecord.TransactionId >= uptoTxIdExclusive)
                 {
                     if (found == false)
                         return null;
@@ -1710,17 +1725,12 @@ namespace Voron
 
                     return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
-
-                if (_transactionsToFlush.TryDequeue(out EnvironmentStateRecordHolder recordHolder) == false)
-                    throw new InvalidOperationException("Failed to get transaction to flush after already peeked successfully");
-
-                record = recordHolder.EnvStateRecord;
-
-                // single thread is reading from this, so we can be sure that peek + take gets the same value
-                Debug.Assert(ReferenceEquals(record, maybe.EnvStateRecord));
-
-                recordHolder.EnvStateRecord = null; // this way we ensure that _transactionsToFlush won't hold reference in its internal slots preventing GC on EnvironmentStateRecord.ClientState object
-
+                Debug.Assert(_lastPeekedRecord is not null && _lastPeekedRecord.TransactionId < uptoTxIdExclusive);
+                
+                record = _lastPeekedRecord;
+                // we consumed the peeked record, so we set it to null, to allow the
+                // GC to collect it in the future
+                _lastPeekedRecord = null; 
 
                 if(record.SparseRegions is not null)
                 {

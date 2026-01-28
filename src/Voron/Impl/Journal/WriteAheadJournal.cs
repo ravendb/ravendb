@@ -1744,6 +1744,11 @@ namespace Voron.Impl.Journal
                 }
                 VoronUnrecoverableErrorException.Raise(env, message);
             }
+
+            public void AssertJournalLockIsHeld()
+            {
+                Debug.Assert(Monitor.IsEntered(_flushingLock));
+            }
         }
 
         private void CurrentFileIsDone()
@@ -2604,5 +2609,6 @@ namespace Voron.Impl.Journal
 
             return output - dst;
         }
+
     }
 }
