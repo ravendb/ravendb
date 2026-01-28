@@ -858,6 +858,9 @@ namespace Raven.Server.Documents.TimeSeries
                     if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
                         return true;
 
+                    // Segment CV may advance while replication is broken, so delete-range CV isn't always newer than the segment CV.
+                    // As a fallback, compare the delete-range CV to the segment's parent document CV.
+                    // If the delete-range already covers that doc CV, the segment belongs to a document version that was already deleted.
                     if (parentDocCv != null && ChangeVectorUtils.GetConflictStatus(parentDocCv, item.ChangeVector) == ConflictStatus.AlreadyMerged)
                         return true;
                 }
@@ -2378,15 +2381,18 @@ namespace Raven.Server.Documents.TimeSeries
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             item.ToDispose(Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out item.Key));
 
-            LazyStringValue docId;
+            LazyStringValue docId = null;
             using (TimeSeriesStats.ExtractStatsKeyFromStorageKey(context, item.Key, out var statsKey))
             {
                 item.Name = Stats.GetTimeSeriesNameOriginalCasing(context, statsKey);
 
-                TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, context, out docId, out var name);
+                if (includeDocumentChangeVector || item.Name == null)
+                {
+                    TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, context, out docId, out var nameFromKey);
 
-                // RavenDB-18381 - replace Null in lower-case name to recover from an existing state of broken replication
-                item.Name ??= name;
+                    // RavenDB-18381 - replace null in lower-case name to recover from an existing state of broken replication
+                    item.Name ??= nameFromKey;
+                }
             }
 
             item.IncludeDocumentChangeVector = includeDocumentChangeVector;
