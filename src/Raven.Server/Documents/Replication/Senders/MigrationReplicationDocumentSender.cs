@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Replication.Senders
         }
 
         protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
-            ReplicationSupportedFeatures replicationSupportedFeatures)
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures replicationSupportedFeatures)
         {
             var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(ctx.DocumentDatabase);
             var documentsStorage = database.ShardedDocumentsStorage;
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        internal static IEnumerable<ReplicationBatchItem> ReplicationBatchItemsForBucket(ShardedDocumentsStorage documentsStorage, DocumentsOperationContext ctx, long etag, ReplicationStats stats, int bucket, ReplicationSupportedFeatures replicationSupportedFeatures)
+        internal static IEnumerable<ReplicationBatchItem> ReplicationBatchItemsForBucket(ShardedDocumentsStorage documentsStorage, DocumentsOperationContext ctx, long etag, ReplicationStats stats, int bucket, TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures replicationSupportedFeatures)
         {
             var docs = documentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(x => DocumentReplicationItem.From(x, ctx));
             var tombs = documentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Replication.Senders
             var revisions = revisionsStorage.GetRevisionsByBucketFrom(ctx, bucket, etag + 1).Select(x => DocumentReplicationItem.From(x, ctx));
             var attachments = documentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(ctx, bucket, etag + 1, replicationSupportedFeatures.RemoteAttachments);
             var counters = documentsStorage.CountersStorage.GetCountersByBucketFrom(ctx, bucket, etag + 1);
-            var timeSeries = documentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1);
+            var timeSeries = documentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(ctx, bucket, etag + 1, replicationSupportedFeatures.TimeSeriesWithDocumentChangeVector);
             var deletedTimeSeriesRanges = documentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(ctx, bucket, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())

@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Raven.Client;
-using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TimeSeries;
@@ -110,6 +109,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Name; // original casing
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
+        public LazyStringValue ParentDocChangeVector;
+        public bool IncludeDocumentChangeVector;
 
         public override long Size => base.Size + // common
 
@@ -123,7 +124,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      Collection.Size + // doc collection
 
                                      sizeof(int) + // size of name
-                                     Name.Size; // name;
+                                     Name.Size + // name
+
+                                     (IncludeDocumentChangeVector 
+                                        ? sizeof(int) + // size of doc cv
+                                          (ParentDocChangeVector?.Size ?? 0)  // parent doc cv
+                                        : 0);
+
 
         public override DynamicJsonValue ToDebugJson()
         {
@@ -131,6 +138,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Collection)] = Collection?.ToString(CultureInfo.InvariantCulture) ?? Constants.Documents.Collections.EmptyCollection;
             djv[nameof(Name)] = Name.ToString(CultureInfo.InvariantCulture);
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
+            djv[nameof(ParentDocChangeVector)] = ParentDocChangeVector?.ToString(CultureInfo.InvariantCulture);
+
             return djv;
         }
 
@@ -165,6 +174,18 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Memory.Copy(pTemp + tempBufferPos, Name.Buffer, Name.Size);
                 tempBufferPos += Name.Size;
 
+                if (IncludeDocumentChangeVector)
+                {
+                    *(int*)(pTemp + tempBufferPos) = ParentDocChangeVector?.Size ?? 0;
+                    tempBufferPos += sizeof(int);
+
+                    if (ParentDocChangeVector != null)
+                    {
+                        Memory.Copy(pTemp + tempBufferPos, ParentDocChangeVector.Buffer, ParentDocChangeVector.Size);
+                        tempBufferPos += ParentDocChangeVector.Size;
+                    }
+                }
+
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordTimeSeriesOutput(Size);
             }
@@ -189,16 +210,23 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 SetLazyStringValueFromString(context, out Name);
                 Debug.Assert(Name != null);
 
+                if (IncludeDocumentChangeVector)
+                {
+                    SetLazyStringValueFromString(context, out ParentDocChangeVector);
+                    Debug.Assert(ParentDocChangeVector != null);
+                }
+
                 stats.RecordTimeSeriesRead(Size);
             }
         }
-
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
             var item = new TimeSeriesReplicationItem
             {
-                Collection = Collection.Clone(context)
+                Collection = Collection.Clone(context),
+                Name = Name.Clone(context),
+                ParentDocChangeVector = ParentDocChangeVector?.Clone(context)
             };
 
             var mem = Segment.Clone(context, out item.Segment);
@@ -216,6 +244,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         protected override void InnerDispose()
         {
             Collection?.Dispose();
+            Name?.Dispose();
+            ParentDocChangeVector?.Dispose();
         }
     }
 }

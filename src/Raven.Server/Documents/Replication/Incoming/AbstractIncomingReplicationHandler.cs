@@ -435,7 +435,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 stats.RecordInputAttempt();
 
-                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader, SupportedFeatures.Replication.RemoteAttachments);
+                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader, SupportedFeatures.Replication);
                 item.ReadChangeVectorAndMarker();
                 item.Read(context, allocator, stats);
 
@@ -451,7 +451,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             var replicatedAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
             for (var i = 0; i < attachmentStreamCount; i++)
             {
-                var attachment = (AttachmentReplicationItem)ReplicationBatchItem.ReadTypeAndInstantiate(reader, SupportedFeatures.Replication.RemoteAttachments);
+                var attachment = (AttachmentReplicationItem)ReplicationBatchItem.ReadTypeAndInstantiate(reader, SupportedFeatures.Replication);
                 Debug.Assert(attachment.Type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
 
                 using (stats.For(ReplicationOperation.Incoming.AttachmentRead))

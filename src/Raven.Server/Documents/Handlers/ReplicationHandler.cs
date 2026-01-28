@@ -9,6 +9,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -126,14 +127,9 @@ namespace Raven.Server.Documents.Handlers
                     TimeSeriesRead = new OutgoingReplicationStatsScope(runStats),
                 };
 
-                var supportedFeatures = new ReplicationDocumentSenderBase.ReplicationSupportedFeatures
-                {
-                    CaseInsensitiveCounters = true,
-                    RevisionTombstonesWithId = true,
-                    RemoteAttachments = true
-                };
+                var tcpSupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, TcpConnectionHeaderMessage.ReplicationTcpVersion);
 
-                var items = ReplicationDocumentSenderBase.GetReplicationItems(Database, context, etag: etag == 0 ? 0 : etag - 1, stats, supportedFeatures);
+                var items = ReplicationDocumentSenderBase.GetReplicationItems(Database, context, etag: etag == 0 ? 0 : etag - 1, stats, tcpSupportedFeatures.Replication);
                 if (types.Count > 0)
                     items = items.Where(x => types.Contains(x.Type));
                 items = items.Take(pageSize);

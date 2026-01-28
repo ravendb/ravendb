@@ -10,6 +10,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -148,7 +149,7 @@ namespace SlowTests.Issues
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
-                            }, new ReplicationDocumentSenderBase.ReplicationSupportedFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
+                            }, new TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
                             etag = firstReplicationOrder.Select(x => x.Etag).Max();
                         }
                         // Replication from source to firstDestination
@@ -175,7 +176,7 @@ namespace SlowTests.Issues
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
-                            }, new ReplicationDocumentSenderBase.ReplicationSupportedFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
+                            }, new TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
                         }
 
                         var database2 = await GetDocumentDatabaseInstanceForAsync(firstDestination, options.DatabaseMode, id, server);
@@ -189,7 +190,7 @@ namespace SlowTests.Issues
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
-                            }, new ReplicationDocumentSenderBase.ReplicationSupportedFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
+                            }, new TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures()).Select(item => item.Clone(ctx, ctx.Allocator)));
                         }
 
                         // remove the 1st doc sent, because of its change in the middle of the 1st replication, so it was sent twice
