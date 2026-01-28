@@ -105,7 +105,7 @@ this.Random = a.toBase64();"
             {
                 Script = @"
 var data = 'Hello world'; // string is converted to utf8 bytes automatically
-var hash = crypto.subtle.digest('SHA-256', data);
+var hash = crypto.digest('SHA-256', data);
 this.Hash = new Uint8Array(hash).toBase64();
 "
             });
@@ -138,20 +138,19 @@ this.Hash = new Uint8Array(hash).toBase64();
             var patch = new PatchCommandData("companies/1", null, new PatchRequest
             {
                 Script = @"
-var key = new Uint8Array(64); // 512 bits key
-crypto.getRandomValues(key);
+var key = crypto.getRandomValuesBase64(64); // 512 bits key as base64
 var data = 'some message';
 
-// Sign
-var sig = crypto.subtle.sign({name: 'HMAC', hash: 'SHA-256'}, key, data);
-this.Signature = new Uint8Array(sig).toBase64();
+// Sign - returns base64 string
+var sig = crypto.sign('SHA-256', key, data);
+this.Signature = sig;
 
-// Verify
-var valid = crypto.subtle.verify({name: 'HMAC', hash: 'SHA-256'}, key, sig, data);
+// Verify with base64 signature
+var valid = crypto.verify('SHA-256', key, sig, data);
 this.Valid = valid;
 
 // Verify invalid
-var invalid = crypto.subtle.verify({name: 'HMAC', hash: 'SHA-256'}, key, sig, 'other');
+var invalid = crypto.verify('SHA-256', key, sig, 'other');
 this.Invalid = invalid;
 "
             });
@@ -186,27 +185,14 @@ this.Invalid = invalid;
             var patch = new PatchCommandData("companies/1", null, new PatchRequest
             {
                 Script = @"
-var key = new Uint8Array(32); // 256 bits
-crypto.getRandomValues(key);
-var iv = new Uint8Array(12);
-crypto.getRandomValues(iv);
+var key = crypto.getRandomValuesBase64(32); // 256 bits as base64
+var iv = crypto.getRandomValuesBase64(12);  // 96 bits as base64
 
 var plain = 'Secret Message';
-var encrypted = crypto.subtle.encrypt({name: 'AES-GCM', iv: iv}, key, plain);
-this.Encrypted = Array.from(new Uint8Array(encrypted));
+var encrypted = crypto.encryptAesGcm(iv, key, plain);
+this.Encrypted = encrypted;
 
-var decrypted = crypto.subtle.decrypt({name: 'AES-GCM', iv: iv}, key, encrypted);
-this.DecryptedLen = decrypted.byteLength;
-
-try {
-    var decoder = new TextDecoder();
-    this.DecodedResult = decoder.decode(decrypted);
-    this.DecoderError = null;
-} catch(e) {
-    this.DecoderError = e.toString();
-    this.DecodedResult = null;
-}
-this.DecryptedString = this.DecodedResult;
+this.DecryptedString = crypto.decryptAesGcm(iv, key, encrypted, 'string');
 "
                 });
                 session.Advanced.Defer(patch);
@@ -216,9 +202,6 @@ this.DecryptedString = this.DecodedResult;
         using (var session = store.OpenSession())
         {
             var c = session.Load<dynamic>("companies/1");
-            string error = c.DecoderError;
-            Assert.True(string.IsNullOrEmpty(error), "Script error: " + error);
-
             var s = (string)c.DecryptedString;
             Assert.Equal("Secret Message", s);
         }

@@ -22,29 +22,69 @@ public sealed partial class ScriptRunner
 
             var crypto = new JsObject(ScriptEngine);
             crypto.SetClfFunc("getRandomValues", Crypto_GetRandomValues);
+            crypto.SetClfFunc("getRandomValuesBase64", Crypto_GetRandomValuesBase64);
             crypto.SetClfFunc("randomUUID", Crypto_RandomUUID);
+            crypto.SetClfFunc("digest", Crypto_Digest);
+            crypto.SetClfFunc("sign", Crypto_Sign);
+            crypto.SetClfFunc("verify", Crypto_Verify);
+            crypto.SetClfFunc("encryptAesGcm", Crypto_EncryptAesGcm);
+            crypto.SetClfFunc("decryptAesGcm", Crypto_DecryptAesGcm);
 
             var subtle = new JsObject(ScriptEngine);
-            subtle.SetClfFunc("digest", Crypto_Subtle_Digest);
-            subtle.SetClfFunc("sign", Crypto_Subtle_Sign);
-            subtle.SetClfFunc("verify", Crypto_Subtle_Verify);
-            subtle.SetClfFunc("encrypt", Crypto_Subtle_Encrypt);
-            subtle.SetClfFunc("decrypt", Crypto_Subtle_Decrypt);
-
-            string[] notImplemented = ["generateKey", "deriveKey", "deriveBits", "importKey", "exportKey", "wrapKey", "unwrapKey"];
-            foreach (var method in notImplemented)
+            string[] implementedMethods = [
+                // implemented methods - as sync versions
+                "digest", "sign", "verify", "encrypt", "decrypt", 
+                // not implemented methods
+                "generateKey", "deriveKey", "deriveBits", "importKey", "exportKey", "wrapKey", "unwrapKey"
+            ];
+            foreach (var method in implementedMethods)
             {
-                subtle.SetClfFunc(method, (self, args) => throw new NotImplementedException($"crypto.subtle.{method} is not implemented"));
+                subtle.SetClfFunc(method, (self, args) => throw new NotImplementedException(GetSubtleMethodNotImplementedMessage(method)));
             }
 
             crypto.FastSetProperty("subtle", new PropertyDescriptor(subtle, false, false, false));
             ScriptEngine.SetValue("crypto", crypto);
         }
 
+        private string GetSubtleMethodNotImplementedMessage(string method)
+        {
+            return method switch
+            {
+                "digest" => "crypto.subtle.digest is not available. Use the sync crypto.digest instead: crypto.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): ArrayBuffer",
+                "sign" => "crypto.subtle.sign is not available. Use the sync crypto.sign instead: crypto.sign(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, data: BufferSource | string): string (base64)",
+                "verify" => "crypto.subtle.verify is not available. Use the sync crypto.verify instead: crypto.verify(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, signature: string (base64) | BufferSource, data: BufferSource | string): boolean",
+                "encrypt" => "crypto.subtle.encrypt is not available. Use the sync crypto.encryptAesGcm instead: crypto.encryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: BufferSource | string): string (base64)",
+                "decrypt" => "crypto.subtle.decrypt is not available. Use the sync crypto.decryptAesGcm instead: crypto.decryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: string (base64) | BufferSource, outputType: 'string' | 'raw'): string | ArrayBuffer",
+                _ => $"crypto.subtle.{method} is not available"
+            };
+        }
+
         private JsValue Crypto_RandomUUID(JsValue self, JsValue[] args)
         {
             // crypto.randomUUID(): string
             return Guid.NewGuid().ToString("D");
+        }
+
+        private JsValue Crypto_GetRandomValuesBase64(JsValue self, JsValue[] args)
+        {
+            const string signature = "crypto.getRandomValuesBase64(lenInBytes: number): string (base64)";
+            if (args.Length != 1)
+                throw new ArgumentException($"{signature} requires 1 argument");
+
+            if (args[0].IsNumber() == false)
+                throw new ArgumentException($"{signature}: Argument must be a number");
+
+            var len = (int)args[0].AsNumber();
+            if (len <= 0)
+                throw new ArgumentException($"{signature}: Length must be greater than 0");
+
+            var bytes = new byte[len];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(bytes);
+            }
+
+            return Convert.ToBase64String(bytes);
         }
 
         private JsValue Crypto_GetRandomValues(JsValue self, JsValue[] args)
@@ -73,9 +113,9 @@ public sealed partial class ScriptRunner
             return target;
         }
 
-        private JsValue Crypto_Subtle_Digest(JsValue self, JsValue[] args)
+        private JsValue Crypto_Digest(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.subtle.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): ArrayBuffer";
+            const string signature = "crypto.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): ArrayBuffer";
             if (args.Length != 2)
                 throw new ArgumentException($"{signature} requires 2 arguments: algorithm, data");
 
@@ -92,87 +132,82 @@ public sealed partial class ScriptRunner
             return CreateArrayBuffer(hash);
         }
 
-        private JsValue Crypto_Subtle_Sign(JsValue self, JsValue[] args)
+        private JsValue Crypto_Sign(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.subtle.sign(algorithm: { name: 'HMAC', hash: 'SHA-256' | 'SHA-384' | 'SHA-512' }, key: BufferSource, data: BufferSource | string): ArrayBuffer";
+            const string signature = "crypto.sign(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, data: BufferSource | string): ArrayBuffer";
             if (args.Length != 3)
                 throw new ArgumentException($"{signature} requires 3 arguments");
-            string algoName = GetAlgorithmName(args[0], signature);
-
-            if (algoName.Equals("HMAC", StringComparison.OrdinalIgnoreCase) == false)
-                throw new NotSupportedException($"{signature}: Algorithm '{algoName}' is not supported for signing.");
-
+            
+            if (args[0].IsString() == false)
+                throw new ArgumentException($"{signature}: First argument must be a hash algorithm string ('SHA-256', 'SHA-384', or 'SHA-512')");
+            
+            string hashName = args[0].AsString();
             byte[] keyData = GetKeyData(args[1], signature);
             byte[] data = GetBytesFromJsValue(args[2], signature);
-
-            string hashName = "SHA-256";
-            if (args[0].IsObject() && args[0].AsObject().TryGetValue("hash", out var hashVal) && hashVal.IsString())
-            {
-                hashName = hashVal.AsString();
-            }
 
             var computedSignature = hashName switch
             {
                 "SHA-256" => HMACSHA256.HashData(keyData, data),
                 "SHA-384" => HMACSHA384.HashData(keyData, data),
                 "SHA-512" => HMACSHA512.HashData(keyData, data),
-                _ => throw new NotSupportedException($"{signature}: Unsupported hash for HMAC: " + hashName)
+                _ => throw new NotSupportedException($"{signature}: Unsupported hash algorithm '{hashName}'")
             };
 
-            return CreateArrayBuffer(computedSignature);
+            return Convert.ToBase64String(computedSignature);
         }
 
-        private JsValue Crypto_Subtle_Verify(JsValue self, JsValue[] args)
+        private JsValue Crypto_Verify(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.subtle.verify(algorithm: { name: 'HMAC', hash: 'SHA-256' | 'SHA-384' | 'SHA-512' }, key: BufferSource, signature: BufferSource, data: BufferSource | string): boolean";
+            const string signature = "crypto.verify(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, signature: string (base64) | BufferSource, data: BufferSource | string): boolean";
             if (args.Length != 4)
                 throw new ArgumentException($"{signature} requires 4 arguments");
-            string algoName = GetAlgorithmName(args[0], signature);
-
-            if (algoName.Equals("HMAC", StringComparison.OrdinalIgnoreCase) == false)
-                throw new NotSupportedException($"{signature}: Algorithm '{algoName}' is not supported for verify.");
-
+            
+            if (args[0].IsString() == false)
+                throw new ArgumentException($"{signature}: First argument must be a hash algorithm string ('SHA-256', 'SHA-384', or 'SHA-512')");
+            
+            string hashName = args[0].AsString();
             byte[] keyData = GetKeyData(args[1], signature);
-            byte[] signatureBytes = GetBytesFromJsValue(args[2], signature);
-            byte[] data = GetBytesFromJsValue(args[3], signature);
-
-            string hashName = "SHA-256";
-            if (args[0].IsObject() && args[0].AsObject().TryGetValue("hash", out var hashVal) && hashVal.IsString())
+            
+            // Handle signature - can be base64 string or buffer
+            byte[] signatureBytes;
+            if (args[2].IsString())
             {
-                hashName = hashVal.AsString();
+                try
+                {
+                    signatureBytes = Convert.FromBase64String(args[2].AsString());
+                }
+                catch
+                {
+                    throw new ArgumentException($"{signature}: Signature must be a valid base64 string or BufferSource");
+                }
             }
+            else
+            {
+                signatureBytes = GetBytesFromJsValue(args[2], signature);
+            }
+            
+            byte[] data = GetBytesFromJsValue(args[3], signature);
 
             var computed = hashName switch
             {
                 "SHA-256" => HMACSHA256.HashData(keyData, data),
                 "SHA-384" => HMACSHA384.HashData(keyData, data),
                 "SHA-512" => HMACSHA512.HashData(keyData, data),
-                _ => throw new NotSupportedException($"{signature}: Unsupported hash for HMAC: " + hashName)
+                _ => throw new NotSupportedException($"{signature}: Unsupported hash algorithm '{hashName}'")
             };
 
             bool valid = CryptographicOperations.FixedTimeEquals(computed, signatureBytes);
             return valid ? JsBoolean.True : JsBoolean.False;
         }
 
-        private JsValue Crypto_Subtle_Encrypt(JsValue self, JsValue[] args)
+        private JsValue Crypto_EncryptAesGcm(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.subtle.encrypt(algorithm: { name: 'AES-GCM', iv: BufferSource }, key: BufferSource, data: BufferSource | string): ArrayBuffer";
+            const string signature = "crypto.encryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: BufferSource | string): string (base64)";
             if (args.Length != 3)
                 throw new ArgumentException($"{signature} requires 3 arguments");
 
-            string algoName = GetAlgorithmName(args[0], signature);
-
-            if (algoName.Equals("AES-GCM", StringComparison.OrdinalIgnoreCase) == false)
-                throw new NotSupportedException($"{signature}: Algorithm '{algoName}' is not supported for encryption.");
-
-            // get iv
-            byte[] iv = null;
-            if (args[0].IsObject() && args[0].AsObject().TryGetValue("iv", out var ivVal))
-                iv = GetBytesFromJsValue(ivVal, signature);
-            if (iv == null)
-                throw new ArgumentException($"{signature}: AES-GCM requires iv");
-
-            byte[] key = GetKeyData(args[1], signature);
+            byte[] iv = GetBytesFromBase64OrBuffer(args[0], signature, "iv");
+            byte[] key = GetBytesFromBase64OrBuffer(args[1], signature, "key");
             byte[] plain = GetBytesFromJsValue(args[2], signature);
 
             const int tagSizeInBytes = 16;
@@ -184,27 +219,35 @@ public sealed partial class ScriptRunner
                 aes.Encrypt(iv, plain, buffer.Slice(0, buffer.Length - tagSizeInBytes), buffer.Slice(buffer.Length - tagSizeInBytes));
             }
 
-            return CreateArrayBuffer(result);
+            return Convert.ToBase64String(result);
         }
 
-        private JsValue Crypto_Subtle_Decrypt(JsValue self, JsValue[] args)
+        private JsValue Crypto_DecryptAesGcm(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.subtle.decrypt(algorithm: { name: 'AES-GCM', iv: BufferSource }, key: BufferSource, data: BufferSource | string): ArrayBuffer";
-            if (args.Length != 3)
-                throw new ArgumentException($"{signature} requires 3 arguments");
-            string algoName = GetAlgorithmName(args[0], signature);
+            const string signature = "crypto.decryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: string (base64) | BufferSource, outputType: 'string' | 'raw'): string | ArrayBuffer";
+            if (args.Length < 3 || args.Length > 4)
+                throw new ArgumentException($"{signature} requires 3 or 4 arguments");
 
-            if (algoName.Equals("AES-GCM", StringComparison.OrdinalIgnoreCase) == false)
-                throw new NotSupportedException($"{signature}: Algorithm '{algoName}' is not supported for decryption.");
-
-            byte[] iv = null;
-            if (args[0].IsObject() && args[0].AsObject().TryGetValue("iv", out var ivVal))
-                iv = GetBytesFromJsValue(ivVal, signature);
-            if (iv == null)
-                throw new ArgumentException($"{signature}: AES-GCM requires iv");
-
-            byte[] key = GetKeyData(args[1], signature);
-            byte[] cipherWithTag = GetBytesFromJsValue(args[2], signature);
+            byte[] iv = GetBytesFromBase64OrBuffer(args[0], signature, "iv");
+            byte[] key = GetBytesFromBase64OrBuffer(args[1], signature, "key");
+            
+            // Handle encrypted data - can be base64 string or buffer
+            byte[] cipherWithTag;
+            if (args[2].IsString())
+            {
+                try
+                {
+                    cipherWithTag = Convert.FromBase64String(args[2].AsString());
+                }
+                catch
+                {
+                    throw new ArgumentException($"{signature}: Encrypted data must be a valid base64 string or BufferSource");
+                }
+            }
+            else
+            {
+                cipherWithTag = GetBytesFromJsValue(args[2], signature);
+            }
 
             const int tagSizeInBytes = 16;
             if (cipherWithTag.Length < tagSizeInBytes)
@@ -218,7 +261,20 @@ public sealed partial class ScriptRunner
                 aes.Decrypt(iv, input.Slice(0, input.Length - tagSizeInBytes), input.Slice(input.Length - tagSizeInBytes), plain);
             }
 
-            return CreateArrayBuffer(plain);
+            string outputType = "string"; 
+            if (args.Length == 4)
+            {
+                if (args[3].IsString() == false)
+                    throw new ArgumentException($"{signature}: outputType must be 'string' or 'raw'");
+                outputType = args[3].AsString();
+            }
+
+            return outputType switch
+            {
+                "string" => Encoding.UTF8.GetString(plain),
+                "raw" => CreateArrayBuffer(plain),
+                _ => throw new ArgumentException($"{signature}: outputType must be 'string' or 'raw', got '{outputType}'")
+            };
         }
 
         private string GetAlgorithmName(JsValue arg, string signature)
@@ -228,6 +284,22 @@ public sealed partial class ScriptRunner
             if (arg.IsObject() && arg.AsObject().TryGetValue("name", out var name))
                 return name.AsString();
             throw new ArgumentException($"{signature}: Invalid algorithm argument");
+        }
+
+        private byte[] GetBytesFromBase64OrBuffer(JsValue val, string signature, string paramName)
+        {
+            if (val.IsString())
+            {
+                try
+                {
+                    return Convert.FromBase64String(val.AsString());
+                }
+                catch
+                {
+                    throw new ArgumentException($"{signature}: {paramName} must be a valid base64 string or BufferSource");
+                }
+            }
+            return GetBytesFromJsValue(val, signature);
         }
 
         private byte[] GetKeyData(JsValue arg, string signature)

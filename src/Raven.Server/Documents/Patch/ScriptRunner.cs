@@ -397,7 +397,6 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetClrFunc("attachments", Attachments);
 
                 InitializeCrypto();
-                InitializeTextDecoder();
 
                 // Clr Functions, apply if any
                 if (runner._clrFunctions != null)
