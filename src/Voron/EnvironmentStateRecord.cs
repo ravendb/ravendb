@@ -20,8 +20,3 @@ public record EnvironmentStateRecord(
     (long Number, long Last4KWritePosition) Journal,
     List<(long Start, long Count)> SparseRegions,
     object ClientState);
-
-internal sealed class EnvironmentStateRecordHolder
-{
-    public EnvironmentStateRecord EnvStateRecord;
-}
