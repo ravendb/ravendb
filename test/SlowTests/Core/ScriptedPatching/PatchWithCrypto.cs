@@ -66,10 +66,7 @@ public class PatchWithCrypto(ITestOutputHelper output) : RavenTestBase(output)
             var patch = new PatchCommandData("companies/1", null,
                 new PatchRequest
                 {
-                    Script = @"
-var a = new Uint8Array(32);
-crypto.getRandomValues(a);
-this.Random = a.toBase64();"
+                    Script = @"this.Random = crypto.getRandomValuesBase64(32);"
                 });
             session.Advanced.Defer(patch);
             session.SaveChanges();
@@ -106,7 +103,7 @@ this.Random = a.toBase64();"
                 Script = @"
 var data = 'Hello world'; // string is converted to utf8 bytes automatically
 var hash = crypto.digest('SHA-256', data);
-this.Hash = new Uint8Array(hash).toBase64();
+this.Hash = hash;
 "
             });
             session.Advanced.Defer(patch);

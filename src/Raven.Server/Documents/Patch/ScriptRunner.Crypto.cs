@@ -14,12 +14,8 @@ public sealed partial class ScriptRunner
 {
     public sealed partial class SingleRun
     {
-        private JsValue _uint8ArrayConstructor;
-
         private void InitializeCrypto()
         {
-            _uint8ArrayConstructor = ScriptEngine.Evaluate("Uint8Array");
-
             var crypto = new JsObject(ScriptEngine);
             crypto.SetClfFunc("getRandomValues", Crypto_GetRandomValues);
             crypto.SetClfFunc("getRandomValuesBase64", Crypto_GetRandomValuesBase64);
@@ -50,7 +46,7 @@ public sealed partial class ScriptRunner
         {
             return method switch
             {
-                "digest" => "crypto.subtle.digest is not available. Use the sync crypto.digest instead: crypto.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): ArrayBuffer",
+                "digest" => "crypto.subtle.digest is not available. Use the sync crypto.digest instead: crypto.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): string (base64)",
                 "sign" => "crypto.subtle.sign is not available. Use the sync crypto.sign instead: crypto.sign(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, data: BufferSource | string): string (base64)",
                 "verify" => "crypto.subtle.verify is not available. Use the sync crypto.verify instead: crypto.verify(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, signature: string (base64) | BufferSource, data: BufferSource | string): boolean",
                 "encrypt" => "crypto.subtle.encrypt is not available. Use the sync crypto.encryptAesGcm instead: crypto.encryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: BufferSource | string): string (base64)",
@@ -115,7 +111,7 @@ public sealed partial class ScriptRunner
 
         private JsValue Crypto_Digest(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): ArrayBuffer";
+            const string signature = "crypto.digest(algorithm: 'SHA-256' | 'SHA-384' | 'SHA-512', data: BufferSource | string): string (base64)";
             if (args.Length != 2)
                 throw new ArgumentException($"{signature} requires 2 arguments: algorithm, data");
 
@@ -129,12 +125,12 @@ public sealed partial class ScriptRunner
                 _ => throw new NotSupportedException($"{signature}: Algorithm '{algoName}' is not supported.")
             };
 
-            return CreateArrayBuffer(hash);
+            return Convert.ToBase64String(hash);
         }
 
         private JsValue Crypto_Sign(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.sign(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, data: BufferSource | string): ArrayBuffer";
+            const string signature = "crypto.sign(hash: 'SHA-256' | 'SHA-384' | 'SHA-512', key: BufferSource, data: BufferSource | string): string (base64)";
             if (args.Length != 3)
                 throw new ArgumentException($"{signature} requires 3 arguments");
             
@@ -224,7 +220,7 @@ public sealed partial class ScriptRunner
 
         private JsValue Crypto_DecryptAesGcm(JsValue self, JsValue[] args)
         {
-            const string signature = "crypto.decryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: string (base64) | BufferSource, outputType: 'string' | 'raw'): string | ArrayBuffer";
+            const string signature = "crypto.decryptAesGcm(iv: BufferSource | string (base64), key: BufferSource | string (base64), data: string (base64) | BufferSource, outputType: 'string' | 'raw' | 'buffer'): string | ArrayBuffer";
             if (args.Length < 3 || args.Length > 4)
                 throw new ArgumentException($"{signature} requires 3 or 4 arguments");
 
@@ -265,15 +261,15 @@ public sealed partial class ScriptRunner
             if (args.Length == 4)
             {
                 if (args[3].IsString() == false)
-                    throw new ArgumentException($"{signature}: outputType must be 'string' or 'raw'");
+                    throw new ArgumentException($"{signature}: outputType must be 'string' or 'raw' or 'buffer'");
                 outputType = args[3].AsString();
             }
 
             return outputType switch
             {
                 "string" => Encoding.UTF8.GetString(plain),
-                "raw" => CreateArrayBuffer(plain),
-                _ => throw new ArgumentException($"{signature}: outputType must be 'string' or 'raw', got '{outputType}'")
+                "raw" or "buffer" => CreateArrayBuffer(plain),
+                _ => throw new ArgumentException($"{signature}: outputType must be 'string' or 'raw' or 'buffer', got '{outputType}'")
             };
         }
 
@@ -332,7 +328,7 @@ public sealed partial class ScriptRunner
                 }
                 if (obj is JsArrayBuffer)
                 {
-                    var u8View = ScriptEngine.Construct(_uint8ArrayConstructor, [obj]);
+                    var u8View = ScriptEngine.Construct(ScriptEngine.Evaluate("Uint8Array"), [obj]);
                     return GetBytesFromJsValue(u8View, signature);
                 }
             }
@@ -342,7 +338,7 @@ public sealed partial class ScriptRunner
 
         private JsValue CreateArrayBuffer(byte[] data)
         {
-            var u8 = ScriptEngine.Construct(_uint8ArrayConstructor, [data.Length]);
+            var u8 = ScriptEngine.Construct(ScriptEngine.Evaluate("Uint8Array"), [data.Length]);
             var typedArray = (JsTypedArray)u8.AsObject();
             for (int i = 0; i < data.Length; i++)
             {
