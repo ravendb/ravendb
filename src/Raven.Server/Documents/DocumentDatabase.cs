@@ -74,8 +74,6 @@ using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.Logging;
-using Raven.Server.Rachis;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 

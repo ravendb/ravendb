@@ -1242,7 +1242,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         {
             var doc = await session.LoadAsync<Chat>("chats/1");
             var toolCallsAnswers = doc.Messages.Where(m => m.Role == "tool").ToList();
-            Assert.True(toolCallsAnswers.Any(a => a.Content is string content && content.Contains("Failed to 'talk' with the agent 'user-info-agent'")));
+            Assert.True(toolCallsAnswers.Any(a => a.Content is string content && content.Contains("Failed to 'communicate' with the agent 'user-info-agent'")));
         }
 
         // Resume execution after an error

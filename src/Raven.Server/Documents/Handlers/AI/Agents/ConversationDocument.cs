@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.JavaScript;
 using System.Text;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -10,7 +8,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -298,7 +295,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         return conversation;
     }
 
-    public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration, ConversationHandler handler)
+    public static List<BlittableJsonReaderObject> GenerateTools(ConversationHandler handler, JsonOperationContext context, AiAgentConfiguration configuration)
     {
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
@@ -307,34 +304,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 continue;
 
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
-            var tool = new DynamicJsonValue
-            {
-                ["type"] = "function",
-                ["function"] = new DynamicJsonValue
-                {
-                    ["name"] = q.Name,
-                    ["description"] = q.Description,
-                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
-                },
-                ["strict"] = true
-            };
+            var tool = GetTool(context, q.Name, q.Description, paramsSchema);
             tools.Add(context.ReadObject(tool, "tool"));
         }
 
         foreach (var a in configuration.Actions ?? [])
         {
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
-            var tool = new DynamicJsonValue
-            {
-                ["type"] = "function",
-                ["function"] = new DynamicJsonValue
-                {
-                    ["name"] = a.Name,
-                    ["description"] = a.Description,
-                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
-                },
-                ["strict"] = true
-            };
+            var tool = GetTool(context, a.Name, a.Description, paramsSchema);
             tools.Add(context.ReadObject(tool, "tool"));
         }
 
@@ -359,17 +336,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(null, args.ToString());
             var description = new StringBuilder(subAgent.Description).AppendLine();
             subAgentConfiguration.AppendCapabilities(description);
-            var tool = new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.JsonSchemaFields.Type] = "function",
-                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
-                {
-                    [ChatCompletionClient.Constants.ResponseFields.Name] = subAgent.Identifier,
-                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description.ToString(),
-                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
-                },
-                [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
-            };
+            var tool = GetTool(context, subAgent.Identifier, description.ToString(), paramsSchema);
             tools.Add(context.ReadObject(tool, "tool"));
         }
 
@@ -381,6 +348,22 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 return true;
             
             return options.AllowModelQueries.Value;
+        }
+
+        static DynamicJsonValue GetTool(JsonOperationContext context, string name, string description, string paramsSchema)
+        {
+            var tool = new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.JsonSchemaFields.Type] = "function",
+                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
+                {
+                    [ChatCompletionClient.Constants.ResponseFields.Name] = name,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
+                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+                },
+                [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
+            };
+            return tool;
         }
     }
 
@@ -490,7 +473,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (configuration.FindQuery(name) != null)
             return ToolType.Query;
 
-        if (configuration.FindSubAgents(name) != null)
+        if (configuration.FindSubAgent(name) != null)
             return ToolType.SubAgent;
 
         return ToolType.Unknown;

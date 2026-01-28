@@ -640,11 +640,11 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
         {
             var doc1 = await session.LoadAsync<Chat>("chats/1/movies-agent-1/Vsy3aOyNusK5fwwmHq4j4kuYQgrH1whMJWuce86epm8=");
             var toolCallsAnswers1 = doc1.Messages.Where(m => m.Role == "tool").ToList();
-            Assert.True(toolCallsAnswers1.Any(a => a.Content is string content && content.Contains($"Failed to 'talk' with the agent '{userAgentId}'")));
+            Assert.True(toolCallsAnswers1.Any(a => a.Content is string content && content.Contains($"Failed to 'communicate' with the agent '{userAgentId}'")));
 
             var doc0 = await session.LoadAsync<Chat>("chats/1");
             var toolCallsAnswers0 = doc0.Messages.Where(m => m.Role == "tool").ToList();
-            Assert.False(toolCallsAnswers0.Any(a => a.Content is string content && content.Contains($"Failed to 'talk' with the agent '{userAgentId}'")));
+            Assert.False(toolCallsAnswers0.Any(a => a.Content is string content && content.Contains($"Failed to 'communicate' with the agent '{userAgentId}'")));
         }
 
         // Resume execution after an error

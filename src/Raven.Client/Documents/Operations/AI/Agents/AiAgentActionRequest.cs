@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Sparrow.Json;
+﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
@@ -11,7 +10,9 @@ public class AiAgentActionRequest : IDynamicJson
     public string Arguments;
 
     public AiAgentActionRequestType Type;
-    public string SubConversation;
+
+    [ForceJsonSerialization]
+    internal string SubConversation;
 
     public bool IsEqual(AiAgentActionRequest other)
     {
@@ -19,6 +20,7 @@ public class AiAgentActionRequest : IDynamicJson
             return false;
 
         return
+            ToolId == other.ToolId &&
             Name == other.Name &&
             Arguments == other.Arguments &&
             Type == other.Type &&
@@ -27,7 +29,7 @@ public class AiAgentActionRequest : IDynamicJson
 
     public override string ToString()
     {
-        using(var ctx = JsonOperationContext.ShortTermSingleUse())
+        using (var ctx = JsonOperationContext.ShortTermSingleUse())
             return ctx.ReadObject(ToJson(), string.Empty).ToString();
     }
 

@@ -94,8 +94,7 @@ public class AiAgentConfiguration : IDynamicJson
     /// Handle("benefits-agent/SendEmail", ...);
     /// Handle("benefits-agent/friendly-agent/SendEmail", ...);
     /// 
-    /// If there is an action defined in the sub-agent, it will return all the way to the client code for handling,
-    /// with the following format: "$agentIdentifier/$actionName". "$agentIdentifier1/$agentIdentifier2/$actionName".
+    /// If there is an action defined in the sub-agent, it will return all the way to the client code for handling.
     /// </summary>
     public List<AiAgentToolSubAgent> SubAgents { get; set; } = [];
 
@@ -154,7 +153,7 @@ public class AiAgentConfiguration : IDynamicJson
         return null;
     }
 
-    internal AiAgentToolSubAgent FindSubAgents(string identifier)
+    internal AiAgentToolSubAgent FindSubAgent(string identifier)
     {
         if (SubAgents?.Count > 0 == false)
             return null;
@@ -198,15 +197,15 @@ public class AiAgentConfiguration : IDynamicJson
         sb.AppendLine("Capabilities:");
         foreach (var q in Queries ?? [])
         {
-            sb.Append("- ").AppendLine(q.Description);
+            sb.Append("- ").Append(q.Name).Append(" - ").AppendLine(q.Description);
         }
         foreach (var q in SubAgents ?? [])
         {
-            sb.Append("- ").AppendLine(q.Description);
+            sb.Append("- ").Append(q.Identifier).Append(" - ").AppendLine(q.Description);
         }
         foreach (var q in Actions ?? [])
         {
-            sb.Append("- ").AppendLine(q.Description);
+            sb.Append("- ").Append(q.Name).Append(" - ").AppendLine(q.Description);
         }
     }
 }

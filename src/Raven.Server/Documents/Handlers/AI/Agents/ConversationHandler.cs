@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,7 +33,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ConversationHandler(ServerStore server, DocumentDatabase database)
+public partial class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
@@ -332,7 +331,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
             }, "system/summary/final/msg"));
 
         var usage = new AiUsage();
-        var tools = ConversationDocument.GenerateTools(context, configuration, this);
+        var tools = ConversationDocument.GenerateTools(this, context, configuration);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
         var result = await client.CompleteAsync(context, request, usage, token);
 
@@ -650,7 +649,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         if (hasActionResponse && hasUserPrompt)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
 
-        Dictionary<string, ServerAiAgentActionResponse> subAgentsActions = null;
+        Dictionary<string, SubAgentActionResponse> subAgentsActions = null;
 
         if (_request.ActionResponses != null)
         {
@@ -681,9 +680,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
                     var childToolId = split[1];
                     Debug.Assert(action.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
 
-                    subAgentsActions ??= new Dictionary<string, ServerAiAgentActionResponse>();
-                    // TODO we might need to change the order here to support nested sub-agents calls
-                    // so it would be grand-child / child / parent instead
+                    subAgentsActions ??= new Dictionary<string, SubAgentActionResponse>();
 
                     var subAgent = GetOrAddSubAgentsActionResponses(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
                     subAgent.Responses.Add(new AiAgentActionResponse
@@ -737,7 +734,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return true;
     }
 
-    private static ServerAiAgentActionResponse GetOrAddSubAgentsActionResponses(Dictionary<string, ServerAiAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
+    private static SubAgentActionResponse GetOrAddSubAgentsActionResponses(Dictionary<string, SubAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
     {
         if (subAgentsActions.TryGetValue(parent.SubConversation, out var subAgent))
         {
@@ -746,7 +743,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
         else
         {
-            subAgent = subAgentsActions[parent.SubConversation] = new ServerAiAgentActionResponse()
+            subAgent = subAgentsActions[parent.SubConversation] = new SubAgentActionResponse()
             {
                 ParentId = parentToolId,
                 Agent = parent.Name,
@@ -757,7 +754,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         return subAgent;
     }
 
-    private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, ServerAiAgentActionResponse> subAgentsActions)
+    private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, SubAgentActionResponse> subAgentsActions)
     {
         if (subAgentsActions?.Count > 0 == false)
             return;
@@ -868,7 +865,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         if (exceptions.Count > 0)
             throw new AggregateException(exceptions).ExtractSingleInnerException();
 
-        _document.RemainingToolIterations -= toolsIterations;
+        _document.RemainingToolIterations = int.Max(_document.RemainingToolIterations - toolsIterations, 0);
         return toolsIterations;
     }
 
@@ -882,7 +879,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
 
             var result = new SubConversationResult(disposable);
 
-            await foreach (var (getRequestResult, i) in ExecuteMultiRequests(context, new DynamicJsonArray(requests.Select(x => x.Req))))
+            await foreach (var (getRequestResult, i) in ExecuteMultiRequestsAsync(context, new DynamicJsonArray(requests.Select(x => x.Req))))
             {
                 var currentCall = requests[i].Call;
                 var toolCall = FindToolFrom(_configuration, currentCall.Name);
@@ -940,21 +937,7 @@ public class ConversationHandler(ServerStore server, DocumentDatabase database)
         }
     }
 
-    private sealed class SubConversationResult
-    {
-        public IDisposable Disposable { get; }
-        public List<BlittableJsonReaderObject> Messages { get; } = new();
-        public List<string> OpenToolCallsToRemove { get; } = new();
-        public Dictionary<string, AiAgentActionRequest> ChildUserCalls { get; } = new();
-        public int ToolsIterations { get; set; }
-
-        public SubConversationResult(IDisposable disposable)
-        {
-            Disposable = disposable;
-        }
-    }
-
-    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequests(JsonOperationContext context, DynamicJsonArray reqs)
+    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs)
     {
         var multiGetHandler = new MultiGetHandler();
         multiGetHandler.Init(new RequestHandlerContext

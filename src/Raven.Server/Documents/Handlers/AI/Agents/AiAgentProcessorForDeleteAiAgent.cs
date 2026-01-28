@@ -1,8 +1,12 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Commands.AI;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -22,7 +26,7 @@ internal class AiAgentProcessorForDeleteAiAgent<TRequestHandler, TOperationConte
         var identifier = RequestHandler.GetStringQueryString("agentId", required: true);
         var r = await ServerStore.SendToLeaderAsync(new DeleteAiAgentCommand(RequestHandler.DatabaseName, identifier, RequestHandler.GetRaftRequestIdFromQuery()), token.Token);
 
-        RequestHandler.LogTaskToAudit(Web.RequestHandler.AiAgentConfiguration, r.Index, configuration: null);
+        RequestHandler.LogAuditForDatabase("DELETE", $"AiAgentConfiguration '{identifier}'");
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 

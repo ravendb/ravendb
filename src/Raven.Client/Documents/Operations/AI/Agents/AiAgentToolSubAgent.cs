@@ -8,6 +8,7 @@ public class AiAgentToolSubAgent : IDynamicJson
     /// The identifier of the sub-agent that we can call
     /// </summary>
     public string Identifier;
+
     /// <summary>
     /// The description for the sub-agent (which the model will use
     /// to decided when to call it)

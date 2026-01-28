@@ -2,13 +2,10 @@
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -71,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
                 catch (Exception e)
                 {
-                    throw new AiException($"Failed to 'talk' with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)
+                    throw new AiException($"Failed to 'communicate' with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)
                     {
                         RequestId = RequestHandler.HttpContext.Response.Headers.RequestId
                     };
