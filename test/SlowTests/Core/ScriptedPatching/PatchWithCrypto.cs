@@ -115,6 +115,8 @@ this.Hash = hash;
             var c = session.Load<Company>("companies/1");
             var buf = Convert.FromBase64String(c.Hash);
             Assert.Equal(32, buf.Length);
+            // Precomputed value for SHA-256("Hello world")
+            Assert.Equal("ZOyIygCyaOW6GjVnihtTFtIS9PNmskdyMlNKiuyjfzw=", c.Hash);
         }
     }
 
