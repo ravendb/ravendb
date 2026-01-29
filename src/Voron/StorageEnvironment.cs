@@ -1693,13 +1693,35 @@ namespace Voron
         private readonly List<PageFromScratchBuffer> _cachedScratchBuffers = [];
         private EnvironmentStateRecord _lastPeekedRecord = null;
 
+        private bool TryPeekNextRecordToFlush(long uptoTxIdExclusive, out EnvironmentStateRecord record)
+        {
+            _journal.Applicator.AssertJournalLockIsHeld();
+
+            // we retain peeked record and avoid using TryPeek because of: https://ayende.com/blog/201891-B/the-memory-leak-in-concurrentqueue
+            if (_lastPeekedRecord == null)
+            {
+                if(_transactionsToFlush.TryDequeue(out _lastPeekedRecord) == false)
+                {
+                    record = null;
+                    return false;
+                }
+            }
+            if(_lastPeekedRecord.TransactionId >= uptoTxIdExclusive)
+            {
+                record = null;
+                return false;
+            }
+            record = _lastPeekedRecord;
+            // we consumed the peeked record, so we set it to null, to allow the GC to collect it in the future
+            _lastPeekedRecord = null; 
+            return true;
+        }
+
         internal ApplyLogsToDataFileState TryGetLatestEnvironmentStateToFlush(long uptoTxIdExclusive)
         {
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
 
-            _journal.Applicator.AssertJournalLockIsHeld();
-            
             List<(long Start, long Count)> sparseRegions = null;
             var scratchBuffers = _cachedScratchBuffers;
             scratchBuffers.Clear();
@@ -1707,11 +1729,7 @@ namespace Voron
             EnvironmentStateRecord record = null;
             while (true)
             {
-                if (
-                    // we retain peeked record and avoid using TryPeek because of: https://ayende.com/blog/201891-B/the-memory-leak-in-concurrentqueue
-                    _lastPeekedRecord != null ||
-                    _transactionsToFlush.TryDequeue(out _lastPeekedRecord) == false ||
-                    _lastPeekedRecord.TransactionId >= uptoTxIdExclusive)
+                if (TryPeekNextRecordToFlush(uptoTxIdExclusive, out var mabye) is false)
                 {
                     if (found == false)
                         return null;
@@ -1725,12 +1743,9 @@ namespace Voron
 
                     return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
-                Debug.Assert(_lastPeekedRecord is not null && _lastPeekedRecord.TransactionId < uptoTxIdExclusive);
+                Debug.Assert(mabye is not null && mabye.TransactionId < uptoTxIdExclusive);
                 
-                record = _lastPeekedRecord;
-                // we consumed the peeked record, so we set it to null, to allow the
-                // GC to collect it in the future
-                _lastPeekedRecord = null; 
+                record = mabye;
 
                 if(record.SparseRegions is not null)
                 {
