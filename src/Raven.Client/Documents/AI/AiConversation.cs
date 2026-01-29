@@ -27,7 +27,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<AiAgentArtificialActionResponse> _artificialActions = [];
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
-    private readonly List<ICommandData> _attachments = new();
+    private readonly List<ICommandData> _attachmentsCommands = new();
     
     public string ChangeVector => _changeVector;
 
@@ -48,15 +48,13 @@ internal class AiConversation : IAiConversationOperations
         _changeVector = changeVector;
     }
     
-    public void AddAttachment(string fileName, Stream stream)
+    public void AddAttachment(Stream stream, string mimeType)
     {
-        ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
         if (stream == null)
             throw new ArgumentNullException(nameof(stream));
 
-        string type = GetContentType(fileName);
-        
-        _attachments.Add(new PutAttachmentCommandData("__this__", fileName, stream, type, changeVector: string.Empty));
+        var fileName = Guid.NewGuid().ToString();
+        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", fileName, stream, mimeType, changeVector: string.Empty));
     }
 
     public void CopyAttachmentFrom(string fileName, string sourceDocumentId)
@@ -64,25 +62,7 @@ internal class AiConversation : IAiConversationOperations
         ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
         ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
 
-        _attachments.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: string.Empty));
-    }
-
-    private static string GetContentType(string fileName)
-    {
-        var extension = Path.GetExtension(fileName);
-        if (string.IsNullOrEmpty(extension))
-            return "image/jpeg"; // Default fallback
-
-        return extension.ToLowerInvariant() switch
-        {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".webp" => "image/webp",
-            ".gif" => "image/gif",
-            ".pdf" => "application/pdf",
-            ".txt" => "text/plain",
-            _ => "application/octet-stream"
-        };
+        _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: string.Empty));
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
@@ -312,7 +292,7 @@ internal class AiConversation : IAiConversationOperations
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
             _actionRequests != null &&
             // otherwise, we already went to the server and have nothing new to tell it, so we are done
-            _promptParts.Count == 0 && _actionResponses.Count == 0 && _attachments.Count == 0)
+            _promptParts.Count == 0 && _actionResponses.Count == 0 && _attachmentsCommands.Count == 0)
         {
             return new AiAnswer<TAnswer>
             {
@@ -348,7 +328,7 @@ var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promp
             _promptParts.Clear();
             _actionResponses.Clear();
             _artificialActions.Clear();
-            _attachments.Clear();
+            _attachmentsCommands.Clear();
         }
     }
 

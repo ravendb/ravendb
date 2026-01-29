@@ -173,6 +173,7 @@ const runChat = createAsyncThunk(
                     ToolId: x.id,
                     Content: x.arguments,
                 })),
+                AttachmentCommands: null,
                 CreationOptions: {
                     Parameters:
                         conversationId == null

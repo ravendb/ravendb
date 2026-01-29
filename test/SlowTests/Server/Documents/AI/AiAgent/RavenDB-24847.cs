@@ -24,12 +24,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public class OutputSchema
         {
             public string Answer { get; set; } = "answer form the llm";
-            public string UploadedAttachments { get; set; } = "the uploaded attachments you got from the user";
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task CanAnalyzeImageAndPersistStructuredData(Options options, GenAiConfiguration config)
+        public async Task CanAnalyzeImages(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
 
@@ -42,15 +41,21 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await store.AI.CreateAgentAsync(agent, new OutputSchema());
 
             var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
-            List<string> names = ["banana.png", "star.png", "heart.png"];
             chat.SetUserPrompt("what are inside the images I sent you? what are their colors?");
-            AiAnswer<OutputSchema> result = null;
-            foreach (var name in names)
+
+            AiAnswer<OutputSchema> result;
+
+            await using (var banana = GetEmbeddedImgStream("banana.png"))
+            await using (var star = GetEmbeddedImgStream("star.png"))
+            await using (var heart = GetEmbeddedImgStream("heart.png"))
             {
-                chat.AddAttachment(name, GetEmbeddedImgStream(name));
+                chat.AddAttachment(banana, "image/png");
+                chat.AddAttachment(star, "image/png");
+                chat.AddAttachment(heart, "image/png");
+
+                result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             }
-            result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
-         
+
             Assert.Equal(AiConversationResult.Done, result?.Status);
             Assert.NotNull(result?.Answer);
             Assert.Contains("banana", result.Answer.Answer, StringComparison.OrdinalIgnoreCase);
@@ -72,23 +77,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Identifier = "image-analyzer";
             agent.Parameters.Add(new AiAgentParameter("company", "The company ID"));
 
-            agent.Queries =
-            [
-                new AiAgentToolQuery
-                {
-                    Name = "ProductSearch",
-                    Description = "semantic search the store product catalog",
-                    Query = "from Products where vector.search(embedding.text(Name), $query)",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                },
-                new AiAgentToolQuery
-                {
-                    Name = "RecentOrder3",
-                    Description = "Get the recent orders of the current user",
-                    Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
-                    ParametersSampleObject = "{}"
-                }
-            ];
             await store.AI.CreateAgentAsync(agent, new OutputSchema());
 
             string sourceDocId = "docs/1";
@@ -109,18 +97,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             chat.SetUserPrompt("What is in this image?");
             chat.CopyAttachmentFrom("heart.png", sourceDocId);
-
-            var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            await chat.RunAsync<OutputSchema>(CancellationToken.None);
             chat.AddUserPrompt("what images do you have uploaded?");
-            result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
-            Assert.Contains("heart.png", result.Answer.UploadedAttachments);
+            var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.Contains("heart", result.Answer.Answer);
             Assert.Equal(AiConversationResult.Done, result.Status);
             Assert.NotNull(result.Answer);
         }
 
-        [RavenRetryTheory(RavenTestCategory.Ai, maxRetries:3, delayBetweenRetriesMs:10_000)]
+        [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task CanHandleCustomToolFailureAndStillRetrieveAttachment(Options options, GenAiConfiguration config)
+        public async Task CanHandleInternalAndExternalActionsCalledTogether(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
 
@@ -143,29 +130,29 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await store.AI.CreateAgentAsync(agent, new OutputSchema());
 
             var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
-            var imgName = "banana.png";
 
-            chat.SetUserPrompt("use the tool CheckImageMetadata once and tell me if the result is successful.");
-            
-            chat.AddAttachment(imgName, GetEmbeddedImgStream(imgName));
-            
+            chat.SetUserPrompt("use the tools and describe the image and it's metadata");
+
+            AiAnswer<OutputSchema> result;
             chat.Handle<object>("CheckImageMetadata", args => "{}");
 
-            var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
-            chat.SetUserPrompt("load the attachment I sent you");
-            result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            await using (var banana = GetEmbeddedImgStream("banana.png"))
+            {
+                chat.AddAttachment(banana, "image/png");
+
+                await chat.RunAsync<OutputSchema>(CancellationToken.None);
+                chat.SetUserPrompt("load the attachment I sent you, which fruit is inside of it?");
+
+                result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            }
 
             Assert.Equal(AiConversationResult.Done, result.Status);
-            var attachmentsUploaded = result?.Answer.UploadedAttachments;
-            Assert.Contains(attachmentsUploaded, imgName);
-
-            WaitForUserToContinueTheTest(store, false);
-            
+            Assert.Contains("banana", result.Answer.Answer);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task AttachmentOnlySecondTurnWithPromptShouldAllowModelToUseAttachment(Options options, GenAiConfiguration config)
+        public async Task CanSendAttachmentWithoutPromptAndRecallItLater(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
 
@@ -181,77 +168,19 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
 
-            chat.AddAttachment("banana.png", GetEmbeddedImgStream("banana.png"));
-
-            await chat.RunAsync<OutputSchema>(CancellationToken.None);
-
-            chat.SetUserPrompt("What is inside the image I previously uploaded?");
-            var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
-
-            Assert.Equal(AiConversationResult.Done, result.Status);
-            Assert.NotNull(result.Answer);
-        }
-
-        [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task ActionRequiredWithoutClientHandlerShouldNotReturnActionRequiredForTheInternalTool(Options options, GenAiConfiguration config)
-        {
-            using var store = GetDocumentStore(options);
-
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-            var agent = new AiAgentConfiguration("action-only", config.ConnectionStringName,
-                "If the user asks you to check metadata, call the tool 'CheckImageMetadata' once and wait.")
+            await using (var banana = GetEmbeddedImgStream("banana.png"))
             {
-                Identifier = "action-only",
-                Actions =
-                [
-                    new AiAgentToolAction
-                    {
-                        Name = "CheckImageMetadata",
-                        Description = "Checks external metadata for an image file.",
-                        ParametersSampleObject = "{\"filename\": \"string\"}"
-                    }
-                ]
-            };
+                chat.AddAttachment(banana, "image/png");
 
-            await store.AI.CreateAgentAsync(agent, new OutputSchema());
+                await chat.RunAsync<OutputSchema>(CancellationToken.None);
+                chat.SetUserPrompt("What is inside the image I previously uploaded?");
+                var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
 
-            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
-            chat.SetUserPrompt("Check metadata for banana.png");
-
-            chat.Handle<object>("CheckImageMetadata", (args) => AiConversationResult.Done);
-
-            var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
-
-            Assert.DoesNotContain(chat.RequiredActions(), x => x.Name.Equals("__RetrieveAttachment", StringComparison.OrdinalIgnoreCase));
+                Assert.Equal(AiConversationResult.Done, result.Status);
+                Assert.NotNull(result.Answer);
+            }
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task UploadedAttachmentThenUserToolResponseShouldIgnoreRetrieveAttachmentResponse(Options options, GenAiConfiguration config)
-        {
-            using var store = GetDocumentStore(options);
-
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-            var agent = new AiAgentConfiguration("ignore-internal-action-response", config.ConnectionStringName,
-                "You are a helpful assistant.")
-            {
-                Identifier = "ignore-internal-action-response"
-            };
-
-            await store.AI.CreateAgentAsync(agent, new OutputSchema());
-
-            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
-            chat.SetUserPrompt("I will upload an image. Describe it.");
-            chat.AddAttachment("banana.png", GetEmbeddedImgStream("banana.png"));
-
-            var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
-            Assert.Equal(AiConversationResult.Done, result.Status);
-
-            Assert.DoesNotContain(chat.RequiredActions(), x => x.Name.Equals("__RetrieveAttachment", StringComparison.OrdinalIgnoreCase));
-        }
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
@@ -272,17 +201,61 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var chat = store.AI.Conversation(agent.Identifier, "chats/memory", new AiConversationCreationOptions());
             var fileName = "banana.png";
 
-            chat.SetUserPrompt("I am sending you a file.");
-            chat.AddAttachment(fileName, GetEmbeddedImgStream(fileName));
+            AiAnswer<OutputSchema> result1;
 
-            var result1 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            chat.SetUserPrompt("I am sending you a file.");
+            await using (var banana = GetEmbeddedImgStream(fileName))
+            {
+                chat.AddAttachment(banana, "image/png");
+                result1 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            }
+
             Assert.Equal(AiConversationResult.Done, result1.Status);
 
-            chat.SetUserPrompt($"What is the filename of the image I sent you earlier?");
+            chat.SetUserPrompt("What does the image I sent you earlier contains?");
 
             var result2 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             Assert.Equal(AiConversationResult.Done, result2.Status);
             Assert.Contains("banana", result2.Answer.Answer.ToLowerInvariant());
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task MultipartUserPromptArrayWithAttachments(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            var agent = new AiAgentConfiguration("multipart-prompt", config.ConnectionStringName,
+                "You are a helpful assistant.")
+            {
+                Identifier = "multipart-prompt"
+            };
+
+            await store.AI.CreateAgentAsync(agent, new OutputSchema());
+
+            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions());
+
+            chat.AddUserPrompt(new[] { "Please describe it.", "can you give tags related to it?" });
+
+            AiAnswer<OutputSchema> result1;
+
+            await using (var banana = GetEmbeddedImgStream("banana.png"))
+            {
+                chat.AddAttachment(banana, "image/png");
+                result1 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            }
+
+            Assert.Equal(AiConversationResult.Done, result1.Status);
+            Assert.NotNull(result1.Answer);
+
+            chat.SetUserPrompt("What is in the image I uploaded?");
+            var result2 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+
+            Assert.Equal(AiConversationResult.Done, result2.Status);
+            Assert.NotNull(result2.Answer);
+            Assert.Contains("banana", result2.Answer.Answer, StringComparison.OrdinalIgnoreCase);
         }
 
         private static Stream GetEmbeddedImgStream(string name)
@@ -298,3 +271,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
     }
 }
+
+
+

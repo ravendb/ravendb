@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -52,11 +49,7 @@ public class RequestBody
 
     public void ValidateForResume()
     {
-        bool hasPrompt = HasUserPrompt(UserPrompt);
-        bool hasAttachments = Attachments is { Count: > 0 };
-        bool hasCommands = AttachmentCommands is not null;
-        
-        if (hasPrompt == false && hasAttachments == false && hasCommands == false)
+        if (HasUserPrompt(UserPrompt) == false)
             throw new ArgumentException("User prompt is missing.");
 
         if (ActionResponses == null)

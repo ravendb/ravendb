@@ -24,7 +24,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
         document.EnsureInitialized();
 
         _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
-        _tools = ConversationDocument.GenerateTools(context, configuration);
+        _tools = ConversationDocument.GenerateTools(context, configuration, handler._persistedAttachmentsNames);
 
         Client = handler.CreateClient();
     }

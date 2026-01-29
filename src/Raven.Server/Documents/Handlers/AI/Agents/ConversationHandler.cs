@@ -4,17 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.SemanticKernel;
 using Newtonsoft.Json;
-using OllamaSharp.Models.Chat;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
@@ -24,9 +19,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
-using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -36,9 +29,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
-using Voron;
 using static Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument;
-using static Raven.Server.Utils.Cpu.WindowsCpuUsageCalculatorOneGroup;
 using GetRequest = Raven.Client.Documents.Commands.MultiGet.GetRequest;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
@@ -48,7 +39,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
-    private const string UploadedAttachmentsFieldName = "uploaded_attachments";
 
     protected ConversationDocument _document;
     private string _conversationId;
@@ -60,9 +50,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     internal List<string> _persistedAttachmentsNames;
 
     public required RavenServer.AuthenticateConnection Authentication;
-
-    public DocumentDatabase Database => database;
-
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
         _conversationId = conversationId;
@@ -92,7 +79,11 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 };
             }
 
-            _request.ValidateForResume();
+            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands.ParsedCommands is {Count: > 0} == false)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
+            }
 
             _document = new ConversationDocument(agentId, _request.Parameters);
             _document.Id = await GetDocumentIdAsync();
@@ -150,8 +141,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                         break;
                     case CommandType.AttachmentPUT:
                         cmd.Id = _document.Id;
-                        var hasNext = it.MoveNext();
-                        Debug.Assert(hasNext, $"Missing attachment stream in {cmd.Name}");
+                        if (it.MoveNext() == false) 
+                            throw new InvalidOperationException($"Missing attachment stream for '{cmd.Name}' in conversation '{_conversationId}'.");
+
                         it.Current.Stream.Position =0;
 
                         ConversationHandlerAttachments.AddPutAttachmentFromStream(_request, it.Current.Stream, cmd.Name, cmd.ContentType);
@@ -217,15 +209,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             using var request = talker.CreateCompletionRequest(attachments);
             
             r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, token);
-
+            
             var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
-
-            if (r.Type == AiResponseType.Result && attachments.Count > 0)
-            {
-                r.Result.Modifications ??= new DynamicJsonValue(r.Result);
-                var modifications = r.Result.Modifications;
-                modifications[UploadedAttachmentsFieldName] = new DynamicJsonArray(attachments.Select(a => a.Name));
-            }
 
             _document.AddMessage(context, r.Message, currentTurnUsage);
             _document.UpdateUsage(talker.AiUsage);
@@ -310,9 +295,6 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             ? null
             : TimeSpan.FromSeconds(reduction.History.HistoryExpirationInSec.Value);
 
-        bool reduced = false;
-        BlittableJsonReaderObject chatBefore = null;
-
         if (reduction.Truncate != null)
         {
             if (_document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
@@ -321,9 +303,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 truncateCount = int.Min(truncateCount, _document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
                 if (truncateCount > 0)
                 {
-                    chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
+                    var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
                     _document.Messages.RemoveRange(1, truncateCount);
-                    AddRetrieveAttachmentToolIfNeeded(context);
                     return chatBefore;
                 }
             }
@@ -337,25 +318,13 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
             {
-                chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
+                var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
                 await SummarizeAsync(context, client, _configuration, _document, token);
-                AddRetrieveAttachmentToolIfNeeded(context);
                 return chatBefore;
             }
         }
 
         return null; // if reduction wasn't executed -> no history to persist (return null)
-    }
-
-    public void AddRetrieveAttachmentToolIfNeeded(JsonOperationContext context)
-    {
-        if (_persistedAttachmentsNames is { Count: > 0 })
-        {
-            var attachmentNames = string.Join(", ", _persistedAttachmentsNames);
-            var toolId = Guid.NewGuid().ToString();
-            _document.AddArtificialToolCall(context, [new AiToolCall(toolId, "RetrieveAttachmentsNames", "{}")]);
-            _document.AddToolResponse(context, toolId, attachmentNames);
-        }
     }
 
     private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument oldChat, CancellationToken token)
@@ -398,7 +367,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }, "system/summary/final/msg"));
 
         var usage = new AiUsage();
-        var tools = ConversationDocument.GenerateTools(context, configuration);
+        var tools = ConversationDocument.GenerateTools(context, configuration, _persistedAttachmentsNames);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
         var result = await client.CompleteAsync(context, request, usage, token);
 
@@ -428,6 +397,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         {
             if (_configuration.FindAction(call.Name) == null)
                 continue;
+
             _document.OpenActionCalls.Add(call.Id,
                 new AiAgentActionRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, _document.Parameters).ToString() });
         }
@@ -436,10 +406,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         {
             if (openActionCall.Value.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
             {
-                return true;
+                return true; //we have at least one user tool to handle
             }
         }
-
+        // no user tools to handle - all were internal system actions/ there are no actions
         return false;
     }
 
@@ -533,13 +503,13 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 var queryResponse = (BlittableJsonReaderObject)results[i];
                 if (queryResponse.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
                     throw new InvalidOperationException("Missing status code");
-                if (queryResponse.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject queryResponseResult) == false)
+                if (queryResponse.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject queryResponseResult) is false)
                     throw new InvalidOperationException("Missing Result from query request output");
 
                 if (statusCode != 200)
                     throw ExceptionDispatcher.Get(queryResponseResult, (HttpStatusCode)statusCode);
 
-                if (queryResponseResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) == false)
+                if (queryResponseResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                     throw new InvalidOperationException("Missing Results from query output");
 
                 RemoveNonEssentialFieldsFromMetadata(queryResult);
@@ -609,9 +579,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {
         var hasActionResponse = _request.ActionResponses is { Length: > 0 } ;
-        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) || 
+        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
                             _request.ArtificialActions is { Length: > 0 } || // equivalent to user prompt, since it is both tool & response in one shot
-                            (_request.Attachments is { Count: > 0 }); 
+                            _request.Attachments is { Count: > 0 }; // Attachments-only request counts as enough "user input" (no text prompt required) to advance with the conversation.
 
         if (hasActionResponse && hasUserPrompt)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
@@ -624,7 +594,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 if (_document.OpenActionCalls.TryGetValue(t.ToolId, out var openCall) == false)
                     throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{_conversationId}'");
 
-                if (openCall.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment, StringComparison.OrdinalIgnoreCase))
+                if (openCall.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment))
                 {
                     continue;
                 }
@@ -651,28 +621,21 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         if (_document.OpenActionCalls.Count > 0)
         {
-            if (_document.OpenActionCalls.Count == 1 && _document.OpenActionCalls.FirstOrDefault().Value.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment, StringComparison.OrdinalIgnoreCase))
+            foreach (var openCall in _document.OpenActionCalls.Values)
             {
-                foreach (var openCall in _document.OpenActionCalls.Values)
+                if (openCall.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
                 {
-                    if (openCall.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment, StringComparison.OrdinalIgnoreCase))
-                    {
-                        HandleInternalSystemActions(context, [openCall]);
-                        return true;
-                    }
-
-                    break;
+                    // We have pending tool-call results from the user;
+                    // skip reduction - persist the document now without history,
+                    // ensuring we can recover if TalkAsync fails.
+                    await TryPersistAsync(context, historyDocs: null);
+                    return false;
                 }
             }
-
-            // We have pending tool-call results from the user;
-            // skip reduction - persist the document now without history,
-            // ensuring we can recover if TalkAsync fails.
-            await TryPersistAsync(context, historyDocs: null);
-            return false;
+            HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
         }
 
-        if (hasActionResponse == false && hasUserPrompt == false)
+        if (hasActionResponse == false && hasUserPrompt == false && _request.Attachments == null)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' without open action calls or user prompt.");
 
 

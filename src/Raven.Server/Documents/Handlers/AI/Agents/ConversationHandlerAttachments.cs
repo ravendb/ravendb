@@ -116,7 +116,7 @@ internal static class ConversationHandlerAttachments
     {
         foreach (var call in toolCalls)
         {
-            if (string.Equals(call.Name, ChatCompletionClient.Constants.ToolNames.RetrieveAttachment, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(call.Name, ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
                 continue;
 
             var result = new List<string>();

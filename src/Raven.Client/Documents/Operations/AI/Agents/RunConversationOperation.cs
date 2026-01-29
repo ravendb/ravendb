@@ -217,7 +217,6 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                     {
                         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
-
                             writer.WriteStartObject();
                             writer.WriteArray("Commands", commandsAsBlittable);
                             writer.WriteEndObject();

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -293,7 +292,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         return conversation;
     }
 
-    public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
+    public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration, List<string> persistedAttachmentsNames)
     {
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
@@ -319,8 +318,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             Name = "__RetrieveAttachment",
             Description =
-                $"Retrieves content for one or more attachments by their names. Use this to re-read files. IMPORTANT: To retrieve multiple files, pass the attachments names as an array to this tool.",
-            ParametersSampleObject = "{\"names\": [\"A List with the names of the attachments that you want to load from the conversation document\"]}",
+                $"Retrieves one or more attachments by their names. Use this to re-read files. {Environment.NewLine} Available Attachments: {string.Join(", ", persistedAttachmentsNames)}",
+            ParametersSampleObject = "{\"names\": [\"**ATTENTION IMPORTANT INSTRUCTION**: use **ONLY** the names from the tool description\"]}",
         });
         foreach (var a in configuration.Actions ?? [])
         {

@@ -247,9 +247,9 @@ public interface IAiConversationOperations
     /// <summary>
     /// Adds a file attachment as a stream to the conversation turn.
     /// </summary>
-    /// <param name="fileName">The name of the file to attach.</param>
     /// <param name="stream">The data stream of the file.</param>
-    void AddAttachment(string fileName, Stream stream);
+    /// <param name="mimeType">The MIME media type of the attachment content (e.g. image/png).</param>
+    void AddAttachment(Stream stream, string mimeType);
 
     /// <summary>
     /// Copies an existing attachment from a document in RavenDB into the conversation context.

@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (Attachments is not null)
             {
                 Attachments.ExecuteDirectly(context);
-                var d = _database.DocumentsStorage.GetDocumentOrTombstone(context, PutResult.Id, DocumentFields.ChangeVector);
+                var d = _database.DocumentsStorage.GetDocumentOrTombstone(context, PutResult.Id, DocumentFields.ChangeVector);// Attachments will change the document change vector; re-read to return the final CV.
                 PutResult.ChangeVector = d.Document.ChangeVector;
             }
 
