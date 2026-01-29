@@ -15,6 +15,7 @@ interface EditAiAgentState {
     testDocument: documentDto;
     runTestState: loadStatus;
     isWaitingForActionToolSubmit: boolean;
+    allIdentifiers?: string[];
 }
 
 const initialState: EditAiAgentState = {
@@ -26,6 +27,7 @@ const initialState: EditAiAgentState = {
     testDocument: null,
     runTestState: "idle",
     isWaitingForActionToolSubmit: false,
+    allIdentifiers: [],
 };
 
 export const editAiAgentSlice = createSlice({
@@ -69,6 +71,9 @@ export const editAiAgentSlice = createSlice({
             const messages = action.payload.result.Document.Messages.map((x) => aiAgentsUtils.mapMessageFromDoc(x));
 
             state.testMessages = aiAgentsUtils.mergeToolResults(messages, action.payload.allQueriesNames);
+        });
+        builder.addCase(getAllIdentifiers.fulfilled, (state, action) => {
+            state.allIdentifiers = action.payload;
         });
     },
 });
@@ -119,8 +124,21 @@ const runTest = createAsyncThunk(
     }
 );
 
+const getAllIdentifiers = createAsyncThunk(
+    editAiAgentSlice.name + "/getAllIdentifiers",
+    async (databaseName: string): Promise<string[]> => {
+        const result = await services.aiAgentService.getAiAgents(databaseName);
+        if (!result) {
+            return [];
+        }
+
+        return result.AiAgents.map((agent) => agent.Identifier);
+    }
+);
+
 export const editAiAgentActions = {
     ...editAiAgentSlice.actions,
+    getAllIdentifiers,
     getIsDocumentExpirationEnabled,
     runTest,
 };
@@ -134,4 +152,5 @@ export const editAiAgentSelectors = {
     testDocument: (state: RootState) => state.editAiAgent.testDocument,
     runTestState: (state: RootState) => state.editAiAgent.runTestState,
     isWaitingForActionToolSubmit: (state: RootState) => state.editAiAgent.isWaitingForActionToolSubmit,
+    allIdentifiers: (state: RootState) => state.editAiAgent.allIdentifiers,
 };

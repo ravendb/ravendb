@@ -79,10 +79,12 @@ function mapFromDto(
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
             maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
         },
-        subAgents: dto.SubAgents?.map(x => ({
-            identifier: x.Identifier,
-            description: x.Description,
-        })) ?? [],
+        subAgents:
+            dto.SubAgents?.map((x) => ({
+                identifier: x.Identifier,
+                description: x.Description,
+                isEditing: false,
+            })) ?? [],
     };
 }
 
@@ -162,10 +164,11 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                       //           : null,
                   }
                 : null,
-        SubAgents: formData.subAgents?.map(x => ({
-            Identifier: x.identifier,
-            Description: x.description,
-        })) ?? [],
+        SubAgents:
+            formData.subAgents?.map((x) => ({
+                Identifier: x.identifier,
+                Description: x.description,
+            })) ?? [],
     };
 }
 

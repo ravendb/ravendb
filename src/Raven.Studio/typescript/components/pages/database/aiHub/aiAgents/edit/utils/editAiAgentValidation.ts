@@ -154,14 +154,13 @@ const editSchema = yup.object({
         })
         .nullable(),
 
-    subAgents: yup
-        .array()
-        .of(
-            yup.object({
-                identifier: yup.string().required("Identifier is required"),
-                description: yup.string().required("Description is required"),
-            })
-        ),
+    subAgents: yup.array().of(
+        yup.object({
+            identifier: yup.string().required(),
+            description: yup.string().required(),
+            isEditing: yup.boolean(),
+        })
+    ),
 });
 
 function getIsToolNameUnique(value: string, ctx: yup.TestContext<EditAiAgentValidationContext>): boolean {

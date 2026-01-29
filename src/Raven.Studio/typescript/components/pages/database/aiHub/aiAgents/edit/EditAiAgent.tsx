@@ -16,6 +16,7 @@ import { LoadError } from "components/common/LoadError";
 import useEditAiAgent from "./hooks/useEditAiAgent";
 import useResizableWidth from "components/hooks/useResizableWidth";
 import ColumnResize from "components/common/ColumnResize";
+import EditAiAgentSubAgentsSection from "components/pages/database/aiHub/aiAgents/edit/partials/EditAiAgentSubAgentsSection";
 
 interface QueryParams {
     id: string;
@@ -75,6 +76,7 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                             <EditAiAgentBasicSection isEditAiAgent={aiAgentEditor.isEditAiAgent} />
                             <EditAiAgentParametersSection />
                             <EditAiAgentToolsSection />
+                            <EditAiAgentSubAgentsSection />
                             <EditAiAgentTrimmingSection />
                         </>
                     )}
