@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands.AI;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

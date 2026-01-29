@@ -9,7 +9,8 @@ public class AiAgentActionRequest : IDynamicJson
     public string ToolId;
     public string Arguments;
 
-    public AiAgentActionRequestType Type;
+    [ForceJsonSerialization]
+    internal AiAgentActionRequestType Type;
 
     [ForceJsonSerialization]
     internal string SubConversation;

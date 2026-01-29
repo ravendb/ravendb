@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Queries;
@@ -15,6 +16,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
+using Raven.Server.Extensions;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -25,60 +27,114 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 {
     public partial class ConversationHandler
     {
-        private async Task<int> ExecuteMultiAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
+        private readonly Dictionary<string, AiAgentActionRequest> _childUserCalls = [];
+
+        private async Task HandleSubAgentCalls(JsonOperationContext context, Dictionary<string, SubAgentActionResponse> subAgentsActions)
         {
-            List<Task<SubConversationResult>> tasks = [];
-            foreach (var (conversationId, conversationReqs) in reqs)
+            if (subAgentsActions?.Count > 0 == false)
+                return;
+
+            Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs = new();
+
+            foreach (var (conversationId, subAgent) in subAgentsActions)
             {
-                tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs));
+                var call = new AiToolCall(subAgent.ParentId /*Parent call*/, subAgent.Agent, Arguments: null);
+                var r = CreateAgentRequest(subAgent.Agent, conversationId, prompt: null, subAgent.Responses, creationOptions: new DynamicJsonValue());
+                reqs.GetOrAdd(conversationId).Add((call, r));
             }
 
-            try
+            await ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
+
+            if (_childUserCalls.Count > 0)
+                return;
+
+            List<AiToolCall> activeToolCalls = [];
+            foreach (var action in _document.OpenActionCalls)
             {
-                await Task.WhenAll(tasks);
-            }
-            catch
-            {
-                // explicitly ignoring this, since we'll handle the error after this
+                var call = new AiToolCall(action.Key, action.Value.Name, action.Value.Arguments);
+                activeToolCalls.Add(call);
             }
 
-            List<Exception> exceptions = new();
-            var toolsIterations = 0;
-            foreach (var t in tasks)
+            await HandleQueryAndAgentCallsAsync(context, activeToolCalls);
+        }
+
+        private void BuildAgentRequest(JsonOperationContext context, ConversationDocument document, AiToolCall call, AiAgentToolSubAgent agent, Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs)
+        {
+            var args = context.Sync.ReadForMemory(call.Arguments, "call/args");
+            if (args.TryGet(ConversationDocument.SubAgentUserPromptKey, out string prompt) is false)
             {
-                try
+                throw new InvalidOperationException($"Missing required 'subAgentUserPrompt' parameter on call to {call.Name}. Arguments: {call.Arguments}.");
+            }
+
+            args.Modifications = new DynamicJsonValue(args);
+            args.Modifications.Remove(ConversationDocument.SubAgentUserPromptKey);
+
+            var parameters = MergeParams(context, document.Parameters, args);
+            var subConversationParamsHash = call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
+            // Unique conversation identifier for this sub-agent (includes document ID, call name, and index).
+            var conversationId = document.Id + "/" + subConversationParamsHash;
+
+            reqs.GetOrAdd(conversationId).Add((call, CreateAgentRequest(agent.Identifier, conversationId,
+                prompt, Array.Empty<object>(), new DynamicJsonValue
                 {
-                    var r = await t;
-                    toolsIterations += r.ToolsIterations;
-                    using (r.Disposable)
+                    [nameof(AiConversationCreationOptions.Parameters)] = parameters,
+                    [nameof(AiConversationCreationOptions.ExpirationInSec)] = document.Expires switch
                     {
-                        foreach (var m in r.Messages)
-                        {
-                            _document.AddMessage(context, m.Clone(context), usage: null);
-                        }
+                        { } td => (int)td.TotalSeconds,
+                        null => null
+                    },
+                    [nameof(AiConversationCreationOptions.MaxModelIterationsPerCall)] = _document.RemainingToolIterations
+                })));
 
-                        foreach (var callId in r.OpenToolCallsToRemove)
-                        {
-                            _document.OpenActionCalls.Remove(callId, out _);
-                        }
+            _document.OpenActionCalls.TryAdd(call.Id, new AiAgentActionRequest
+            {
+                ToolId = call.Id, // Parent call
+                Name = call.Name,
+                Type = AiAgentActionRequestType.SubAgent,
+                Arguments = call.Arguments,
+                SubConversation = conversationId
+            });
+        }
 
-                        foreach (var (key, value) in r.ChildUserCalls)
-                        {
-                            AddChildrenUserCall(_childUserCalls, key, value);
-                        }
-                    }
-                }
-                catch (Exception ex)
+        private DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
+        {
+            var queryString = new StringBuilder("?")
+                .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
+                .Append("&agentId=").Append(Uri.EscapeDataString(agent))
+                .ToString();
+
+            return new DynamicJsonValue
+            {
+                [nameof(GetRequest.Url)] = $"/databases/{database.Name}/ai/agent",
+                [nameof(GetRequest.Query)] = queryString,
+                [nameof(GetRequest.Method)] = "POST",
+                [nameof(GetRequest.Content)] = new DynamicJsonValue
                 {
-                    exceptions.Add(ex);
+                    [nameof(ConversionRequestBody.UserPrompt)] = prompt,
+                    [nameof(ConversionRequestBody.ActionResponses)] = actionResponses,
+                    [nameof(ConversionRequestBody.CreationOptions)] = creationOptions
                 }
+            };
+        }
+
+        private static SubAgentActionResponse GetOrAddSubAgentsActionResponses(Dictionary<string, SubAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
+        {
+            if (subAgentsActions.TryGetValue(parent.SubConversation, out var subAgent))
+            {
+                Debug.Assert(subAgent.ParentId == parentToolId, $"subAgent.ParentId != rootToolId. subAgent.ParentId is '{subAgent.ParentId}',  rootToolId is '{parentToolId}'");
+                Debug.Assert(subAgent.Agent == parent.Name, $"subAgent.Agent != action.Name. subAgent.Agent is '{subAgent.Agent}', action.Name is '{parent.Name}'");
+            }
+            else
+            {
+                subAgent = subAgentsActions[parent.SubConversation] = new SubAgentActionResponse()
+                {
+                    ParentId = parentToolId,
+                    Agent = parent.Name,
+                    Responses = new()
+                };
             }
 
-            if (exceptions.Count > 0)
-                throw new AggregateException(exceptions).ExtractSingleInnerException();
-
-            _document.RemainingToolIterations = int.Max(_document.RemainingToolIterations - toolsIterations, 0);
-            return toolsIterations;
+            return subAgent;
         }
 
         private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
