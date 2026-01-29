@@ -74,12 +74,10 @@ public class RavenDB_25307 : RavenTestBase
 
         var agent = await store.AI.CreateAgentAsync(agentConfig);
         var chat = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null);
-        var recentOrderCalled = false;
 
         // should be resolved to the async overload of Handle
         chat.Handle("RecentOrder", (object query) =>
         {
-            recentOrderCalled = true;
             return Task.FromResult("done");
         }, AiHandleErrorStrategy.RaiseImmediately);
 
