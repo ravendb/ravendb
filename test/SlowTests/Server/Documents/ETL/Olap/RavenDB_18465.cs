@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -107,7 +109,7 @@ loadTo(""Orders"", partitionBy(key),
                     }
                 }, expectedVal: true, timeout: 30_000);
 
-                Assert.True(itemDeleted);
+                Assert.True(itemDeleted, AddDebugInfo(Server));
             }
         }
 
@@ -145,6 +147,17 @@ loadTo(""Orders"", partitionBy(key),
 
                 await session.SaveChangesAsync();
             }
+        }
+
+        private static string AddDebugInfo(RavenServer server)
+        {
+            var sb = new StringBuilder("ETL process state was not deleted from storage")
+                .AppendLine()
+                .AppendLine("Server debug logs:")
+                .AppendLine();
+
+            ClusterTestBase.GetDebugLogsForNode(server, sb);
+            return sb.ToString();
         }
     }
 
