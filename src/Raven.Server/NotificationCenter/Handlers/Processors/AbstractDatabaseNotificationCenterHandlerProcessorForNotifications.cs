@@ -13,38 +13,42 @@ internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForNot
     where TOperationContext : JsonOperationContext
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
+    protected bool Postponed { get; init; }
+    protected string Type { get; init; }
+    protected int Start { get; init; }
+    protected int PageSize { get; init; }
+    
     protected AbstractDatabaseNotificationCenterHandlerProcessorForNotifications([NotNull] TRequestHandler requestHandler)
         : base(requestHandler)
     {
+        Postponed = RequestHandler.GetBoolValueQueryString("postponed", required: false) ?? true; 
+        Type = RequestHandler.GetStringQueryString("type", required: false);
+        Start = RequestHandler.GetIntValueQueryString("pageStart", required: false) ?? 0;
+        PageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
     }
 
     protected abstract AbstractDatabaseNotificationCenter GetNotificationCenter();
     
     protected override RavenCommand<BlittableJsonReaderObject> CreateCommandForNode(string nodeTag)
     {
-        return new GetDatabaseNotificationsCommand(nodeTag);
+        return new GetDatabaseNotificationsCommand(Postponed, Type, Start, PageSize, nodeTag);
     }
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
         var notificationCenter = GetNotificationCenter();
         
-        var postponed = RequestHandler.GetBoolValueQueryString("postponed", required: false) ?? true;
-        var type = RequestHandler.GetStringQueryString("type", required: false);
-        var start = RequestHandler.GetIntValueQueryString("pageStart", required: false) ?? 0;
-        var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
-        
-        var filter = NotificationCenterHelper.GetAndEnsureValidTypeParameters(type);
-        var shouldFilter = type != null;
+        var filter = NotificationCenterHelper.GetAndEnsureValidTypeParameters(Type);
+        var shouldFilter = Type != null;
         
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            using (notificationCenter.GetStored(out var storedNotifications, postponed))
+            using (notificationCenter.GetStored(out var storedNotifications, Postponed))
             {
                 var filteredNotifications = shouldFilter ? NotificationCenterHelper.FilterNotifications(storedNotifications, filter) : storedNotifications;
 
-                writer.WriteNotifications(filteredNotifications, pageSize, start);
+                writer.WriteNotifications(filteredNotifications, PageSize, Start);
             }
         }
     }
