@@ -295,6 +295,11 @@ namespace SlowTests.Client.Subscriptions
                 {
                     await store.Subscriptions.CreateAsync<Message>(x => Regex.IsMatch(x.UserMessage, pattern, RegexOptions.NonBacktracking));
                 });
+
+                await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                {
+                    await store.Subscriptions.CreateAsync<Message>(x => Regex.Match(x.UserMessage, pattern).Success);
+                });
             }
         }
 

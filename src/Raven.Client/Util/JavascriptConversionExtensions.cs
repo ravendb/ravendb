@@ -2765,8 +2765,16 @@ namespace Raven.Client.Util
                     return;
 
                 var method = mce.Method;
-                if (method.DeclaringType != typeof(Regex) || method.Name != nameof(Regex.IsMatch))
+                if (method.DeclaringType != typeof(Regex))
                     return;
+
+                if (method.Name != nameof(Regex.IsMatch))
+                {
+                    throw new NotSupportedException($"Only Regex.IsMatch is supported in query translation. Method '{method.Name}' is not supported.")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };
+                }
 
                 // We currently support Regex.IsMatch(string input, string pattern)
                 // and Regex.IsMatch(string input, string pattern, RegexOptions options)
