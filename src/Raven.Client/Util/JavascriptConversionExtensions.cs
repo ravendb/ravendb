@@ -2751,6 +2751,141 @@ namespace Raven.Client.Util
             public static JavascriptConversionExtension Instance = new EnumConversionExtension(EnumOptions.UseStrings);
         }
 
+        internal sealed class RegexSupport : JavascriptConversionExtension
+        {
+            public static readonly RegexSupport Instance = new RegexSupport();
+
+            private RegexSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is not MethodCallExpression mce)
+                    return;
+
+                var method = mce.Method;
+                if (method.DeclaringType != typeof(Regex) || method.Name != nameof(Regex.IsMatch))
+                    return;
+
+                // We currently support Regex.IsMatch(string input, string pattern)
+                // and Regex.IsMatch(string input, string pattern, RegexOptions options)
+                if (mce.Arguments.Count > 3)
+                {
+                    throw new NotSupportedException("Regex.IsMatch with more than 3 arguments is not supported.")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };
+                }
+
+                if (mce.Arguments.Count < 2)
+                {
+                    throw new NotSupportedException("Regex.IsMatch must be called with at least 2 arguments: input and pattern.")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };
+                }
+
+                var inputExpr = mce.Arguments[0];
+                var patternExpr = mce.Arguments[1];
+
+                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(patternExpr, out var patternObj) == false)
+                {
+                    throw new NotSupportedException("Regex.IsMatch pattern must be a constant expression.")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };
+                }
+
+                if (patternObj is not string pattern)
+                {
+                    throw new NotSupportedException("Regex.IsMatch pattern must be a string constant.")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };
+                }
+
+                // Extract RegexOptions when present
+                RegexOptions options = RegexOptions.None;
+                if (mce.Arguments.Count == 3)
+                {
+                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(mce.Arguments[2], out var optionsObj) == false || optionsObj is not RegexOptions ro)
+                        throw new NotSupportedException("Regex.IsMatch options must be a constant expression.")
+                        {
+                            HelpLink = "DoNotWrap"
+                        };
+
+                    options = ro;
+                }
+
+                var flags = GetJsFlags(options);
+
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(mce))
+                {
+                    writer.Write("new RegExp(");
+                    writer.Write("\"");
+                    writer.Write(EscapeForJsString(pattern));
+                    writer.Write("\"");
+
+                    if (flags.Length > 0)
+                    {
+                        writer.Write(", \"");
+                        writer.Write(flags);
+                        writer.Write("\"");
+                    }
+
+                    writer.Write(").test(");
+                    context.Visitor.Visit(inputExpr);
+                    writer.Write(")");
+                }
+            }
+
+            private static string GetJsFlags(RegexOptions options)
+            {
+                var flags = string.Empty;
+
+                if ((options & RegexOptions.IgnoreCase) == RegexOptions.IgnoreCase)
+                    flags += "i";
+
+                if ((options & RegexOptions.Multiline) == RegexOptions.Multiline)
+                    flags += "m";
+
+                // Singleline (RegexOptions.Singleline) => JS "." matches newlines flag "s"
+                if ((options & RegexOptions.Singleline) == RegexOptions.Singleline)
+                    flags += "s";
+
+                const RegexOptions supported = RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Singleline;
+                var unsupported = options & ~supported;
+                if (unsupported != RegexOptions.None)
+                {
+                    throw new NotSupportedException($"RegexOptions '{unsupported}' are not supported in JavaScript regex translation.")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };
+                }
+
+                return flags;
+            }
+
+            private static string EscapeForJsString(string pattern)
+            {
+                if (pattern == null)
+                    return string.Empty;
+
+                return pattern
+                    .Replace("\\", "\\\\")        // Must be first!
+                    .Replace("\"", "\\\"")        // Escape quotes
+                    .Replace("\r", "\\r")         // Escape CR
+                    .Replace("\n", "\\n")         // Escape LF
+                    .Replace("\u2028", "\\u2028") // CRITICAL: Escape Line Separator
+                    .Replace("\u2029", "\\u2029") // CRITICAL: Escape Paragraph Separator
+                    .Replace("\t", "\\t");        // Optional: nice for debugging readablity
+            }
+        }
+
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
             return GetInnermostExpression(expression, out _, out _) as ParameterExpression;
