@@ -119,9 +119,9 @@ public sealed partial class ScriptRunner
             byte[] data = GetBytesFromJsValue(args[1], signature);
             var hash = algoName switch
             {
-                "SHA-256" => SHA256.HashData(data),
-                "SHA-384" => SHA384.HashData(data),
-                "SHA-512" => SHA512.HashData(data),
+                "SHA-256" or "sha-256" => SHA256.HashData(data),
+                "SHA-384" or "sha-384" => SHA384.HashData(data),
+                "SHA-512" or "sha-512" => SHA512.HashData(data),
                 _ => throw new NotSupportedException($"{signature}: Algorithm '{algoName}' is not supported.")
             };
 
@@ -143,9 +143,9 @@ public sealed partial class ScriptRunner
 
             var computedSignature = hashName switch
             {
-                "SHA-256" => HMACSHA256.HashData(keyData, data),
-                "SHA-384" => HMACSHA384.HashData(keyData, data),
-                "SHA-512" => HMACSHA512.HashData(keyData, data),
+                "SHA-256" or "sha-256" => HMACSHA256.HashData(keyData, data),
+                "SHA-384" or "sha-384" => HMACSHA384.HashData(keyData, data),
+                "SHA-512" or "sha-512" => HMACSHA512.HashData(keyData, data),
                 _ => throw new NotSupportedException($"{signature}: Unsupported hash algorithm '{hashName}'")
             };
 
@@ -186,9 +186,9 @@ public sealed partial class ScriptRunner
 
             var computed = hashName switch
             {
-                "SHA-256" => HMACSHA256.HashData(keyData, data),
-                "SHA-384" => HMACSHA384.HashData(keyData, data),
-                "SHA-512" => HMACSHA512.HashData(keyData, data),
+                "SHA-256" or "sha-256" => HMACSHA256.HashData(keyData, data),
+                "SHA-384" or "sha-384" => HMACSHA384.HashData(keyData, data),
+                "SHA-512" or "sha-512" => HMACSHA512.HashData(keyData, data),
                 _ => throw new NotSupportedException($"{signature}: Unsupported hash algorithm '{hashName}'")
             };
 
