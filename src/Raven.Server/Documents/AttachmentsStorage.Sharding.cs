@@ -1,8 +1,8 @@
 ﻿using System;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,7 +17,7 @@ namespace Raven.Server.Documents
 {
     public unsafe partial class AttachmentsStorage
     {
-        public IEnumerable<AttachmentReplicationItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<AttachmentReplicationItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool remoteAttachments)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents
 
                 attachment.Stream = stream;
 
-                yield return AttachmentReplicationItem.From(context, attachment);
+                yield return AttachmentReplicationItem.From(context, attachment, remoteAttachments);
             }
         }
 
@@ -110,12 +110,6 @@ namespace Raven.Server.Documents
 
         internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase })
-            {
-                Debug.Assert(false, $"tx.Owner is not DocumentsOperationContext");
-                return;
-            }
-
             var streamSize = 0L;
             var tree = tx.CreateTree(AttachmentsSlice);
 
@@ -131,12 +125,11 @@ namespace Raven.Server.Documents
             key.AsReadOnlySpan().Slice(0, sizeof(int)).CopyTo(bufferAsSpan);
             old.CopyTo(bufferAsSpan.Slice(sizeof(int)));
 
-            var schema = documentDatabase.ShardedDocumentsStorage.AttachmentsStorage.AttachmentsSchema;
-            var table = tx.OpenTable(schema, AttachmentsMetadataSlice);
+            var table = tx.OpenTable(ShardingAttachmentsSchemaBase, AttachmentsMetadataSlice);
             using (Slice.External(tx.Allocator, buffer, sizeof(int) + oldHashSize, ByteStringType.Immutable, out var slice))
             using (Slice.External(tx.Allocator, oldHashPtr, oldHashSize, ByteStringType.Immutable, out var hashSlice))
             {
-                var refCount = table.GetCountOfMatchesFor(schema.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
+                var refCount = table.GetCountOfMatchesFor(ShardingAttachmentsSchemaBase.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
                 switch (refCount)
                 {
                     case 1:

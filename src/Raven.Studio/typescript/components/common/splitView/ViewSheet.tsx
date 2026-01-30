@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import { ComponentProps, PropsWithChildren, ReactNode, useCallback } from "react";
 import Button, { ButtonProps } from "react-bootstrap/Button";
 import { useSplitViewContext } from "./SplitView";
-import { splitViewSelectors, splitViewActions } from "./store/splitViewSlice";
+import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
 
 export type ViewSheetWidth = number | `${number}%`;
 
@@ -25,12 +25,12 @@ interface SheetHeaderProps extends Required<PropsWithChildren>, ClassNameProps {
 }
 
 function SheetHeader(props: SheetHeaderProps) {
-    const hasDefaultButtons = !props.isPinHidden && !props.isCloseHidden;
+    const hasDefaultButtons = !props.isPinHidden || !props.isCloseHidden;
 
     return (
         <div
             className={classNames(
-                "d-flex justify-content-between align-items-center p-2 border-bottom border-secondary panel-bg-2",
+                "d-flex justify-content-between align-items-center p-2 border-bottom border-color-light panel-bg-2",
                 props.className
             )}
         >
@@ -88,7 +88,7 @@ function SheetFooter(props: Required<PropsWithChildren> & ClassNameProps) {
     );
 }
 
-interface OpenSheetOptions {
+export interface OpenSheetOptions {
     component: ReactNode;
     initialWidth?: ViewSheetWidth;
     minWidth?: ViewSheetWidth;

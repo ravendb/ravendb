@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 NullRewriter.Instance,
                 IsRewriter.Instance,
                 NoTrackingRewriter.Instance,
+                SchemaValidatorRewriter.Instance,
                 _vectorFieldRewriter,
             })
             {

@@ -92,7 +92,7 @@ namespace SlowTests.Sharding.Issues
                 using (var session = store.OpenSession())
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    var command = new GenerateClassFromDocumentCommand("users/1", "csharp");
+                    var command = new GenerateClassFromDocumentCommand("users/1", collection: null, "csharp");
 
                     session.Advanced.RequestExecutor.Execute(command, context);
 

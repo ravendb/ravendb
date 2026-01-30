@@ -44,7 +44,9 @@ namespace SlowTests.Issues
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true });
 
+#pragma warning disable SYSLIB0057
             var ownCertificate = new X509Certificate2(sinkCertificates.ClientCertificate1Path, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+#pragma warning restore SYSLIB0057
             Assert.True(ownCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options

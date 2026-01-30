@@ -49,10 +49,17 @@ import shardedDatabase = require("models/resources/shardedDatabase");
 import assertUnreachable = require("components/utils/assertUnreachable");
 import getDocumentRevisionsPhysicalSizeCommand = require("commands/database/documents/getDocumentRevisionPhysicalSizeCommand");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
-
+import getRemoteAttachmentsConfigurationCommand = require("commands/database/settings/getRemoteAttachmentsConfigurationCommand");
+import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
+import storeCompat = require("components/storeCompat");
+import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
+import popoverUtils = require("common/popoverUtils");
+import validateDocumentSchemaCommand = require("commands/database/documents/validateDocumentSchemaCommand");
+import getSchemaValidationCommand = require("commands/database/settings/getSchemaValidationCommand");
+import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
+import licenseModel = require("models/auth/licenseModel");
 
 class editDocument extends shardViewModelBase {
-
     view = require("views/database/documents/editDocument.html");
 
     static editDocSelector = ".edit-document";
@@ -69,25 +76,25 @@ class editDocument extends shardViewModelBase {
     comparingWith = ko.observable<document>();
     leftRevisionIsNewer: KnockoutComputed<boolean>;
     compareButtonVisible: KnockoutComputed<boolean>;
-    
+
     revisionChangeVector = ko.observable<string>();
-    
+
     document = ko.observable<document>();
     documentItemType: KnockoutComputed<string>;
-    
+
     documentText = ko.observable("");
     documentTextOrg = ko.observable(""); // stash for huge document
     documentTextLeft = ko.observable("");
-    
+
     metadata: KnockoutComputed<documentMetadata>;
-    
+
     changeVector: KnockoutComputed<changeVectorItem[]>;
     changeVectorHtml: KnockoutComputed<string>;
     changeVectorFormatted: KnockoutComputed<string>;
-    
+
     savedInClusterTransaction: KnockoutComputed<boolean>;
     atomicGuardUrl: KnockoutComputed<string>;
-    
+
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
@@ -103,9 +110,9 @@ class editDocument extends shardViewModelBase {
     createTimeSeriesUrl: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
-    
+
     cloneEnabled: KnockoutComputed<boolean>;
-    
+
     isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
@@ -115,9 +122,9 @@ class editDocument extends shardViewModelBase {
     propertiesPanelVisible = ko.observable(true);
 
     globalValidationGroup = ko.validatedObservable({
-        userDocumentText: this.documentText
+        userDocumentText: this.documentText,
     });
-    
+
     documentExpirationEnabled: KnockoutComputed<boolean>;
     documentRefreshEnabled: KnockoutComputed<boolean>;
     documentArchivalEnabled: KnockoutComputed<boolean>;
@@ -133,21 +140,29 @@ class editDocument extends shardViewModelBase {
     isConflictDocument = ko.observable<boolean>(false);
     isNewLineFriendlyMode = ko.observable<boolean>(false);
     isSaving = ko.observable<boolean>(false);
-    
+
     displayDocumentChange = ko.observable<boolean>(false);
     displayDocumentDeleted = ko.observable<boolean>(false);
-    
+
     private metaPropsToRestoreOnSave: any[] = [];
 
     private changeNotification: changeSubscription;
 
-    private normalActionProvider = new normalCrudActions(this.document, this.db,
-        docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
-    
-    // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
+    private normalActionProvider = new normalCrudActions(
+        this.document,
+        this.db,
+        (docId) => this.loadDocument(docId),
+        (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) =>
+            this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation)
+    );
+
+    // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider);
 
-    connectedDocuments = new connectedDocuments(this.document,
+    remoteAttachmentDisabledReason = ko.observable<string>("");
+
+    connectedDocuments = new connectedDocuments(
+        this.document,
         this.db,
         (docId) => this.loadDocument(docId),
         (changeVector) => this.loadRevisionWithDirtyCheck(changeVector),
@@ -155,21 +170,23 @@ class editDocument extends shardViewModelBase {
         this.crudActionsProvider,
         this.inReadOnlyMode,
         this.isReadOnlyAccess,
-        this.isClone);
+        this.isClone,
+        this.remoteAttachmentDisabledReason
+    );
 
     isSaveEnabled: KnockoutComputed<boolean>;
-    
+
     computedDocumentSize: KnockoutComputed<string>;
     hugeTextSize = ko.observable<number>(0);
     isHugeDocument = ko.observable<boolean>(false);
     ignoreHugeDocument = ko.observable<boolean>(false);
     showHugeDocumentWarning: KnockoutComputed<boolean>;
-    
+
     sizeOnDiskActual = ko.observable<string>();
     sizeOnDiskAllocated = ko.observable<string>();
     documentSizeHtml: KnockoutComputed<string>;
     isCompressed = ko.observable<boolean>(false);
-    
+
     editedDocId: KnockoutComputed<string>;
     displayLastModifiedDate: KnockoutComputed<boolean>;
     collectionTracker = collectionsTracker.default;
@@ -181,6 +198,9 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
+    canValidateDocument: KnockoutComputed<boolean>;
+    schemaValidationConfig = ko.observable<SchemaValidationConfiguration>(null);
+
     isFullScreenEditor = ko.observable(false);
 
     collapseDocsWhenOpening = ko.observable<boolean>(false);
@@ -189,48 +209,68 @@ class editDocument extends shardViewModelBase {
 
     aiAgentConversationUrl: KnockoutComputed<string>;
     isAiAgentHistory: KnockoutComputed<boolean>;
-    
+
     constructor(db: database) {
         super(db);
-        
+
         aceEditorBindingHandler.install();
         this.initializeObservables();
         this.initValidation();
 
-        this.bindToCurrentInstance("forceCreateRevision", "copyChangeVectorToClipboard",
-            "togglePropertiesPanel", "activateTimeSeriesTab", "activateAttachmentsTab",
-            "revisionNavigate", "changeLeftRevision", "changeRightRevision");
+        this.bindToCurrentInstance(
+            "forceCreateRevision",
+            "copyChangeVectorToClipboard",
+            "togglePropertiesPanel",
+            "activateTimeSeriesTab",
+            "activateAttachmentsTab",
+            "revisionNavigate",
+            "changeLeftRevision",
+            "changeRightRevision"
+        );
+
+        this.loadRemoteAttachmentsConfiguration();
     }
 
     canActivate(args: any) {
         this.ignoreHugeDocument(false);
-        
-        return $.when<any>(super.canActivate(args))
-            .then(() => {
-                if (args && args.revisionBinEntry && args.id) {
-                    return this.activateByRevisionsBinEntry(args.id);
-                } else if (args && args.id && args.revision) {
-                    return this.activateByRevision(args.id, args.revision);
-                } else if (args && args.id) {
-                    return this.activateById(args.id);
-                } else {
-                    return $.Deferred().resolve({can: true});
-                }
-            });
+
+        return $.when<any>(super.canActivate(args)).then(() => {
+            if (args && args.revisionBinEntry && args.id) {
+                return this.activateByRevisionsBinEntry(args.id);
+            } else if (args && args.id && args.revision) {
+                return this.activateByRevision(args.id, args.revision);
+            } else if (args && args.id) {
+                return this.activateById(args.id);
+            } else {
+                return $.Deferred().resolve({ can: true });
+            }
+        });
     }
 
     activate(navigationArgs: {
-        list: string,
-        database: string,
-        item: string,
-        id: string,
-        new: string,
-        index: string,
-        revision: number
+        list: string;
+        database: string;
+        item: string;
+        id: string;
+        new: string;
+        index: string;
+        revision: number;
     }) {
         super.activate(navigationArgs);
-        this.updateHelpLink('M72H1R');
-        
+        this.updateHelpLink("M72H1R");
+
+        if (navigationArgs?.id) {
+            storeCompat.globalDispatch(
+                chatbotSlice.chatbotActions.attachedContextUpserted({
+                    id: "DocumentId",
+                    type: "DocumentId",
+                    label: navigationArgs.id,
+                    value: navigationArgs.id,
+                    state: "excluded",
+                })
+            );
+        }
+
         if (!navigationArgs || !navigationArgs.id) {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
@@ -247,14 +287,14 @@ class editDocument extends shardViewModelBase {
         this.$docEditor = $(editDocument.docEditorSelector);
         this.$docEditorLeft = $(editDocument.docEditorSelectorLeft);
 
-        this.isNewLineFriendlyMode.subscribe(val => {
+        this.isNewLineFriendlyMode.subscribe((val) => {
             this.updateNewlineLayoutInDocument(val);
         });
     }
 
     compositionComplete() {
         super.compositionComplete();
-        
+
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
         this.docEditorLeft = aceEditorBindingHandler.getEditorBySelection(this.$docEditorLeft);
 
@@ -262,14 +302,13 @@ class editDocument extends shardViewModelBase {
         (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
 
         this.connectedDocuments.compositionComplete();
-        
-        studioSettings.default.globalSettings()
-            .done((settings: globalSettings) => {
-                if (settings.collapseDocsWhenOpening.getValue()) {
-                    this.collapseDocsWhenOpening(true);
-                    this.forceFold = true;
-                }
-            });
+
+        studioSettings.default.globalSettings().done((settings: globalSettings) => {
+            if (settings.collapseDocsWhenOpening.getValue()) {
+                this.collapseDocsWhenOpening(true);
+                this.forceFold = true;
+            }
+        });
 
         if (this.docEditor) {
             this.docEditor.getSession().on("changeAnnotation", () => {
@@ -282,10 +321,19 @@ class editDocument extends shardViewModelBase {
 
         this.setupDisableReasons();
         this.focusOnEditor();
-        
+
+        this.loadSchemaValidationConfiguration();
+
         this.watchFullScreenCommand();
+
+        $('.edit-document [data-toggle="tooltip"]').tooltip();
+        popoverUtils.longWithHover($(".add-remote-attachment"),
+            {
+                content: this.remoteAttachmentDisabledReason(),
+                placement: "left",
+            });
     }
-    
+
     detached() {
         super.detached();
         this.connectedDocuments.dispose();
@@ -313,7 +361,7 @@ class editDocument extends shardViewModelBase {
         }
 
         const originalExec = command.exec;
-        
+
         command.exec = (editor: AceAjax.Editor, args?: unknown) => {
             originalExec(editor, args);
             callback();
@@ -327,7 +375,9 @@ class editDocument extends shardViewModelBase {
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
-                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.db) });
+                canActivateResult.resolve({
+                    redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.db),
+                });
             });
         return canActivateResult;
     }
@@ -337,8 +387,12 @@ class editDocument extends shardViewModelBase {
 
         this.loadRevisionsBinEntry(id)
             .done(() => canActivateResult.resolve({ can: true }))
-            .fail(() => canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.db) }));
-            
+            .fail(() =>
+                canActivateResult.resolve({
+                    redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.db),
+                })
+            );
+
         return canActivateResult;
     }
 
@@ -375,7 +429,7 @@ class editDocument extends shardViewModelBase {
     private initValidation() {
         this.documentText.extend({
             required: {
-                onlyIf: () => !this.isHugeDocument() && this.ignoreHugeDocument()
+                onlyIf: () => !this.isHugeDocument() && this.ignoreHugeDocument(),
             },
             aceValidation: true,
             validation: [
@@ -391,14 +445,18 @@ class editDocument extends shardViewModelBase {
                             return false;
                         }
                     },
-                    message: "Document must be valid JSON object"
-                }
-            ]
+                    message: "Document must be valid JSON object",
+                },
+            ],
         });
     }
 
     private initializeObservables(): void {
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
+        this.dirtyFlag = new ko.DirtyFlag(
+            [this.documentText, this.userSpecifiedId],
+            false,
+            jsonUtil.newLineNormalizingHashFunction
+        );
 
         this.cloneEnabled = ko.pureComputed(() => {
             const belongsToShardedDb = this.db instanceof shard || this.db instanceof shardedDatabase;
@@ -414,8 +472,8 @@ class editDocument extends shardViewModelBase {
             }
 
             return !this.showHugeDocumentWarning() && !this.isCreatingNewDocument();
-        })
-        
+        });
+
         this.isSaveEnabled = ko.pureComputed(() => {
             const isSaving = this.isSaving();
             const isDirty = this.dirtyFlag().isDirty();
@@ -440,11 +498,11 @@ class editDocument extends shardViewModelBase {
                 return null;
             }
 
-            return isRevision ? 
-                appUrl.forDocumentRevisionRawData(activeDb, revisionChangeVector) :
-                appUrl.forDocumentRawData(activeDb, docId);
+            return isRevision
+                ? appUrl.forDocumentRevisionRawData(activeDb, revisionChangeVector)
+                : appUrl.forDocumentRawData(activeDb, docId);
         });
-        
+
         this.documentExpirationEnabled = ko.pureComputed(() => {
             const db = this.db;
             if (db) {
@@ -485,16 +543,16 @@ class editDocument extends shardViewModelBase {
 
             return false;
         });
-        
+
         this.compareButtonVisible = ko.pureComputed(() => {
             const diffMode = this.inDiffMode();
             const isClone = this.isClone();
             const creatingNewDocument = this.isCreatingNewDocument();
             const deleteRevision = this.isDeleteRevision();
             const hasRevisions = this.document()?.__metadata.hasFlag("HasRevisions");
-            
+
             return !diffMode && !isClone && !creatingNewDocument && !deleteRevision && hasRevisions;
-        })
+        });
 
         this.isRevision = ko.pureComputed(() => {
             const doc = this.document();
@@ -503,7 +561,7 @@ class editDocument extends shardViewModelBase {
             } else {
                 return false;
             }
-        })
+        });
 
         this.isDeleteRevision = ko.pureComputed(() => {
             const doc = this.document();
@@ -536,11 +594,11 @@ class editDocument extends shardViewModelBase {
             if (!this.inReadOnlyMode()) {
                 return "";
             }
-           
+
             if (this.isDeleteRevision()) {
                 return "| DELETE REVISION";
             }
-            
+
             if (this.isConflictRevision()) {
                 return "| CONFLICT REVISION";
             }
@@ -548,10 +606,10 @@ class editDocument extends shardViewModelBase {
             if (this.isResolvedRevision()) {
                 return "| RESOLVED REVISION";
             }
-           
+
             return "| REVISION";
         });
-        
+
         this.isArchived = ko.pureComputed(() => {
             const doc = this.document();
             if (doc) {
@@ -560,17 +618,17 @@ class editDocument extends shardViewModelBase {
                 return false;
             }
         });
-        
+
         this.archivedText = ko.pureComputed(() => {
             const archived = this.isArchived();
             return archived ? "| ARCHIVED" : null;
         });
 
-        this.document.subscribe(doc => {
+        this.document.subscribe((doc) => {
             if (doc) {
                 const docDto = doc.toDto(true);
                 const metaDto = docDto["@metadata"];
-                
+
                 if (metaDto) {
                     this.metaPropsToRestoreOnSave.length = 0;
                     documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
@@ -580,7 +638,7 @@ class editDocument extends shardViewModelBase {
                 const textSizeInByes = genUtils.getSizeInBytesAsUTF8(docText);
 
                 this.isHugeDocument(textSizeInByes > document.hugeSizeInBytesDefault);
-                
+
                 if (this.isHugeDocument() && !this.ignoreHugeDocument()) {
                     this.documentTextOrg(docText);
                     this.documentText(null);
@@ -592,11 +650,11 @@ class editDocument extends shardViewModelBase {
                 }
             }
         });
-        
-        this.diffMode.subscribe(mode => this.onDiffModeChanged(mode));
 
-        this.metadata = ko.pureComputed<documentMetadata>(() => this.document() ? this.document().__metadata : null);
-        
+        this.diffMode.subscribe((mode) => this.onDiffModeChanged(mode));
+
+        this.metadata = ko.pureComputed<documentMetadata>(() => (this.document() ? this.document().__metadata : null));
+
         this.changeVector = ko.pureComputed(() => {
             const meta = this.metadata();
             if (!meta || !meta.changeVector()) {
@@ -608,30 +666,34 @@ class editDocument extends shardViewModelBase {
         });
 
         this.changeVectorFormatted = ko.pureComputed(() => {
-            return this.changeVector().map(vectorItem => vectorItem.fullFormat).join('<br/>');
+            return this.changeVector()
+                .map((vectorItem) => vectorItem.fullFormat)
+                .join("<br/>");
         });
 
         this.changeVectorHtml = ko.pureComputed(() => {
             return `<div><strong>Change Vector</strong></div>${this.changeVectorFormatted()}`;
         });
-        
+
         this.savedInClusterTransaction = ko.pureComputed(() => {
-            const vectors = this.changeVector().find(x => x.shortFormat.startsWith("TRXN:"));
+            const vectors = this.changeVector().find((x) => x.shortFormat.startsWith("TRXN:"));
             return !!vectors;
         });
-        
+
         this.atomicGuardUrl = ko.pureComputed(() => {
             const id = this.document().getId();
             if (!id) {
                 return null;
             }
-           
+
             return appUrl.forEditCmpXchg("rvn-atomic/" + id.toLocaleLowerCase(), this.db);
         });
 
         this.isConflictDocument = ko.computed(() => {
             const metadata = this.metadata();
-            return metadata && ("Raven-Replication-Conflict" in metadata) && !(metadata as any).id.includes("/conflicts/");
+            return (
+                metadata && "Raven-Replication-Conflict" in metadata && !(metadata as any).id.includes("/conflicts/")
+            );
         });
 
         this.computedDocumentSize = ko.pureComputed(() => {
@@ -653,25 +715,27 @@ class editDocument extends shardViewModelBase {
             if (this.isClone() || this.isCreatingNewDocument()) {
                 return `Computed Size: ${this.computedDocumentSize()} KB`;
             }
-            
+
             const text = `<div class="margin-top-sm margin-bottom-sm"><strong>${this.inReadOnlyMode() ? "Revision" : "Document"} Size on Disk</strong></div> Actual Size: ${this.sizeOnDiskActual()} <br/> Allocated Size: ${this.sizeOnDiskAllocated()} <br/> Compressed: ${this.isCompressed() ? "Yes" : "No"}`;
-            const hugeSizeText = this.isHugeDocument() ? `<br /><div class="text-warning bg-warning margin-top margin-bottom">Document is huge</div>` : "";
-            
+            const hugeSizeText = this.isHugeDocument()
+                ? `<br /><div class="text-warning bg-warning margin-top margin-bottom">Document is huge</div>`
+                : "";
+
             return text + hugeSizeText;
         });
-        
+
         this.documentItemType = ko.pureComputed(() => {
-            return this.inReadOnlyMode() ? 'Revision' : 'Document';
-        })
-        
+            return this.inReadOnlyMode() ? "Revision" : "Document";
+        });
+
         this.metadata.subscribe((meta: documentMetadata) => {
             if (meta && meta.id) {
                 this.userSpecifiedId(meta.id);
                 this.entityName(document.getCollectionFromId(meta.id, this.collectionTracker.getCollectionNames()));
             }
         });
-        this.editedDocId = ko.pureComputed(() => this.metadata() ? this.metadata().id : "");
-       
+        this.editedDocId = ko.pureComputed(() => (this.metadata() ? this.metadata().id : ""));
+
         this.displayLastModifiedDate = ko.pureComputed<boolean>(() => {
             const hasMetadata = !!this.metadata();
             const inEditMode = !this.isCreatingNewDocument();
@@ -689,7 +753,7 @@ class editDocument extends shardViewModelBase {
             const id = this.document().getId();
             return appUrl.forEditDoc(id, this.db);
         });
-        
+
         this.createTimeSeriesUrl = ko.pureComputed(() => {
             const id = this.document().getId();
             return appUrl.forCreateTimeSeries(id, this.db);
@@ -699,32 +763,53 @@ class editDocument extends shardViewModelBase {
             if (this.isClone()) {
                 return true;
             }
-            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+            return (
+                !this.connectedDocuments.isArtificialDocument() &&
+                !this.connectedDocuments.isHiloDocument() &&
+                !this.isCreatingNewDocument() &&
+                !this.isDeleteRevision()
+            );
         });
 
         this.canViewCounters = ko.pureComputed(() => {
             if (this.isClone()) {
                 return true;
             }
-            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+            return (
+                !this.connectedDocuments.isArtificialDocument() &&
+                !this.connectedDocuments.isHiloDocument() &&
+                !this.isCreatingNewDocument() &&
+                !this.isDeleteRevision()
+            );
         });
 
         this.canViewTimeSeries = ko.pureComputed(() => {
             if (this.isClone()) {
                 return true;
             }
-            
-            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+
+            return (
+                !this.connectedDocuments.isArtificialDocument() &&
+                !this.connectedDocuments.isHiloDocument() &&
+                !this.isCreatingNewDocument() &&
+                !this.isDeleteRevision()
+            );
         });
 
         this.canViewRevisions = ko.pureComputed(() => {
-            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
+            return (
+                !this.connectedDocuments.isArtificialDocument() &&
+                !this.connectedDocuments.isHiloDocument() &&
+                !this.isCreatingNewDocument()
+            );
         });
-        
-        this.canViewRelated = ko.pureComputed(() => !this.isDeleteRevision() && (this.isClone() || !this.isCreatingNewDocument()));
+
+        this.canViewRelated = ko.pureComputed(
+            () => !this.isDeleteRevision() && (this.isClone() || !this.isCreatingNewDocument())
+        );
 
         this.canViewCSharpClass = ko.pureComputed(() => !this.isCreatingNewDocument() && !this.inReadOnlyMode());
-        
+
         this.showHugeDocumentWarning = ko.pureComputed(() => {
             if (this.isBusy()) {
                 return this.isHugeDocument();
@@ -746,7 +831,7 @@ class editDocument extends shardViewModelBase {
             if (agentName && (isConversation || isHistory)) {
                 return appUrl.forChatAiAgent(this.db.name, String(agentName), this.document().getId(), isHistory);
             }
-            
+
             return null;
         });
 
@@ -757,35 +842,53 @@ class editDocument extends shardViewModelBase {
 
             return this.document().__metadata.collection === "@conversations-history";
         });
+
+        this.canValidateDocument = ko.pureComputed(() => {
+            const collection = this.document().getCollection();
+            if (collection === "@empty") {
+                return false;
+            }
+
+            const schemaConfig = this.schemaValidationConfig();
+            if (!schemaConfig || !schemaConfig.ValidatorsPerCollection) {
+                return false;
+            }
+
+            return Object.hasOwn(schemaConfig.ValidatorsPerCollection, collection);
+        });
     }
 
     async onDiffModeChanged(newMode: "previous" | "manual") {
         if (newMode === "previous") {
             // if user chooses previous we can't choose the oldest revision
             const currentRevision = this.document();
-            if (this.revisionsToCompare().at(-1).__metadata.changeVector() === currentRevision.__metadata.changeVector()) {
+            if (
+                this.revisionsToCompare().at(-1).__metadata.changeVector() === currentRevision.__metadata.changeVector()
+            ) {
                 await this.changeRightRevision(this.revisionsToCompare().at(-2));
                 return;
             }
-            
+
             await this.changeRightRevision(this.document());
         }
     }
-    
+
     enableCustomNameProvider() {
         this.provideCustomNameForNewDocument(true);
         this.userIdHasFocus(true);
     }
 
     createDocumentChangeNotification(docId: string): changeSubscription {
-        return this.changesContext.databaseChangesApi().watchDocument(docId, (n: Raven.Client.Documents.Changes.DocumentChange) => this.onDocumentChange(n));
+        return this.changesContext
+            .databaseChangesApi()
+            .watchDocument(docId, (n: Raven.Client.Documents.Changes.DocumentChange) => this.onDocumentChange(n));
     }
 
     onDocumentChange(change: Raven.Client.Documents.Changes.DocumentChange): void {
         if (this.isSaving() || change.ChangeVector === this.metadata().changeVector() || this.inReadOnlyMode()) {
             return;
         }
-        
+
         if (change.Type === "Delete") {
             if (this.editedDocId() === change.Id) {
                 this.displayDocumentDeleted(true);
@@ -799,10 +902,10 @@ class editDocument extends shardViewModelBase {
         const dirtyFlagValue = this.dirtyFlag().isDirty();
         if (unescapeNewline) {
             this.documentText(documentHelpers.unescapeNewlinesAndTabsInTextFields(this.documentText()));
-            this.docEditor.getSession().setMode('ace/mode/raven_document_newline_friendly');
+            this.docEditor.getSession().setMode("ace/mode/raven_document_newline_friendly");
         } else {
             this.documentText(documentHelpers.escapeNewlinesAndTabsInTextFields(this.documentText()));
-            this.docEditor.getSession().setMode('ace/mode/raven_document');
+            this.docEditor.getSession().setMode("ace/mode/raven_document");
             this.formatDocument();
         }
 
@@ -815,7 +918,7 @@ class editDocument extends shardViewModelBase {
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
-        this.createKeyboardShortcut("ctrl+s", () => this.saveDocument(), editDocument.editDocSelector); 
+        this.createKeyboardShortcut("ctrl+s", () => this.saveDocument(), editDocument.editDocSelector);
         // Q. Why do we have to set up ALT+S, when we could just use HTML's access key attribute?
         // A. Because the access key attribute causes the save button to take focus, thus stealing the focus from the user's editing spot in the doc editor, disrupting his workflow.
     }
@@ -828,7 +931,7 @@ class editDocument extends shardViewModelBase {
         this.isCreatingNewDocument(true);
         this.collectionForNewDocument(collectionForNewDocument);
         this.connectedDocuments.activateRecent();
-        
+
         const documentTask = $.Deferred<document>();
 
         if (collectionForNewDocument) {
@@ -837,7 +940,7 @@ class editDocument extends shardViewModelBase {
                 .execute()
                 .done((documents: pagedResult<document>) => {
                     const schemaDoc = documentHelpers.findSchema(documents.items);
-                    this.document(schemaDoc); 
+                    this.document(schemaDoc);
                     documentTask.resolve(schemaDoc);
                 })
                 .fail(() => documentTask.reject());
@@ -855,34 +958,43 @@ class editDocument extends shardViewModelBase {
     private defaultNameForNewDocument(collectionForNewDocument: string) {
         // We get here upon clicking 'Clone' or 'New doc in current collection'
         // Just append / to collection name if exists
-        
+
         if (!collectionForNewDocument || collectionForNewDocument === "@empty") {
             return "";
         }
-        
+
         return collectionForNewDocument + "/";
     }
 
     reLoadDocument() {
         this.ignoreHugeDocument(true);
-        
+
         if (this.inReadOnlyMode()) {
             this.loadRevision(this.revisionChangeVector(), this.editedDocId());
         } else {
             this.loadDocument(this.document().getId());
         }
     }
-    
+
     downloadDocument() {
         fileDownloader.downloadAsTxt(this.documentTextOrg(), this.document().getId() + ".json");
     }
-    
+
     viewRaw() {
         window.open(this.rawJsonUrl(), "_blank");
     }
-    
+
     copyDocumentBodyToClipboard() {
         copyToClipboard.copy(this.documentText(), "Document has been copied to clipboard");
+    }
+
+    validateDocumentSchema() {
+        if (!this.isValid(this.globalValidationGroup)) {
+            return;
+        }
+
+        eventsCollector.default.reportEvent("document", "validate-document");
+        this.validateDocumentInternal();
     }
 
     copyDocumentIdToClipboard() {
@@ -890,7 +1002,12 @@ class editDocument extends shardViewModelBase {
     }
 
     copyChangeVectorToClipboard() {
-        copyToClipboard.copy(this.changeVector().map(vectorItem => vectorItem.fullFormat).join(", "), "Change Vector has been copied to clipboard");
+        copyToClipboard.copy(
+            this.changeVector()
+                .map((vectorItem) => vectorItem.fullFormat)
+                .join(", "),
+            "Change Vector has been copied to clipboard"
+        );
     }
 
     copyRevisionTimestampToClipboard(revisionTimestamp: string) {
@@ -904,12 +1021,15 @@ class editDocument extends shardViewModelBase {
     toggleNewlineMode() {
         eventsCollector.default.reportEvent("document", "toggle-newline-mode");
         if (this.isNewLineFriendlyMode() === false && parseInt(this.computedDocumentSize().replace(",", "")) > 1024) {
-            app.showBootstrapMessage("This operation might take long time with big documents, are you sure you want to continue?", "Toggle newline mode", ["Cancel", "Continue"])
-                .then((dialogResult: string) => {
-                    if (dialogResult === "Continue") {
-                        this.isNewLineFriendlyMode.toggle();
-                    }
-                });
+            app.showBootstrapMessage(
+                "This operation might take long time with big documents, are you sure you want to continue?",
+                "Toggle newline mode",
+                ["Cancel", "Continue"]
+            ).then((dialogResult: string) => {
+                if (dialogResult === "Continue") {
+                    this.isNewLineFriendlyMode.toggle();
+                }
+            });
         } else {
             this.isNewLineFriendlyMode.toggle();
         }
@@ -930,12 +1050,12 @@ class editDocument extends shardViewModelBase {
             this.unfoldDocument();
         }
     }
-    
+
     collapseDocument() {
         this.foldAll();
         this.isDocumentCollapsed(true);
     }
-    
+
     unfoldDocument() {
         this.docEditor.getSession().unfold(null, true);
         this.isDocumentCollapsed(false);
@@ -944,50 +1064,63 @@ class editDocument extends shardViewModelBase {
     foldAll() {
         const AceRange = ace.require("ace/range").Range;
         this.docEditor.getSession().foldAll();
-        const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
-        folds.map(f => this.docEditor.getSession().expandFold(f));
+        const folds = <any[]>(
+            this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0))
+        );
+        folds.map((f) => this.docEditor.getSession().expandFold(f));
     }
 
     tryCreateClone() {
         if (this.isSaveEnabled()) {
-            this.confirmationMessage("Unsaved changes",
-                                     "Document has unsaved changes. How do you want to proceed?",
-                                     { buttons: ["Cancel", "Clone with changes"] })
-                .done(result => {
-                    if (result.can) {
-                        this.createClone(true);
-                    }
-                })
+            this.confirmationMessage("Unsaved changes", "Document has unsaved changes. How do you want to proceed?", {
+                buttons: ["Cancel", "Clone with changes"],
+            }).done((result) => {
+                if (result.can) {
+                    this.createClone(true);
+                }
+            });
         } else {
             this.createClone();
         }
     }
-    
+
     createClone(keepChanges = false) {
         const attachments = this.document().__metadata.attachments()
-            ? this.document().__metadata.attachments().map(x => editDocument.mapToAttachmentItem(this.editedDocId(), x))
+            ? this.document()
+                  .__metadata.attachments()
+                  .map((x) => editDocument.mapToAttachmentItem(this.editedDocId(), x))
             : [];
 
         const documentHasCounters = this.crudActionsProvider().countersCount() > 0;
-        
-        const fetchCountersTask = documentHasCounters ?
-            // Must get counter values from server since cloning counters is a 'create' operation (not copy)
-            this.normalActionProvider.fetchCounters("") :
-            $.when<pagedResult<counterItem>>({ items: [], totalResultCount: 0 } as pagedResult<counterItem>);
-        
+
+        const fetchCountersTask = documentHasCounters
+            ? // Must get counter values from server since cloning counters is a 'create' operation (not copy)
+              this.normalActionProvider.fetchCounters("")
+            : $.when<pagedResult<counterItem>>({ items: [], totalResultCount: 0 } as pagedResult<counterItem>);
+
         const fetchTimeSeriesTask = this.normalActionProvider.fetchTimeSeries("");
 
-        $.when<any>(fetchCountersTask, fetchTimeSeriesTask)
-            .done((counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
+        $.when<any>(fetchCountersTask, fetchTimeSeriesTask).done(
+            (counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
                 this.createCloneInternal(attachments, timeSeries.items, counters.items, keepChanges);
-            })
+            }
+        );
     }
-    
-    private createCloneInternal(attachments: attachmentItem[], timeSeries: timeSeriesItem[], counters: counterItem[], keepChanges = false) {
+
+    private createCloneInternal(
+        attachments: attachmentItem[],
+        timeSeries: timeSeriesItem[],
+        counters: counterItem[],
+        keepChanges = false
+    ) {
         // Show current document as a clone document...
         router.navigate(window.location.hash + "&isClone=true", { trigger: false, replace: false });
-        
-        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.db, attachments, timeSeries, counters, () => this.connectedDocuments.reload()));
+
+        this.crudActionsProvider(
+            new clonedDocumentCrudActions(this, this.db, attachments, timeSeries, counters, () =>
+                this.connectedDocuments.reload()
+            )
+        );
 
         this.isCreatingNewDocument(true);
         this.isClone(true);
@@ -997,7 +1130,7 @@ class editDocument extends shardViewModelBase {
 
         eventsCollector.default.reportEvent("document", "clone");
 
-        // Remove the '@change-vector' & '@flags' from metadata view for the clone 
+        // Remove the '@change-vector' & '@flags' from metadata view for the clone
         const docDto = this.document().toDto(true);
         const metaDto = docDto["@metadata"];
         let docId = "";
@@ -1010,20 +1143,20 @@ class editDocument extends shardViewModelBase {
                 this.documentText(originalDocText);
             }
 
-            // Suggest initial document Id 
+            // Suggest initial document Id
             docId = this.defaultNameForNewDocument(metaDto["@collection"]);
         }
 
         // Clear data..
         this.document().__metadata.clearFlags();
-        
+
         this.metadata().changeVector(undefined);
 
         this.userSpecifiedId(docId);
 
         this.setActiveTab();
         this.adjustCollapseState();
-        
+
         this.connectedDocuments.gridController().reset(true);
     }
 
@@ -1033,38 +1166,41 @@ class editDocument extends shardViewModelBase {
 
     handleSaveDocument(isClusterWide = false) {
         if (!this.isSaveEnabled()) {
-            return ;
+            return;
         }
-        
+
         if (this.isValid(this.globalValidationGroup)) {
-            $.when<boolean>(this.maybeConfirmWarnings())
-                .then((canSave: boolean) => {
-                    if (canSave) {
-                        eventsCollector.default.reportEvent("document", "save");
-                        this.saveInternal(this.userSpecifiedId(), false, isClusterWide);
-                    }
-                });
+            $.when<boolean>(this.maybeConfirmWarnings()).then((canSave: boolean) => {
+                if (canSave) {
+                    eventsCollector.default.reportEvent("document", "save");
+                    this.saveInternal(this.userSpecifiedId(), false, isClusterWide);
+                }
+            });
         }
     }
-    
+
     private maybeConfirmWarnings(): JQueryPromise<boolean> | boolean {
-        const documentWarnings = this.docEditor.getSession().getAnnotations()
+        const documentWarnings = this.docEditor
+            .getSession()
+            .getAnnotations()
             .filter((x: AceAjax.Annotation) => x.type === "warning");
-        
+
         if (documentWarnings.length) {
-            const viewModel = new editorWarningsConfirm("Document",
+            const viewModel = new editorWarningsConfirm(
+                "Document",
                 [{ source: "Document", warnings: documentWarnings }],
                 (warning) => {
                     // please note go to line is not zero based, so we add 1
                     this.docEditor.gotoLine(warning.row + 1, warning.column, true);
                     this.docEditor.focus();
-            });
+                }
+            );
             return app.showBootstrapDialog(viewModel);
         }
-        
+
         return true;
     }
-    
+
     private saveInternal(documentId: string, forceRevisionCreation = false, isClusterWide = false) {
         let message = "";
         let updatedDto: any;
@@ -1081,17 +1217,17 @@ class editDocument extends shardViewModelBase {
             }
             this.focusOnEditor();
         }
-        
+
         if (message) {
             messagePublisher.reportError(message, undefined, undefined, false);
             return;
         }
 
-        if (!updatedDto['@metadata']) {
+        if (!updatedDto["@metadata"]) {
             updatedDto["@metadata"] = {};
         }
 
-        const meta = updatedDto['@metadata'];
+        const meta = updatedDto["@metadata"];
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like @id and @collection.
         // Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
@@ -1100,17 +1236,17 @@ class editDocument extends shardViewModelBase {
         } else {
             // If we're editing a document, we hide some reserved properties from the user.
             // Restore these before we save.
-            this.metaPropsToRestoreOnSave.forEach(p => {
+            this.metaPropsToRestoreOnSave.forEach((p) => {
                 if (p.name !== "Origin") {
                     meta[p.name] = p.value;
                 }
             });
             // force document id to support save as new
-            meta['@id'] = documentId;
+            meta["@id"] = documentId;
         }
 
         // skip some not necessary meta in headers
-        const metaToSkipInHeaders = ['Raven-Replication-History'];
+        const metaToSkipInHeaders = ["Raven-Replication-History"];
         for (const i in metaToSkipInHeaders) {
             const skippedHeader = metaToSkipInHeaders[i];
             delete meta[skippedHeader];
@@ -1119,41 +1255,46 @@ class editDocument extends shardViewModelBase {
         // we split save of cloned document into 2 calls, as default id convention creates ids like: users/
         // as result we don't know exact destination document id.
         const newDoc = new document(updatedDto);
-        
-        const transactionMode: Raven.Client.Documents.Session.TransactionMode = isClusterWide ? "ClusterWide" : "SingleNode";
 
-        const saveCommand = forceRevisionCreation ?
-                            new forceRevisionCreationCommand(documentId, this.db) :
-                            new saveDocumentCommand(documentId, newDoc, this.db, true, transactionMode);
-        
+        const transactionMode: Raven.Client.Documents.Session.TransactionMode = isClusterWide
+            ? "ClusterWide"
+            : "SingleNode";
+
+        const saveCommand = forceRevisionCreation
+            ? new forceRevisionCreationCommand(documentId, this.db)
+            : new saveDocumentCommand(documentId, newDoc, this.db, true, transactionMode);
+
         this.isSaving(true);
         saveCommand
             .execute()
             .then((saveResult: saveDocumentResponseDto) => {
-                return this.crudActionsProvider().saveRelatedItems(saveResult.Results[0]["@id"])
+                return this.crudActionsProvider()
+                    .saveRelatedItems(saveResult.Results[0]["@id"])
                     .then(() => saveResult);
             })
-            .then((saveResult: saveDocumentResponseDto) => this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto, forceRevisionCreation))
+            .then((saveResult: saveDocumentResponseDto) =>
+                this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto, forceRevisionCreation)
+            )
             .fail(() => {
                 this.isSaving(false);
             });
     }
-    
+
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) {
         if (forceRevisionCreation && !saveResult.Results[0].RevisionCreated) {
             // No new revision was created since the server detected that a revision with latest document content already exists... so do nothing.
             this.isSaving(false);
             return;
         }
-        
+
         this.isClone(false);
         this.crudActionsProvider(this.normalActionProvider);
-        
+
         const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
-        
+
         const currentSelection = this.docEditor.getSelectionRange();
 
-        const metadata = localDoc['@metadata'];
+        const metadata = localDoc["@metadata"];
         for (const prop in savedDocumentDto) {
             // eslint-disable-next-line no-prototype-builtins
             if (savedDocumentDto.hasOwnProperty(prop)) {
@@ -1197,17 +1338,51 @@ class editDocument extends shardViewModelBase {
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
 
-        this.getDocumentPhysicalSize(metadata['@id']);
-           
+        this.getDocumentPhysicalSize(metadata["@id"]);
+
         if (!this.connectedDocuments.isRevisionsActive()) {
             this.crudActionsProvider().fetchRevisionsCount(savedDocumentDto["@id"], this.db);
         }
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        // Define a collection to be sent to server only if there is a relevant value 
-        target['@id'] = id;
-        target['@collection'] = target['@collection'] || document.getCollectionFromId(id, this.collectionTracker.getCollectionNames());
+        // Define a collection to be sent to server only if there is a relevant value
+        target["@id"] = id;
+        target["@collection"] =
+            target["@collection"] || document.getCollectionFromId(id, this.collectionTracker.getCollectionNames());
+    }
+
+    private validateDocumentInternal() {
+        let updatedDocDto: documentDto;
+        try {
+            updatedDocDto = JSON.parse(documentHelpers.escapeNewlinesAndTabsInTextFields(this.documentText()));
+        } catch (error) {
+            messagePublisher.reportError("Failed to parse document JSON", error.message);
+            return;
+        }
+
+        const documentToValidate = new document(updatedDocDto);
+        const db = this.db;
+        new validateDocumentSchemaCommand(db, documentToValidate.toDto(true))
+            .execute()
+            .done((result) => {
+                switch (result.Status) {
+                    case "Valid":
+                        messagePublisher.reportSuccess("Document is valid");
+                        break;
+                    case "Invalid":
+                        messagePublisher.reportError("Document validation failed", JSON.stringify({
+                            Message: result.ErrorMessages.join(" "),
+                            Error: result.ErrorMessages.join("\n")
+                        }));
+                        break;
+                    case "MissingSchema":
+                        messagePublisher.reportError("Document schema is missing");
+                        break;
+                    default:
+                        assertUnreachable.default(result.Status);
+                }
+            })
     }
 
     private loadDocument(id: string): JQueryPromise<document> {
@@ -1223,11 +1398,11 @@ class editDocument extends shardViewModelBase {
                 this.inReadOnlyMode(false);
                 this.displayDocumentChange(false);
                 this.dirtyFlag().reset();
-                
+
                 this.getDocumentPhysicalSize(id);
-                
+
                 this.crudActionsProvider().fetchRevisionsCount(id, this.db);
-                
+
                 loadTask.resolve(doc);
             })
             .fail((xhr: JQueryXHR) => {
@@ -1235,7 +1410,7 @@ class editDocument extends shardViewModelBase {
                 if (xhr.status === 404) {
                     if (db.hasRevisionsConfiguration()) {
                         this.loadRevisionsBinEntry(id)
-                            .done(doc => {
+                            .done((doc) => {
                                 if (doc) {
                                     loadTask.resolve(doc);
                                 } else {
@@ -1260,30 +1435,74 @@ class editDocument extends shardViewModelBase {
         return loadTask;
     }
 
+    private loadRemoteAttachmentsConfiguration() {
+        const hasRemoteAttachments = licenseModel.getStatusValue("HasRemoteAttachments");
+        if (!hasRemoteAttachments) {
+            this.remoteAttachmentDisabledReason("Remote attachments are not available in your current license");
+            return;
+        }
+
+        if (this.db.isSharded()) {
+            this.remoteAttachmentDisabledReason("Remote attachments are not supported in sharded databases");
+            return;
+        }
+
+        new getRemoteAttachmentsConfigurationCommand(this.db)
+            .execute()
+            .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
+                if (remoteAttachmentsConfiguration == null || remoteAttachmentsConfiguration.Disabled) {
+                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings → Remote Attachments and update the configuration accordingly.");
+                }
+            })
+            .fail(() => {
+                this.remoteAttachmentDisabledReason("Remote attachments configuration could not be retrieved.");
+            });
+    }
+
+    private loadSchemaValidationConfiguration() {
+        new getSchemaValidationCommand(this.db)
+            .execute()
+            .done((schemaValidationConfig: SchemaValidationConfiguration) => {
+                this.schemaValidationConfig(schemaValidationConfig);
+            })
+            .fail(() => {
+                this.schemaValidationConfig(null);
+            });
+    }
+
     async enterCompareModeAndCompareWithPrevious(): Promise<void> {
         const changeVector = this.document().__metadata.changeVector();
-        const revisions = await new getDocumentRevisionsCommand(this.document().getId(), this.db, 0, 1024, true)
-            .execute();
+        const revisions = await new getDocumentRevisionsCommand(
+            this.document().getId(),
+            this.db,
+            0,
+            1024,
+            true
+        ).execute();
 
-        const itemToCompare = revisions.items.find(x => x.__metadata.changeVector() === changeVector);
-        
-        this.revisionsToCompare(revisions.items.filter(x => !x.__metadata.hasFlag("DeleteRevision")));
+        const itemToCompare = revisions.items.find((x) => x.__metadata.changeVector() === changeVector);
+
+        this.revisionsToCompare(revisions.items.filter((x) => !x.__metadata.hasFlag("DeleteRevision")));
 
         this.diffMode("previous");
-        
+
         if (itemToCompare) {
-            const isLastItem = this.revisionsToCompare().at(-1).__metadata.changeVector() === itemToCompare.__metadata.changeVector();
+            const isLastItem =
+                this.revisionsToCompare().at(-1).__metadata.changeVector() === itemToCompare.__metadata.changeVector();
             if (isLastItem) {
-                this.confirmationMessage("Nothing to compare", "This is the oldest revision. Please choose another revision.", {
-                    buttons: ["Ok"]
-                });
+                this.confirmationMessage(
+                    "Nothing to compare",
+                    "This is the oldest revision. Please choose another revision.",
+                    {
+                        buttons: ["Ok"],
+                    }
+                );
             } else {
                 return this.changeRightRevision(itemToCompare);
             }
-            
         }
     }
-    
+
     async revisionNavigate(direction: "older" | "newer", tab: "right" | "left"): Promise<void> {
         if (!this.canNavigateObservable(direction, tab)) {
             return;
@@ -1291,7 +1510,9 @@ class editDocument extends shardViewModelBase {
         switch (tab) {
             case "right": {
                 const currentRevision = this.document();
-                const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x.__metadata.changeVector() === currentRevision.__metadata.changeVector());
+                const currentRevisionIndex = this.revisionsToCompare().findIndex(
+                    (x) => x.__metadata.changeVector() === currentRevision.__metadata.changeVector()
+                );
                 switch (direction) {
                     case "newer": {
                         await this.changeRightRevision(this.revisionsToCompare()[currentRevisionIndex - 1]);
@@ -1308,7 +1529,7 @@ class editDocument extends shardViewModelBase {
             }
             case "left": {
                 const currentRevision = this.comparingWith();
-                const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
+                const currentRevisionIndex = this.revisionsToCompare().findIndex((x) => x === currentRevision);
                 switch (direction) {
                     case "newer": {
                         await this.changeLeftRevision(this.revisionsToCompare()[currentRevisionIndex - 1]);
@@ -1326,15 +1547,16 @@ class editDocument extends shardViewModelBase {
             default:
                 assertUnreachable.default(tab);
         }
-        
     }
-    
+
     canNavigateObservable(direction: "older" | "newer", tab: "right" | "left") {
         return ko.pureComputed(() => {
             switch (tab) {
                 case "right": {
                     const currentRevision = this.document();
-                    const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x.__metadata.changeVector() === currentRevision.__metadata.changeVector());
+                    const currentRevisionIndex = this.revisionsToCompare().findIndex(
+                        (x) => x.__metadata.changeVector() === currentRevision.__metadata.changeVector()
+                    );
                     switch (direction) {
                         case "newer": {
                             return currentRevisionIndex > 0;
@@ -1344,7 +1566,7 @@ class editDocument extends shardViewModelBase {
                                 // in case of previous mode we can't choose the oldest item, as we won't be able to compare with older than the oldest
                                 return currentRevisionIndex < this.revisionsToCompare().length - 2;
                             }
-                            
+
                             return currentRevisionIndex < this.revisionsToCompare().length - 1;
                         }
                         default:
@@ -1357,7 +1579,7 @@ class editDocument extends shardViewModelBase {
                         return false;
                     }
                     const currentRevision = this.comparingWith();
-                    const currentRevisionIndex = this.revisionsToCompare().findIndex(x => x === currentRevision);
+                    const currentRevisionIndex = this.revisionsToCompare().findIndex((x) => x === currentRevision);
                     switch (direction) {
                         case "newer": {
                             return currentRevisionIndex > 0;
@@ -1374,20 +1596,20 @@ class editDocument extends shardViewModelBase {
             }
         });
     }
-    
+
     async changeRightRevision(item: document): Promise<void> {
         const changeVector = item.__metadata.changeVector();
         const allRevisions = this.revisionsToCompare();
 
         await this.loadRevision(changeVector, this.editedDocId());
-        
+
         const rightDoc = this.document();
         const rightDocDto = rightDoc.toDiffDto();
         this.documentText(genUtils.stringify(rightDocDto));
         this.dirtyFlag().reset();
-        
+
         if (this.diffMode() === "previous") {
-            const currentIndex = allRevisions.findIndex(x => x.__metadata.changeVector() === changeVector);
+            const currentIndex = allRevisions.findIndex((x) => x.__metadata.changeVector() === changeVector);
             if (currentIndex < this.revisionsToCompare().length - 1) {
                 await this.changeLeftRevision(this.revisionsToCompare()[currentIndex + 1]);
             }
@@ -1395,12 +1617,11 @@ class editDocument extends shardViewModelBase {
             this.renderDifferences();
         }
     }
-    
+
     async changeLeftRevision(item: document): Promise<void> {
         this.comparingWith(item);
-        
-        const leftDoc = await new getDocumentAtRevisionCommand(item.__metadata.changeVector(), this.db)
-            .execute();
+
+        const leftDoc = await new getDocumentAtRevisionCommand(item.__metadata.changeVector(), this.db).execute();
 
         if (leftDoc) {
             const leftDocDto = leftDoc.toDiffDto();
@@ -1409,21 +1630,21 @@ class editDocument extends shardViewModelBase {
 
         this.renderDifferences();
     }
-    
+
     private getDocumentPhysicalSize(id: string): JQueryPromise<Raven.Client.Documents.Commands.DocumentSizeDetails> {
         return new getDocumentPhysicalSizeCommand(id, this.db)
             .execute()
             .done((size) => {
                 this.sizeOnDiskActual(size.HumaneActualSize);
                 this.sizeOnDiskAllocated(size.HumaneAllocatedSize);
-                this.isCompressed(size.IsCompressed)
+                this.isCompressed(size.IsCompressed);
             })
             .fail(() => {
                 this.sizeOnDiskActual("Failed to get size");
                 this.sizeOnDiskAllocated("Failed to get size");
-            }); 
+            });
     }
-    
+
     private loadRevisionsBinEntry(id: string): JQueryPromise<document> {
         return new getRevisionsBinDocumentMetadataCommand(id, this.db)
             .execute()
@@ -1443,7 +1664,7 @@ class editDocument extends shardViewModelBase {
 
     private loadRevisionWithDirtyCheck(changeVector: string) {
         if (!this.inDiffMode() && this.dirtyFlag().isDirty() && !this.inReadOnlyMode()) {
-            this.discardStayResult().then(result => {
+            this.discardStayResult().then((result) => {
                 if (result.can) {
                     this.loadRevision(changeVector, this.editedDocId());
                 }
@@ -1452,25 +1673,27 @@ class editDocument extends shardViewModelBase {
             this.loadRevision(changeVector, this.editedDocId());
         }
     }
-    
-    private loadRevision(changeVector: string, documentId: string) : JQueryPromise<document> {
+
+    private loadRevision(changeVector: string, documentId: string): JQueryPromise<document> {
         this.isBusy(true);
-        
+
         router.navigate(appUrl.forViewDocumentAtRevision(documentId, changeVector, this.db), false);
 
         return new getDocumentAtRevisionCommand(changeVector, this.db)
             .execute()
             .done((doc: document) => {
                 this.inReadOnlyMode(true);
-                
+
                 this.document(doc);
                 this.displayDocumentChange(false);
-                this.getRevisionPhysicalSize(changeVector)
+                this.getRevisionPhysicalSize(changeVector);
                 this.revisionChangeVector(changeVector);
 
                 this.dirtyFlag().reset();
             })
-            .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
+            .fail(() =>
+                messagePublisher.reportError("Could not find requested revision. Redirecting to latest version")
+            )
             .always(() => this.isBusy(false));
     }
 
@@ -1484,21 +1707,19 @@ class editDocument extends shardViewModelBase {
 
     refreshDocument() {
         eventsCollector.default.reportEvent("document", "refresh");
-        this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
-            .done(() => {
-                const docId = this.editedDocId();
-                this.userSpecifiedId("");
-                this.loadDocument(docId)
-                    .done(() => {
-                        this.connectedDocuments.gridController().reset(true);
-                    });
-
-                this.displayDocumentChange(false);
-                
-                if (this.collapseDocsWhenOpening() || this.isDocumentCollapsed()) {
-                    this.forceFold = true;
-                }
+        this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?").done(() => {
+            const docId = this.editedDocId();
+            this.userSpecifiedId("");
+            this.loadDocument(docId).done(() => {
+                this.connectedDocuments.gridController().reset(true);
             });
+
+            this.displayDocumentChange(false);
+
+            if (this.collapseDocsWhenOpening() || this.isDocumentCollapsed()) {
+                this.forceFold = true;
+            }
+        });
     }
 
     navigateAfterExternalDelete() {
@@ -1536,8 +1757,9 @@ class editDocument extends shardViewModelBase {
         eventsCollector.default.reportEvent("document", "delete");
         const doc = this.document();
         if (doc) {
-            
-            const transactionMode: Raven.Client.Documents.Session.TransactionMode = isClusterWide ? "ClusterWide" : "SingleNode";
+            const transactionMode: Raven.Client.Documents.Session.TransactionMode = isClusterWide
+                ? "ClusterWide"
+                : "SingleNode";
 
             const viewModel = new deleteDocuments([doc.getId()], this.db, transactionMode);
             viewModel.deletionTask.done(() => {
@@ -1546,7 +1768,7 @@ class editDocument extends shardViewModelBase {
                 this.displayDocumentDeleted(false);
             });
             app.showBootstrapDialog(viewModel, editDocument.editDocSelector);
-        } 
+        }
     }
 
     formatDocument() {
@@ -1577,15 +1799,18 @@ class editDocument extends shardViewModelBase {
         const doc: document = this.document();
         const generate = new generateClassCommand(this.db, doc.getId(), "csharp");
         const deferred = generate.execute();
-        deferred.done((code: string) => app.showBootstrapDialog(new showDataDialog("The Generated C# Class", code, "csharp", null)));
+        deferred.done((code: string) =>
+            app.showBootstrapDialog(new showDataDialog("The Generated C# Class", code, "csharp", null))
+        );
     }
-    
+
     private setActiveTab() {
         if (this.isDeleteRevision()) {
             this.connectedDocuments.activateRevisions(true);
         } else if (!this.canViewAttachments() || !this.canViewCounters()) {
             this.connectedDocuments.activateRecent();
-        } else if (this.inReadOnlyMode()) { // revision mostly...
+        } else if (this.inReadOnlyMode()) {
+            // revision mostly...
             this.connectedDocuments.activateRevisions(false);
         } else {
             this.connectedDocuments.activateAttachments();
@@ -1597,7 +1822,8 @@ class editDocument extends shardViewModelBase {
             documentId: documentId,
             name: file.Name,
             contentType: file.ContentType,
-            size: file.Size
+            size: file.Size,
+            remoteParameters: file.RemoteParameters,
         };
     }
 
@@ -1614,12 +1840,12 @@ class editDocument extends shardViewModelBase {
         this.documentTextLeft("");
         this.revisionsToCompare([]);
         this.comparingWith(null);
-        
+
         if (this.currentDiff()) {
             this.currentDiff().destroy();
             this.currentDiff(undefined);
         }
-        
+
         this.inDiffMode(false);
         this.adjustCollapseState();
     }
@@ -1632,13 +1858,13 @@ class editDocument extends shardViewModelBase {
     }
 
     getBadgeText(number: KnockoutObservable<number>): KnockoutComputed<string> {
-        return ko.pureComputed(() => number() ? genUtils.getCountPrefix(number()) : "");
+        return ko.pureComputed(() => (number() ? genUtils.getCountPrefix(number()) : ""));
     }
 
     getBadgeTitle(number: KnockoutObservable<number>): KnockoutComputed<string> {
-        return ko.pureComputed(() => number() ? number().toLocaleString() : "");
+        return ko.pureComputed(() => (number() ? number().toLocaleString() : ""));
     }
-    
+
     getBadgeClasses(number: KnockoutObservable<number>): KnockoutComputed<string> {
         return ko.pureComputed(() => {
             const sizeClass = genUtils.getSizeClass(number());
@@ -1658,29 +1884,40 @@ class editDocument extends shardViewModelBase {
 }
 
 class normalCrudActions implements editDocumentCrudActions {
-    
     private readonly document: KnockoutObservable<document>;
     private readonly db: database;
     private readonly loadDocument: (id: string) => JQueryPromise<document>;
-    private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => void | JQueryPromise<void>;
+    private readonly onDocumentSavedAction: (
+        saveResult: saveDocumentResponseDto,
+        localDoc: any,
+        forceRevisionCreation: boolean
+    ) => void | JQueryPromise<void>;
 
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
     revisionsCount = ko.observable<number>();
     timeSeriesCount: KnockoutComputed<number>;
 
-    constructor(document: KnockoutObservable<document>, db: database, loadDocument: (id: string) => JQueryPromise<document>,
-                onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean) => void | JQueryPromise<void>) {
+    constructor(
+        document: KnockoutObservable<document>,
+        db: database,
+        loadDocument: (id: string) => JQueryPromise<document>,
+        onDocumentSaved: (
+            saveResult: saveDocumentResponseDto,
+            localDoc: any,
+            forcedRevisionCreation: boolean
+        ) => void | JQueryPromise<void>
+    ) {
         this.document = document;
         this.db = db;
         this.loadDocument = loadDocument;
         this.onDocumentSavedAction = onDocumentSaved;
-        
+
         _.bindAll(this, "setCounter");
 
         this.initObservables();
     }
-    
+
     initObservables() {
         this.attachmentsCount = ko.pureComputed(() => {
             const doc = this.document();
@@ -1690,14 +1927,14 @@ class normalCrudActions implements editDocumentCrudActions {
 
             return doc.__metadata.attachments().length;
         });
-        
+
         this.timeSeriesCount = ko.pureComputed(() => {
             const doc = this.document();
 
             if (doc && doc.__metadata && doc.__metadata.revisionTimeSeries().length) {
                 return doc.__metadata.revisionTimeSeries().length;
             }
-            
+
             if (!doc || !doc.__metadata || !doc.__metadata.timeSeries()) {
                 return 0;
             }
@@ -1721,37 +1958,40 @@ class normalCrudActions implements editDocumentCrudActions {
     }
 
     setCounter(counter: counterItem) {
-        const saveAction = (newCounter: boolean, counterName: string, newValue: number,
-                            db: database, onCounterNameError: (error: string) => void): JQueryPromise<CountersDetail> => {
+        const saveAction = (
+            newCounter: boolean,
+            counterName: string,
+            newValue: number,
+            db: database,
+            onCounterNameError: (error: string) => void
+        ): JQueryPromise<CountersDetail> => {
             const documentId = this.document().getId();
 
             const saveTask = () => {
                 const previousValue = counter ? counter.totalCounterValue : 0;
                 const counterDeltaValue = newValue - previousValue;
-                return new setCounterCommand(counterName, counterDeltaValue, documentId, db)
-                    .execute()
-                    .done(() => {
-                        this.loadDocument(this.document().getId());
-                    })
+                return new setCounterCommand(counterName, counterDeltaValue, documentId, db).execute().done(() => {
+                    this.loadDocument(this.document().getId());
+                });
             };
-    
+
             if (newCounter) {
                 return new getCountersCommand(documentId, db)
                     .execute()
                     .then((counters: Raven.Client.Documents.Operations.Counters.CountersDetail) => {
-                        if (counters.Counters.find(x => x.CounterName === counterName)) {
+                        if (counters.Counters.find((x) => x.CounterName === counterName)) {
                             const error = "Counter '" + counterName + "' already exists.";
                             onCounterNameError(error);
                             return $.Deferred<CountersDetail>().reject(error);
                         } else {
                             return saveTask();
                         }
-                    })
+                    });
             } else {
                 return saveTask();
             }
         };
-        
+
         eventsCollector.default.reportEvent("counters", "set");
         const setCounterView = new setCounterDialog(counter, this.db, true, saveAction);
 
@@ -1760,9 +2000,10 @@ class normalCrudActions implements editDocumentCrudActions {
 
     deleteAttachment(file: attachmentItem) {
         eventsCollector.default.reportEvent("attachments", "delete");
-        viewHelpers.confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, {
-            buttons: ["Cancel", "Delete"]
-        })
+        viewHelpers
+            .confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, {
+                buttons: ["Cancel", "Delete"],
+            })
             .done((result) => {
                 if (result.can) {
                     new deleteAttachmentCommand(file.documentId, file.name, this.db)
@@ -1774,9 +2015,10 @@ class normalCrudActions implements editDocumentCrudActions {
 
     deleteCounter(counter: counterItem) {
         eventsCollector.default.reportEvent("counter", "delete");
-        viewHelpers.confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, {
-            buttons: ["Cancel", "Delete"]
-        })
+        viewHelpers
+            .confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, {
+                buttons: ["Cancel", "Delete"],
+            })
             .done((result) => {
                 if (result.can) {
                     new deleteCounterCommand(counter.counterName, counter.documentId, this.db)
@@ -1792,17 +2034,17 @@ class normalCrudActions implements editDocumentCrudActions {
         let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
 
         if (nameFilter) {
-            attachments = attachments.filter(file => file.Name.toLocaleLowerCase().includes(nameFilter));
+            attachments = attachments.filter((file) => file.Name.toLocaleLowerCase().includes(nameFilter));
         }
 
-        const mappedFiles = attachments.map(file => editDocument.mapToAttachmentItem(doc.getId(), file));
+        const mappedFiles = attachments.map((file) => editDocument.mapToAttachmentItem(doc.getId(), file));
 
         return $.Deferred<pagedResult<attachmentItem>>().resolve({
             items: mappedFiles,
-            totalResultCount: mappedFiles.length
+            totalResultCount: mappedFiles.length,
         });
     }
-    
+
     fetchCounters(nameFilter: string): JQueryPromise<pagedResult<counterItem>> {
         const doc = this.document();
 
@@ -1810,7 +2052,7 @@ class normalCrudActions implements editDocumentCrudActions {
             let counters = doc.__metadata.revisionCounters();
 
             if (nameFilter) {
-                counters = counters.filter(c => c.name.toLocaleLowerCase().includes(nameFilter));
+                counters = counters.filter((c) => c.name.toLocaleLowerCase().includes(nameFilter));
             }
 
             return $.when({
@@ -1819,10 +2061,10 @@ class normalCrudActions implements editDocumentCrudActions {
                         documentId: doc.getId(),
                         counterName: x.name,
                         totalCounterValue: x.value,
-                        counterValuesPerNode: []
-                    }
+                        counterValuesPerNode: [],
+                    };
                 }),
-                totalResultCount: counters.length
+                totalResultCount: counters.length,
             });
         }
 
@@ -1833,26 +2075,25 @@ class normalCrudActions implements editDocumentCrudActions {
         const fetchTask = $.Deferred<pagedResult<counterItem>>();
         new getCountersCommand(doc.getId(), this.db)
             .execute()
-            .done(result => {
+            .done((result) => {
                 if (nameFilter) {
-                    result.Counters = result.Counters
-                        .filter(x => x.CounterName.toLocaleLowerCase().includes(nameFilter));
+                    result.Counters = result.Counters.filter((x) =>
+                        x.CounterName.toLocaleLowerCase().includes(nameFilter)
+                    );
                 }
-                const mappedResults = result.Counters
-                    .filter(x => x) //RavenDB-19823 - server return nulls in counters -> then ignore it
-                    .map(x => normalCrudActions.resultItemToCounterItem(x));
+                const mappedResults = result.Counters.filter((x) => x) //RavenDB-19823 - server return nulls in counters -> then ignore it
+                    .map((x) => normalCrudActions.resultItemToCounterItem(x));
 
                 fetchTask.resolve({
                     items: mappedResults,
-                    totalResultCount: result.Counters.length
+                    totalResultCount: result.Counters.length,
                 });
-
             })
-            .fail(xhr => fetchTask.reject(xhr));
+            .fail((xhr) => fetchTask.reject(xhr));
 
         return fetchTask.promise();
     }
-    
+
     fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
         const doc = this.document();
 
@@ -1860,94 +2101,104 @@ class normalCrudActions implements editDocumentCrudActions {
             let timeSeries = doc.__metadata.revisionTimeSeries();
 
             if (nameFilter) {
-                timeSeries = timeSeries.filter(ts => ts.name.toLocaleLowerCase().includes(nameFilter));
+                timeSeries = timeSeries.filter((ts) => ts.name.toLocaleLowerCase().includes(nameFilter));
             }
-            
+
             return $.when({
-                items: timeSeries.map(x => {
+                items: timeSeries.map((x) => {
                     return {
-                        
                         name: x.name,
                         numberOfEntries: x.count,
                         startDate: x.start,
-                        endDate: x.end
+                        endDate: x.end,
                     };
                 }),
-                totalResultCount: timeSeries.length
+                totalResultCount: timeSeries.length,
             });
         }
-        
+
         if (!doc.__metadata.hasFlag("HasTimeSeries")) {
             return connectedDocuments.emptyDocResult<timeSeriesItem>();
         }
-        
+
         const fetchTask = $.Deferred<pagedResult<timeSeriesItem>>();
         new getTimeSeriesStatsCommand(doc.getId(), this.db)
             .execute()
-            .done(result => {
+            .done((result) => {
                 if (nameFilter) {
-                    result.TimeSeries = result.TimeSeries
-                        .filter(x => x.Name.toLocaleLowerCase().includes(nameFilter));
+                    result.TimeSeries = result.TimeSeries.filter((x) =>
+                        x.Name.toLocaleLowerCase().includes(nameFilter)
+                    );
                 }
 
-                const mappedResults = result.TimeSeries
-                    .map(x => normalCrudActions.resultItemToTimeSeriesItem(x));
+                const mappedResults = result.TimeSeries.map((x) => normalCrudActions.resultItemToTimeSeriesItem(x));
 
                 fetchTask.resolve({
                     items: mappedResults,
-                    totalResultCount: result.TimeSeries.length
+                    totalResultCount: result.TimeSeries.length,
                 });
             })
-            .fail(xhr => fetchTask.reject(xhr));
-        
-        
+            .fail((xhr) => fetchTask.reject(xhr));
+
         return fetchTask.promise();
     }
 
-    private static resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
+    private static resultItemToCounterItem(
+        counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail
+    ): counterItem {
         const counter = counterDetail;
 
         const valuesPerNode = Array<nodeCounterValue>();
         for (const nodeDetails in counter.CounterValues) {
-            const [nodeTag, dbId] = _.split(nodeDetails, '-', 2);
+            const [nodeTag, dbId] = _.split(nodeDetails, "-", 2);
             valuesPerNode.unshift({
                 nodeTag: nodeTag,
                 databaseId: dbId,
-                nodeCounterValue: counter.CounterValues[nodeDetails]
-            })
+                nodeCounterValue: counter.CounterValues[nodeDetails],
+            });
         }
 
         return {
             documentId: counter.DocumentId,
             counterName: counter.CounterName,
             totalCounterValue: counter.TotalValue,
-            counterValuesPerNode: valuesPerNode
+            counterValuesPerNode: valuesPerNode,
         };
     }
-    
-    private static resultItemToTimeSeriesItem(timeSeriesDetail: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesItemDetail): timeSeriesItem {
+
+    private static resultItemToTimeSeriesItem(
+        timeSeriesDetail: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesItemDetail
+    ): timeSeriesItem {
         return {
             numberOfEntries: timeSeriesDetail.NumberOfEntries,
             name: timeSeriesDetail.Name,
             startDate: timeSeriesDetail.StartDate,
-            endDate: timeSeriesDetail.EndDate
-        }
+            endDate: timeSeriesDetail.EndDate,
+        };
     }
 
     fetchRevisionsCount(docId: string, db: database): void {
         new getDocumentRevisionsCountCommand(docId, db)
             .execute()
-            .done((result: Raven.Client.Documents.Session.Operations.GetRevisionsCountOperation.DocumentRevisionsCount) => {
-                this.revisionsCount(result.RevisionsCount);
-            });
+            .done(
+                (
+                    result: Raven.Client.Documents.Session.Operations.GetRevisionsCountOperation.DocumentRevisionsCount
+                ) => {
+                    this.revisionsCount(result.RevisionsCount);
+                }
+            );
     }
 
     saveRelatedItems() {
         // no action required
         return $.when<void>(null);
     }
-    
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean): void | JQueryPromise<void> {
+
+    onDocumentSaved(
+        saveResult: saveDocumentResponseDto,
+        localDoc: any,
+        forceRevisionCreation: boolean
+    ): void | JQueryPromise<void> {
         this.onDocumentSavedAction(saveResult, localDoc, forceRevisionCreation);
     }
 }
@@ -1956,54 +2207,65 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     counters = ko.observableArray<counterItem>();
     attachments = ko.observableArray<attachmentItem>();
     timeSeries = ko.observableArray<timeSeriesItem>();
-    
+
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
     revisionsCount = ko.observable<number>(0);
     timeSeriesCount: KnockoutComputed<number>;
-    
+
     private readonly parentView: editDocument;
     private readonly sourceDocumentId: string;
     private readonly db: database;
     private readonly reload: () => void;
-    
+
     private changeVector: string;
     private fromRevision: boolean;
-    
-    constructor(parentView: editDocument, db: database, attachments: attachmentItem[], timeSeries: timeSeriesItem[], counters: counterItem[], reload: () => void) {
+
+    constructor(
+        parentView: editDocument,
+        db: database,
+        attachments: attachmentItem[],
+        timeSeries: timeSeriesItem[],
+        counters: counterItem[],
+        reload: () => void
+    ) {
         this.parentView = parentView;
         this.sourceDocumentId = parentView.editedDocId();
-        
+
         this.db = db;
         this.reload = reload;
 
         const sourceDocument = parentView.document();
         this.fromRevision = sourceDocument.__metadata.hasFlag("Revision");
         this.changeVector = sourceDocument.__metadata.changeVector();
-        
+
         this.attachments(attachments);
         this.timeSeries(timeSeries);
         this.counters(counters);
 
         _.bindAll(this, "setCounter");
-        
+
         this.initObservables();
     }
-    
+
     initObservables() {
         this.attachmentsCount = ko.pureComputed(() => this.attachments().length);
         this.countersCount = ko.pureComputed(() => this.counters().length);
         this.timeSeriesCount = ko.pureComputed(() => this.timeSeries().length);
     }
-    
-    setCounter(counter: counterItem) {
-        const saveAction = (newCounter: boolean, counterName: string, newValue: number,
-                            db: database, onCounterNameError: (error: string) => void): JQueryPromise<CountersDetail> => {
 
+    setCounter(counter: counterItem) {
+        const saveAction = (
+            newCounter: boolean,
+            counterName: string,
+            newValue: number,
+            db: database,
+            onCounterNameError: (error: string) => void
+        ): JQueryPromise<CountersDetail> => {
             const task = $.Deferred<CountersDetail>();
-            
-            const existing = this.counters().find(x => x.counterName === counterName);
-            
+
+            const existing = this.counters().find((x) => x.counterName === counterName);
+
             if (newCounter) {
                 if (existing) {
                     const error = "Counter '" + counterName + "' already exists.";
@@ -2014,17 +2276,17 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
                         counterName: counterName,
                         totalCounterValue: newValue,
                         documentId: null,
-                        counterValuesPerNode: []
-                    })
+                        counterValuesPerNode: [],
+                    });
                 }
             } else {
                 existing.totalCounterValue = newValue;
             }
-            
+
             this.reload();
             return task.resolve(null);
         };
-        
+
         eventsCollector.default.reportEvent("counters", "set");
         const setCounterView = new setCounterDialog(counter, this.db, false, saveAction);
 
@@ -2045,12 +2307,12 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         let attachments: attachmentItem[] = this.attachments();
 
         if (nameFilter) {
-            attachments = attachments.filter(file => file.name.toLocaleLowerCase().includes(nameFilter));
+            attachments = attachments.filter((file) => file.name.toLocaleLowerCase().includes(nameFilter));
         }
 
         return $.Deferred<pagedResult<attachmentItem>>().resolve({
             items: attachments,
-            totalResultCount: attachments.length
+            totalResultCount: attachments.length,
         });
     }
 
@@ -2058,58 +2320,64 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         let counters: counterItem[] = this.counters();
 
         if (nameFilter) {
-            counters = counters.filter(counter => counter.counterName.toLocaleLowerCase().includes(nameFilter));
+            counters = counters.filter((counter) => counter.counterName.toLocaleLowerCase().includes(nameFilter));
         }
 
         return $.Deferred<pagedResult<counterItem>>().resolve({
             items: counters,
-            totalResultCount: counters.length
+            totalResultCount: counters.length,
         });
     }
-    
+
     fetchTimeSeries(nameFilter: string): JQueryPromise<pagedResult<timeSeriesItem>> {
         let timeSeries: timeSeriesItem[] = this.timeSeries();
 
         if (nameFilter) {
-            timeSeries = timeSeries.filter(ts => ts.name.toLocaleLowerCase().includes(nameFilter));
+            timeSeries = timeSeries.filter((ts) => ts.name.toLocaleLowerCase().includes(nameFilter));
         }
 
         return $.Deferred<pagedResult<timeSeriesItem>>().resolve({
             items: timeSeries,
-            totalResultCount: timeSeries.length
+            totalResultCount: timeSeries.length,
         });
     }
 
     fetchRevisionsCount(): void {
         // Not needed for clone view.
     }
-    
+
     saveRelatedItems(targetDocumentId: string): JQueryPromise<void> {
         const hasAttachments = this.attachmentsCount() > 0;
         const hasTimeSeries = this.timeSeriesCount() > 0;
         const hasCounters = this.countersCount() > 0;
-        
+
         if (hasAttachments || hasTimeSeries || hasCounters) {
-            
-            const attachmentNames = this.attachments().map(x => x.name);
-            const timeSeries = this.timeSeries().map(x => x.name);
-            
-            const counters: Array<{ name: string, value: number }> = this.counters().map(x => {
+            const attachmentNames = this.attachments().map((x) => x.name);
+            const timeSeries = this.timeSeries().map((x) => x.name);
+
+            const counters: Array<{ name: string; value: number }> = this.counters().map((x) => {
                 return {
                     name: x.counterName,
-                    value: x.totalCounterValue
-                }
+                    value: x.totalCounterValue,
+                };
             });
-            
-            return new cloneRelatedItemsCommand(this.sourceDocumentId, this.fromRevision, this.changeVector,
-                targetDocumentId, this.db, attachmentNames, timeSeries, counters)
-                .execute();
+
+            return new cloneRelatedItemsCommand(
+                this.sourceDocumentId,
+                this.fromRevision,
+                this.changeVector,
+                targetDocumentId,
+                this.db,
+                attachmentNames,
+                timeSeries,
+                counters
+            ).execute();
         } else {
             // no need for extra call
             return $.when<void>(null);
         }
     }
-    
+
     onDocumentSaved(saveResult: saveDocumentResponseDto) {
         this.parentView.dirtyFlag().reset();
         router.navigate(appUrl.forEditDoc(saveResult.Results[0]["@id"], this.db));

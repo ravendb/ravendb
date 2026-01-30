@@ -24,7 +24,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IDatabaseRecordActions DatabaseRecord();
 
-        IDocumentActions Documents(bool throwOnCollectionMismatchError = true);
+        IDocumentActions Documents(bool throwOnCollectionMismatchError = true, BackupKind? backupKind = null);
 
         IDocumentActions RevisionDocuments();
 

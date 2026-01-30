@@ -247,13 +247,19 @@ export function DetailedDatabaseStats() {
                             <DetailsBlock>
                                 {(data) => (
                                     <div>
-                                        <span>{data.CountOfAttachments.toLocaleString()}</span>
+                                        <span>{data.CountOfAttachments.toLocaleString()} total</span>
                                         {data.CountOfAttachments !== data.CountOfUniqueAttachments && (
                                             <>
-                                                <span className="text-muted">/</span>
+                                                <span className="text-muted">•</span>
                                                 <small>
                                                     <span className="text-muted">
-                                                        {data.CountOfUniqueAttachments.toLocaleString()} unique
+                                                        {data.CountOfUniqueAttachments.toLocaleString()} unique (local)
+                                                    </span>
+                                                </small>
+                                                <span className="text-muted">•</span>
+                                                <small>
+                                                    <span className="text-muted">
+                                                        {data.CountOfRemoteAttachments.toLocaleString()} remote
                                                     </span>
                                                 </small>
                                             </>

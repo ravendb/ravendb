@@ -9,25 +9,29 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Attachments;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
+using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
-using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -45,6 +49,9 @@ namespace Raven.Server.Documents
 
     public unsafe partial class AttachmentsStorage
     {
+        public RemoteAttachmentsStorage RemoteAttachmentsStorage;
+        internal static ushort AttachmentHashSize = 44;
+
         internal readonly TableSchema AttachmentsSchema;
 
         private readonly DocumentDatabase _documentDatabase;
@@ -61,8 +68,10 @@ namespace Raven.Server.Documents
             AttachmentsSchema = schema ?? throw new ArgumentNullException(nameof(schema));
 
             tx.CreateTree(AttachmentsSlice);
-            AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
+            AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, AttachmentHashSize);
             _documentDatabase.DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
+
+            RemoteAttachmentsStorage = new RemoteAttachmentsStorage(tx, database);
         }
 
         public static long ReadLastEtag(Transaction tx)
@@ -74,7 +83,7 @@ namespace Raven.Server.Documents
             return it.SeekToLast() ? it.CurrentKey : 0;
         }
 
-        public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag, bool remoteAttachments)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -83,12 +92,33 @@ namespace Raven.Server.Documents
                 var attachment = TableValueToAttachment(context, ref result.Reader);
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
-                if (stream == null)
+                if (stream == null && attachment.RemoteParameters.IsRemoteStorageAttachment() == false)
+                {
                     ThrowMissingAttachment(context, attachment.Key);
+                }
+                else
+                {
+                    attachment.Stream = stream;
+                }
 
-                attachment.Stream = stream;
+                yield return AttachmentReplicationItem.From(context, attachment, remoteAttachments);
+            }
+        }
 
-                yield return AttachmentReplicationItem.From(context, attachment);
+        public IEnumerable<Attachment> GetAllAttachments(DocumentsOperationContext context, bool includeStream = false)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], 0, 0))
+            {
+                var attachment = TableValueToAttachment(context, ref result.Reader);
+                if (includeStream)
+                {
+                    var stream = GetAttachmentStream(context, attachment.Base64Hash);
+                    attachment.Stream = stream;
+                }
+
+                yield return attachment;
             }
         }
 
@@ -109,10 +139,32 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
+        public GetAttachmentHashCountCommand.Response GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
+
+            using var scope = context.Allocator.Allocate(sizeof(int) + 1 + hash.Size, out ByteString keyMem); // key size+separator+hash size
+            keyMem.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
+            Memory.Copy(keyMem.Ptr + sizeof(int) + 1, hash.Content.Ptr, hash.Size);
+
+            Slice slice;
+            var remoteHashes = GetHashesCount(RemoteAttachmentFlags.Remote);
+            var localHashes = GetHashesCount(RemoteAttachmentFlags.None);
+
+            return new GetAttachmentHashCountCommand.Response
+            {
+                Hash = hash.ToString(),
+                LocalAttachmentsCount = localHashes,
+                RemoteAttachmentsCount = remoteHashes,
+                Count = localHashes + remoteHashes
+            };
+
+            long GetHashesCount(RemoteAttachmentFlags flag)
+            {
+                *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
+                slice = new Slice(SliceOptions.Key, keyMem);
+                return table.GetCountOfMatchesFor(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
+            }
         }
 
         internal IEnumerable<AttachmentNameWithCount> GetAttachmentsMetadataForDocumentWithCounts(DocumentsOperationContext context, string lowerDocumentId)
@@ -122,21 +174,71 @@ namespace Raven.Server.Documents
             {
                 foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
+                    var counts = GetCountOfAttachmentsForHash(context, attachment.Base64Hash);
                     yield return new AttachmentNameWithCount
                     {
                         Name = attachment.Name,
                         Hash = attachment.Base64Hash.ToString(),
                         ContentType = attachment.ContentType,
                         Size = attachment.Size,
-                        Count = GetCountOfAttachmentsForHash(context, attachment.Base64Hash)
+                        LocalStorageCount = counts.LocalAttachmentsCount,
+                        RemoteStorageCount = counts.RemoteAttachmentsCount,
+                        Count = counts.Count
                     };
                 }
             }
         }
 
-        public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
-            string hash, string expectedChangeVector = null, Stream stream = null, bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false)
+        public void MarkAsRemoteAttachment(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, LazyStringValue name, LazyStringValue contentType, LazyStringValue hash, long sizeInBytes)
         {
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out var nameSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out var contentTypeSlice))
+            using (Slice.External(context.Allocator, hash, out var hashSlice))
+            using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                       hashSlice, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
+            {
+                if (TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out _) == false)
+                    throw new DocumentDoesNotExistException($"Cannot update metadata of remote attachment '{name}' on a non existent document '{documentId}'.");
+
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                if (table.ReadByKey(keySlice, out TableValueReader attachmentTvr) == false)
+                    throw new AttachmentDoesNotExistException($"Cannot update metadata of remote attachment '{keySlice}' that belongs to document '{lowerDocumentId}' because it doesn't exists.");
+
+                var attachmentEtag = _documentsStorage.GenerateNextEtag();
+                var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                var remoteAt = TableValueToLong((int)AttachmentsTable.RemoteAt, ref attachmentTvr);
+
+                using (TableValueToSlice(context, (int)AttachmentsTable.Identifier, ref attachmentTvr, out var identifierSlice))
+                using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                    tvb.Add(Bits.SwapBytes(attachmentEtag));
+                    tvb.Add(nameSlice);
+                    tvb.Add(contentTypeSlice);
+                    tvb.Add(hashSlice);
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add(changeVectorSlice);
+                    tvb.Add(sizeInBytes);
+                    tvb.Add(Bits.SwapBytes((int)RemoteAttachmentFlags.Remote)); // add Remote flag
+                    tvb.Add(remoteAt);
+                    tvb.Add(identifierSlice);
+                    table.Update(attachmentTvr.Id, tvb);
+
+                    // Delete the attachment stream if needed
+                    context.Transaction.CheckIfShouldDeleteAttachmentStream(hashSlice);
+                }
+
+                // The document will be updated by the caller, after all its attachments will be marked as "Remote"
+            }
+        }
+
+        public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
+            string hash, long size, RemoteAttachmentParameters remoteParams, string expectedChangeVector = null, Stream stream = null,
+            bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, bool fromEtl = false)
+        {
+            (RemoteAttachmentFlags flags, DateTime? remoteAtDt, string identifier) = GetInfoFromRemoteAttachmentParameters(remoteParams);
+
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
@@ -155,39 +257,58 @@ namespace Raven.Server.Documents
                     var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out tvr);
                     if (hasDoc == false)
                         throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
-                    var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
-                    if (flags.HasFlag(DocumentFlags.Artificial))
+                    if (TableValueToFlags((int)DocumentsTable.Flags, ref tvr).HasFlag(DocumentFlags.Artificial))
                         throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
                 }
-
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                 using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
                 using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
                            lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
                 {
-                    Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
+                    Debug.Assert(base64Hash.Size == AttachmentHashSize, $"Hash size should be 44 but was: {keySlice.Size}");
+
 
                     DeleteTombstoneIfNeeded(context, keySlice);
 
                     var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
                     Debug.Assert(changeVector != null);
+                    long remoteAt;
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                    void SetTableValue(TableValueBuilder tvb, Slice cv)
+                    IDisposable SetTableValue(out TableValueBuilder tvb)
                     {
+                        var toDispose = new List<IDisposable>();
+                        Slice identifierSlice = Slices.Empty;
+                        if (string.IsNullOrEmpty(identifier) == false)
+                            toDispose.Add(Slice.From(context.Allocator, identifier, out identifierSlice));
+                        toDispose.Add(Slice.From(context.Allocator, changeVector, out var changeVectorSlice));
+                        toDispose.Add(table.Allocate(out tvb));
+
                         tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                         tvb.Add(Bits.SwapBytes(attachmentEtag));
                         tvb.Add(namePtr);
                         tvb.Add(contentTypePtr);
                         tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);
                         tvb.Add(context.GetTransactionMarker());
-                        tvb.Add(cv.Content.Ptr, cv.Size);
+                        tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
+                        tvb.Add(size);
+                        tvb.Add(Bits.SwapBytes((int)flags));
+                        tvb.Add(remoteAt);
+                        tvb.Add(identifierSlice.Content.Ptr, identifierSlice.Size);
+
+                        return new DisposableAction(() =>
+                        {
+                            foreach (var item in toDispose)
+                            {
+                                item.Dispose();
+                            }
+                        });
                     }
 
-                    if (table.ReadByKey(keySlice, out TableValueReader oldValue))
+                    if (table.ReadByKey(keySlice, out TableValueReader oldValue) && TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue) == RemoteAttachmentFlags.None)
                     {
-                        // This is an update to the attachment with the same stream and content type
+                        // This is an update to the local storage attachment with the same stream and content type
                         // Just updating the etag and casing of the name and the content type.
 
                         if (expectedChangeVector != null)
@@ -197,10 +318,11 @@ namespace Raven.Server.Documents
                                 ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
                         }
 
-                        using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-                        using (table.Allocate(out TableValueBuilder tvb))
+                        size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
+                        remoteAt = RemoteAttachmentsStorage.TryUpdateRemoteAttachment(context, documentId, name, remoteAtDt, TableValueToLong((int)AttachmentsTable.RemoteAt, ref oldValue), identifier, TableValueToString(context, (int)AttachmentsTable.Identifier, ref oldValue), keySlice);
+
+                        using (SetTableValue(out TableValueBuilder tvb))
                         {
-                            SetTableValue(tvb, changeVectorSlice);
                             table.Update(oldValue.Id, tvb);
                         }
                     }
@@ -241,7 +363,7 @@ namespace Raven.Server.Documents
                                 // Delete the attachment stream only if we have a different hash
                                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {
-                                    putStream = existingHash.Content.Match(base64Hash.Content) == false;
+                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref partialTvr) is RemoteAttachmentFlags.Remote;
                                     if (putStream)
                                     {
                                         using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
@@ -249,7 +371,8 @@ namespace Raven.Server.Documents
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
                                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
+                                            var existingRemoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, ref partialTvr);
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, existingRemoteAtTicks);
                                         }
                                     }
                                 }
@@ -265,18 +388,45 @@ namespace Raven.Server.Documents
 
                         if (putStream && fromSmuggler == false)
                         {
-                            PutAttachmentStream(context, keySlice, base64Hash, stream);
+                            if (fromEtl == false || flags == RemoteAttachmentFlags.None)
+                            {
+                                PutAttachmentStream(context, keySlice, base64Hash, stream);
+                            }
                         }
 
-                        using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-                        using (table.Allocate(out TableValueBuilder tvb))
+                        if (fromSmuggler == false)
                         {
-                            SetTableValue(tvb, changeVectorSlice);
+                            if (fromEtl && flags == RemoteAttachmentFlags.Remote)
+                            {
+                                remoteAt = remoteAtDt.HasValue == false ? -1L : remoteAtDt.Value.Ticks;
+                            }
+                            else
+                            {
+                                Debug.Assert(flags == RemoteAttachmentFlags.None, "flags == AttachmentFlags.None");
+                                remoteAt = RemoteAttachmentsStorage.TryUpdateRemoteAttachment(context, documentId, name, remoteAtDt, currentDt: -1L, identifier, currentIdentifier: null, keySlice);
+                            }
+                        }
+                        else
+                        {
+                            if (remoteAtDt != null)
+                            {
+                                remoteAt = remoteAtDt.Value.Ticks;
+                                RemoteAttachmentsStorage.Put(context, keySlice, remoteAtDt.Value.GetDefaultRavenFormat(), identifier);
+                            }
+                            else
+                            {
+                                remoteAt = -1L;
+                            }
+                        }
+
+                        using (SetTableValue(out TableValueBuilder tvb))
+                        {
                             table.Insert(tvb);
                         }
                     }
 
                     _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
+
 
                     CollectionName collectionName = null;
                     if (updateDocument)
@@ -292,7 +442,8 @@ namespace Raven.Server.Documents
                         DocumentId = documentId,
                         Hash = hash,
                         Size = stream?.Length ?? -1,
-                        CollectionName = collectionName
+                        CollectionName = collectionName,
+                        RemoteParameters = remoteParams
                     };
                 }
             }
@@ -301,9 +452,9 @@ namespace Raven.Server.Documents
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>
-        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, string changeVector = null)
+        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, RemoteAttachmentParameters remoteParams, long size, bool isRevision, string changeVector = null)
         {
-            Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
+            Debug.Assert(base64Hash.Size == AttachmentHashSize, $"Hash size should be 44 but was: {key.Size}");
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -313,7 +464,6 @@ namespace Raven.Server.Documents
             }
             Debug.Assert(changeVector != null);
             DeleteTombstoneIfNeeded(context, key);
-
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             using (table.Allocate(out TableValueBuilder tvb))
@@ -325,8 +475,23 @@ namespace Raven.Server.Documents
                 tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
+                tvb.Add(size);
 
-                table.Set(tvb);
+                (RemoteAttachmentFlags flags, DateTime? remoteAt, string identifier) = WriteRemoteParameters(context, remoteParams, tvb, table);
+
+                if (isRevision == false)
+                {
+                    // this works similar to expiration, we populate the tree even if we don't have a configuration for remote attachments
+                    if (flags == RemoteAttachmentFlags.None && remoteAt.HasValue)
+                    {
+                        RemoteAttachmentsStorage.Put(context, key, remoteAt.Value.GetDefaultRavenFormat(), identifier);
+                    }
+                    else if (flags == RemoteAttachmentFlags.Remote)
+                    {
+                        // we got remote attachment, so we can remove the stream from data file
+                        context.Transaction.CheckIfShouldDeleteAttachmentStream(base64Hash);
+                    }
+                }
             }
 
             _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
@@ -360,31 +525,31 @@ namespace Raven.Server.Documents
                 var flags = DocumentFlags.None;
 
                 data.Modifications = new DynamicJsonValue(data);
-                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                if (data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata);
 
                     if (attachments.Count > 0)
                     {
                         flags |= DocumentFlags.HasAttachments;
-                        metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+                        metadata.Modifications[Client.Constants.Documents.Metadata.Attachments] = attachments;
                     }
                     else
                     {
-                        metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                        metadata.Modifications.Remove(Client.Constants.Documents.Metadata.Attachments);
                         flags &= ~DocumentFlags.HasAttachments;
                     }
 
-                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                    data.Modifications[Client.Constants.Documents.Metadata.Key] = metadata;
                 }
                 else
                 {
                     if (attachments.Count > 0)
                     {
                         flags |= DocumentFlags.HasAttachments;
-                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        data.Modifications[Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Documents.Metadata.Attachments] = attachments
+                            [Client.Constants.Documents.Metadata.Attachments] = attachments
                         };
                     }
                     else
@@ -396,7 +561,8 @@ namespace Raven.Server.Documents
                 using (data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     collectionName = extractCollectionName ? _documentsStorage.ExtractCollectionName(context, data) : default;
-                    return _documentsStorage.Put(context, documentId, null, data, null, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate).ChangeVector;
+                    const NonPersistentDocumentFlags nonPersistentDocumentFlags = NonPersistentDocumentFlags.ByAttachmentUpdate | NonPersistentDocumentFlags.SkipSchemaValidation;
+                    return _documentsStorage.Put(context, documentId, null, data, null, null, null, flags, nonPersistentDocumentFlags).ChangeVector;
                 }
             }
             finally
@@ -409,11 +575,16 @@ namespace Raven.Server.Documents
         {
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
-                var exists = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, throwOnConflict: true, tvr: out TableValueReader tvr);
-                if (exists == false)
-                    return null;
-                return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, null, extractCollectionName: false, out var _);
+                return UpdateDocumentAfterAttachmentChangeInternal(context, lowerDocumentId, documentId);
             }
+        }
+
+        internal string UpdateDocumentAfterAttachmentChangeInternal(DocumentsOperationContext context, Slice lowerDocumentId, string documentId)
+        {
+            var exists = _documentsStorage.GetTableValueReaderForDocument(context, lowerDocumentId, throwOnConflict: true, tvr: out TableValueReader tvr);
+            if (exists == false)
+                return null;
+            return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, null, extractCollectionName: false, out var _);
         }
 
         public void DeleteAttachmentBeforeRevert(DocumentsOperationContext context, LazyStringValue lowerDocId)
@@ -451,12 +622,17 @@ namespace Raven.Server.Documents
 
                 if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                     attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
-                    attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                    attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                    attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
                     throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                 var cv = Slices.Empty;
                 var type = AttachmentType.Document;
-
+                RemoteAttachmentParameters remoteParams = null;
+                if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsBjro) && remoteParamsBjro != null)
+                {
+                    remoteParams = JsonDeserializationClient.RemoteAttachmentParameters(remoteParamsBjro);
+                }
                 using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerDocumentId))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice nameSlice))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
@@ -464,7 +640,7 @@ namespace Raven.Server.Documents
                 using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                            base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                 {
-                    PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
+                    PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, remoteParams, size, isRevision: false);
                 }
             }
         }
@@ -489,8 +665,38 @@ namespace Raven.Server.Documents
                 tvb.Add(hashSlice);
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add(changeVector.Content.Ptr, changeVector.Size);
+                tvb.Add(attachment.Size);
+
+                WriteRemoteParameters(context, attachment.RemoteParameters, tvb, table);
+            }
+        }
+
+        private static (RemoteAttachmentFlags Flags, DateTime? RemoteAt, string Identifier) WriteRemoteParameters(DocumentsOperationContext context, RemoteAttachmentParameters remoteParameters, TableValueBuilder tvb, Table table)
+        {
+            (RemoteAttachmentFlags flags, DateTime? remoteAt, string identifier) = GetInfoFromRemoteAttachmentParameters(remoteParameters);
+
+            tvb.Add(Bits.SwapBytes((int)flags));
+
+            if (remoteAt.HasValue)
+                tvb.Add(remoteAt.Value.Ticks);
+            else
+                tvb.Add(-1L);
+
+            if (string.IsNullOrEmpty(identifier))
+            {
+                tvb.Add(Slices.Empty.Content.Ptr, Slices.Empty.Size);
                 table.Set(tvb);
             }
+            else
+            {
+                using (Slice.From(context.Allocator, identifier, out var identifierSlice))
+                {
+                    tvb.Add(identifierSlice.Content.Ptr, identifierSlice.Size);
+                    table.Set(tvb);
+                }
+            }
+
+            return (flags, remoteAt, identifier);
         }
 
         public void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice base64Hash, Stream stream)
@@ -507,18 +713,30 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash)
         {
-            if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
-            {
-                var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                using (tree.GetStreamTag(hash, out var keySlice))
-                {
-                    if (keySlice.HasValue == false)
-                        return; // stream doesn't exists
+            var attachmentHashesCount = GetCountOfAttachmentsForHash(context, hash);
 
-                    tree.DeleteStream(hash);
-                }
+            if (attachmentHashesCount.LocalAttachmentsCount > 0)
+            {
+                return;
+            }
+
+            Debug.Assert(attachmentHashesCount.Count == attachmentHashesCount.RemoteAttachmentsCount);
+
+            // all attachments are remote or there is no attachments
+            DeleteAttachmentStreamInternal(context, hash);
+        }
+
+        private static void DeleteAttachmentStreamInternal(DocumentsOperationContext context, Slice hash)
+        {
+            var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
+            using (tree.GetStreamTag(hash, out var keySlice))
+            {
+                if (keySlice.HasValue == false)
+                    return;
+
+                tree.DeleteStream(hash);
             }
         }
 
@@ -546,21 +764,23 @@ namespace Raven.Server.Documents
                 if (attachment == null)
                     continue;
 
-                if (includeStreams == false)
+                if (attachment.RemoteParameters.IsRemoteStorageAttachment())
                 {
-                    attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
+                    yield return attachment;
                 }
                 else
                 {
-                    var stream = GetAttachmentStream(context, attachment.Base64Hash);
-                    if (stream == null)
-                        throw new FileNotFoundException($"Attachment's stream {attachment.Name} on {prefixSlice.ToString()} was not found. This should not happen and is likely a bug.");
+                    if (includeStreams)
+                    {
+                        var stream = GetAttachmentStream(context, attachment.Base64Hash);
+                        if (stream == null)
+                            throw new FileNotFoundException($"Attachment's stream {attachment.Name} on {prefixSlice.ToString()} was not found. This should not happen and is likely a bug.");
 
-                    attachment.Stream = stream;
-                    attachment.Size = stream.Length;
+                        attachment.Stream = stream;
+                    }
+
+                    yield return attachment;
                 }
-
-                yield return attachment;
             }
         }
 
@@ -569,6 +789,23 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (DocumentIdWorker.GetLower(context.Allocator, documentId, out var lowerDocumentIdSlice))
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
+            {
+                foreach (Attachment attachment in GetAttachmentsForDocumentInternal(context, type, lowerDocumentIdSlice, changeVectorSlice, table))
+                    yield return attachment;
+            }
+        }
+
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, Slice lowerDocumentIdSlice)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            foreach (Attachment attachment in GetAttachmentsForDocumentInternal(context, type, lowerDocumentIdSlice, Slices.Empty, table))
+                yield return attachment;
+
+        }
+
+        private static IEnumerable<Attachment> GetAttachmentsForDocumentInternal(DocumentsOperationContext context, AttachmentType type, Slice lowerDocumentIdSlice, Slice changeVectorSlice,
+            Table table)
+        {
             using (AttachmentKey.GetPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : changeVectorSlice, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
@@ -576,8 +813,6 @@ namespace Raven.Server.Documents
                     var attachment = TableValueToAttachment(context, ref sr.Value.Reader);
                     if (attachment == null)
                         continue;
-
-                    attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
 
                     yield return attachment;
                 }
@@ -589,15 +824,23 @@ namespace Raven.Server.Documents
             var attachments = new DynamicJsonArray();
             using (AttachmentKey.GetPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
-                foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
+                foreach (Attachment attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
-                    attachments.Add(new DynamicJsonValue
+                    var djv = new DynamicJsonValue
                     {
                         [nameof(AttachmentName.Name)] = attachment.Name,
                         [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
-                        [nameof(AttachmentName.Size)] = attachment.Size
-                    });
+                        [nameof(AttachmentName.Size)] = attachment.Size,
+   
+                    };
+
+                    if (attachment.RemoteParameters != null)
+                    {
+                        djv[nameof(AttachmentName.RemoteParameters)] = attachment.RemoteParameters.ToJson();
+                    }
+
+                    attachments.Add(djv);
                 }
             }
             return attachments;
@@ -617,7 +860,8 @@ namespace Raven.Server.Documents
                         ContentType = attachment.ContentType,
                         Size = attachment.Size,
                         ChangeVector = attachment.ChangeVector,
-                        DocumentId = lowerDocumentId.ToString()
+                        DocumentId = lowerDocumentId.ToString(),
+                        RemoteParameters = attachment.RemoteParameters
                     });
                 }
             }
@@ -666,7 +910,7 @@ namespace Raven.Server.Documents
                     var document = _documentsStorage.Get(context, documentId, throwOnConflict: false);
                     if (document != null &&
                         document.TryGetMetadata(out var metadata) &&
-                        metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
+                        metadata.TryGet(Client.Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
                         exitingDocumentCv == changeVector)
                     {
                         return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
@@ -676,11 +920,15 @@ namespace Raven.Server.Documents
                 return null;
             }
 
+            if (attachment.RemoteParameters.IsRemoteStorageAttachment())
+            {
+                return attachment;
+            }
+
             var stream = GetAttachmentStream(context, attachment.Base64Hash);
             if (stream == null)
                 throw new FileNotFoundException($"Attachment's stream {name} on {documentId} was not found. This should not happen and is likely a bug.");
             attachment.Stream = stream;
-            attachment.Size = stream.Length;
 
             return attachment;
         }
@@ -758,6 +1006,16 @@ namespace Raven.Server.Documents
             return tree.ReadStream(hashSlice);
         }
 
+        public LazyStringValue GetAttachmentNameByKey(DocumentsOperationContext context, Slice key)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            if (table.SeekOnePrimaryKeyPrefix(key, out TableValueReader tvr) == false)
+                return null;
+
+            return TableValueToId(context, (int)AttachmentsTable.Name, ref tvr);
+        }
+
         public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice, out string tag)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
@@ -768,10 +1026,21 @@ namespace Raven.Server.Documents
         public static long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return GetAttachmentStreamLength(tree, hashSlice);
+        }
+
+        private static long GetAttachmentStreamLength(Tree tree, Slice hashSlice)
+        {
             var info = tree.GetStreamInfo(hashSlice, false);
             if (info == null)
                 return -1;
             return info->TotalSize;
+        }
+
+        public (Stream Stream, long Size) GetAttachmentStreamAndLength(DocumentsOperationContext context, Slice hashSlice)
+        {
+            Tree tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return (tree.ReadStream(hashSlice), GetAttachmentStreamLength(tree, hashSlice));
         }
 
         public static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
@@ -783,8 +1052,14 @@ namespace Raven.Server.Documents
                 Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr),
                 ChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr),
                 Name = TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
-                ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr)
+                ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
+                Size = TableValueToLong((int)AttachmentsTable.Size, ref tvr),
             };
+
+            result.RemoteParameters = RemoteAttachmentExtensions.GetRemoteAttachmentParameters(
+                TableValueToString(context, (int)AttachmentsTable.Identifier, ref tvr),
+                TableValueToNullableDateTime((int)AttachmentsTable.RemoteAt, ref tvr),
+                TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr));
 
             TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
 
@@ -841,7 +1116,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 
             var hash = attachment.Base64Hash.ToString();
-            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RemoteParameters.IsRemoteStorageAttachment());
         }
 
         public MoveAttachmentDetailsServer MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true, bool extractCollectionName = false)
@@ -861,7 +1136,7 @@ namespace Raven.Server.Documents
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
-            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
+            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RemoteParameters.IsRemoteStorageAttachment());
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()
@@ -965,12 +1240,12 @@ namespace Raven.Server.Documents
         public void DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
             BlittableJsonReaderObject conflictDocument, string changeVector)
         {
-            if (conflictDocument.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject conflictMetadata) == false ||
-                conflictMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray conflictAttachments) == false)
+            if (conflictDocument.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject conflictMetadata) == false ||
+                conflictMetadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray conflictAttachments) == false)
                 return;
 
-            if (document == null || document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+            if (document == null || document.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
                 attachments = null;
             }
@@ -979,12 +1254,14 @@ namespace Raven.Server.Documents
             {
                 if (conflictAttachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue conflictName) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue conflictContentType) == false ||
-                    conflictAttachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue conflictHash) == false)
+                    conflictAttachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue conflictHash) == false ||
+                    conflictAttachment.TryGet(nameof(AttachmentName.Size), out long conflictSize) == false)
                 {
                     Debug.Assert(false, "Should never happen.");
                     continue;
                 }
 
+                conflictAttachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject conflictRemoteParamsBjro);
                 var attachmentFoundInResolveDocument = false;
                 if (attachments != null)
                 {
@@ -992,15 +1269,20 @@ namespace Raven.Server.Documents
                     {
                         if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                             attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
-                            attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
+                            attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
+                            attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
                         {
                             Debug.Assert(false, "Should never happen.");
                             continue;
                         }
 
+                        attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParamsBjro);
+
                         if (conflictName.Equals(name) &&
                             conflictContentType.Equals(contentType) &&
-                            conflictHash.Equals(hash))
+                            conflictHash.Equals(hash) &&
+                            conflictSize.Equals(size) &&
+                            Equals(conflictRemoteParamsBjro, remoteParamsBjro))
                         {
                             attachmentFoundInResolveDocument = true;
                             break;
@@ -1009,12 +1291,19 @@ namespace Raven.Server.Documents
                 }
 
                 if (attachmentFoundInResolveDocument == false)
-                    DeleteAttachmentDirect(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector);
+                {
+                    RemoteAttachmentParameters remoteParams = null;
+                    if (conflictRemoteParamsBjro != null)
+                    {
+                        remoteParams = JsonDeserializationClient.RemoteAttachmentParameters(conflictRemoteParamsBjro);
+                    }
+                    DeleteAttachmentFromConflict(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector, remoteParams);
+                }
             }
         }
 
-        private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
-            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector)
+        private void DeleteAttachmentFromConflict(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
+            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector, RemoteAttachmentParameters remoteParams)
         {
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, conflictName, out Slice lowerName))
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, conflictContentType, out Slice lowerContentType))
@@ -1024,6 +1313,7 @@ namespace Raven.Server.Documents
                        base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+
                 DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
             }
         }
@@ -1055,12 +1345,14 @@ namespace Raven.Server.Documents
                 table.ReadByKey(key, out tvr) == false)
             {
                 if (expectedChangeVector != null)
+                {
                     throw new ConcurrencyException($"Attachment {name} with key '{key}' does not exist, " +
                                                    $"but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ExpectedChangeVector = expectedChangeVector
                     };
+                }
 
                 // This basically means that we tried to delete attachment that doesn't exist.
                 long attachmentEtag;
@@ -1098,18 +1390,22 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
+                var remoteAtTicks = TableValueToLong((int)AttachmentsTable.RemoteAt, ref tvr);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, remoteAtTicks);
             }
 
             table.Delete(tvr.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash,
-            string changeVector, long lastModifiedTicks, DocumentFlags flags)
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, 
+             long lastModifiedTicks, DocumentFlags flags, long remoteAtTicks)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
-
+            if (remoteAtTicks != -1)
+            {
+                RemoteAttachmentsStorage.RemoveRemotePutValue(context, key, remoteAtTicks);
+            }
             // We may have another operation in the same transaction that would cause us to re-create
             // the missing references, let's move the actual stream delete to the end of the transaction
             context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
@@ -1147,8 +1443,26 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector,
+        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+        {
+            using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
+            using (AttachmentKey.GetPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
+            {
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags, isRevision: true);
+            }
+        }
+
+        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector,
             long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+        {
+            using (AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            {
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, flags, isRevision: false);
+            }
+        }
+
+        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector,
+            long lastModifiedTicks, DocumentFlags flags, bool isRevision)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             {
@@ -1158,27 +1472,11 @@ namespace Raven.Server.Documents
                     using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
                     {
                         var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
-                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags);
+
+                        long remoteAtTicks = isRevision ? -1L : TableValueToLong((int)AttachmentsTable.RemoteAt, ref before.Reader);
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, remoteAtTicks);
                     }
                 });
-            }
-        }
-
-        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
-        {
-            using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
-            using (AttachmentKey.GetPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
-            {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags);
-            }
-        }
-
-        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector,
-            long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
-        {
-            using (AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
-            {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, flags);
             }
         }
 
@@ -1192,8 +1490,8 @@ namespace Raven.Server.Documents
 
         public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+            if (document.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
             {
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -1206,7 +1504,7 @@ namespace Raven.Server.Documents
         {
             foreach (var hash in attachmentHashesToMaybeDelete)
             {
-                DeleteAttachmentStream(context, hash, 0);
+                DeleteAttachmentStream(context, hash);
             }
         }
 
@@ -1230,6 +1528,31 @@ namespace Raven.Server.Documents
             return table?.NumberOfEntries ?? 0;
         }
 
+        public long GetNumberOfAttachmentsForFlag(DocumentsOperationContext context, RemoteAttachmentFlags flag)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using var scope = SliceFromAttachmentFlagAndSeparator(context, flag, out var slice);
+            return table.GetCountOfMatchesForPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
+        }
+
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope SliceFromAttachmentFlagAndSeparator(DocumentsOperationContext context, RemoteAttachmentFlags flag, out Slice slice)
+        {
+            var scope = context.Allocator.Allocate(sizeof(int) + 1, out ByteString keyMem);
+            *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
+            keyMem.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
+            slice = new Slice(SliceOptions.Key, keyMem);
+
+            return scope;
+        }
+
+        internal static (RemoteAttachmentFlags Flags, DateTime? RemoteAtDt, string Identifier) GetInfoFromRemoteAttachmentParameters(RemoteAttachmentParameters remoteParams)
+        {
+            RemoteAttachmentFlags flags = remoteParams?.Flags ?? Client.Documents.Attachments.RemoteAttachmentFlags.None;
+            DateTime? remoteAtDt = remoteParams?.At;
+            string identifier = remoteParams?.Identifier;
+            return (flags, remoteAtDt, identifier);
+        }
+
         public static class AttachmentKey
         {
             /*
@@ -1249,12 +1572,17 @@ namespace Raven.Server.Documents
                 PartialKey,
                 Prefix
             }
-            
+
             private const byte RecordSeparator = SpecialChars.RecordSeparator;
             private const byte DocType = (byte)'d';
             private const byte RevisionType = (byte)'r';
 
             public static int GetSizeOfDocId(ReadOnlySpan<byte> key) => FindNextSeparator(key, 0);
+
+            public static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractLowerDocumentIdSliceFromAttachmentKey(DocumentsOperationContext context, Slice key, out Slice lowerDocumentId)
+            {
+                return Slice.External(context.Allocator, key.Content, 0, GetSizeOfDocId(key), out lowerDocumentId);
+            }
 
             public static (LazyStringValue DocId, LazyStringValue AttachmentName) ExtractDocIdAndAttachmentName(JsonOperationContext context,
                 LazyStringValue key)
@@ -1307,7 +1635,7 @@ namespace Raven.Server.Documents
                         throw new InvalidOperationException($"Invalid attachment key type {(char)keyType}({keyType:X}). Key {Encodings.Utf8.GetString(key)}");
                 }
             }
-            
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static ByteStringContext.InternalScope GetKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize,
                 byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize,
@@ -1430,7 +1758,7 @@ namespace Raven.Server.Documents
             {
                 var separatorIndex = FindNextSeparator(key.AsReadOnlySpan(), 0);
                 var typeIndex = separatorIndex + 1;
-                
+
                 if (typeIndex >= key.Size)
                     throw new InvalidOperationException($"Could not parse {nameof(key)}");
 
@@ -1441,7 +1769,7 @@ namespace Raven.Server.Documents
                 Debug.Assert(c == DocType);
                 return AttachmentType.Document;
             }
-            
+
             private static int FindNextSeparator(ReadOnlySpan<byte> key, int start)
             {
                 for (var i = start; i < key.Length; i++)

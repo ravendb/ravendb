@@ -191,7 +191,8 @@ namespace Raven.Server.Documents.Patch
                 {
                     DocumentCompareResult compareResult = default;
                     bool shouldUpdateMetadata = nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.ResolveCountersConflict) ||
-                                                nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.ResolveTimeSeriesConflict);
+                                                nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.ResolveTimeSeriesConflict) ||
+                                                nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.ResolveAttachmentsConflict);
 
                     if (shouldUpdateMetadata == false)
                     {
@@ -298,6 +299,7 @@ namespace Raven.Server.Documents.Patch
         {
             var nonPersistentFlags = AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentCountersToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveCountersConflict);
             nonPersistentFlags |= AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentTimeSeriesToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveTimeSeriesConflict);
+            nonPersistentFlags |= AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentAttachmentsToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveAttachmentsConflict);
 
             return nonPersistentFlags;
         }

@@ -127,7 +127,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     RequestHandler.ServerStore.LicenseManager.AssertCanAddQueueEtl();
                     break;
                 case EtlType.Snowflake:
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl();
+                    var snowflakeConfiguration = Client.Json.Serialization.JsonDeserializationClient.SnowflakeEtlConfiguration(etlConfiguration);
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddSnowflakeEtl(snowflakeConfiguration);
                     break;
                 case EtlType.EmbeddingsGeneration:
                     using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -139,9 +140,9 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         break;
                     }
                 case EtlType.GenAi:
-                    RequestHandler.ServerStore.LicenseManager.AssertCanAddGenAiTask();
+                    var genAiConfiguration = Client.Json.Serialization.JsonDeserializationClient.AiGenConfiguration(etlConfiguration);
+                    RequestHandler.ServerStore.LicenseManager.AssertCanAddGenAiTask(genAiConfiguration);
                     break;
-
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }

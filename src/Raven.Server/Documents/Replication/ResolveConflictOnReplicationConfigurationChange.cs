@@ -3,19 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
@@ -509,15 +507,17 @@ namespace Raven.Server.Documents.Replication
                 foreach (var attachment in group)
                 {
                     if (found == false && resolvedAttachmentsMetadata.Any(x =>
-                            x.Name == attachment.Name &&
-                            x.Hash == attachment.Hash &&
-                            x.ContentType == attachment.ContentType))
+                            x.Name == attachment.Name && 
+                            x.Hash == attachment.Hash && 
+                            x.ContentType == attachment.ContentType &&
+                            x.Size == attachment.Size &&
+                            x.RemoteParameters == attachment.RemoteParameters))
                     {
                         found = true;
-                        // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure
-                        // all nodes have the same change vector value after replication
-                        var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId,
-                            attachment.Name, attachment.ContentType, attachment.Hash,
+                       // we have to generate a _new_ change vector for the attachment, since it is resolved, to ensure
+                       // all nodes have the same change vector value after replication
+                        var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId, 
+                            attachment.Name, attachment.ContentType, attachment.Hash, attachment.Size, attachment.RemoteParameters,
                             stream: null, expectedChangeVector: null, updateDocument: false);
                         continue;
                     }

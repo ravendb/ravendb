@@ -2,6 +2,7 @@
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import additionalSource = require("models/database/index/additionalSource");
 import additionalAssembly = require("models/database/index/additionalAssemblyModel");
+import schemaDefinitionModel = require("models/database/index/schemaDefinitionModel");
 import configurationItem = require("models/database/index/configurationItem");
 import validateNameCommand = require("commands/resources/validateNameCommand");
 import generalUtils = require("common/generalUtils");
@@ -47,6 +48,8 @@ class indexDefinition {
     additionalSources = ko.observableArray<additionalSource>();
     additionalAssemblies = ko.observableArray<additionalAssembly>();
     
+    schemaDefinitions = ko.observableArray<schemaDefinitionModel>([]);
+
     defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
 
@@ -132,6 +135,14 @@ class indexDefinition {
             this.additionalAssemblies(dto.AdditionalAssemblies.map(assembly => new additionalAssembly(assembly)));
         }
         
+        if (dto.SchemaDefinitions) {
+            this.schemaDefinitions(
+                Object.entries(dto.SchemaDefinitions).map(([collectionName, schemaText]) =>
+                    new schemaDefinitionModel(collectionName, generalUtils.prettifyJson(schemaText))
+                )
+            );
+        }
+
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
             const nonEmptyFields = this.fields().filter(x => x.name());
             return new Set(nonEmptyFields.map(x => x.name())).size !== nonEmptyFields.length;
@@ -296,8 +307,23 @@ class indexDefinition {
         return result;
     }
 
+    private schemaDefinitionsToDto(): Record<string, string> {
+        if (!this.schemaDefinitions().length) {
+            return null;
+        }
+        const result = {} as Record<string, string>;
+        this.schemaDefinitions().forEach(schema => {
+            const collectionName = schema.collectionName();
+            if (collectionName) {
+                result[collectionName] = schema.schemaText();
+            }
+        });
+        return result;
+    }
+
     toDto(): Raven.Client.Documents.Indexes.IndexDefinition {
         return {
+            SchemaDefinitions: this.schemaDefinitionsToDto(),
             Name: this.name(),
             Maps: this.maps().map(m => m.map()),
             Reduce: this.reduce(),
@@ -369,6 +395,15 @@ class indexDefinition {
         this.configuration.remove(item);
     }
 
+    addSchemaDefinition() {
+        const schema = schemaDefinitionModel.empty();
+        this.schemaDefinitions.push(schema);
+    }
+
+    removeSchemaDefinition(item: schemaDefinitionModel) {
+        this.schemaDefinitions.remove(item);
+    }
+
     removeDefaultFieldOptions() {
         this.defaultFieldOptions(null);
 
@@ -404,6 +439,7 @@ class indexDefinition {
     
     static createDefaultIndexDefinition(indexingDatabaseSettings?: indexingDatabaseSettingsTypes.IndexingDatabaseSettingsType): indexDefinition {
         return new indexDefinition({
+            SchemaDefinitions: null,
             Fields: {},
             Maps: [""],
             Name: "",

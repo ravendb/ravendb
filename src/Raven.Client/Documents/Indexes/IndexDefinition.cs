@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
@@ -81,6 +80,8 @@ namespace Raven.Client.Documents.Indexes
             set => _configuration = value;
         }
 
+        public IndexSchemaDefinitions SchemaDefinitions { get; set; }
+        
         private IndexSourceType? _indexSourceType;
 
         public virtual IndexSourceType SourceType
@@ -224,7 +225,9 @@ namespace Raven.Client.Documents.Indexes
                     }
                 }
             }
-            
+
+            if (DictionaryExtensions.ContentEquals(SchemaDefinitions, other.SchemaDefinitions) == false)
+                result |= IndexDefinitionCompareDifferences.SchemaValidationConfiguration;
             
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
             {
@@ -552,6 +555,7 @@ namespace Raven.Client.Documents.Indexes
 
             definition.LockMode = LockMode;
             definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
+            definition.SchemaDefinitions = SchemaDefinitions;
             definition.Fields = fields;
             definition.Name = Name;
             definition.Priority = Priority;
@@ -638,7 +642,8 @@ namespace Raven.Client.Documents.Indexes
         DeploymentMode = 1 << 12,
         CompoundFields = 1 << 13,
         ArchivedDataProcessingBehavior = 1 << 14,
+        SchemaValidationConfiguration = 1 << 15,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior,
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies | DeploymentMode | CompoundFields | ArchivedDataProcessingBehavior | SchemaValidationConfiguration,
     }
 }

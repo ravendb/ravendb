@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -21,6 +22,7 @@ using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Logging;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Commands;
 using Sparrow;
@@ -143,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Static
             // never hit
             return null;
         }
-        
+
         public dynamic AttachmentsFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
@@ -175,6 +177,30 @@ namespace Raven.Server.Documents.Indexes.Static
             return timeSeries != null
                 ? timeSeries
                 : new DynamicArray(Enumerable.Empty<object>());
+        }
+        
+        protected dynamic SchemaGetErrorsFor(dynamic doc)
+        {
+            var json = EnsureSourceDocumentOrThrow(doc, "Schema.GetErrorsFor");
+            return CurrentIndexingScope.Current.SchemaGetErrorsFor(json);
+        }
+
+        private static BlittableJsonReaderObject EnsureSourceDocumentOrThrow(dynamic doc, string funcName)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+
+            if (doc is not DynamicBlittableJson json)
+            {
+                ThrowInvalidDocType(doc, funcName);
+                // never hit
+                return null;
+            }
+            
+            if(CurrentIndexingScope.Current.Source is not DynamicBlittableJson srcDoc 
+               || ReferenceEquals(srcDoc.BlittableJson, json.BlittableJson) == false)
+                throw new InvalidOperationException($"'{funcName}' can only be performed on the source document.");
+            return json.BlittableJson;
         }
 
         [DoesNotReturn]

@@ -10,10 +10,8 @@ import attachmentUpload = require("common/notifications/models/attachmentUpload"
 class editDocumentUploader {
 
     static readonly filePickerSelector = "#uploadAttachmentFilePicker";
+    static readonly userCancelledErrorCode = "ATTACHMENT_OVERWRITE_CANCELLED";
 
-    private document: KnockoutObservable<document>;
-    private db: database;
-    private afterUpload: () => void;
     currentUpload = ko.observable<attachmentUpload>();
     
     uploadButtonText = ko.pureComputed(() => {
@@ -27,11 +25,7 @@ class editDocumentUploader {
         upload: ko.observable<boolean>(false)
     };
 
-    constructor(document: KnockoutObservable<document>, db: database, afterUpload: () => void) {
-        this.document = document;
-        this.db = db;
-        this.afterUpload = afterUpload;
-    }
+    constructor(private document: KnockoutObservable<document>, private db: database, private afterUpload: () => void) {}
 
     fileSelected(fileName: string) {
         if (fileName) {
@@ -63,7 +57,7 @@ class editDocumentUploader {
         return attachments.find(x => x.Name === name);
     }
 
-    private uploadInternal(file: File) {
+    private async uploadInternal(file: File, remoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters) {
         this.spinners.upload(true);
 
         const upload = attachmentUpload.forFile(this.db, this.document().getId(), file.name);
@@ -72,10 +66,9 @@ class editDocumentUploader {
         
         notificationCenter.instance.monitorAttachmentUpload(upload);
 
-        const command = new uploadAttachmentCommand(file, this.document().getId(), this.db, event => upload.updateProgress(event));
+        const command = new uploadAttachmentCommand(file, this.document().getId(), this.db, event => upload.updateProgress(event), remoteParameters);
         
-        command
-            .execute()
+        await command.execute()
             .done(() => {
                 this.afterUpload();
             })
@@ -90,7 +83,30 @@ class editDocumentUploader {
                 this.currentUpload(null);
             });
      
-        upload.abort = () => command.abort(); 
+        upload.abort = () => command.abort();
+    }
+
+    async uploadFileWithRemoteParameters(file: File, remoteParameters: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters) {
+        const nameAlreadyExists = this.findAttachment(file.name);
+
+        if (nameAlreadyExists) {
+            const confirmed = await new Promise<boolean>((resolve) => {
+                viewHelpers
+                    .confirmationMessage(
+                        `Attachment '${file.name}' already exists.`,
+                        "Do you want to overwrite existing attachment?",
+                        { buttons: ["No", "Yes, overwrite"] }
+                    )
+                    .done((result: any) => resolve(!!result?.can))
+                    .fail(() => resolve(false));
+            });
+
+            if (!confirmed) {
+                throw new Error(editDocumentUploader.userCancelledErrorCode);
+            }
+        }
+
+        await this.uploadInternal(file, remoteParameters);
     }
 }
 

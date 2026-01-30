@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Net.Http;
 using Raven.Client.Documents.Operations.AI;
 using Sparrow.Json;
 
@@ -17,6 +19,15 @@ internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClient
     public override string GetRelativeCompletionUri() => "v1/" + base.GetRelativeCompletionUri();
 
     public override string GetRelativeModelsUri() => "v1/" + base.GetRelativeModelsUri();
+    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response)
+    {
+        // Ollama does not provide structured error responses, so we return the raw content as the error message.
+        return new AiError
+        {
+            ErrorType = ErrorType.Unknown,
+            Message = content.ToString()
+        };
+    }
 
     public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
     {

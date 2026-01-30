@@ -95,6 +95,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public bool ConflictSolverConfigUpdated { get; set; }
 
+        public bool SchemaValidationConfigUpdated { get; set; }
+
         public bool TimeSeriesConfigurationUpdated { get; set; }
 
         public bool DocumentsCompressionConfigurationUpdated { get; set; }
@@ -106,6 +108,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
         public bool RefreshConfigurationUpdated { get; set; }
         
         public bool DataArchivalConfigurationUpdated { get; set; }
+
+        public bool RemoteAttachmentsConfigurationUpdated { get; set; }
 
         public bool RavenConnectionStringsUpdated { get; set; }
 
@@ -163,6 +167,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (DataArchivalConfigurationUpdated)
                 json[nameof(DataArchivalConfigurationUpdated)] = DataArchivalConfigurationUpdated;
 
+            if (RemoteAttachmentsConfigurationUpdated)
+                json[nameof(RemoteAttachmentsConfigurationUpdated)] = RemoteAttachmentsConfigurationUpdated;
+
             if (RavenConnectionStringsUpdated)
                 json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
 
@@ -183,6 +190,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (ConflictSolverConfigUpdated)
                 json[nameof(ConflictSolverConfigUpdated)] = ConflictSolverConfigUpdated;
+
+            if (SchemaValidationConfigUpdated)
+                json[nameof(SchemaValidationConfigUpdated)] = SchemaValidationConfigUpdated;
 
             if (PeriodicBackupsUpdated)
                 json[nameof(PeriodicBackupsUpdated)] = PeriodicBackupsUpdated;
@@ -268,6 +278,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (DataArchivalConfigurationUpdated)
                 sb.AppendLine("- Data Archival");
 
+            if (RemoteAttachmentsConfigurationUpdated)
+                sb.AppendLine("- Remote Attachments");
+
             if (RavenConnectionStringsUpdated)
                 sb.AppendLine("- RavenDB Connection Strings");
 
@@ -285,6 +298,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (ConflictSolverConfigUpdated)
                 sb.AppendLine("- Conflicts Solvers");
+
+            if (SchemaValidationConfigUpdated)
+                sb.AppendLine("- Schema Validation Configurations");
 
             if (PeriodicBackupsUpdated)
                 sb.AppendLine("- Periodic Backups");

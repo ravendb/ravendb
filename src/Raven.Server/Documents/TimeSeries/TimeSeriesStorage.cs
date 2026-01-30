@@ -15,7 +15,6 @@ using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -25,7 +24,6 @@ using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -35,6 +33,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.DeletedRanges;
 using static Raven.Server.Documents.Schemas.TimeSeries;
+using Slices = Voron.Slices;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -548,7 +547,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 storage.Put(ctx, doc.Id, null, newDocumentData, flags: flags,
-                    nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                    nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 
@@ -621,18 +620,18 @@ namespace Raven.Server.Documents.TimeSeries
         public bool TryAppendEntireSegment(DocumentsOperationContext context, TimeSeriesReplicationItem item, string docId, LazyStringValue name, ChangeVector changeVector, DateTime baseline)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, item.Collection);
-            return TryAppendEntireSegment(context, item.Key, docId, name, collectionName, changeVector, item.Segment, baseline);
+            return TryAppendEntireSegment(context, item.Key, docId, name, collectionName, changeVector, item.Segment, baseline, item.ParentDocChangeVector);
         }
 
-        private bool TryAppendEntireSegment(
-            DocumentsOperationContext context,
+        private bool TryAppendEntireSegment(DocumentsOperationContext context,
             Slice key,
             string documentId,
             string name,
             CollectionName collectionName,
             ChangeVector changeVector,
             TimeSeriesValuesSegment segment,
-            DateTime baseline)
+            DateTime baseline, 
+            LazyStringValue parentDocCv)
         {
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
@@ -654,7 +653,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             if (Stats.GetStats(context, documentId, name) == default &&
-                SegmentAlreadyDeleted(context, documentId, name, changeVector, collectionName, segment, baseline))
+                SegmentAlreadyDeleted(context, documentId, name, changeVector, collectionName, segment, baseline, parentDocCv))
             {
                 // if we reach this point, it means the entire time series was deleted,
                 // and the deletion has a newer change vector than this segment.
@@ -839,8 +838,8 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, string changeVector, 
-            CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline)
+        private bool SegmentAlreadyDeleted(DocumentsOperationContext context, string documentId, string name, string changeVector,
+            CollectionName collectionName, TimeSeriesValuesSegment segment, DateTime baseline, LazyStringValue parentDocCv)
         {
             var hash = (long)Hashing.XXHash64.Calculate(changeVector, Encoding.UTF8);
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
@@ -857,6 +856,12 @@ namespace Raven.Server.Documents.TimeSeries
                         continue;
 
                     if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                        return true;
+
+                    // Segment CV may advance while replication is broken, so delete-range CV isn't always newer than the segment CV.
+                    // As a fallback, compare the delete-range CV to the segment's parent document CV.
+                    // If the delete-range already covers that doc CV, the segment belongs to a document version that was already deleted.
+                    if (parentDocCv != null && ChangeVectorUtils.GetConflictStatus(parentDocCv, item.ChangeVector) == ConflictStatus.AlreadyMerged)
                         return true;
                 }
 
@@ -2240,7 +2245,7 @@ namespace Raven.Server.Documents.TimeSeries
             using (data)
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 
@@ -2311,10 +2316,13 @@ namespace Raven.Server.Documents.TimeSeries
             var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
             flags |= DocumentFlags.HasTimeSeries;
 
+            nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate;
+            nonPersistentFlags |= NonPersistentDocumentFlags.SkipSchemaValidation;
+
             using (data)
             {
                 var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentFlags);
             }
         }
 
@@ -2343,18 +2351,18 @@ namespace Raven.Server.Documents.TimeSeries
             return name;
         }
 
-        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag, bool includeDocumentChangeVector = true)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
             {
-                yield return CreateTimeSeriesSegmentItem(context, ref result.Reader);
+                yield return CreateTimeSeriesSegmentItem(context, ref result.Reader, includeDocumentChangeVector);
             }
         }
 
-        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader, bool includeDocumentChangeVector)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -2373,15 +2381,26 @@ namespace Raven.Server.Documents.TimeSeries
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             item.ToDispose(Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out item.Key));
 
+            LazyStringValue docId = null;
             using (TimeSeriesStats.ExtractStatsKeyFromStorageKey(context, item.Key, out var statsKey))
             {
                 item.Name = Stats.GetTimeSeriesNameOriginalCasing(context, statsKey);
 
-                if (item.Name == null)
+                if (includeDocumentChangeVector || item.Name == null)
                 {
-                    // RavenDB-18381 - replace Null in lower-case name to recover from an existing state of broken replication
-                    TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, context, out _, out item.Name);
+                    TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, context, out docId, out var nameFromKey);
+
+                    // RavenDB-18381 - replace null in lower-case name to recover from an existing state of broken replication
+                    item.Name ??= nameFromKey;
                 }
+            }
+
+            item.IncludeDocumentChangeVector = includeDocumentChangeVector;
+
+            if (includeDocumentChangeVector)
+            {
+                var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, DocumentFields.ChangeVector);
+                item.ParentDocChangeVector = context.GetLazyString(doc?.ChangeVector);
             }
 
             return item;

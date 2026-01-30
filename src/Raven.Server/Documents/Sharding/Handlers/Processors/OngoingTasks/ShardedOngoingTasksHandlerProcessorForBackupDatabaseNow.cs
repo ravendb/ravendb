@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
                 "Backup of sharded database : " + RequestHandler.DatabaseName,
                 detailedDescription: null,
                 (_, shardNumber) => new StartBackupOperation.StartBackupCommand(isFullBackup, taskId, operationId, startTime),
-                token);
+                token: token);
             
             _ = t.ContinueWith(_ =>
             {

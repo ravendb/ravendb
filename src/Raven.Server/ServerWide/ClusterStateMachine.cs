@@ -445,6 +445,7 @@ namespace Raven.Server.ServerWide
                     case nameof(EditExpirationCommand):
                     case nameof(EditRefreshCommand):
                     case nameof(EditDataArchivalCommand):
+                    case nameof(EditRemoteAttachmentsCommand):
                     case nameof(ModifyConflictSolverCommand):
                     case nameof(UpdateTopologyCommand):
                     case nameof(CreateNewShardCommand):
@@ -502,6 +503,7 @@ namespace Raven.Server.ServerWide
                     case nameof(DeletePrefixedShardingSettingCommand):
                     case nameof(UpdatePrefixedShardingSettingCommand):
                     case nameof(RevisionsBinConfigurationCommand):
+                    case nameof(EditSchemaValidationConfigurationCommand):
                         UpdateDatabase(context, type, cmd, index, serverStore);
                         break;
 
@@ -2815,6 +2817,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditPostgreSqlConfigurationCommand):
                 case nameof(EditRefreshCommand):
                 case nameof(EditDataArchivalCommand):
+                case nameof(EditRemoteAttachmentsCommand):
                 case nameof(EditRevisionsConfigurationCommand):
                 case nameof(EditRevisionsForConflictsConfigurationCommand):
                 case nameof(EditTimeSeriesConfigurationCommand):

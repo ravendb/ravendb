@@ -97,7 +97,7 @@ export default function ChatAiAgentPromptActions({
             <ButtonWithSpinner
                 type="submit"
                 variant="secondary"
-                icon="arrow-up"
+                icon="arrow-thin-top"
                 isSpinning={isLoading}
                 disabled={isPromptDisabled}
                 className="rounded-pill"

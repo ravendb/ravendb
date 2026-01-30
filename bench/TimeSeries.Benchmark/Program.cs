@@ -438,11 +438,11 @@ namespace TimeSeries.Benchmark
                     await _onFire.Task;
                 }
 
-                while (file.EndOfStream == false)
+                while (true)
                 {
                     var line = await file.ReadLineAsync();
                     if (line == null)
-                        continue;
+                        break;
 
                     var parts = line.Split(',');
 
@@ -456,7 +456,7 @@ namespace TimeSeries.Benchmark
                         {
                             line = await file.ReadLineAsync();
                             if (line == null)
-                                continue;
+                                break;
 
                             parts = line.Split(',');
                             var time = new DateTime(long.Parse(parts[0]));

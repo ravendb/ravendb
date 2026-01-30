@@ -29,6 +29,16 @@ export abstract class AutoMockService<T extends object> {
         return dto;
     }
 
+    protected mockFetchResponse<T>(mock: any, value: MockedValue<T>, defaultValue: T) {
+        const dto = this.createValue(value, defaultValue);
+        const response = new Response(JSON.stringify(dto), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+        });
+        mock.mockResolvedValue(response);
+        return dto;
+    }
+
     private static getMethods(obj: object) {
         const properties = new Set<string>();
         let currentObj = obj;

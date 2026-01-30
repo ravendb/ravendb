@@ -18,7 +18,7 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected long _lastDocumentEtag;
         protected readonly AsyncManualResetEvent _replicationFromAnotherSource;
         protected RavenLogger Logger;
+        private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
 
         public long LastDocumentEtag => _lastDocumentEtag;
 
@@ -89,6 +90,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             _contextPool = _parent.ContextPool;
 
             Logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), _databaseName);
+            _endOfStreamExceptionLogger = new DeescalatingWarnToDebugLogger(Logger);
 
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
@@ -333,9 +335,12 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             catch (EndOfStreamException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Received unexpected end of stream while receiving replication batches. " +
-                              "This might indicate an issue with network.", e);
+                if (_endOfStreamExceptionLogger.IsEnabled)
+                {
+                    _endOfStreamExceptionLogger.Log(
+                        "Received unexpected end of stream while receiving replication batches. This might indicate an issue with network.",
+                        e);
+                }
                 throw;
             }
             catch (Exception e)
@@ -430,7 +435,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 stats.RecordInputAttempt();
 
-                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
+                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader, SupportedFeatures.Replication);
                 item.ReadChangeVectorAndMarker();
                 item.Read(context, allocator, stats);
 
@@ -446,7 +451,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             var replicatedAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
             for (var i = 0; i < attachmentStreamCount; i++)
             {
-                var attachment = (AttachmentReplicationItem)ReplicationBatchItem.ReadTypeAndInstantiate(reader);
+                var attachment = (AttachmentReplicationItem)ReplicationBatchItem.ReadTypeAndInstantiate(reader, SupportedFeatures.Replication);
                 Debug.Assert(attachment.Type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
 
                 using (stats.For(ReplicationOperation.Incoming.AttachmentRead))

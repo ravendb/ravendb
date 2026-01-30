@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Lucene.Net.Search;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
@@ -24,6 +25,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -43,6 +45,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
@@ -51,6 +54,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Commands;
@@ -82,6 +86,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -101,6 +106,7 @@ using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
 using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
+using SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.ServerWide
@@ -115,6 +121,8 @@ namespace Raven.Server.ServerWide
         public const string LicenseStorageKey = "License/Key";
 
         public const string LicenseLimitsStorageKey = "License/Limits/Key";
+        
+        public const string SystemDirectoryName = "System";
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
         private FileLocker _fileLocker;
@@ -132,9 +140,9 @@ namespace Raven.Server.ServerWide
 
         private RequestExecutor _leaderRequestExecutor;
         internal long _lastClusterTopologyIndex = -1;
+        private readonly RavenServer _server;
 
         public readonly RavenConfiguration Configuration;
-        private readonly RavenServer _server;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly ServerNotificationCenter NotificationCenter;
         public readonly ThreadsInfoNotifications ThreadsInfoNotifications;
@@ -640,7 +648,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsDebugEnabled)
                 Logger.Debug("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 
-            var path = Configuration.Core.DataDirectory.Combine("System");
+            var path = Configuration.Core.DataDirectory.Combine(SystemDirectoryName);
 
             IoChanges = new IoChangesNotifications
             {
@@ -660,7 +668,7 @@ namespace Raven.Server.ServerWide
                 string tempPath = null;
 
                 if (Configuration.Storage.TempPath != null)
-                    tempPath = Configuration.Storage.TempPath.Combine("System").FullPath;
+                    tempPath = Configuration.Storage.TempPath.Combine(SystemDirectoryName).FullPath;
 
                 options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification, LoggingResource.Server, LoggingComponent.ServerStore);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
@@ -2061,6 +2069,13 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editDataArchival);
         }
 
+        public Task<(long Index, object Result)> ModifyDatabaseAttachmentsRemote(TransactionOperationContext context, string databaseName, RemoteAttachmentsConfiguration configuration, string raftRequestId)
+        {
+            var editRemoteAttachmentsCommand = new EditRemoteAttachmentsCommand(configuration, databaseName, raftRequestId);
+
+            return SendToLeaderAsync(editRemoteAttachmentsCommand);
+        }
+
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var documentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(configurationJson);
@@ -2069,6 +2084,28 @@ namespace Raven.Server.ServerWide
 
             var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
             return SendToLeaderAsync(editDocumentsCompression);
+        }
+
+        public Task<(long Index, object Result)> ModifySchemaValidation(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(configurationJson);
+            ValidateSchemaConfiguration(context, schemaValidationConfiguration);            
+            
+            var editSchemaValidation = new EditSchemaValidationConfigurationCommand(schemaValidationConfiguration, databaseName, raftRequestId);
+            return SendToLeaderAsync(editSchemaValidation);
+        }
+
+        private void ValidateSchemaConfiguration(JsonOperationContext context, SchemaValidationConfiguration definitions)
+        {
+            if (definitions.ValidatorsPerCollection == null)
+                throw new InvalidOperationException($"'{nameof(SchemaValidationConfiguration.ValidatorsPerCollection)}' cannot be null");
+
+            foreach (var item in definitions.ValidatorsPerCollection)
+            {
+                using var schema = context.Sync.ReadForMemory(item.Value.Schema, "schema-validation");
+                SchemaValidator.ValidateInit(schema);
+                SchemaValidationHelper.ValidateSchemaDefinitionForDocument(schema);
+            }
         }
 
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)

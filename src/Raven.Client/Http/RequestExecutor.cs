@@ -1577,8 +1577,14 @@ namespace Raven.Client.Http
                     }
                     else
                     {
+#if !NET9_0_OR_GREATER
+                        const string flagName = nameof(X509KeyStorageFlags.MachineKeySet);
+#else
+                        const string flagName = nameof(X509KeyStorageFlags.UserKeySet);
+#endif
+
                         builder.Append("The certificate ").Append(Certificate.FriendlyName)
-                            .Append(" contains no private key. Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem. ");
+                            .Append(" contains no private key. Constructing the certificate with the 'X509KeyStorageFlags").Append(flagName).Append("' flag may solve this problem. ");
                     }
                     builder.Append("Method: ").Append(request.Method).Append(", Request: ").AppendLine(request.RequestUri.ToString()).Append(msg);
                     throw new AuthorizationException(builder.ToString());

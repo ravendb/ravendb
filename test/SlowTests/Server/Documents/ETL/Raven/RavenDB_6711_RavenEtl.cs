@@ -57,8 +57,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 Etl.AddEtl(src, dest, collections: new string[0], script: null, applyToAllDocuments: true);
 
-                //var etlDone = Etl.WaitForEtlToComplete(src, numOfProcessesToWaitFor: 2);
-
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User
@@ -105,8 +103,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 // update
 
-                var etlDone = Etl.WaitForEtlToComplete(src);
-
                 using (var session = src.OpenSession())
                 {
                     var user = session.Load<User>("users/1-A");
@@ -116,8 +112,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
-
+                await Etl.AssertEtlReachedDestination(() =>
+                {
                 using (var session = dest.OpenSession())
                 {
                     var stats = dest.Maintenance.Send(new GetStatisticsOperation());
@@ -127,10 +123,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     var user = session.Load<User>("users/1-A");
                     Assert.Equal("James Doe", user.Name);
                 }
+                });
 
                 // delete
-
-                etlDone.Reset();
 
                 using (var session = src.OpenSession())
                 {
@@ -141,8 +136,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
-                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(30)));
-
+                await Etl.AssertEtlReachedDestination(() =>
+                {
                 using (var session = dest.OpenSession())
                 {
                     var stats = dest.Maintenance.Send(new GetStatisticsOperation());
@@ -152,6 +147,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     var user = session.Load<User>("users/1-A");
                     Assert.Null(user);
                 }
+                });
             }
         }
 

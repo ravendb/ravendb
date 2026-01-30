@@ -2,14 +2,14 @@
 
 ## Repository Overview
 
-RavenDB is a modern ACID-compliant NoSQL document database written in C# (.NET 8.0) with TypeScript/React web studio. Open source (AGPLv3), supports Windows/Linux/MacOS/containers.
+RavenDB is a modern ACID-compliant NoSQL document database written in C# (.NET 10.0) with TypeScript/React web studio. Open source (AGPLv3), supports Windows/Linux/MacOS/containers.
 
 **Key Info:** Large repo, .NET, Node.js >=20.0.0, React/TypeScript UI
 
 ## Build & Validation (CRITICAL)
 
 ### Prerequisites
-- .NET SDK 8.0.413 (exact version in `global.json`)
+- .NET SDK 10.0.100 (exact version in `global.json`)
 - Node.js >=20.0.0 LTS 
 - PowerShell (Linux: `sudo ./install_build_prerequisites.sh`)
 

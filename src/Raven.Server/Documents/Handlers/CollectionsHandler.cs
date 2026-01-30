@@ -27,6 +27,13 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/databases/*/collections/docs/ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetCollectionDocumentsIds()
+        {
+            using (var processor = new CollectionHandlerProcessorForGetDocumentIds(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenAction("/databases/*/collections/last-change-vector", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetLastDocumentChangeVectorForCollection()
         {

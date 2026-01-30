@@ -117,6 +117,15 @@
                             <i class="icon-ai-agents"></i>
                             <span data-bind="text: isAiAgentHistory() ? 'See conversation' : 'Continue conversation'"></span>
                         </a>
+
+                        <button type="button" class="btn btn-default"
+                                data-bind="click: validateDocumentSchema,
+                                           visible: canValidateDocument()"
+                                title="Validate document">
+                            <i class="icon-start"></i>
+                            <span>Validate document</span>
+                        </button>
+
                         <button type="button" class="btn btn-default" data-bind="click: copyDocumentBodyToClipboard, enable: !showHugeDocumentWarning()" title="Copy document content to clipboard">
                             <i class="icon-copy-to-clipboard"></i>
                             <span>Copy to Clipboard</span>
@@ -550,15 +559,41 @@
 
 <script type="text/html" id="uploader-template">
     <div class="padding padding-xs margin-top margin-top-sm" data-bind="with: uploader">
-        <div class="input-group file-input">
-            <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
-            <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary btn-block" data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
-                <i class="icon-attachment"></i> <span data-bind="text: uploadButtonText"></span>
-            </label>
+        <div class=" file-input">
+            <input type="file" id="uploadAttachmentFilePicker"
+                   data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
+            <div class="btn-group w-100 d-flex">
+                <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary flex-grow"
+                       data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
+                    <i class="icon-attachment"></i> <span data-bind="text: uploadButtonText"></span>
+                </label>
+
+                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true"
+                        data-bind="disable: spinners.upload"
+                        aria-expanded="false"
+                >
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+
+                <ul class="dropdown-menu uploader-template">
+                    <li class="add-remote-attachment">
+                    <a href="#" data-bind="click: () => $root.connectedDocuments.isAddAttachmentWithRemoteParametersModalVisible(!$root.remoteAttachmentDisabledReason()), css: { 'disabled': $root.remoteAttachmentDisabledReason() }">
+                            <i class="icon-cluster"></i>
+                            <span>Add attachment to remote storage</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </script>
 
 <div class="tooltip json-preview document-items-tooltip" style="opacity: 0">
     <pre><code></code></pre>
+</div>
+
+<div data-bind="if: connectedDocuments.isAddAttachmentWithRemoteParametersModalVisible()">
+    <div data-bind="react: $root.connectedDocuments.remoteAttachmentParametersModalView"></div>
 </div>

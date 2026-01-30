@@ -42,8 +42,8 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
             }
             return $versionTags + @(
                 "$($repo):ubuntu-latest",
-#                "$($repo):ubuntu-latest-lts",
-                "$($repo):7.1-ubuntu-latest"
+                "$($repo):ubuntu-latest-lts",
+                "$($repo):7.2-ubuntu-latest"
             )
             break;
         }
@@ -56,8 +56,8 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
             }
             return $versionTags + @(
                 "$($repo):ubuntu-arm32v7-latest",
-#                "$($repo):ubuntu-arm32v7-latest-lts",
-                "$($repo):7.1-ubuntu-arm32v7-latest"
+                "$($repo):ubuntu-arm32v7-latest-lts",
+                "$($repo):7.2-ubuntu-arm32v7-latest"
             )
             break;
         }
@@ -70,8 +70,8 @@ function GetUbuntuImageTags($repo, $version, $arch, [bool]$useVersionTagsOnly = 
             }
             return $versionTags + @(
                 "$($repo):ubuntu-arm64v8-latest",
-#                "$($repo):ubuntu-arm64v8-latest-lts",
-                "$($repo):7.1-ubuntu-arm64v8-latest"
+                "$($repo):ubuntu-arm64v8-latest-lts",
+                "$($repo):7.2-ubuntu-arm64v8-latest"
                 )
                 break;
         }
@@ -91,8 +91,9 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
                 return $versionTags
             }
             return $versionTags + @(
-#                "$($repo):windows-1809-latest-lts",
-                "$($repo):7.1-windows-1809-latest"
+                "$($repo):windows-1809-latest",
+                "$($repo):windows-1809-latest-lts",
+                "$($repo):7.2-windows-1809-latest"
             )
             break;
         }
@@ -104,8 +105,9 @@ function GetWindowsImageTags($repo, $version, $WinVer, [bool]$useVersionTagsOnly
                 return $versionTags
             }
             return $versionTags + @(
-#                "$($repo):windows-ltsc2022-latest-lts",
-                "$($repo):7.1-windows-ltsc2022-latest"
+                "$($repo):windows-ltsc2022-latest",
+                "$($repo):windows-ltsc2022-latest-lts",
+                "$($repo):7.2-windows-ltsc2022-latest"
             )
             break;
         }
@@ -122,8 +124,8 @@ function GetManifestTags {
 
     return @(
         "${repo}:latest",
-#        "${repo}:latest-lts",
-        "${repo}:7.1-latest"
+        "${repo}:latest-lts",
+        "${repo}:7.2-latest"
     )
 }
 
@@ -133,10 +135,10 @@ function GetImageTagsForManifest {
     )
 
     return @(
-        "${repo}:7.1-ubuntu-latest",
-        "${repo}:7.1-ubuntu-arm32v7-latest",
-        "${repo}:7.1-ubuntu-arm64v8-latest",
-        "${repo}:7.1-windows-1809-latest",
-        "${repo}:7.1-windows-ltsc2022-latest"
+        "${repo}:7.2-ubuntu-latest",
+        "${repo}:7.2-ubuntu-arm32v7-latest",
+        "${repo}:7.2-ubuntu-arm64v8-latest",
+        "${repo}:7.2-windows-1809-latest",
+        "${repo}:7.2-windows-ltsc2022-latest"
     )
 }

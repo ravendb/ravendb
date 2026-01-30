@@ -139,14 +139,6 @@ namespace SlowTests.Issues
             }
         }
 
-        internal class GetReplicationOutgoingsFailureInfoOperation : IMaintenanceOperation<ReplicationOutgoingsFailurePreview>
-        {
-            public RavenCommand<ReplicationOutgoingsFailurePreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new GetReplicationOutgoingsFailureInfoCommand();
-            }
-        }
-
         internal class GetReplicationOutgoingReconnectionQueueOperation : IMaintenanceOperation<ReplicationOutgoingReconnectionQueuePreview>
         {
             public RavenCommand<ReplicationOutgoingReconnectionQueuePreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)

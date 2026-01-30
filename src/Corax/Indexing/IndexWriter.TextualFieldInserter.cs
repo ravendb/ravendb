@@ -549,7 +549,7 @@ public unsafe partial class IndexWriter
 
                 // Decoding the posting list id yields the container root that stores the posting list. We keep it as
                 // ContainerId so later steps talk to the correct root instead of a payload slot.
-                long containerId = EntryIdEncodings.GetContainerId(cur);
+                long containerId = (long)EntryIdEncodings.GetContainerId(cur);
                 postingListPagesProcessingBuffer.Add(containerId / Voron.Global.Constants.Storage.PageSize);
             }
 

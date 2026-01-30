@@ -31,7 +31,7 @@ export default function CellJsonPreview({ json }: CellJsonPreviewProps) {
                         <CloseButton onClick={toggleIsOpen} />
                     </div>
                     <pre style={{ maxHeight: "400px" }} className="overflow-auto m-0 mt-3">
-                        <Code language="json" code={jsonText} elementToCopy={jsonText} />
+                        <Code language="json" code={jsonText} />
                     </pre>
                 </Modal.Body>
                 <Modal.Footer>

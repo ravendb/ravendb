@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -769,6 +770,111 @@ namespace SlowTests.Client.Attachments
                         () => store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", stream, "image/jpeg")));
                     Assert.Equal($"Cannot put an attachment with a stream that have position which isn't zero (The position is: {2}) since this is most of the time not intended and it is a common mistake.", exceptoin.Message);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
+        public void AttachmentStreamWithoutLengthWillWork_UnencryptedDatabase()
+        {
+            using (var store = GetDocumentStore())
+            {
+                AttachmentStreamWithoutLengthWillWorkInternal(store);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Encryption)]
+        public void AttachmentStreamWithoutLengthWillWork_EncryptedDatabase()
+        {
+            var databaseName = Encryption.SetupEncryptedDatabase(out var cert, out _);
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = cert.ServerCertificate.Value,
+                ClientCertificate = cert.ServerCertificate.Value,
+                ModifyDatabaseName = _ => databaseName,
+                ModifyDatabaseRecord = r => r.Encrypted = true
+            }))
+            {
+                AttachmentStreamWithoutLengthWillWorkInternal(store);
+            }
+        }
+
+        private static void AttachmentStreamWithoutLengthWillWorkInternal(DocumentStore store)
+        {
+            var originalData = Encoding.UTF8.GetBytes("123");
+            using (var session = store.OpenSession())
+            {
+                var company = new Company
+                {
+                    Name = "HR"
+                };
+
+                session.Store(company, "companies/1");
+
+                session.Advanced.Attachments.Store(company, "file0", new SeekableStreamWithoutLength(originalData));
+
+                session.SaveChanges();
+
+                Assert.Equal(1, session.Advanced.Attachments.GetNames(company).Length);
+
+                // Read back the attachment and verify content
+                using (var attachmentResult = session.Advanced.Attachments.Get(company, "file0"))
+                {
+                    Assert.NotNull(attachmentResult);
+                    Assert.Equal("file0", attachmentResult.Details.Name);
+
+                    using (var retrievedStream = attachmentResult.Stream)
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        retrievedStream.CopyTo(memoryStream);
+                        var retrievedData = memoryStream.ToArray();
+
+                        Assert.Equal(originalData.Length, retrievedData.Length);
+                        Assert.Equal(originalData, retrievedData);
+                        Assert.Equal("123", Encoding.UTF8.GetString(retrievedData));
+                    }
+                }
+
+            }
+        }
+
+        private class SeekableStreamWithoutLength : Stream
+        {
+            private readonly MemoryStream _innerStream;
+
+            public SeekableStreamWithoutLength(byte[] data)
+            {
+                _innerStream = new MemoryStream(data);
+            }
+
+            public override bool CanRead => _innerStream.CanRead;
+            public override bool CanSeek => true;
+            public override bool CanWrite => _innerStream.CanWrite;
+
+            public override long Length => throw new NotSupportedException("Length not supported");
+
+            public override long Position
+            {
+                get => _innerStream.Position;
+                set => _innerStream.Position = value;
+            }
+
+            public override void Flush() => _innerStream.Flush();
+
+            public override int Read(byte[] buffer, int offset, int count)
+                => _innerStream.Read(buffer, offset, count);
+
+            public override void Write(byte[] buffer, int offset, int count)
+                => _innerStream.Write(buffer, offset, count);
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                return _innerStream.Seek(offset, origin);
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException("SetLength not supported");
+
             }
         }
     }

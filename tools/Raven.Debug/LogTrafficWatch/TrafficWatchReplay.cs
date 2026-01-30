@@ -295,7 +295,9 @@ namespace Raven.Debug.LogTrafficWatch
                 {
                     ClientCertificates =
                     {
+#pragma warning disable SYSLIB0057
                         new X509Certificate2(certPath, certPass, X509KeyStorageFlags.MachineKeySet)
+#pragma warning restore SYSLIB0057
                     }
                 });
                 return;

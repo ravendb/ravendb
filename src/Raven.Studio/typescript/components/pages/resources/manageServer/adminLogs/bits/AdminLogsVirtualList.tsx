@@ -93,12 +93,7 @@ export default function AdminLogsVirtualList(props: { availableHeightInPx: numbe
                                 </div>
                                 {log._meta.isExpanded && (
                                     <div className="vstack gap-2 p-2">
-                                        <Code
-                                            code={log.Message}
-                                            elementToCopy={log.Message}
-                                            language="plaintext"
-                                            codeClassName="wrapped pe-4"
-                                        />
+                                        <Code code={log.Message} language="plaintext" codeClassName="wrapped pe-4" />
                                         <div className="p-2">
                                             <Table size="sm" className="m-0">
                                                 <tbody>

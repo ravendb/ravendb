@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public sealed class RevisionsCollectionConfiguration
+    public sealed class RevisionsCollectionConfiguration : IDynamicJson
     {
         public long? MinimumRevisionsToKeep { get; set; }
 

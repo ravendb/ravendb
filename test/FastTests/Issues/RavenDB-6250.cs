@@ -46,7 +46,8 @@ namespace FastTests.Issues
                 OperationType.EnforceRevisionConfiguration,
                 OperationType.DumpRawIndexData,
                 OperationType.Resharding,
-                OperationType.AdoptOrphanedRevisions
+                OperationType.AdoptOrphanedRevisions,
+                OperationType.ValidateSchema
             };
 
             var operationWithoutDetails = new HashSet<OperationType>

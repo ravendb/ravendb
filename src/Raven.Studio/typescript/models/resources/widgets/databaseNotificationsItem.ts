@@ -1,4 +1,4 @@
-class databaseNotificationsItem implements databaseAndNodeAwareStats {
+class databaseNotificationsItem implements Omit<databaseAndNodeAwareStats, "hideDatabaseName" | "even"> {
     database: string;
     nodeTag: string;
     
@@ -9,9 +9,6 @@ class databaseNotificationsItem implements databaseAndNodeAwareStats {
     performanceHints: Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.NotificationSummaryItem[];
 
     noData: boolean;
-
-    hideDatabaseName = false;
-    even = false;
 
     constructor(nodeTag: string, data: Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications.DatabaseNotificationsSummary) {
         this.nodeTag = nodeTag;
@@ -32,38 +29,6 @@ class databaseNotificationsItem implements databaseAndNodeAwareStats {
         const item = new databaseNotificationsItem(nodeTag, null);
         item.database = database;
         return item;
-    }
-
-    alertsDataForHtml(): iconPlusText[] {
-        if (!this.alerts?.length) {
-            return [];
-        }
-
-        const textValue = this.alertsCount.toLocaleString();
-        return [
-            {
-                title: `${textValue} ${this.alertsCount > 1 ? "alerts" : "alert"}`,
-                text: textValue,
-                iconClass: "icon-warning",
-                textClass: "badge badge-warning rounded-pill",
-            }
-        ];
-    }
-
-    performanceHintsDataForHtml(): iconPlusText[] {
-        if (!this.performanceHints?.length) {
-            return [];
-        }
-
-        const textValue = this.performanceHintsCount.toLocaleString();
-        return [
-            {
-                title: `${textValue} ${this.performanceHintsCount > 1 ? "performance hints" : "performance hint"}`,
-                text: textValue,
-                iconClass: "icon-info",
-                textClass: "badge badge-info rounded-pill",
-            },
-        ];
     }
 }
 

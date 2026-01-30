@@ -87,6 +87,8 @@ interface computedAppUrls {
     revertRevisions: KnockoutComputed<string>;
     expiration: KnockoutComputed<string>;
     dataArchival: KnockoutComputed<string>;
+    documentSchema: KnockoutComputed<string>;
+    documentSchemaPlayground: KnockoutComputed<string>;
     documentsCompression: KnockoutComputed<string>;
     timeSeries: KnockoutComputed<string>;
     refresh: KnockoutComputed<string>;
@@ -96,6 +98,7 @@ interface computedAppUrls {
     connectionStrings: KnockoutComputed<string>;
     conflictResolution: KnockoutComputed<string>;
     revisionsBinCleaner: KnockoutComputed<string>;
+    remoteAttachments: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;
     whatsNew: KnockoutComputed<string>;

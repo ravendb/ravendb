@@ -42,7 +42,9 @@ public sealed class DatabaseReplicationHubCertificateActions : IReplicationHubCe
         const int batchSize = 128;
 
         byte[] buffer = Convert.FromBase64String(access.CertificateBase64);
+#pragma warning disable SYSLIB0057
         using var cert = new X509Certificate2(buffer);
+#pragma warning restore SYSLIB0057
 
         _commands.Add(new RegisterReplicationHubAccessCommand(_name, hub, access, cert, RaftIdGenerator.DontCareId));
 

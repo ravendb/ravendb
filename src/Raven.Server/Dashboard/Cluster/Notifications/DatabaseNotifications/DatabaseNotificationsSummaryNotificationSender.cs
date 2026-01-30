@@ -55,7 +55,7 @@ public class DatabaseNotificationsSummaryNotificationSender : AbstractClusterDas
                     var notificationSummaryItem = new NotificationSummaryItem
                     {
                         Reason = notificationReasonCount.Key,
-                        PrettifiedReason = NotificationSummaryItem.PrettifyReason(notificationReasonCount.Key),
+                        PrettifiedReason = NotificationSummaryItem.PrettifyReason(notificationType, notificationReasonCount.Key),
                         Count = notificationReasonCount.Value
                     };
 

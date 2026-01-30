@@ -17,10 +17,17 @@ import { adminLogsMiddleware } from "components/pages/resources/manageServer/adm
 import { adminLogsSlice } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { certificatesSlice } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { splitViewSlice } from "./common/splitView/store/splitViewSlice";
+import { databaseMiddleware } from "components/common/shell/databaseMiddleware";
+import { setupWizardSlice } from "./setupWizard/store/setupWizardSlice";
 import { editGenAiTaskSlice } from "./pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/store/editGenAiTaskSlice";
 import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/editAiAgentSlice";
 import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
 import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
+import { remoteAttachmentsSlice } from "./pages/database/settings/remoteAttachments/store/remoteAttachmentsSlice";
+import { aiAssistantSlice } from "./common/shell/aiAssistantSlice";
+import { chatbotSlice } from "./shell/chatbot/store/chatbotSlice";
+import { chatbotMiddleware } from "./shell/chatbot/store/chatbotMiddleware";
+import { documentSchemaSlice } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -42,9 +49,14 @@ export function createStoreConfiguration() {
             adminLogs: adminLogsSlice.reducer,
             certificates: certificatesSlice.reducer,
             splitView: splitViewSlice.reducer,
+            setupWizard: setupWizardSlice.reducer,
             editGenAiTask: editGenAiTaskSlice.reducer,
             editAiAgent: editAiAgentSlice.reducer,
             chatAiAgent: chatAiAgentSlice.reducer,
+            remoteAttachments: remoteAttachmentsSlice.reducer,
+            aiAssistant: aiAssistantSlice.reducer,
+            chatbot: chatbotSlice.reducer,
+            documentSchema: documentSchemaSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
@@ -54,8 +66,10 @@ export function createStoreConfiguration() {
             })
                 .prepend(listenerMiddleware.middleware)
                 .prepend(connectionStringsUpdateUrlMiddleware.middleware)
+                .prepend(databaseMiddleware.middleware)
                 .prepend(adminLogsMiddleware.middleware)
-                .prepend(chatAiAgentUpdateUrlMiddleware.middleware),
+                .prepend(chatAiAgentUpdateUrlMiddleware.middleware)
+                .prepend(chatbotMiddleware.middleware),
     });
 }
 

@@ -235,6 +235,24 @@ namespace Raven.Server.Documents.Patch
             return TimeSeriesRetriever.ParseDateTime(arg.AsString());
         }
 
+        private static DateTime GetRemoteAttachmentAtArg(JsValue arg, string signature, string argName)
+        {
+            if (arg.IsDate())
+                return arg.AsDate().ToDateTime().EnsureUtc();
+
+            if (arg.IsString() == false)
+                throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+
+            var valueAsStr = arg.AsString();
+
+            if (DateTime.TryParseExact(valueAsStr, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var attachmentRemoteAt) == false)
+                throw new ArgumentException($"Unable to parse the value of remote attachment 'At' parameter . Got: {valueAsStr}{Environment.NewLine}" +
+                                            $"The supported time formats are:{Environment.NewLine}" +
+                                            $"{string.Join(Environment.NewLine, DefaultFormat.DateTimeFormatsToRead.OrderBy(f => f.Length))}");
+
+            return attachmentRemoteAt.EnsureUtc();
+        }
+
         private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
 
         public sealed class SingleRun
@@ -271,10 +289,12 @@ namespace Raven.Server.Documents.Patch
             private readonly ConcurrentLruRegexCache _regexCache;
             public HashSet<string> DocumentCountersToUpdate;
             public HashSet<string> DocumentTimeSeriesToUpdate;
+            public HashSet<string> DocumentAttachmentsToUpdate;
             public JavaScriptUtils JavaScriptUtils;
 
             private const string _timeSeriesSignature = "timeseries(doc, name)";
             private const string _unarchiveSignature = "unarchive(doc)";
+            private const string _attachmentsSignature = "attachments(doc, name)";
             public const string GetMetadataMethod = "getMetadata";
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Prepared<Script>> scriptsSource, bool ignoreValidationErrors)
@@ -373,7 +393,8 @@ namespace Raven.Server.Documents.Patch
                 //TimeSeries
                 ScriptEngine.SetClrFunc("timeseries", TimeSeries);
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
-
+                //Attachments
+                ScriptEngine.SetClrFunc("attachments", Attachments);
                 // Clr Functions, apply if any
                 if (runner._clrFunctions != null)
                 {
@@ -808,6 +829,56 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 return new JsArray(ScriptEngine, entries.ToArray());
+            }
+
+            private JsValue Attachments(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext(_attachmentsSignature);
+
+                if (args.Length != 2)
+                    throw new ArgumentException($"{_attachmentsSignature}: This method requires 2 arguments but was called with {args.Length}");
+
+                var obj = new JsObject(ScriptEngine);
+                obj.SetClfFunc("remote", (thisObj, values) => RemoteAttachments(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.FastSetDataProperty("doc", args[0]);
+                obj.FastSetDataProperty("name", args[1]);
+
+                return obj;
+            }
+
+            private JsValue RemoteAttachments(JsValue document, JsValue name, JsValue[] args)
+            {
+                AssertValidDatabaseContext("attachments(doc, name).remote");
+                const string signature2Args = "attachments(doc, name).remote(identifier, at)";
+
+                if (args.Length != 2)
+                    throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args} ");
+
+                var (id, doc) = GetIdAndDocFromArg(document, _attachmentsSignature);
+
+                string attachmentName = GetStringArg(name, _attachmentsSignature, "name");
+                string identifier = GetStringArg(args[0], signature2Args, "identifier");
+                var at = GetRemoteAttachmentAtArg(args[1], signature2Args, "at");
+
+                if (_database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage.PutRemoteAttachmentFromPatch(_docsCtx, doc, id, attachmentName, identifier, at))
+                {
+                    DocumentAttachmentsToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentAttachmentsToUpdate.Add(id);
+                }
+
+                if (DebugMode)
+                {
+                    DebugActions.RemoteAttachments.Add(new DynamicJsonValue
+                    {
+                        ["DocId"] = id,
+                        ["DocData"] = doc.ToString(),
+                        ["Name"] = attachmentName,
+                        ["Identifier"] = identifier,
+                        ["At"] = at,
+                    });
+                }
+
+                return JsValue.Undefined;
             }
 
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName] string caller = null)
@@ -2222,6 +2293,7 @@ namespace Raven.Server.Documents.Patch
                 CompareExchangeValueIncludes?.Clear();
                 DocumentCountersToUpdate?.Clear();
                 DocumentTimeSeriesToUpdate?.Clear();
+                DocumentAttachmentsToUpdate?.Clear();
                 PutOrDeleteCalled = false;
                 UnarchiveCalled = false;
                 OriginalDocumentId = null;
@@ -2312,6 +2384,7 @@ namespace Raven.Server.Documents.Patch
 
                 _run.DocumentCountersToUpdate?.Clear();
                 _run.DocumentTimeSeriesToUpdate?.Clear();
+                _run.DocumentAttachmentsToUpdate?.Clear();
 
                 _holder.Parent.ReturnRunner(_holder);
                 _run = null;

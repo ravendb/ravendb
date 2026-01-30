@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
 
         protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token) => RequestHandler.ExecuteRemoteAsync(command, token.Token);
 
-        protected override DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de)
+        protected override DynamicJsonValue GetJsonReport(StorageEnvironmentWithType env, LowLevelTransaction lowTx, bool de, bool flat)
         {
             //Opening a write transaction to avoid concurrency problems (Issue #21088)
             var sc = env.Environment.ScratchBufferPool.InfoForDebug(env.Environment.PossibleOldestReadTransaction(lowTx));

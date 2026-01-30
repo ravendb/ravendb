@@ -9,6 +9,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using Corax.Indexing;
 using Sparrow;
+using Voron.Data.Containers;
 
 namespace Corax.Utils;
 
@@ -28,6 +29,9 @@ public static class EntryIdEncodings
     private const byte ContainerTypeOffset = 2;
     private const long MaxEntryId = 1L << 54;
 
+    /// <summary>
+    /// Encodes storage-layer container IDs. Used when encoding ContainerEntryId (cast to long).
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static long Encode(long entryId, short count, TermIdMask containerType)
     {
@@ -37,21 +41,32 @@ public static class EntryIdEncodings
     }
 
     /// <summary>
-    /// Returns id of entry without offset and frequency
+    /// Type-safe overload for document entry IDs. Prefer this to avoid accidentally passing
+    /// a container ID where a document ID is expected.
     /// </summary>
-    /// <param name="entryId"></param>
-    /// <returns></returns>
-    public static (long EntryId, short Frequency) Decode(long entryId)
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static long Encode(DocumentEntryId entryId, short count, TermIdMask containerType)
     {
-        return (entryId >> EntryIdOffset, FrequencyReconstructionFromQuantization(((entryId >> ContainerTypeOffset) & Mask)));
+        return Encode((long)entryId, count, containerType);
     }
 
     /// <summary>
-    /// Container id (page) without encodings.
+    /// Returns both the document entry ID and frequency from an encoded value.
     /// </summary>
-    public static long GetContainerId(long entryId)
+    public static (DocumentEntryId EntryId, short Frequency) Decode(long entryId)
     {
-        return (entryId >> EntryIdOffset);
+        var rawId = entryId >> EntryIdOffset;
+        var freq = FrequencyReconstructionFromQuantization(((entryId >> ContainerTypeOffset) & Mask));
+        return (new DocumentEntryId(rawId), freq);
+    }
+
+    /// <summary>
+    /// Extracts the storage container ID from a posting list encoding.
+    /// For single-document entries (TermIdMask.Single), use DecodeAndDiscardFrequency instead.
+    /// </summary>
+    public static ContainerEntryId GetContainerId(long entryId)
+    {
+        return new ContainerEntryId(entryId >> EntryIdOffset);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -64,9 +79,10 @@ public static class EntryIdEncodings
             entryId = (entryId << EntryIdOffset) | (FrequencyQuantization(frequency) << ContainerTypeOffset);
         }
     }
-
+    
+    // Decodes single-document entries (TermIdMask.Single) to DocumentEntryId, discarding frequency.
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static long DecodeAndDiscardFrequency(long entryId) => entryId >> EntryIdOffset;
+    public static DocumentEntryId DecodeAndDiscardFrequency(long entryId) => new DocumentEntryId(entryId >> EntryIdOffset);
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public static void DecodeAndDiscardFrequencyVector256(Span<long> entries, int read)

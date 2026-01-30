@@ -13,13 +13,13 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public partial class TimeSeriesStorage
     {
-        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool includeDocumentChangeVector = true)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
             {
-                yield return CreateTimeSeriesSegmentItem(context, ref result.Result.Reader);
+                yield return CreateTimeSeriesSegmentItem(context, ref result.Result.Reader, includeDocumentChangeVector);
             }
         }
 

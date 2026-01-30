@@ -49,52 +49,72 @@ namespace FastTests
 #pragma warning restore SYSLIB0026 // Type or member is obsolete
 
             public TrackingX509Certificate2(byte[] rawData)
+#pragma warning disable SYSLIB0057
                 : base(rawData)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(byte[] rawData, string password)
+#pragma warning disable SYSLIB0057
                 : base(rawData, password)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(byte[] rawData, SecureString password)
+#pragma warning disable SYSLIB0057
                 : base(rawData, password)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(byte[] rawData, string password, X509KeyStorageFlags keyStorageFlags)
+#pragma warning disable SYSLIB0057
                 : base(rawData, password, keyStorageFlags)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(byte[] rawData, SecureString password, X509KeyStorageFlags keyStorageFlags)
+#pragma warning disable SYSLIB0057
                 : base(rawData, password, keyStorageFlags)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(string fileName)
+#pragma warning disable SYSLIB0057
                 : base(fileName)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(string fileName, string password)
+#pragma warning disable SYSLIB0057
                 : base(fileName, password)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(string fileName, SecureString password)
+#pragma warning disable SYSLIB0057
                 : base(fileName, password)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(string fileName, string password, X509KeyStorageFlags keyStorageFlags)
+#pragma warning disable SYSLIB0057
                 : base(fileName, password, keyStorageFlags)
+#pragma warning restore SYSLIB0057
             {
             }
 
             public TrackingX509Certificate2(string fileName, SecureString password, X509KeyStorageFlags keyStorageFlags)
+#pragma warning disable SYSLIB0057
                 : base(fileName, password, keyStorageFlags)
+#pragma warning restore SYSLIB0057
             {
             }
 

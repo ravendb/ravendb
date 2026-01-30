@@ -60,6 +60,9 @@ namespace Sparrow.Json
     // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
     public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IConvertible, IEnumerable<char>
+#if NET8_0_OR_GREATER
+    , ISpanFormattable
+#endif
     {
         internal JsonOperationContext _context;
         private string _string;
@@ -166,6 +169,14 @@ namespace Sparrow.Json
 
             return _context.GetLazyString(_buffer, _size, longLived: false);
         }
+        
+        public LazyStringValue CloneForConcurrentRead(JsonOperationContext context)
+        {
+            if (_size == 0)
+                return context.Empty;
+
+            return context.AllocateStringValue(_string, _buffer, _size);
+        }
 
         public bool HasStringValue => _string != null;
 
@@ -181,7 +192,7 @@ namespace Sparrow.Json
                 _lazyStringTempBuffer = new char[Bits.NextAllocationSize(charCount)];
             return _lazyStringTempBuffer;
         }
-        
+
         private static byte[] GetLazyStringTempComparisonBuffer(int charCount)
         {
             if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < charCount * 5)
@@ -318,7 +329,7 @@ namespace Sparrow.Json
 
             if (ReferenceEquals(self, null))
                 return false;
-            
+
             return ReferenceEquals(str, null) == false && self.Equals(str);
         }
 
@@ -455,7 +466,50 @@ namespace Sparrow.Json
         {
             return (string)this; // invoke the implicit string conversion
         }
+        
+#if NET8_0_OR_GREATER
+        public string ToString(string format, IFormatProvider formatProvider) => ToString();
 
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider provider)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (destination.Length < Length)
+            {
+                charsWritten = 0;
+                return false;
+            }
+            
+            if (_string != null)
+            {
+                if (_string.AsSpan().TryCopyTo(destination))
+                {
+                    charsWritten = _string.Length;
+                    return true;
+                }
+            }
+            else 
+            {
+                fixed (char* pDestination = destination)
+                {
+                    if(Encodings.Utf8.GetChars(Buffer, Size, pDestination, destination.Length) == Length)
+                    {
+                        charsWritten = Length;
+                        return true;
+                    }
+                }
+            }
+            charsWritten = 0;
+            return false;
+        }
+
+        public bool TryCopyTo(Span<char> destination)
+        {
+            return TryFormat(destination, out _, default, null);
+        }
+#endif
+        
         public int CompareTo(object obj)
         {
             if (IsDisposed)
@@ -968,6 +1022,13 @@ namespace Sparrow.Json
         {
             return ToString().Split(separator, count, options);
         }
+
+#if NET9_0_OR_GREATER
+        public string[] Split(scoped ReadOnlySpan<char> separator)
+        {
+            return ToString().Split(separator);
+        }
+#endif
 
         public bool StartsWith(string value)
         {

@@ -20,14 +20,12 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Exceptions;
-using Raven.Server.Logging;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
@@ -322,7 +320,41 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
-            protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
+            protected void PreProcessAttachments(DocumentsOperationContext context, ReplicationBatchItem item)
+            {
+                if (_replicationInfo.SupportedFeatures.Replication.RemoteAttachments == false)
+                {
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem attachmentReplicationItem:
+
+                            if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachmentReplicationItem.Base64Hash, out var attachmentStream))
+                            {
+                                // when we created AttachmentReplicationItem with the attachment stream, we put the stream's size into AttachmentSize variable
+                                attachmentReplicationItem.AttachmentSize = attachmentStream.AttachmentSize;
+                            }
+                            else
+                            {
+                                // the attachment stream was not replicated, we check the local storage for the size of the attachment stream
+                                var attachmentSize = AttachmentsStorage.GetAttachmentStreamLength(context, attachmentReplicationItem.Base64Hash);
+                                if (attachmentSize != -1)
+                                {
+                                    attachmentReplicationItem.AttachmentSize = attachmentSize;
+                                }
+                            }
+
+                            break;
+                    }
+                }
+            }
+
+            protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags()
+            {
+                var flags = NonPersistentDocumentFlags.FromReplication;
+                if (_isInternal)
+                    flags |= NonPersistentDocumentFlags.SkipSchemaValidation;
+                return flags;
+            }
 
             protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
@@ -369,6 +401,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         operationsCount++;
 
+                        PreProcessAttachments(context, item);
                         var changeVectorToMerge = PreProcessItem(context, item);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
@@ -385,11 +418,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                             case AttachmentReplicationItem attachment:
 
                                 var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
+                                var isRevision = AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) == AttachmentType.Revision;
                                 if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) != AttachmentType.Revision,
+                                        Debug.Assert(result.Attachment == null || isRevision == false,
                                             "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
@@ -412,8 +446,14 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 if (newChangeVector != null)
                                 {
+                                    RemoteAttachmentParameters remoteParams = null;
+                                    if (attachment.RemoteAtUtc.HasValue)
+                                    {
+                                        remoteParams = new RemoteAttachmentParameters(attachment.RemoteIdentifier.ToString(), attachment.RemoteAtUtc.Value) { Flags = attachment.Flags };
+                                    }
+
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, newChangeVector);
+                                        contentType, attachment.Base64Hash, remoteParams, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;
@@ -440,6 +480,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                     newChangeVector,
                                     attachmentTombstone.LastModifiedTicks);
+
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
@@ -789,7 +830,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
-
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) && remoteParameters != null
+                        && remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.Remote)
+                        continue;
                     if (context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash))
                         continue;
 
@@ -833,6 +876,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return new MergedDocumentReplicationCommandDto
                 {
                     LastEtag = _lastEtag,
+                    IsInternal = _isInternal,
                     SupportedFeatures = _replicationInfo.SupportedFeatures,
                     ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => i.Clone(context, context.Allocator)).ToArray(),
                     SourceDatabaseId = _replicationInfo.SourceDatabaseId,
@@ -846,6 +890,7 @@ namespace Raven.Server.Documents.Replication.Incoming
     {
         public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;
+        public bool IsInternal;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         public string SourceDatabaseId;
         public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
@@ -881,7 +926,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 Logger = database.Loggers.GetLogger<MergedDocumentReplicationCommandDto>()
             };
 
-            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);
+            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag, IsInternal);
         }
 
         private AttachmentReplicationItem CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)

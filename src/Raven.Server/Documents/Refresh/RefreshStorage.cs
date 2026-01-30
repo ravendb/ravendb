@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -11,11 +12,11 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Refresh
 {
-    public sealed class RefreshStorage : AbstractBackgroundWorkStorage
+    public sealed class RefreshStorage : DocumentBackgroundWorkStorage
     {
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
-        public RefreshStorage(DocumentDatabase database, Transaction tx) 
+        public RefreshStorage(DocumentDatabase database, Transaction tx)
             : base(tx, database, DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
         {
         }
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Refresh
                 {
                     try
                     {
-                        Database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                        Database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction), nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
                     }
                     catch (ConcurrencyException)
                     {
@@ -57,14 +58,11 @@ namespace Raven.Server.Documents.Refresh
 
         protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
         {
-            if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                return;
-
             (bool allExpired, string id) = GetConflictedExpiration(options.Context, options.CurrentTime, clonedId);
 
             if (allExpired)
             {
-                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
+                expiredDocs.Enqueue(id == null ? new DocumentExpirationInfo(ticksAsSlice, clonedId, null, BackgroundWorkInfoStatus.Delete) : new DocumentExpirationInfo(ticksAsSlice, clonedId, id, BackgroundWorkInfoStatus.Process));
                 totalCount++;
             }
         }

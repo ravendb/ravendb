@@ -92,14 +92,14 @@ if (name == 'CF')
             Assert.Equal(1, result.Documents.SkippedCount);
             Assert.Equal(0, result.Documents.ErroredCount);
 
-            Assert.Equal(1, result.Documents.Attachments.ReadCount);
+            Assert.Equal(2, result.Documents.Attachments.ReadCount);
             Assert.Equal(0, result.Documents.Attachments.ErroredCount);
 
             Assert.Equal(2, result.RevisionDocuments.ReadCount);
             Assert.Equal(1, result.RevisionDocuments.SkippedCount);
             Assert.Equal(0, result.RevisionDocuments.ErroredCount);
 
-            Assert.Equal(1, result.RevisionDocuments.Attachments.ReadCount);
+            Assert.Equal(2, result.RevisionDocuments.Attachments.ReadCount);
             Assert.Equal(0, result.RevisionDocuments.Attachments.ErroredCount);
 
             Assert.Equal(2, result.Counters.ReadCount);

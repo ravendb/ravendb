@@ -85,8 +85,10 @@ namespace StressTests.Issues
                 await s.SaveChangesAsync();
             }
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -236,8 +238,10 @@ namespace StressTests.Issues
                 await s.SaveChangesAsync();
             }
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {

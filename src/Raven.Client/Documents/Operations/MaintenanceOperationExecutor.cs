@@ -7,6 +7,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Utils;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace Raven.Client.Documents.Operations
 {

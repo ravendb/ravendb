@@ -19,36 +19,30 @@ export function withNestedSubmit(action: (...args: any[]) => void) {
     };
 }
 
-export function createIdleState<T>(initialData: T = null): loadableData<T> {
+export function createIdleState<T>(initialData?: T): loadableData<T> {
     return {
-        data: initialData,
         status: "idle",
-        error: null,
+        data: initialData,
     };
 }
 
 export function createSuccessState<T>(data: T): loadableData<T> {
     return {
-        data,
-        error: null,
         status: "success",
+        data,
     };
 }
 
-export function createLoadingState<T>(previousState?: loadableData<T>): loadableData<T> {
+export function createLoadingState(): loadableData<undefined> {
     return {
-        error: null,
-        data: null,
-        ...previousState,
         status: "loading",
     };
 }
 
-export function createFailureState(error?: string): loadableData<any> {
+export function createFailureState(error?: any): loadableData<undefined> {
     return {
-        error,
-        data: null,
         status: "failure",
+        error,
     };
 }
 
@@ -71,6 +65,28 @@ export async function tryHandleSubmit<T>(promise: () => Promise<T>) {
         return await promise();
     } catch (e) {
         console.error(e);
+    }
+}
+
+export type TryCatchResult<T> =
+    | {
+          status: "success";
+          data: T;
+      }
+    | {
+          status: "error";
+          error: string;
+      };
+
+export async function tryCatch<T>(promiseFn: () => Promise<T>): Promise<TryCatchResult<T>> {
+    try {
+        const response = await promiseFn();
+        return { status: "success", data: response };
+    } catch (error) {
+        return {
+            status: "error",
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
     }
 }
 

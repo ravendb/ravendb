@@ -315,7 +315,8 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                         builder.WriteNull(fieldId, path);
                         break;
                     }
-                    
+
+                    Debug.Assert(field is not { Vector: null }, "field is not { Vector: null }");
                     var embedding = vectorValue.GetEmbedding();
                     var destinationEmbeddingType = field.Vector.DestinationEmbeddingType;
                     
@@ -596,7 +597,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
         exceptionMessage.Append(
             "If you really need to use this field for searching purposes, you have to call ToString() on the field value in the index definition. Although it's recommended to index individual fields of this complex object. " +
-            "Read more at: https://ravendb.net/l/OB9XW4/7.1");
+            "Read more at: https://ravendb.net/l/OB9XW4/7.2");
 
         throw new NotSupportedInCoraxException(exceptionMessage.ToString());
     }

@@ -23,6 +23,9 @@ class globalSettings extends abstractSettings {
 
     isRequireTypedConfirmationToDeleteDocuments = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
 
+    isChatbotAlwaysAllowEndpointCalls = new simpleStudioSetting<boolean>("local", false, x => this.saveSetting(x));
+    isChatbotDataSubmissionEnabled = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
+
     feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));
 
     constructor(remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>,

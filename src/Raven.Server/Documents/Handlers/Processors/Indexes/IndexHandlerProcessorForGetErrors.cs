@@ -25,6 +25,8 @@ internal sealed class IndexHandlerProcessorForGetErrors : AbstractIndexHandlerPr
     protected override ValueTask HandleCurrentNodeAsync()
     {
         var names = GetIndexNames();
+        var pageSize = RequestHandler.GetPageSize();
+        var start = RequestHandler.GetStart();
 
         List<Index> indexes;
         if (names == null || names.Length == 0)
@@ -45,7 +47,7 @@ internal sealed class IndexHandlerProcessorForGetErrors : AbstractIndexHandlerPr
         var indexErrors = indexes.Select(x => new IndexErrors
         {
             Name = x.Name,
-            Errors = x.GetErrors().ToArray()
+            Errors = x.GetErrors(start, pageSize).ToArray()
         }).ToArray();
 
         return WriteResultAsync(indexErrors);

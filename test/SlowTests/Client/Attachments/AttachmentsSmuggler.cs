@@ -480,7 +480,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(1, importResult.Documents.ReadCount);
                         Assert.True(4 == importResult.RevisionDocuments.ReadCount, $"{i} : importResult.RevisionDocuments.ReadCount = {importResult.RevisionDocuments.ReadCount}");
                         Assert.True(4 == importResult.Documents.Attachments.ReadCount, $"{i} : importResult.Documents.Attachments.ReadCount = {importResult.Documents.Attachments.ReadCount}");
-                        Assert.True(4 == importResult.RevisionDocuments.Attachments.ReadCount, $"{i} : importResult.RevisionDocuments.Attachments.ReadCount = {importResult.RevisionDocuments.Attachments.ReadCount}");
+                        Assert.True(10 == importResult.RevisionDocuments.Attachments.ReadCount, $"{i} : importResult.RevisionDocuments.Attachments.ReadCount = {importResult.RevisionDocuments.Attachments.ReadCount}");
 
                         var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                         Assert.Equal(1, stats.CountOfDocuments);

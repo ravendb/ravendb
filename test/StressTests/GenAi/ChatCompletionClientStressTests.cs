@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;

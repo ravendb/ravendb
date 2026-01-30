@@ -2,7 +2,7 @@ import "./SampleObjectAndSchemaFields.scss";
 import { Icon } from "components/common/Icon";
 import AceEditor from "../ace/AceEditor";
 import ButtonWithSpinner from "../ButtonWithSpinner";
-import { FormAceEditor } from "../Form";
+import { FormAceEditor, FormErrorIcon, useErrorMessage } from "../Form";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 import { Control, FieldPath, FieldValues, useFormContext, UseFormSetValue, useWatch } from "react-hook-form";
 import ReactAce from "react-ace";
@@ -13,7 +13,6 @@ import Tabs from "react-bootstrap/Tabs";
 import Tab from "react-bootstrap/Tab";
 import useUniqueId from "components/hooks/useUniqueId";
 import classNames from "classnames";
-import genUtils from "common/generalUtils";
 import messagePublisher from "common/messagePublisher";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
@@ -63,6 +62,9 @@ export default function SampleObjectAndSchemaFields<
     const sampleObjectValue = useWatch({ control, name: sampleObjectName });
     const { trigger, formState } = useFormContext();
 
+    const sampleObjectError = useErrorMessage({ control, paths: [sampleObjectName] });
+    const jsonSchemaError = useErrorMessage({ control, paths: [jsonSchemaName] });
+
     const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>(sampleObjectValue);
 
     const asyncGenerateSchema = useAsyncCallback(async () => {
@@ -79,7 +81,7 @@ export default function SampleObjectAndSchemaFields<
     const canRegenerateSchema = !!sampleObject && !!jsonSchema && lastSampleObjectForGenerate !== sampleObject;
 
     useEffect(() => {
-        if (genUtils.getNestedField(formState.dirtyFields, sampleObjectName)) {
+        if (_.get(formState.dirtyFields, sampleObjectName)) {
             setValue(canRegenerateSchemaName, canRegenerateSchema as TFieldValues[TName], {
                 shouldValidate: true,
             });
@@ -91,21 +93,20 @@ export default function SampleObjectAndSchemaFields<
 
     const defaultActiveTab = jsonSchema ? "json-schema" : "sample-object";
 
-    const hasSampleObjectError = genUtils.getNestedField(formState.errors, sampleObjectName);
-    const hasJsonSchemaError = genUtils.getNestedField(formState.errors, jsonSchemaName);
-
     return (
         <div className="sample-object-and-schema-tabs">
             <Tabs defaultActiveKey={defaultActiveTab} id={tabsId}>
                 <Tab
                     eventKey="sample-object"
                     title={
-                        <div className={classNames({ "text-danger": hasSampleObjectError })}>
-                            {sampleObjectLabel}
+                        <div className="hstack">
+                            <div className={classNames({ "text-danger": sampleObjectError.hasErrors })}>
+                                {sampleObjectLabel}
+                            </div>
                             <PopoverWithHoverWrapper message={sampleObjectTooltip}>
                                 <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
-                            {hasSampleObjectError && <Icon icon="warning" color="danger" margin="ms-1" />}
+                            <FormErrorIcon control={control} paths={[sampleObjectName]} onError={() => {}} />
                         </div>
                     }
                 >
@@ -152,12 +153,14 @@ export default function SampleObjectAndSchemaFields<
                 <Tab
                     eventKey="json-schema"
                     title={
-                        <div>
-                            <span className={classNames(hasJsonSchemaError && "text-danger")}>{jsonSchemaLabel}</span>
+                        <div className="hstack">
+                            <span className={classNames(jsonSchemaError.hasErrors && "text-danger")}>
+                                {jsonSchemaLabel}
+                            </span>
                             <PopoverWithHoverWrapper message={jsonSchemaTooltip}>
                                 <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
-                            {hasJsonSchemaError && <Icon icon="warning" color="danger" margin="ms-1" />}
+                            <FormErrorIcon control={control} paths={[jsonSchemaName]} />
                         </div>
                     }
                 >

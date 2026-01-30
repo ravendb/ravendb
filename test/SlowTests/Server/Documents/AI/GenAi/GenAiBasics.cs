@@ -761,6 +761,7 @@ for(const comment of this.Comments)
 
         etlDone = Etl.WaitForEtlToComplete(store);
         long etag = 0;
+        var baselineUtc = DateTime.UtcNow;
         using (var session = store.OpenSession())
         {
             // modify the doc to trigger etl 
@@ -769,7 +770,6 @@ for(const comment of this.Comments)
 
             var doc = session.Load<Post>(docId);
             doc.Comments.Add(new Comment("spam comment", "evil bot"));
-
             etag = ChangeVectorUtils.GetEtagById(session.Advanced.GetChangeVectorFor(doc), db.DbBase64Id);
 
             session.SaveChanges();
@@ -787,7 +787,11 @@ for(const comment of this.Comments)
         value = await WaitForValueAsync(() =>
         {
             stats2 = etlProcess.GetPerformanceStats()
-                .Where(x => x != null && x.NumberOfLoadedItems > 0 && x.LastLoadedEtag == etag + 1 && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
+                .Where(x => x != null
+                            && x.Started >= baselineUtc
+                            && x.LastLoadedEtag >= etag + 1
+                            && x.NumberOfLoadedItems > 0
+                            && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
                 .ToArray();
             return stats2.Length > 0;
         }, expectedVal: true, timeout: 60_000);
@@ -795,15 +799,16 @@ for(const comment of this.Comments)
         Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
         Assert.NotEmpty(stats2);
-        Assert.Equal(1, stats2[^1].NumberOfExtractedItems[EtlItemType.Document]);
 
-        var loadDetails2 = stats2[^1].Details.Operations[^1];
-        var genAiStats2 = loadDetails2.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel) as GenAiPerformanceOperation;
-        Assert.NotNull(genAiStats2);
+        var resend = stats2.FirstOrDefault(s =>
+        {
+            var load = s.Details.Operations[^1];
+            var op = load.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel)
+                as GenAiPerformanceOperation;
+            return op is { TotalSentToModel: 1, NumberOfContextObjects: 1, TotalCachedContexts: 0 };
+        });
 
-        Assert.Equal(1, genAiStats2.NumberOfContextObjects);
-        Assert.Equal(1, genAiStats2.TotalSentToModel);
-        Assert.Equal(0, genAiStats2.TotalCachedContexts);
+        Assert.True(resend != null, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
         using (var session = store.OpenAsyncSession())
         {

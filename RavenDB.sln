@@ -1,17 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.4.33103.184
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C0225BB-6184-4859-8ED1-2251A492A449}"
 	ProjectSection(SolutionItems) = preProject
+		agents.md = agents.md
 		src\CommonAssemblyInfo.cs = src\CommonAssemblyInfo.cs
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		RavenDB.ruleset = RavenDB.ruleset
-		agents.md = agents.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{764C36EA-83A0-4BA3-BA36-53A6808C13A9}"
@@ -99,6 +99,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlowTests.Tools", "test\SlowTests.Tools\SlowTests.Tools.csproj", "{B9224D08-B302-40BF-BCE5-D9C6CEF38756}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlowTests.Issues", "test\SlowTests.Issues\SlowTests.Issues.csproj", "{74AA8EAC-F8A1-4137-A3A4-A04B17A719EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RequestHandler.Benchmark", "bench\RequestHandler.Benchmark\RequestHandler.Benchmark.csproj", "{4E976E13-4BEC-4826-86CD-89E64C04DC69}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -830,6 +832,24 @@ Global
 		{74AA8EAC-F8A1-4137-A3A4-A04B17A719EF}.Validate|x64.Build.0 = Release|Any CPU
 		{74AA8EAC-F8A1-4137-A3A4-A04B17A719EF}.Validate|x86.ActiveCfg = Release|Any CPU
 		{74AA8EAC-F8A1-4137-A3A4-A04B17A719EF}.Validate|x86.Build.0 = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Debug|x64.Build.0 = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Debug|x86.Build.0 = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Release|x64.ActiveCfg = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Release|x64.Build.0 = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Release|x86.ActiveCfg = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Release|x86.Build.0 = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Validate|Any CPU.ActiveCfg = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Validate|x64.ActiveCfg = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Validate|x64.Build.0 = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Validate|x86.ActiveCfg = Debug|Any CPU
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69}.Validate|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -875,6 +895,7 @@ Global
 		{09E3A43E-1980-4D44-952F-FA1A7D774704} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{B9224D08-B302-40BF-BCE5-D9C6CEF38756} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{74AA8EAC-F8A1-4137-A3A4-A04B17A719EF} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
+		{4E976E13-4BEC-4826-86CD-89E64C04DC69} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}

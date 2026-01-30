@@ -49,6 +49,8 @@
 }
 
 .about-view-dropdown {
+    z-index: calc(var(--zindex-modal) - 1);
+
     .popover {
         padding: sizes.$gutter-xxs;
         width: 540px;

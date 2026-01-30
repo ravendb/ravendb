@@ -47,7 +47,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             var access = JsonDeserializationClient.ReplicationHubAccess(configuration);
             access.Validate(_hubDefinition.WithFiltering);
 
+#pragma warning disable SYSLIB0057
             using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
+#pragma warning restore SYSLIB0057
 
             var command = new RegisterReplicationHubAccessCommand(RequestHandler.DatabaseName, _hubTaskName, access, cert, raftRequestId);
             return await RequestHandler.Server.ServerStore.SendToLeaderAsync(command);

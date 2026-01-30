@@ -19,7 +19,6 @@
         margin-top: sizes.$gutter-xxs !important;
         padding: 0 !important;
         cursor: default;
-        max-height: 640px;
         overflow-y: auto;
 
         .dropdown-item {
@@ -33,6 +32,7 @@
         padding: 0 !important;
         border: 0 !important;
         background: none !important;
+        position: relative;
 
         &:before {
             content: "search";
@@ -48,6 +48,13 @@
 
         &:after {
             display: none !important;
+        }
+
+        &:has(.studio-search__ask-ai-button) {
+            .studio-search__input {
+                // Add extra padding to avoid overlap with Ask AI button
+                padding-right: 96px !important;
+            }
         }
     }
 
@@ -102,8 +109,26 @@
         min-height: 35px !important;
     }
 
+    &__ask-ai-button {
+        display: flex;
+        align-items: center;
+        position: absolute !important;
+        top: 5px;
+        right: 5px;
+        bottom: 5px;
+        border-radius: sizes.$border-radius-pill !important;
+        background-color: colors.$panel-bg-2-var !important;
+        border: none !important;
+
+        &:hover,
+        &:focus,
+        &:active {
+            background-color: colors.$panel-bg-3-var !important;
+        }
+    }
+
     &__database-col {
-        max-height: 540px;
+        max-height: 400px;
         overflow-y: auto;
 
         &__header {
@@ -124,6 +149,7 @@
             margin: sizes.$gutter-xs sizes.$gutter-sm;
             padding-bottom: sizes.$gutter-xs;
             border-bottom: 1px solid colors.$border-color-light-var;
+            width: auto !important;
 
             &__header {
                 padding: 0 0 sizes.$gutter-xs 0 !important;
@@ -165,7 +191,7 @@
         }
     }
     &__server-col {
-        max-height: 540px;
+        max-height: 400px;
         overflow-y: auto;
 
         @media (min-width: sizes.$screen-sm-max) {

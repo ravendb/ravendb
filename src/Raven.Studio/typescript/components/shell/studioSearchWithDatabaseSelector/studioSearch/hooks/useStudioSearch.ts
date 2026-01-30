@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import useBoolean from "components/hooks/useBoolean";
 import { StudioSearchResultDatabaseGroup, StudioSearchResultItem } from "../studioSearchTypes";
 import { useStudioSearchAsyncRegister } from "./useStudioSearchAsyncRegister";
@@ -7,8 +7,14 @@ import { useStudioSearchSyncRegister } from "./useStudioSearchSyncRegister";
 import { useStudioSearchOmniSearch } from "./useStudioSearchOmniSearch";
 import { useStudioSearchUtils } from "./useStudioSearchUtils";
 import { useStudioSearchMouseEvents } from "./useStudioSearchMouseEvents";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 export function useStudioSearch(menuItems: menuItem[]) {
+    const dispatch = useAppDispatch();
+    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
+
     const { value: isSearchDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +53,20 @@ export function useStudioSearch(menuItems: menuItem[]) {
         goToUrl,
     });
 
+    const handleAskAi = useCallback(() => {
+        if (isAiAssistantDisabled) {
+            return;
+        }
+
+        if (!searchQuery?.trim()) {
+            return;
+        }
+
+        dispatch(chatbotActions.isOpenSet(true));
+        dispatch(chatbotActions.runChat({ message: searchQuery }));
+        resetDropdown();
+    }, [searchQuery]);
+
     useStudioSearchKeyboardEvents({
         refs,
         studioSearchInputId,
@@ -54,7 +74,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
         activeItem,
         setIsDropdownOpen,
         setActiveItem,
-        setSearchQuery,
+        handleAskAi,
     });
 
     useStudioSearchMouseEvents({
@@ -74,11 +94,13 @@ export function useStudioSearch(menuItems: menuItem[]) {
     return {
         refs,
         isSearchDropdownOpen,
+        setIsDropdownOpen,
         searchQuery,
         setSearchQuery,
         matchStatus,
         results,
         activeItem,
+        handleAskAi,
     };
 }
 

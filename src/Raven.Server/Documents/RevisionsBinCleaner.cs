@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal bool IsFirst => AbstractBackgroundWorkStorage.ShouldHandleWorkOnCurrentNode(_documentDatabase.ReadDatabaseRecord().Topology, _documentDatabase.ServerStore.NodeTag);
+        internal bool IsFirst => AbstractBackgroundWorkStorageBase.ShouldHandleWorkOnCurrentNode(_documentDatabase.ReadDatabaseRecord().Topology, _documentDatabase.ServerStore.NodeTag);
 
         internal async Task<long> ExecuteCleanup(RevisionsBinConfiguration config = null)
         {

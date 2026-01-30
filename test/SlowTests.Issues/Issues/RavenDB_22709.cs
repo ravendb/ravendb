@@ -62,8 +62,10 @@ namespace SlowTests.Issues
 
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
 
+#pragma warning disable SYSLIB0057
             var pullCert1 = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
             var pullCert2 = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate3Path), (string)null, X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -134,7 +136,9 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 3, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
             await CreateDatabaseInCluster(sinkStore.Database, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkClusterCert);
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             var pullDefinition = new PullReplicationDefinition
             {
@@ -240,7 +244,9 @@ namespace SlowTests.Issues
             await CreateDatabaseInCluster(hubStore.Database, replicationFactor: 1, leadersUrl: hubCluster.Leader.WebUrl, certificate: hubClusterCert);
             await CreateDatabaseInCluster(sinkStore.Database, replicationFactor: 3, leadersUrl: sinkCluster.Leader.WebUrl, certificate: sinkClusterCert);
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(hubCluster.Certificates.ClientCertificate2Path), (string)null, X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {

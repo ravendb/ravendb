@@ -11,6 +11,8 @@ public class RequestBody
     public BlittableJsonReaderObject Parameters { get; set; }
     public object UserPrompt { private get; set; }
     public BlittableJsonReaderArray ActionResponses { get; set; }
+    
+    public BlittableJsonReaderArray ArtificialActions { get; set; }
     public AiConversationCreationOptions CreationOptions { get; set; }
 
     public List<AiAttachment> Attachments { get; set; }

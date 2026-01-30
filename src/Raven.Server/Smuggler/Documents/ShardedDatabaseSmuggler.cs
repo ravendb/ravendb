@@ -88,6 +88,11 @@ namespace Raven.Server.Smuggler.Documents
                 AddWarning(DatabaseRecordItemType.QueueSinks);
             }
 
+            if (databaseRecord.RemoteAttachments != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RemoteAttachments))
+            {
+                AddWarning(DatabaseRecordItemType.RemoteAttachments);
+            }
+
             //warn and remove mentor nodes
             foreach (var externalReplication in databaseRecord.ExternalReplications)
             {

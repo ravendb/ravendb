@@ -130,8 +130,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
     {
         if (items is not EmbeddingsGenerationScriptRun embeddingsScriptRun)
         {
-            Debug.Assert(items != null && items!.GetType()!.FullName!.StartsWith("System.Linq.EmptyPartition"),
-                $"items != null && items!.GetType()!.FullName!.StartsWith('System.Linq.EmptyPartition'): {items!.GetType()!.FullName!}");
+            Debug.Assert(items is EmbeddingGenerationScriptResult[] {Length: 0});
+            
             return 0;
         }
 

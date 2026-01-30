@@ -89,7 +89,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Configuration)]
         public void ThrowOnDatabaseRecordChanges()
         {
-            const int numberOfFields = 51;
+            const int numberOfFields = 53;
             const int numberOfProperties = 1;
 
             var tasksList = new List<string>

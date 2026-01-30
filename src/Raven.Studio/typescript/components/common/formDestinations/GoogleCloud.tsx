@@ -16,6 +16,7 @@ import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import useBoolean from "components/hooks/useBoolean";
 import classNames from "classnames";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
+import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
 
 interface GoogleCloudProps {
     isForNewConnection: boolean;
@@ -49,14 +50,7 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                 </FormSwitch>
                 <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
                     <div>
-                        <FormSwitch
-                            name={`${fieldBase}.config.isOverrideConfig`}
-                            control={control}
-                            className="ms-3 w-100"
-                            color="secondary"
-                        >
-                            Override configuration via external script
-                        </FormSwitch>
+                        <OverrideConfigurationViaExternalScriptToggle fieldBase={fieldBase} />
                         {formValues.config.isOverrideConfig ? (
                             <OverrideConfiguration fieldBase={fieldBase} />
                         ) : (

@@ -1,5 +1,5 @@
 @use "sass:color";
-
+@use "Content/scss/colors";
 @use "Content/scss/variables";
 
 // TODO replace all panels widh cards -> remove css
@@ -35,6 +35,7 @@
 }
 
 .item-disabled {
+    cursor: not-allowed;
     filter: contrast(85%);
     mix-blend-mode: luminosity;
     opacity: 0.4;
@@ -349,6 +350,11 @@ select {
     }
 }
 
+// Ensure dropdown menus are not clipped by sibling items in virtualized lists
+.virtual-item:has(.dropdown.show) {
+    z-index: 1;
+}
+
 // remove padding top from modal footer
 .modal-footer {
     padding-top: 0;
@@ -628,6 +634,13 @@ $filtering-input-bg: $toggle-bg !default;
     padding-right: $gutter-sm;
 }
 
+.hover-filter {
+    &:hover {
+        filter: $hover-filter-var;
+        transition: $global-easing-in-out;
+    }
+}
+
 .list-group-item {
     &.disabled {
         cursor: unset;
@@ -663,6 +676,27 @@ $filtering-input-bg: $toggle-bg !default;
     }
 }
 
+.border-dotted {
+    border-style: dotted;
+}
+
+.border-dashed {
+    border-style: dashed;
+}
+
+.icon-info-new {
+    font-size: 100%;
+    opacity: 0.6;
+    transition: $transition-base;
+    margin-left: $gutter-xxxs;
+    margin-right: 0 !important;
+
+    &:hover {
+        opacity: 1;
+        transition: none;
+    }
+}
+
 .content-padding {
     width: 100%;
     height: 100%;
@@ -689,5 +723,50 @@ $filtering-input-bg: $toggle-bg !default;
     &:hover {
         opacity: 1;
         transition: none;
+    }
+}
+
+.ai-gradient::before {
+    background: var(--ai-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.border-color-light {
+    border-color: $border-color-light-var !important;
+}
+
+.text-muted {
+    color: colors.$text-muted-var !important;
+}
+
+.tokens-usage-progress-bar {
+    background-color: colors.$gray-700;
+
+    .progress-bar {
+        background: linear-gradient(135deg, #2fb4d2 0%, #6972ee 100%);
+    }
+}
+
+[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    width: 14px;
+    background-image: url(data:image/svg+xml;base64,PCEtLSBHZW5lcmF0ZWQgYnkgSWNvTW9vbi5pbyAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPg0KPHRpdGxlPjwvdGl0bGU+DQo8ZyBpZD0iaWNvbW9vbi1pZ25vcmUiPg0KPC9nPg0KPHBhdGggZD0iTTYzOC40IDUxMmwyMzYuOC0yMzUuMi0xMjgtMTI2LjQtMjM1LjIgMjM1LjItMjM1LjItMjM2LjgtMTI4IDEyOCAyMzYuOCAyMzUuMi0yMzUuMiAyMzUuMiAxMjYuNCAxMjYuNCAyMzUuMi0yMzUuMiAyMzUuMiAyMzYuOCAxMjgtMTI4eiI+PC9wYXRoPg0KPC9zdmc+DQo=);
+    background-size: 14px 14px;
+    opacity: 0.5;
+    transition: $transition-base;
+    cursor: pointer;
+
+    // Default image color is black. Invert it for white inputs
+    body[data-theme="dark"] &,
+    body[data-theme="classic"] & {
+        filter: invert(1);
+    }
+
+    &:hover {
+        opacity: 1;
     }
 }

@@ -123,7 +123,13 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     public void Score(Span<long> matches, Span<float> scores, float _)
     {
-        Debug.Assert(_persisted, "Score() should be called after Fill() or AndWith()");
+        if (_persisted == false)
+        {
+            // BinaryMatch may skip the method call if the other node of the AND clause 
+            // is empty, the evaluation of this primitive is pointless. In these cases, the call is ignored.
+            return;
+        }
+        
         if (_singleVectorSearchDoNotSortByIds == false)
         {
             for (int i = 0; i < matches.Length; ++i)

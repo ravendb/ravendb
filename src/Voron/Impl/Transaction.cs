@@ -713,6 +713,13 @@ namespace Voron.Impl
             if (tableTree.TryRead(TableSchema.InactiveSectionSlice, out _) )
                 DeleteFixedTree(table.InactiveSections, isInRoot: false);
 
+            // pre allocated pages
+
+            table.TablePageAllocator.FreePreAllocatedFreePages();
+
+            DeleteFixedTree(table.TablePageAllocator.GetAllocationStorageFst(), isInRoot: false);
+            DeleteFixedTree(table.TablePageAllocator.GetAllocationStorageSizeFst(), isInRoot: false);
+
             DeleteTree(name);
 
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out var nameSlice))

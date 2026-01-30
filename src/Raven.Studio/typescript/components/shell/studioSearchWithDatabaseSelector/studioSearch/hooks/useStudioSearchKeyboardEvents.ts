@@ -12,11 +12,11 @@ interface UseStudioSearchKeyboardEventsProps {
     activeItem: StudioSearchResultItem;
     setActiveItem: React.Dispatch<React.SetStateAction<StudioSearchResultItem>>;
     setIsDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+    handleAskAi: () => void;
 }
 
 export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEventsProps) {
-    const { refs, results, activeItem, setIsDropdownOpen, setActiveItem } = props;
+    const { refs, results, activeItem, setIsDropdownOpen, setActiveItem, handleAskAi } = props;
 
     const { inputRef, serverColumnRef, databaseColumnRef } = refs;
 
@@ -75,6 +75,23 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
             current.removeEventListener("keydown", handleEnterKey);
         };
     }, [inputRef, activeItem, setIsDropdownOpen]);
+
+    // Handle ask AI shortcut
+    useEffect(() => {
+        const handleAskAiShortcut = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+                e.preventDefault();
+                handleAskAi();
+            }
+        };
+
+        const current = inputRef.current;
+
+        current.addEventListener("keydown", handleAskAiShortcut);
+        return () => {
+            current.removeEventListener("keydown", handleAskAiShortcut);
+        };
+    }, [handleAskAi]);
 
     const [activeGroup, setActiveGroup] = useState<"left" | "right">("left");
     const [activeIndex, setActiveIndex] = useState(0);

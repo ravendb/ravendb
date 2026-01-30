@@ -8,6 +8,7 @@ function mapFromDto(
         return {
             name: "",
             identifier: "",
+            state: "Enabled",
             connectionStringName: "",
             systemPrompt: "",
             sampleObject: "",
@@ -32,6 +33,7 @@ function mapFromDto(
     return {
         name: isClone ? "" : dto.Name,
         identifier: isClone ? "" : dto.Identifier,
+        state: dto.Disabled ? "Disabled" : "Enabled",
         connectionStringName: dto.ConnectionStringName,
         systemPrompt: dto.SystemPrompt,
         sampleObject: dto.SampleObject,
@@ -41,6 +43,7 @@ function mapFromDto(
             dto.Parameters?.map((x) => ({
                 name: x.Name,
                 description: x.Description,
+                isSendToModel: x.SendToModel ?? true, // the default value on the server is true
             })) ?? [],
         queries:
             dto.Queries?.map((x) => ({
@@ -96,12 +99,14 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
         Identifier: formData.identifier,
         ConnectionStringName: formData.connectionStringName,
         SystemPrompt: formData.systemPrompt,
+        Disabled: formData.state === "Disabled",
         OutputSchema: formData.outputSchema,
         SampleObject: formData.sampleObject,
         Parameters:
             formData.parameters?.map((x) => ({
                 Name: x.name,
                 Description: x.description,
+                SendToModel: x.isSendToModel,
             })) ?? [],
         Queries:
             formData.queries?.map((x) => ({

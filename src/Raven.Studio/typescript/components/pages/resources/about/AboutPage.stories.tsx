@@ -4,18 +4,21 @@ import {
     supportStatusArgType,
     withBootstrap5,
     withStorybookContexts,
+    withForceRerender,
 } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react-webpack5";
+import { ArgTypes, Meta, StoryObj } from "@storybook/react-webpack5";
 import { AboutPage as AboutPageComponent } from "./AboutPage";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
 import moment from "moment";
+import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
+import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
 
 export default {
     title: "Pages/About",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     argTypes: {
         securityClearance: securityClearanceArgType,
         licenseType: licenseArgType,
@@ -40,11 +43,18 @@ interface AboutPageStoryProps {
     supportStatus: Raven.Server.Commercial.Status;
     subscriptionExpiration: string;
     expired: boolean;
+    consentStatus: CheckConsentAiAssistantResultDto["Status"];
+    usageStatus: CheckUsageAiAssistantResultDto["Status"];
+    usagePercentage: number;
 }
 
 function commonInit(props: AboutPageStoryProps) {
-    const { licenseService } = mockServices;
-    const { license, accessManager, cluster } = mockStore;
+    const { licenseService, aiAssistantService } = mockServices;
+    const { license, accessManager, cluster, aiAssistant } = mockStore;
+
+    aiAssistant.with_consent(props.consentStatus);
+    aiAssistantService.withCheckConsent((dto) => (dto.Status = props.consentStatus));
+    aiAssistantService.withCheckUsage({ Status: props.usageStatus, UsagePercentage: props.usagePercentage });
 
     accessManager.with_securityClearance(props.securityClearance);
     cluster.with_ClientVersion();
@@ -91,6 +101,20 @@ const defaultArgs: AboutPageStoryProps = {
     securityClearance: "ClusterAdmin",
     subscriptionExpiration: moment.utc().add(2, "month").format(),
     expired: false,
+    consentStatus: "Success",
+    usageStatus: "Success",
+    usagePercentage: 35,
+};
+
+const defaultArgTypes: Partial<ArgTypes<AboutPageStoryProps>> = {
+    consentStatus: {
+        control: "select",
+        options: ["Success", "InvalidCredentials", "ConsentRequired"],
+    },
+    usageStatus: {
+        control: "select",
+        options: ["Success", "InvalidCredentials"],
+    },
 };
 
 const render = (props: AboutPageStoryProps) => {
@@ -102,6 +126,7 @@ const render = (props: AboutPageStoryProps) => {
 export const AboutPage: StoryObj<AboutPageStoryProps> = {
     render,
     args: defaultArgs,
+    argTypes: defaultArgTypes,
 };
 
 export const ConnectionFailure: StoryObj<AboutPageStoryProps> = {
@@ -110,6 +135,7 @@ export const ConnectionFailure: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseServerConnection: false,
     },
+    argTypes: defaultArgTypes,
 };
 
 export const NoLicense: StoryObj<AboutPageStoryProps> = {
@@ -118,6 +144,7 @@ export const NoLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseType: "None",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const DeveloperLicense: StoryObj<AboutPageStoryProps> = {
@@ -126,6 +153,7 @@ export const DeveloperLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseType: "Developer",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const CommunityLicense: StoryObj<AboutPageStoryProps> = {
@@ -134,6 +162,7 @@ export const CommunityLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseType: "Community",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const ProfessionalLicense: StoryObj<AboutPageStoryProps> = {
@@ -142,6 +171,7 @@ export const ProfessionalLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseType: "Professional",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const EnterpriseLicense: StoryObj<AboutPageStoryProps> = {
@@ -150,6 +180,7 @@ export const EnterpriseLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseType: "Enterprise",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const EssentialLicense: StoryObj<AboutPageStoryProps> = {
@@ -158,6 +189,7 @@ export const EssentialLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         licenseType: "Essential",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const NoSupportOnPremise: StoryObj<AboutPageStoryProps> = {
@@ -167,6 +199,7 @@ export const NoSupportOnPremise: StoryObj<AboutPageStoryProps> = {
         cloud: false,
         supportStatus: "NoSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const NoSupportCloud: StoryObj<AboutPageStoryProps> = {
@@ -176,6 +209,7 @@ export const NoSupportCloud: StoryObj<AboutPageStoryProps> = {
         cloud: true,
         supportStatus: "NoSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const ProfessionalSupportOnPremise: StoryObj<AboutPageStoryProps> = {
@@ -185,6 +219,7 @@ export const ProfessionalSupportOnPremise: StoryObj<AboutPageStoryProps> = {
         cloud: false,
         supportStatus: "ProfessionalSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const ProductionSupportOnPremise: StoryObj<AboutPageStoryProps> = {
@@ -194,6 +229,7 @@ export const ProductionSupportOnPremise: StoryObj<AboutPageStoryProps> = {
         cloud: false,
         supportStatus: "ProductionSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const ProductionSupportCloud: StoryObj<AboutPageStoryProps> = {
@@ -203,6 +239,7 @@ export const ProductionSupportCloud: StoryObj<AboutPageStoryProps> = {
         cloud: true,
         supportStatus: "ProductionSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const PartialSupportOnPremise: StoryObj<AboutPageStoryProps> = {
@@ -212,6 +249,7 @@ export const PartialSupportOnPremise: StoryObj<AboutPageStoryProps> = {
         cloud: false,
         supportStatus: "PartialSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const UsingLatestVersion: StoryObj<AboutPageStoryProps> = {
@@ -222,6 +260,7 @@ export const UsingLatestVersion: StoryObj<AboutPageStoryProps> = {
         cloud: false,
         supportStatus: "NoSupport",
     },
+    argTypes: defaultArgTypes,
 };
 
 export const ExpiredLicense: StoryObj<AboutPageStoryProps> = {
@@ -231,6 +270,7 @@ export const ExpiredLicense: StoryObj<AboutPageStoryProps> = {
         subscriptionExpiration: moment.utc().subtract(1, "month").format(),
         expired: true,
     },
+    argTypes: defaultArgTypes,
 };
 
 export const AboutToExpireLicense: StoryObj<AboutPageStoryProps> = {
@@ -239,4 +279,5 @@ export const AboutToExpireLicense: StoryObj<AboutPageStoryProps> = {
         ...defaultArgs,
         subscriptionExpiration: moment.utc().add(3, "days").format(),
     },
+    argTypes: defaultArgTypes,
 };

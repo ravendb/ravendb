@@ -10,55 +10,40 @@
         }
     }
 
-    .edit-ai-agent-parameters-section {
-        .parameters-grid {
-            border-radius: sizes.$gutter-xs !important;
-            border: 1px solid colors.$border-color-light-var;
-            background: colors.$panel-bg-1;
+    .parameters-table-wrapper {
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-sm;
+        max-height: 220px;
+        overflow-y: auto;
 
-            .parameters-header {
-                border-radius: sizes.$gutter-xs sizes.$gutter-xs 0 0 !important;
+        table {
+            margin: 0;
+            background-color: colors.$input-bg-var;
 
-                .parameters-grid-header {
-                    display: grid;
-                    grid-template-columns: 1fr 3fr 80px;
+            thead {
+                position: sticky;
+                top: 0;
+                background-color: colors.$panel-bg-2-var;
+                z-index: 5;
 
-                    .parameter-name-header,
-                    .parameter-description-header,
-                    .parameter-actions-header {
-                        padding: sizes.$gutter-xxs;
-                        border-bottom: 1px solid colors.$border-color-light-var;
-                    }
-
-                    .parameter-name-header,
-                    .parameter-description-header {
-                        border-right: 1px solid colors.$border-color-light-var;
-                    }
+                th:not(:first-child) {
+                    border-left: 1px solid colors.$border-color-light-var;
                 }
             }
 
-            .parameters-list {
-                .parameter-row {
-                    &:last-child {
-                        border-bottom: none !important;
+            tbody {
+                tr {
+                    border-top: 1px solid colors.$border-color-light-var;
+
+                    td {
+                        padding: 0;
+                        align-content: center;
                     }
 
-                    .parameters-grid-row {
-                        display: grid;
-                        grid-template-columns: 1fr 3fr 80px;
-                        background-color: colors.$input-bg-var;
-
-                        .parameter-name-cell,
-                        .parameter-description-cell {
-                            border-right: 1px solid colors.$border-color-light-var;
-                        }
+                    td:not(:first-child) {
+                        border-left: 1px solid colors.$border-color-light-var;
                     }
                 }
-            }
-
-            .parameter-header,
-            .parameter-row {
-                border-bottom: 1px solid colors.$border-color-light-var;
             }
         }
     }
@@ -70,10 +55,5 @@
         justify-content: center;
         align-items: center;
         border-radius: sizes.$border-radius-sm;
-    }
-
-    table {
-        clip-path: content-box;
-        margin-bottom: 0 !important;
     }
 }

@@ -198,8 +198,10 @@ namespace SlowTests.Server.Documents.OngoingTasks
                 CreateDatabase = true
             });
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {

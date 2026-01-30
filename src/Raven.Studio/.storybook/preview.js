@@ -143,7 +143,9 @@ export const parameters = {
               ],
               "About",
           ],
+          "Widgets",
           "Shell",
+          "Setup Wizard",
           "Bits",
       ],
     }

@@ -56,8 +56,10 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -194,8 +196,10 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = x => sinkDatabase
             });
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -332,8 +336,10 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -443,8 +449,10 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -597,8 +605,10 @@ namespace SlowTests.Server.Replication
             }
 
             //setup pull replication
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -684,8 +694,10 @@ namespace SlowTests.Server.Replication
             //setup expiration
             await SetupExpiration(sinkStore);
 
+#pragma warning disable SYSLIB0057
             var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {

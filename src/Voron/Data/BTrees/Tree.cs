@@ -331,10 +331,10 @@ namespace Voron.Data.BTrees
 
         public void Add(Slice key, ReadOnlySpan<byte> value)
         {
-            if (value == null)
+            if (value == ReadOnlySpan<byte>.Empty)
                 ThrowNullReferenceException();
 
-            Debug.Assert(value != null);
+            Debug.Assert(value != ReadOnlySpan<byte>.Empty);
 
             using (DirectAdd(key, value.Length, out byte* ptr))
                 value.CopyTo(new Span<byte>(ptr, value.Length));

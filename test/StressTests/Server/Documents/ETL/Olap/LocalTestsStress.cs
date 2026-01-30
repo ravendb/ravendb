@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -17,10 +18,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
-using Tests.Infrastructure;
-using SlowTests.Server.Documents.ETL;
 using Sparrow.Server;
-using Tests.Infrastructure.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -77,11 +76,10 @@ loadToOrders(partitionBy(key), o);
 
                 var path = NewDataPath(forceCreateDir: true);
                 SetupLocalOlapEtl(store, script, path, frequency: DefaultFrequency);
-                var firstBatchTime = DateTime.UtcNow;
-                var firstBatchTimeMinutes = firstBatchTime.Minute;
+
                 Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(10)));
 
-                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToArray();
                 Assert.Equal(1, files.Length);
 
                 var expectedFields = new[] { "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
@@ -143,21 +141,24 @@ loadToOrders(partitionBy(key), o);
                     await session.SaveChangesAsync();
                 }
 
-                etlDone = Etl.WaitForEtlToComplete(store);
-                Assert.True(await etlDone.WaitAsync(TimeSpan.FromSeconds(60)));
+                var secondBatchCompleted = WaitForValue(() =>
+                {
+                    files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToArray();
+                    return files.Length == 2;
+                }, expectedVal: true, timeout: 70_000);
 
-                var secondBatchTime = DateTime.UtcNow;
-                var secondBatchTimeMinutes = secondBatchTime.Minute;
-                var oneMinuteApart = secondBatchTimeMinutes - firstBatchTimeMinutes == 1 || firstBatchTimeMinutes == 59 && secondBatchTimeMinutes == 0 ||
-                    // grant one second tolerance 
-                    (secondBatchTime - firstBatchTime).TotalSeconds >= 59 ||
-                    secondBatchTime.Second == 59 && firstBatchTimeMinutes == secondBatchTimeMinutes;
+                Assert.True(secondBatchCompleted, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(70)));
 
-                Assert.True(oneMinuteApart,
+                var firstBatchTime = File.GetLastWriteTimeUtc(files[0]);
+                var secondBatchTime = File.GetLastWriteTimeUtc(files[1]);
+
+                // compute next minute boundary
+                var expectedSecondBatchAt = new DateTime(firstBatchTime.Year, firstBatchTime.Month, firstBatchTime.Day, firstBatchTime.Hour, firstBatchTime.Minute, 0, DateTimeKind.Utc)
+                    .AddMinutes(1);
+
+                Assert.True(secondBatchTime >= expectedSecondBatchAt.AddMilliseconds(-250),
                     $"First batch time : {firstBatchTime}, second batch time : {secondBatchTime}. Files : {string.Join(", ", Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories))}");
 
-                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
-                Assert.Equal(2, files.Length);
             }
         }
 

@@ -1894,7 +1894,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var r = await etlDone.WaitAsync(_defaultTimeout);
                 Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, _defaultTimeout, databaseMode));
 
-                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
+                var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories)
+                    .OrderBy(x => x)
+                    .ToList();
 
                 Assert.Equal(5, files.Count);
 
@@ -1904,9 +1906,22 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 Assert.Contains("year=2023", files[3]);
                 Assert.Contains("year=2024", files[4]);
 
-                // add more data
-                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+                // disable ETL while we make changes in the configuration
+                const string documentIdColumn = "order_id";
+                configuration.OlapTables = new List<OlapEtlTable>
+                {
+                    new OlapEtlTable
+                    {
+                        TableName = "Orders",
+                        DocumentIdColumn = documentIdColumn
+                    }
+                };
+                configuration.Disabled = true;
 
+                var updateResult = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                taskId = updateResult.TaskId;
+
+                // add more data while ETL is disabled
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 6; i <= 10; i++)
@@ -1920,32 +1935,27 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                         };
 
                         await session.StoreAsync(o);
-
                         dt = dt.AddYears(1);
                     }
 
                     await session.SaveChangesAsync();
                 }
 
-                // update
-                const string documentIdColumn = "order_id";
-                configuration.OlapTables = new List<OlapEtlTable>
-                {
-                    new OlapEtlTable
-                    {
-                        TableName = "Orders",
-                        DocumentIdColumn = documentIdColumn
-                    }
-                };
+                // re-enable ETL
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
+                configuration.Disabled = false;
                 store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
 
                 // assert that batch completed successfully and that we got new files with new name of the document id column
                 r = await etlDone.WaitAsync(_defaultTimeout);
                 Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, _defaultTimeout, databaseMode));
 
-                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
-                Assert.Equal(10, files.Count);
+                files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories)
+                    .OrderBy(x => x)
+                    .ToList();
+
+                Assert.True(files.Count == 10, await Etl.GetEtlDebugInfo(store.Database, _defaultTimeout, databaseMode));
 
                 Assert.Contains("year=2025", files[5]);
                 Assert.Contains("year=2026", files[6]);
@@ -2059,9 +2069,14 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 Assert.Contains("year=2023", files[3]);
                 Assert.Contains("year=2024", files[4]);
 
-                // add more data
-                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+                // disable ETL while we make changes in the configuration
+                configuration.RunFrequency = DefaultFrequency; // every minute
+                configuration.Disabled = true;
 
+                var updateResult = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                taskId = updateResult.TaskId;
+
+                // add more data while ETL is disabled
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 6; i <= 10; i++)
@@ -2082,21 +2097,29 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                     await session.SaveChangesAsync();
                 }
 
-                // update 
-                configuration.RunFrequency = DefaultFrequency; // every minute
-                store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                // re-enable ETL
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+
+                configuration.Disabled = false;
+                updateResult = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                taskId = updateResult.TaskId;
 
                 r = await etlDone.WaitAsync(timeout);
                 Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, timeout, databaseMode));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
-                Assert.Equal(10, files.Count);
+                Assert.True(files.Count == 10, await Etl.GetEtlDebugInfo(store.Database, timeout, databaseMode));
 
                 Assert.Contains("year=2025", files[5]);
                 Assert.Contains("year=2026", files[6]);
                 Assert.Contains("year=2027", files[7]);
                 Assert.Contains("year=2028", files[8]);
                 Assert.Contains("year=2029", files[9]);
+
+                var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.OlapEtl));
+                var olapTaskInfo = taskInfo as OngoingTaskOlapEtl;
+                Assert.NotNull(olapTaskInfo);
+                Assert.Equal(DefaultFrequency, olapTaskInfo.Configuration.RunFrequency);
             }
         }
 
@@ -2187,9 +2210,15 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                     Assert.Contains(customPartition, file);
                 }
 
-                // add more data
-                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
+                // disable ETL while we make changes in the configuration
+                const string newCustomPartition = "shop35";
+                configuration.CustomPartitionValue = newCustomPartition;
+                configuration.Disabled = true;
 
+                var updateResult = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                taskId = updateResult.TaskId;
+
+                // add more data
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int i = 6; i <= 10; i++)
@@ -2210,10 +2239,10 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                     await session.SaveChangesAsync();
                 }
 
-                // update
-                const string newCustomPartition = "shop35";
-                configuration.CustomPartitionValue = newCustomPartition;
+                // re enable ETL
+                etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
+                configuration.Disabled = false;
                 store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
 
                 // assert that batch completed successfully with the new partition value
@@ -2221,7 +2250,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 Assert.True(r, await Etl.GetEtlDebugInfo(store.Database, _defaultTimeout, databaseMode));
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
-                Assert.Equal(10, files.Count);
+                Assert.True(files.Count == 10, await Etl.GetEtlDebugInfo(store.Database, _defaultTimeout, databaseMode));
 
                 foreach (var file in new[] { files[5], files[6], files[7], files[8], files[9] })
                 {

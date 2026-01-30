@@ -94,6 +94,13 @@ namespace Corax
             
             public const int InvalidPageId = -1;
 
+            /// <summary>
+            /// Sentinel value used to mark dictionary entries as "in-progress" during atomic Dictionary+Storage updates.
+            /// If Storage.AddByRef throws, the dictionary entry remains at this value, allowing retry on next access.
+            /// See RavenDB-25907.
+            /// </summary>
+            public const int InvalidStorageIndex = -1;
+
             internal const long UninitializedFieldRootPage = -1L;
 
             public static class Hnsw

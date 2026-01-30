@@ -184,7 +184,7 @@ if ($output.IsCommentSpam) {
     return (
         <div>
             <div>Sample update script</div>
-            <Code code={code} elementToCopy={code} language="javascript" />
+            <Code code={code} language="javascript" />
         </div>
     );
 }

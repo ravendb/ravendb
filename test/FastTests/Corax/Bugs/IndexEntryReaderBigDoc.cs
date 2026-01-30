@@ -36,7 +36,7 @@ public class IndexEntryReaderBigDoc : StorageTest
             {
                 writer.Write(0, "users/1"u8);
 
-                entryId = writer.EntryId;
+                entryId = (long)writer.EntryId;
                 
                 writer.IncrementList();
                 {

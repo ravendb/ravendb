@@ -41,5 +41,14 @@ namespace Raven.Server.Storage.Schema
         {
             _transactions.Renew();
         }
+
+        public IDisposable AllocateDocumentsOperationContext(out DocumentsOperationContext ctx)
+        {
+            var dispose = DocumentsStorage.ContextPool.AllocateOperationContext(out ctx);
+
+            ctx.DoNotReuse = true; // ctx.Environment isn't initialized yet as we're upgrading the schema, so we don't want to return it to the pool
+            
+            return dispose;
+        }
     }
 }

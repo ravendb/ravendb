@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -15,12 +17,14 @@ internal sealed class DocumentHandlerProcessorForGenerateClassFromDocument : Abs
     {
     }
 
-    protected override async ValueTask HandleClassGenerationAsync(string id, string lang)
+    protected override async ValueTask HandleClassGenerationAsync(string id, string collection, string lang)
     {
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var document = RequestHandler.Database.DocumentsStorage.Get(context, id);
+            var document = string.IsNullOrEmpty(id) ? 
+                RequestHandler.Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, collection, 0, 1).SingleOrDefault() : 
+                RequestHandler.Database.DocumentsStorage.Get(context, id);
             if (document == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -33,7 +37,7 @@ internal sealed class DocumentHandlerProcessorForGenerateClassFromDocument : Abs
                     break;
 
                 default:
-                    throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
+                    throw new NotImplementedException($"Document code generator isn't implemented for {lang}, try using: csharp");
             }
 
             await using (var writer = new StreamWriter(RequestHandler.ResponseBodyStream()))

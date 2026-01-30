@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
@@ -35,14 +38,22 @@ namespace Raven.Client.Documents.Commands.Batches
             stream.Position = 0;
         }
 
-        public static void ValidateStream(Stream stream)
+        public static bool TryValidateStream(Stream stream, RemoteAttachmentParameters parameters)
         {
+            if (parameters.IsRemoteStorageAttachment())
+            {
+                Debug.Assert(stream == null, "stream == null");
+                return false;
+            }
+
             if (stream.CanRead == false)
                 ThrowNotReadableStream();
             if (stream.CanSeek == false)
                 ThrowNotSeekableStream();
             if (stream.Position != 0)
                 ThrowPositionNotZero(stream.Position);
+
+            return true;
         }
     }
 }

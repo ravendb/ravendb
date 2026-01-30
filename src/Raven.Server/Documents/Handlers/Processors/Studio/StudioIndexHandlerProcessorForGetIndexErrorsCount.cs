@@ -25,6 +25,8 @@ internal sealed class StudioIndexHandlerProcessorForGetIndexErrorsCount : Abstra
     protected override ValueTask HandleCurrentNodeAsync()
     {
         var names = GetIndexNames();
+        var pageSize = RequestHandler.GetPageSize();
+        var start = RequestHandler.GetStart();
 
         List<Index> indexes;
         if (names == null || names.Length == 0)
@@ -45,7 +47,7 @@ internal sealed class StudioIndexHandlerProcessorForGetIndexErrorsCount : Abstra
         var indexErrorsCounts = indexes.Select(x => new GetIndexErrorsCountCommand.IndexErrorsCount
         {
             Name = x.Name,
-            Errors = x.GetErrors()
+            Errors = x.GetErrors(start, pageSize)
                 .GroupBy(y => y.Action)
                 .Select(y => new GetIndexErrorsCountCommand.IndexingErrorCount
                 {

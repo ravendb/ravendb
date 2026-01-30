@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -62,6 +63,7 @@ namespace Raven.Server.Smuggler.Documents
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
+        private HashSet<string> _attachmentStreamsAlreadyExported;
 
         public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
         {
@@ -164,24 +166,24 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseRecordActions(_writer, _context);
         }
 
-        public IDocumentActions Documents(bool throwOnDuplicateCollection)
+        public IDocumentActions Documents(bool throwOnDuplicateCollection, BackupKind? backupKind = null)
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, "Docs");
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, "Docs");
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.RevisionDocuments));
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.RevisionDocuments));
         }
 
         public IDocumentActions Tombstones()
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Tombstones));
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Tombstones));
         }
 
         public IDocumentActions Conflicts()
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Conflicts));
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Conflicts));
         }
 
         public IKeyValueActions<long> Identities()
@@ -277,7 +279,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.ConflictSolverConfig));
-                    WriteConflictSolver(databaseRecord.ConflictSolverConfig);
+                    WriteTaskConfiguration(databaseRecord.ConflictSolverConfig);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Settings))
@@ -291,49 +293,56 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Revisions));
-                    WriteRevisions(databaseRecord.Revisions);
+                    WriteTaskConfiguration(databaseRecord.Revisions);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.TimeSeries))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.TimeSeries));
-                    WriteTimeSeries(databaseRecord.TimeSeries);
+                    WriteTaskConfiguration(databaseRecord.TimeSeries);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DocumentsCompression))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.DocumentsCompression));
-                    WriteDocumentsCompression(databaseRecord.DocumentsCompression);
+                    WriteTaskConfiguration(databaseRecord.DocumentsCompression);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Expiration))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Expiration));
-                    WriteExpiration(databaseRecord.Expiration);
+                    WriteTaskConfiguration(databaseRecord.Expiration);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DataArchival))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.DataArchival));
-                    WriteDataArchival(databaseRecord.DataArchival);
+                    WriteTaskConfiguration(databaseRecord.DataArchival);
                 }
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.RemoteAttachments))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.RemoteAttachments));
+                    WriteTaskConfiguration(databaseRecord.RemoteAttachments);
+                }
+                
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Refresh))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Refresh));
-                    WriteRefresh(databaseRecord.Refresh);
+                    WriteTaskConfiguration(databaseRecord.Refresh);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Client))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Client));
-                    WriteClientConfiguration(databaseRecord.Client);
+                    WriteTaskConfiguration(databaseRecord.Client);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Sorters))
@@ -362,7 +371,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Studio));
 
-                    WriteStudioConfiguration(databaseRecord.Studio);
+                    WriteTaskConfiguration(databaseRecord.Studio);
                 }
 
                 if (databaseRecord.RevisionsForConflicts != null)
@@ -370,7 +379,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
 
-                    WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                    WriteTaskConfiguration(databaseRecord.RevisionsForConflicts);
                 }
 
                 if (databaseRecord.IsSharded)
@@ -380,6 +389,13 @@ namespace Raven.Server.Smuggler.Documents
                     WriteShardingConfiguration(databaseRecord.Sharding);
                 }
 
+                if (databaseRecord.SchemaValidation != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.SchemaValidation));
+                    _context.Write(_writer, databaseRecord.SchemaValidation.ToJson());
+                }
+                
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:
@@ -552,26 +568,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 await _writer.MaybeFlushAsync();
-            }
-
-            private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
-            {
-                if (revisionsForConflictsConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, revisionsForConflictsConfiguration.ToJson());
-            }
-
-            private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
-            {
-                if (studioConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, studioConfiguration.ToJson());
             }
 
             private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)
@@ -1025,87 +1021,15 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteConflictSolver(ConflictSolver conflictSolver)
+            private void WriteTaskConfiguration(IDynamicJson config)
             {
-                if (conflictSolver == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, conflictSolver.ToJson());
-            }
-
-            private void WriteClientConfiguration(ClientConfiguration clientConfiguration)
-            {
-                if (clientConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, clientConfiguration.ToJson());
-            }
-
-            private void WriteExpiration(ExpirationConfiguration expiration)
-            {
-                if (expiration == null)
+                if (config == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
 
-                _context.Write(_writer, expiration.ToJson());
-            }
-
-            private void WriteDataArchival(DataArchivalConfiguration dataArchival)
-            {
-                if (dataArchival == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, dataArchival.ToJson());
-            }
-
-            private void WriteRefresh(RefreshConfiguration refresh)
-            {
-                if (refresh == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, refresh.ToJson());
-            }
-
-            private void WriteRevisions(RevisionsConfiguration revisions)
-            {
-                if (revisions == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, revisions.ToJson());
-            }
-
-            private void WriteTimeSeries(TimeSeriesConfiguration timeSeries)
-            {
-                if (timeSeries == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, timeSeries.ToJson());
-            }
-
-            private void WriteDocumentsCompression(DocumentsCompressionConfiguration compressionConfiguration)
-            {
-                if (compressionConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, compressionConfiguration.ToJson());
+                _context.Write(_writer, config.ToJson());
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
@@ -1577,16 +1501,18 @@ namespace Raven.Server.Smuggler.Documents
 
         private sealed class StreamDocumentActions : StreamActionsBaseWithBuilder, IDocumentActions
         {
+            private readonly StreamDestination _parent;
             private readonly JsonOperationContext _context;
             private readonly ISmugglerSource _source;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly Func<LazyStringValue, bool> _filterMetadataProperty;
-            private HashSet<string> _attachmentStreamsAlreadyExported;
             private Stream _attachmentStreamsTempFile;
 
-            public StreamDocumentActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ISmugglerSource source, DatabaseSmugglerOptionsServerSide options, Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
+            public StreamDocumentActions(StreamDestination parent, AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ISmugglerSource source, DatabaseSmugglerOptionsServerSide options,
+                Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
                 : base(context, writer, propertyName)
             {
+                _parent = parent;
                 _context = context;
                 _source = source;
                 _options = options;
@@ -1608,11 +1534,9 @@ namespace Raven.Server.Smuggler.Documents
                                 await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
                             }
                         }
-                        else
-                        {
+                        
                             await WriteUniqueAttachmentStreamsAsync(document, progress);
                         }
-                    }
 
                     if (First == false)
                         Writer.WriteComma();
@@ -1709,8 +1633,7 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
 
-                if (_attachmentStreamsAlreadyExported == null)
-                    _attachmentStreamsAlreadyExported = new HashSet<string>();
+                _parent._attachmentStreamsAlreadyExported ??= new HashSet<string>();
 
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -1721,18 +1644,20 @@ namespace Raven.Server.Smuggler.Documents
                         throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
                     }
 
-                    progress.Attachments.ReadCount++;
-
-                    if (_attachmentStreamsAlreadyExported.Add(hash))
+                    if (attachment.TryGet(nameof(AttachmentName.RemoteParameters), out BlittableJsonReaderObject remoteParameters) == false || remoteParameters == null 
+                        || (remoteParameters.TryGet(nameof(RemoteAttachmentParameters.Flags), out RemoteAttachmentFlags flags) && flags == RemoteAttachmentFlags.None))
                     {
-                        await using (var stream = _source.GetAttachmentStream(hash, out string tag))
+                        if (_parent._attachmentStreamsAlreadyExported.Add(hash))
                         {
-                            if (stream == null)
+                            await using (var stream = _source.GetAttachmentStream(hash, out string tag))
                             {
-                                progress.Attachments.ErroredCount++;
-                                throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                if (stream == null)
+                                {
+                                    progress.Attachments.ErroredCount++;
+                                    throw new ArgumentException($"Document {document.Id} seems to have an attachment hash: {hash}, but no correlating hash was found in the storage.");
+                                }
+                                await WriteAttachmentStreamAsync(hash, stream, tag);
                             }
-                            await WriteAttachmentStreamAsync(hash, stream, tag);
                         }
                     }
                 }
@@ -1757,9 +1682,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask WriteAttachmentStreamAsync(string hash, Stream stream, string tag)
             {
-                if (_attachmentStreamsAlreadyExported == null)
-                    _attachmentStreamsAlreadyExported = new HashSet<string>();
-                _attachmentStreamsAlreadyExported.Add(hash);
+                _parent._attachmentStreamsAlreadyExported ??= new HashSet<string>();
+                _parent._attachmentStreamsAlreadyExported.Add(hash);
 
                 if (First == false)
                     Writer.WriteComma();

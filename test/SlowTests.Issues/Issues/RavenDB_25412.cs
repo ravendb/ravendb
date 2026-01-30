@@ -180,6 +180,8 @@ public class RavenDB_25412 : ReplicationTestBase
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Link the caller's token with our dispose token to handle stream disposal correctly
             using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCts.Token))
             {

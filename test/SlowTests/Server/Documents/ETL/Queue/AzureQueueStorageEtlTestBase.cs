@@ -11,9 +11,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
-public class AzureQueueStorageEtlTestBase : QueueEtlTestBase
+public abstract class AzureQueueStorageEtlTestBase : QueueEtlTestBase
 {
-    public AzureQueueStorageEtlTestBase(ITestOutputHelper output) : base(output)
+    protected AzureQueueStorageEtlTestBase(ITestOutputHelper output) : base(output)
     {
     }
 
