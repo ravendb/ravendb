@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.22</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.23</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -49,6 +49,7 @@
     <None Remove="Data\RavenDB_22498\AutoIndexes.FastTests.json.gz" />
     <None Remove="Data\RavenDB_22498\AutoIndexes.SlowTests.json.gz" />
     <None Remove="Data\RavenDB_22534\RavenDB_22534.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
     <None Remove="Data\RavenDB_23100\2024-11-18-17-16-52-7843589.ravendb-snapshot" />
     <None Remove="Data\RavenDB_23100\2024-11-19-08-30-34-7519596.ravendb-snapshot" />
     <None Remove="Data\RavenDB_23100\2024-11-19-10-39-25-6242058.ravendb-snapshot" />
@@ -118,11 +119,10 @@
     <EmbeddedResource Include="Data\RavenDB_22703\RavenDB_22703.ravendb-snapshot" />
     <None Remove="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22937\RavenDB_22937.ravendb-snapshot" />
-    <None Remove="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot" />
-    <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot" />
     <None Remove="Data\RavenDB-23409.rec" />
     <EmbeddedResource Include="Data\RavenDB-23409.rec" />
     <None Remove="Data\RavenDB_24281\RavenDB-24281.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
     <EmbeddedResource Include="Data\RavenDB_24281\RavenDB_24281.ravendb-snapshot" />
     <None Remove="Data\RavenDB_24649\RavenDB_24649.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24649\RavenDB_24649.ravendb-snapshot" />

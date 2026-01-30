@@ -535,7 +535,7 @@ $form-text-color: $text-muted-var !default;
 // scss-docs-end form-text-variables
 
 // scss-docs-start form-label-variables
-$form-label-margin-bottom: 0.5rem !default;
+$form-label-margin-bottom: $gutter-xxs !default;
 $form-label-font-size: null !default;
 $form-label-font-style: null !default;
 $form-label-font-weight: null !default;
@@ -558,9 +558,9 @@ $input-padding-y-lg: $input-btn-padding-y-lg !default;
 $input-padding-x-lg: $input-btn-padding-x-lg !default;
 $input-font-size-lg: $input-btn-font-size-lg !default;
 
-$input-bg: $well-bg-var !default;
+$input-bg: $input-bg-var !default;
 $input-disabled-color: null !default;
-$input-disabled-bg: transparent !default;
+$input-disabled-bg: $input-bg !default;
 $input-disabled-border-color: $border-color-disabled !default;
 
 $input-color: $text-color-var !default;
@@ -1146,7 +1146,7 @@ $form-feedback-tooltip-border-radius: $tooltip-border-radius !default;
 
 // scss-docs-start popover-variables
 $popover-font-size: $font-size-sm !default;
-$popover-bg: $panel-bg-2-var !default;
+$popover-bg: $tooltip-bg-var !default;
 $popover-max-width: 400px !default;
 $popover-border-width: var(--#{$prefix}border-width) !default;
 $popover-border-color: $popover-bg !default;

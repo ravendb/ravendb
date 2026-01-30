@@ -1066,7 +1066,11 @@ public sealed partial class ClusterStateMachine
 
     private void AssertDynamicNodesDistribution(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
-        if (databaseRecord.Topology.DynamicNodesDistribution == false)
+        var usingDynamicNodesDistribution = databaseRecord.IsSharded
+            ? databaseRecord.Sharding.Orchestrator.Topology.DynamicNodesDistribution
+            : databaseRecord.Topology.DynamicNodesDistribution;
+
+        if (usingDynamicNodesDistribution == false)
             return;
 
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)

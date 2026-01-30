@@ -174,6 +174,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 for (int i = 0; i < as1.Length; i++)
                                     nls[i] = as1[i].TrimEnd('*').TrimStart('*');
                                 break;
+                            case List<(string Term, bool Exact)> termsWithExact: // In query
+                                nls = new string[termsWithExact.Count];
+                                for (int i = 0; i < termsWithExact.Count; i++)
+                                    nls[i] = termsWithExact[i].Term.TrimEnd('*').TrimStart('*');
+                                break;
                             case null:
                                 continue;
                             default:

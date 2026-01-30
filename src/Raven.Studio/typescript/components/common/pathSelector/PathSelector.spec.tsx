@@ -4,7 +4,7 @@ import * as stories from "./PathSelector.stories";
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 
-const { getParentPath, formatPathInList } = exportedForTesting;
+const { getParentPath, getRelativePath } = exportedForTesting;
 const { PathSelectorStory } = composeStories(stories);
 
 const selectors = {
@@ -34,7 +34,7 @@ describe("PathSelector", () => {
         });
     });
 
-    describe("formatPathInList", () => {
+    describe("getRelativePath", () => {
         it.each([
             ["C:\\", "", "C:\\"],
             ["C:\\", "C", "C:\\"],
@@ -44,8 +44,9 @@ describe("PathSelector", () => {
             ["/path", "/", "path"],
             ["/path/to", "/path/", "to"],
             ["/path/to/dir", "/path/to/", "dir"],
+            ["/path/to/dir", "/path/to/d", "dir"],
         ])("for list item %p and path %p returns %p", (listItemPath, pathInput, expected) => {
-            const result = formatPathInList(listItemPath, pathInput);
+            const result = getRelativePath(listItemPath, pathInput);
 
             expect(result).toBe(expected);
         });

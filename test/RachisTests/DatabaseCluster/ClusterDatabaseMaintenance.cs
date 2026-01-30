@@ -642,7 +642,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        [RavenMultiplatformFact(RavenTestCategory.ClusterTransactions, RavenArchitecture.AllX64)]
         public async Task ReshuffleAfterPromotion()
         {
             var numberOfDatabases = 25;

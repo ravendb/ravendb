@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import ToggleLimitBadge from "components/common/toggles/partials/ToggleLimitBadge";
 import { InputItem } from "components/models/common";
@@ -14,16 +15,18 @@ export default function ToggleItemLabel<T extends string | number = string>({
     inputItem,
 }: ToggleItemLabelProps<T>) {
     const [target, setTarget] = useState<HTMLElement>();
+    const bgClass = inputItem.badgeColor ? `bg-${inputItem.badgeColor}` : "bg-primary";
 
     return (
         <>
-            <label htmlFor={id} ref={setTarget}>
+            <label htmlFor={id} ref={setTarget} className={classNames("rounded-pill", bgClass)}>
+                {inputItem.icon && <span style={{ zIndex: 1 }}>{inputItem.icon}</span>}
                 <span>{inputItem.label}</span>
-                {inputItem.count !== null && inputItem.limit ? (
+                {inputItem.count != null && inputItem.count > 0 && inputItem.limit ? (
                     <ToggleLimitBadge count={inputItem.count} limit={inputItem.limit} />
-                ) : (
+                ) : inputItem.count != null && inputItem.count > 0 ? (
                     <span className="multi-toggle-item-count">{inputItem.count}</span>
-                )}
+                ) : null}
             </label>
             {inputItem.popover && (
                 <PopoverWithHover target={target} placement={inputItem.popoverPlacement ?? "top"}>

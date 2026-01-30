@@ -35,6 +35,7 @@
 }
 
 .item-disabled {
+    cursor: not-allowed;
     filter: contrast(85%);
     mix-blend-mode: luminosity;
     opacity: 0.4;
@@ -354,6 +355,11 @@ select {
     }
 }
 
+// Ensure dropdown menus are not clipped by sibling items in virtualized lists
+.virtual-item:has(.dropdown.show) {
+    z-index: 1;
+}
+
 // remove padding top from modal footer
 .modal-footer {
     padding-top: 0;
@@ -622,8 +628,10 @@ $filtering-input-bg: $toggle-bg !default;
 }
 
 .hover-filter {
-    filter: $hover-filter-var;
-    transition: $global-easing-in-out;
+    &:hover {
+        filter: $hover-filter-var;
+        transition: $global-easing-in-out;
+    }
 }
 
 .list-group-item {
@@ -658,5 +666,26 @@ $filtering-input-bg: $toggle-bg !default;
         + .input-group-text {
             opacity: 0.5;
         }
+    }
+}
+
+.border-dotted {
+    border-style: dotted;
+}
+
+.border-dashed {
+    border-style: dashed;
+}
+
+.icon-info-new {
+    font-size: 100%;
+    opacity: 0.6;
+    transition: $transition-base;
+    margin-left: $gutter-xxxs;
+    margin-right: 0 !important;
+
+    &:hover {
+        opacity: 1;
+        transition: none;
     }
 }

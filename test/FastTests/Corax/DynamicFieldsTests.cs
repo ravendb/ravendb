@@ -47,7 +47,7 @@ public unsafe class DynamicFieldsTests : StorageTest
             {
                 writer.Write(Constants.IndexWriter.DynamicField, fieldName, Encoding.UTF8.GetBytes(""));
                 writer.Write(0, "users/1"u8);
-                entryId = writer.EntryId;
+                entryId = (long)writer.EntryId;
                 writer.EndWriting();
             }
             indexWriter.Commit();
@@ -250,7 +250,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                 entry.Write(1, "Oren"u8);
                 entry.Write(Constants.IndexWriter.DynamicField,"Name", "Oren"u8);
                 entry.EndWriting();
-                documentId = entry.EntryId;
+                documentId = (long)entry.EntryId;
             }
             writer.Commit();
         }
@@ -451,7 +451,7 @@ public unsafe class DynamicFieldsTests : StorageTest
                     }
                 }
                 writer.DecrementList();
-                entryId = writer.EntryId;
+                entryId = (long)writer.EntryId;
                 writer.EndWriting();
             }
             indexWriter.Commit();

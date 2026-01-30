@@ -78,6 +78,8 @@ $well-bg: $body-bg;
 $base-well-bg: $body-bg;
 $pre-bg: $well-bg;
 $ace-gutter-bg: $panel-header-bg;
+$input-bg: #0a0d1d;
+$tooltip-bg: #0f0f19;
 
 $primary: $color-5;
 $success: $color-3;
@@ -103,6 +105,8 @@ $token-deleted: $color-1;
 $token-important: $color-2-2;
 
 $developer: #c7ff6b;
+$community: #2e9ef4;
+$experimental: #525fff;
 
 $twofactor: #5537c4;
 
@@ -150,6 +154,8 @@ $twofactor: #5537c4;
     $base-well-bg: $black;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-bg-2;
+    $input-bg: #f5f6ff;
+    $tooltip-bg: #0f0f19;
 
     $link-color: $primary;
     $shadow-color: $gray-500;
@@ -252,6 +258,8 @@ $twofactor: #5537c4;
     $base-well-bg: $body-bg;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-header-bg;
+    $input-bg: #f2f3f7;
+    $tooltip-bg: #0f0f19;
 
     $link-color: $primary;
     $shadow-color: $gray-600;
@@ -337,6 +345,8 @@ $twofactor: #5537c4;
     $base-well-bg: $body-bg;
     $pre-bg: $well-bg;
     $ace-gutter-bg: $panel-header-bg;
+    $input-bg: #17191f;
+    $tooltip-bg: #0f0f19;
 
     $success: $color-3;
     $info: $color-4;
@@ -440,8 +450,10 @@ $theme-colors: (
     "professional": $professional,
     "enterprise": $enterprise,
     "developer": $developer,
+    "community": $community,
     "cloud": $brand-cloud,
     "2fa": $twofactor,
+    "experimental": $experimental,
 ) !default;
 
 // scss-docs-end theme-colors-map
@@ -509,6 +521,8 @@ $well-bg-var: var(--well-bg);
 $pre-bg-var: var(--pre-bg);
 $ace-gutter-bg-var: var(--ace-gutter-bg);
 $shadow-color-var: var(--shadow-color);
+$input-bg-var: var(--input-bg);
+$tooltip-bg-var: var(--tooltip-bg);
 
 $row-bg-var: var(--row-bg);
 $row-even-bg-var: var(--row-even-bg);
@@ -540,3 +554,5 @@ $flags: (
     "time-series": $color-2-3,
     "archived": $color-1-1,
 ) !default;
+
+$ai-gradient: linear-gradient(135.89deg, #388ee9 0%, #7b51ff 85.4%);

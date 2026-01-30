@@ -16,6 +16,7 @@ internal abstract class AbstractDatabaseConnectionState
 
     private readonly TaskCompletionSource<object> _firstSet = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task _connected;
+    protected readonly object _eventLock = new object();
 
     protected AbstractDatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
     {
@@ -43,17 +44,19 @@ internal abstract class AbstractDatabaseConnectionState
         _connected = connection;
     }
 
-    public void Inc()
+    public int Inc()
     {
-        Interlocked.Increment(ref _value);
+        return Interlocked.Increment(ref _value);
     }
 
-    public void Dec()
+    public int Dec()
     {
-        if (Interlocked.Decrement(ref _value) == 0)
+        var val = Interlocked.Decrement(ref _value);
+        if (val == 0)
         {
             Set(_onDisconnect());
         }
+        return val;
     }
 
     public void Error(Exception e)
@@ -68,10 +71,55 @@ internal abstract class AbstractDatabaseConnectionState
         return _connected ?? _firstSet.Task;
     }
 
+    protected void CallEventInternal<T>(Action<T> changeHandler, T change)
+    {
+        Action<T> handler;
+        lock (_eventLock)
+        {
+            handler = changeHandler;
+        }
+
+        handler?.Invoke(change);
+    }
+
+    protected void RegisterEventsInternal<T>(ref Action<T> onChangeNotification, Action<T> changeHandler, Action<Exception> errorHandler)
+    {
+        lock (_eventLock)
+        {
+            if (_disposed)
+                return;
+
+            onChangeNotification += changeHandler;
+            OnError += errorHandler;
+        }
+    }
+
+    protected void UnregisterEventsInternal<T>(ref Action<T> onChangeNotification, Action<T> changeHandler, Action<Exception> errorHandler)
+    {
+        lock (_eventLock)
+        {
+            if (_disposed)  // already disposed
+                return;
+
+            onChangeNotification -= changeHandler;
+            OnError -= errorHandler;
+        }
+    }
+
+    private volatile bool _disposed;
+
     public virtual void Dispose()
     {
-        if(_connected?.Exception == null)
-            Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
-        OnError = null;
+        lock (_eventLock)
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            if (_connected?.Exception == null)
+                Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
+
+            OnError = null;
+        }
     }
 }

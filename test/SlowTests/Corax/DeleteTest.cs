@@ -92,8 +92,8 @@ public class DeleteTest : StorageTest
             var terms = fields?.CompactTreeFor("Content");
             Assert.True(terms!.TryGetValue("9", out var containerId));
             Assert.NotEqual(0, containerId & (long)TermIdMask.PostingList);
-            var setId = EntryIdEncodings.DecodeAndDiscardFrequency(containerId);
-            var setStateSpan = Container.GetMutable(llt, (ContainerEntryId)setId);
+            var setId = EntryIdEncodings.GetContainerId(containerId);
+            var setStateSpan = Container.GetMutable(llt, setId);
             ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             using var _ = Slice.From(llt.Allocator, "Content", ByteStringType.Immutable, out var fieldName);
             var set = new PostingList(llt, fieldName, in setState);
@@ -111,7 +111,7 @@ public class DeleteTest : StorageTest
                     for (int i = 0; i < total; i++)
                     {
                         var current = buffer[i];
-                        Assert.False(previousIds.BinarySearch(EntryIdEncodings.DecodeAndDiscardFrequency(current)) >= 0);
+                        Assert.False(previousIds.BinarySearch((long)EntryIdEncodings.DecodeAndDiscardFrequency(current)) >= 0);
                     }
                 }
             }

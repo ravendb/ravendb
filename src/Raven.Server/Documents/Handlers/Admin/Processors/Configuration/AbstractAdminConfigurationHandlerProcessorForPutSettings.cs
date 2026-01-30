@@ -1,7 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
+using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -18,6 +23,29 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
         : base(requestHandler)
     {
     }
+
+    static AbstractAdminConfigurationHandlerProcessorForPutSettings()
+    {
+        var storageConfigurations = new List<string>()
+        {
+            nameof(StorageConfiguration.OnDirectoryInitializeExec),
+            nameof(StorageConfiguration.OnDirectoryInitializeExecArguments),
+            nameof(StorageConfiguration.OnDirectoryInitializeExecTimeout),
+        };
+
+        foreach (var configuration in storageConfigurations)
+        {
+            var propertyInfo = typeof(StorageConfiguration).GetProperty(configuration);
+            var attributes = propertyInfo.GetCustomAttributes<ConfigurationEntryAttribute>(inherit: false);
+
+            foreach (var attribute in attributes)
+            {
+                StorageConfigurationEntriesToCheck.Add(attribute.Key);
+            }
+        }
+    }
+
+    private static readonly HashSet<string> StorageConfigurationEntriesToCheck = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
@@ -37,7 +65,9 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
                 databaseSettingsJson.GetPropertyByIndex(i, ref prop);
                 settingsToUpdate.Add(prop.Name, prop.Value?.ToString());
             }
-            
+
+            AssertStorageConfigurationForNonClusterAdmins(settingsToUpdate);
+
             if (LoggingSource.AuditLog.IsInfoEnabled)
             {
                 using (context.OpenReadTransaction())
@@ -60,7 +90,25 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);
     }
-    
+
+    private void AssertStorageConfigurationForNonClusterAdmins(Dictionary<string, string> settingsToUpdate)
+    {
+        if (RequestHandler.ServerStore.Configuration.Security.RestrictExternalScriptUsageForNonClusterAdmin == false)
+            return;
+
+        var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+        if (authConnection == null || authConnection.Status == RavenServer.AuthenticationStatus.ClusterAdmin)
+            return;
+
+        foreach (var setting in settingsToUpdate)
+        {
+            if (StorageConfigurationEntriesToCheck.Contains(setting.Key))
+            {
+                throw new ArgumentException($"Setting up the configuration for {setting.Key} is not allowed for non cluster admins.");
+            }
+        }
+    }
+
     private static List<string> GetUpdatedSettingsKeys(Dictionary<string, string> currentSettings, Dictionary<string, string> settingsToUpdate)
     {
         var updatedSettings = new List<string>();

@@ -12,6 +12,7 @@ export interface ConfirmOptions {
     message?: ReactNode;
     confirmText?: string;
     confirmIcon?: IconName;
+    size?: "sm" | "lg" | "xl";
 }
 
 type InnerOptions = Partial<ConfirmOptions> & { isOpen: boolean };
@@ -22,7 +23,7 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
     const [options, setOptions] = useState<InnerOptions>({ isOpen: false });
     const promise = useRef<(choice: boolean) => void>(null);
 
-    const { isOpen, title, icon, confirmIcon, message } = options;
+    const { isOpen, title, icon, confirmIcon, message, size } = options;
 
     const confirmText = options.confirmText ?? "Yes";
     const actionColor = options.actionColor ?? "warning";
@@ -45,7 +46,7 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
         <ConfirmDialog.Provider value={exposedConfirm}>
             {children}
             {isOpen && (
-                <Modal show onHide={onCancel} contentClassName={`modal-border bulge-${actionColor}`}>
+                <Modal show onHide={onCancel} contentClassName={`modal-border bulge-${actionColor}`} size={size}>
                     <Modal.Header closeButton className="vstack gap-4" onCloseClick={onCancel}>
                         {icon && (
                             <div className="text-center">
@@ -54,7 +55,7 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
                         )}
                         <div className="text-center lead">{title}</div>
                     </Modal.Header>
-                    <Modal.Body className="vstack  gap-4">{message}</Modal.Body>
+                    <Modal.Body className="vstack pt-0 gap-4">{message}</Modal.Body>
                     <Modal.Footer>
                         <Button variant="link" onClick={onCancel} className="link-muted">
                             Cancel

@@ -1,10 +1,11 @@
+@use "Content/scss/colors";
 @use "Content/scss/sizes";
 
 .code {
     .code-classes {
         height: unset;
-        padding: sizes.$gutter-xs;
-        background-color: var(--well-bg);
+        padding: sizes.$gutter-sm;
+        background-color: colors.$well-bg-var;
         border-radius: sizes.$gutter-xxs;
     }
 }

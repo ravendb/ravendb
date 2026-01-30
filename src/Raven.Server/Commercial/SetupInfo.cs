@@ -380,6 +380,141 @@ namespace Raven.Server.Commercial
         Finish
     }
 
+    public enum State
+    {
+        Pending, 
+        InProgress, 
+        Completed, 
+        Error, 
+        NotApplicable,
+        SkippedDueToError
+    }
+
+    public enum ErrorType
+    {
+        LetsEncryptChallengeError,
+        DnsSetupError,
+        ValidationError,
+        ConfigurationSettingsError,
+        ClientCertificateError,
+        SettingsJsonError
+    }
+
+    public enum ConfigurationStepType
+    {
+        LetsEncrypt,
+        DnsRecords,
+        AcquiringLetsEncryptCertificate,
+        Validation,
+        ConfigurationSettings,
+        ClientCertificate,
+        CreatingSettingsJson
+    }
+
+    public class SetupActionInfo
+    {
+        public State State { get; set; }
+        public ErrorType? ErrorType { get; set; }
+        public string ErrorMessage { get; set; }
+        public string[] ErrorReasons { get; set; }
+
+        public void SetState(State state)
+        {
+            State = state;
+        }
+
+        public void SetError(ErrorType errorType, string errorMessage)
+        {
+            State = State.Error;
+            ErrorType = errorType;
+            ErrorMessage = errorMessage;
+
+            ErrorReasons = errorType switch
+            {
+                Commercial.ErrorType.DnsSetupError => ["Are you blocked by a firewall? Make sure the port is open."],
+                Commercial.ErrorType.LetsEncryptChallengeError => ["Check if relevant DNS record was added.", "Flush your DNS cache.", "Change your DNS server."],
+                _ => []
+            };
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue()
+            {
+                [nameof(State)] = State,
+                [nameof(ErrorType)] = ErrorType,
+                [nameof(ErrorMessage)] = ErrorMessage,
+                [nameof(ErrorReasons)] = ErrorReasons
+            };
+        }
+    }
+
+    public class SetupActionSteps
+    {
+        public IDictionary<ConfigurationStepType, SetupActionInfo> StepsByConfigurationStepType { get; }
+
+        public SetupActionSteps(SetupMode mode, bool zipOnly)
+        {
+            StepsByConfigurationStepType = new Dictionary<ConfigurationStepType, SetupActionInfo>
+            {
+                [ConfigurationStepType.LetsEncrypt] = new SetupActionInfo(),
+                [ConfigurationStepType.DnsRecords] = new SetupActionInfo(),
+                [ConfigurationStepType.AcquiringLetsEncryptCertificate] = new SetupActionInfo(),
+                [ConfigurationStepType.Validation] = new SetupActionInfo(),
+                [ConfigurationStepType.ConfigurationSettings] = new SetupActionInfo(),
+                [ConfigurationStepType.ClientCertificate] = new SetupActionInfo(),
+                [ConfigurationStepType.CreatingSettingsJson] = new SetupActionInfo()
+            };
+            
+            switch (mode)
+            {
+                case SetupMode.Unsecured:
+                    StepsByConfigurationStepType[ConfigurationStepType.LetsEncrypt].SetState(State.NotApplicable);
+                    StepsByConfigurationStepType[ConfigurationStepType.DnsRecords].SetState(State.NotApplicable);
+                    StepsByConfigurationStepType[ConfigurationStepType.AcquiringLetsEncryptCertificate].SetState(State.NotApplicable);
+                    StepsByConfigurationStepType[ConfigurationStepType.ClientCertificate].SetState(State.NotApplicable);
+                    break;
+                case SetupMode.Secured:
+                    StepsByConfigurationStepType[ConfigurationStepType.LetsEncrypt].SetState(State.NotApplicable);
+                    StepsByConfigurationStepType[ConfigurationStepType.DnsRecords].SetState(State.NotApplicable);
+                    StepsByConfigurationStepType[ConfigurationStepType.AcquiringLetsEncryptCertificate].SetState(State.NotApplicable);
+                    break;
+                case SetupMode.LetsEncrypt:
+                    break;
+                default:
+                    throw new NotSupportedException($"Setup mode {mode} is not supported for tracking progress.");
+            }
+            
+            if (zipOnly)
+                StepsByConfigurationStepType[ConfigurationStepType.CreatingSettingsJson].SetState(State.NotApplicable);
+        }
+
+        public void SetError(ConfigurationStepType stepType, ErrorType errorType, string errorMessage)
+        {
+            StepsByConfigurationStepType[stepType].SetError(errorType, errorMessage);
+
+            foreach (var step in StepsByConfigurationStepType.Values.Where(step => step.State == State.Pending))
+            {
+                step.SetState(State.SkippedDueToError);
+            }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var configurationStepsDjv = new DynamicJsonValue();
+
+            foreach (var kvp in StepsByConfigurationStepType)
+            {
+                configurationStepsDjv[kvp.Key.ToString()] = kvp.Value.ToJson();
+            }
+            
+            return new DynamicJsonValue()
+            {
+                [nameof(StepsByConfigurationStepType)] = configurationStepsDjv
+            };
+        }
+    }
+
     public sealed class SetupProgressAndResult : IOperationResult, IOperationProgress
     {
         private readonly Action<(string Message, Exception Exception)> _onMessage;
@@ -391,11 +526,14 @@ namespace Raven.Server.Commercial
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile; // not sent as part of the result
 
-        public SetupProgressAndResult(Action<(string Message, Exception Exception)> onMessage)
+        public SetupActionSteps SetupActionSteps { get; set; }
+
+        public SetupProgressAndResult(Action<(string Message, Exception Exception)> onMessage, SetupMode setupMode, bool zipOnly = false)
         {
             _onMessage = onMessage;
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
+            SetupActionSteps = new SetupActionSteps(setupMode, zipOnly);
         }
 
         public string Message { get; private set; }
@@ -407,7 +545,8 @@ namespace Raven.Server.Commercial
                 [nameof(Processed)] = Processed,
                 [nameof(Total)] = Total,
                 [nameof(Readme)] = Readme,
-                [nameof(Messages)] = Messages.ToArray()
+                [nameof(Messages)] = Messages.ToArray(),
+                [nameof(SetupActionSteps)] = SetupActionSteps.ToJson()
             };
 
             if (Certificate != null)

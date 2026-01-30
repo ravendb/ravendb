@@ -325,6 +325,12 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, AttachmentHandler.MissingAttachmentInfo> MissingAttachmentInfo = GenerateJsonDeserializationRoutine<AttachmentHandler.MissingAttachmentInfo>();
 
+        public static readonly Func<BlittableJsonReaderObject, LicenseHandler.SendFreeLicenseVerificationCodeRequest> SendFreeLicenseVerificationCodeRequest = GenerateJsonDeserializationRoutine<LicenseHandler.SendFreeLicenseVerificationCodeRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, LicenseHandler.DownloadFreeLicenseRequest> DownloadFreeLicenseRequest = GenerateJsonDeserializationRoutine<LicenseHandler.DownloadFreeLicenseRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, LicenseHandler.DownloadFreeLicenseResponse> DownloadFreeLicenseResponse = GenerateJsonDeserializationRoutine<LicenseHandler.DownloadFreeLicenseResponse>();
+
         public sealed class Parameters
         {
             private Parameters()
@@ -358,7 +364,6 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, EnforceRevisionsConfigurationOperation.Parameters> EnforceRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<EnforceRevisionsConfigurationOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, AdoptOrphanedRevisionsOperation.Parameters> AdoptOrphanedRevisionsConfigurationOperationParameters = GenerateJsonDeserializationRoutine<AdoptOrphanedRevisionsOperation.Parameters>();
-
         }
     }
 }

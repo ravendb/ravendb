@@ -132,7 +132,7 @@ class serverSetup {
         return port && port !== "443" ? ":" + port : "";
     }
 
-    toContinueSetupDto(): Raven.Server.Commercial.ContinueSetupInfo {
+    toContinueSetupDto(): Raven.Server.Commercial.ContinueSetupInfo { // it means create from package
         return {
             NodeTag: this.continueSetup().nodeTag(),
             Zip: this.continueSetup().zipFile(),
@@ -147,6 +147,11 @@ class serverSetup {
         });
         
         return {
+            AutoIndexingEngineType: null, 
+            DataDirectory: null, 
+            SetupCertificatePath: null,
+            LogsPath: null, 
+            StaticIndexingEngineType: null,
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             LocalNodeTag: !this.startNodeAsPassive() ? this.localNodeTag() : null,
             Environment: !this.startNodeAsPassive() ? this.environment() : null,
@@ -162,6 +167,11 @@ class serverSetup {
         });
 
         return {
+            AutoIndexingEngineType: null, 
+            DataDirectory: null, 
+            SetupCertificatePath: null, 
+            LogsPath: null, 
+            StaticIndexingEngineType: null,
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             Environment: this.environment(),
             License: this.license().toDto(),

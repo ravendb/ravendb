@@ -586,7 +586,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return queryChanges;
     }
 
-    private List<string> GetGroupByFields()
+    protected List<string> GetGroupByFields()
     {
         List<string> groupByFields;
 

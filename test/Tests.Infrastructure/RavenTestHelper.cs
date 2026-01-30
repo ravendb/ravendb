@@ -317,6 +317,8 @@ namespace Tests.Infrastructure
             ("GET", "/admin/debug/memory/allocations"),                               // heavy
             ("GET", "/license/support"),                                              // heavy 
             ("GET", "/admin/debug/threads/runaway"),                                  // heavy
+            ("POST", "/license/free/send-verification-code"),                         // only available in setup mode
+            ("POST", "/license/free/download"),                                       // only available in setup mode
          ];
 
         internal static HashSet<(string Method, string Path)> DatabaseEndpointsToIgnore = 

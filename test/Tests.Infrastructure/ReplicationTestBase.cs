@@ -418,7 +418,10 @@ namespace Tests.Infrastructure
             Assert.True(server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var db));
             var database = await db;
             var handler = new OngoingTasksHandler();
-            var ctx = new RequestHandlerContext
+            
+            // The ctor does nothing. Totally safe to use initializer.
+            // ReSharper disable once UsingStatementResourceInitialization
+            using var ctx = new RequestHandlerContext
             {
                 RavenServer = server,
                 Database = database,

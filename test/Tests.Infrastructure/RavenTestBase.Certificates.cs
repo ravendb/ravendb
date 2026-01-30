@@ -119,16 +119,17 @@ public partial class RavenTestBase
             {
                 var log = new StringBuilder();
                 byte[] certBytes;
-                string serverCertificatePath = null;
                 string ekuSuffix = with2Eku ? "2eku" : "1eku";
 
-                serverCertificatePath = Path.Combine(Path.GetTempPath(), $"Server-{gen}-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}-{ekuSuffix}.pfx");
+                var name = $"{Environment.MachineName}_{gen}_{RavenVersionAttribute.Instance.Build}_{DateTime.Today:yyyy-MM-dd}_{ekuSuffix}";
+                var serverCertificatePath = Path.Combine(Path.GetTempPath(), $"{name}.pfx");
 
                 if (File.Exists(serverCertificatePath) == false)
                 {
                     try
                     {
-                        certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName + "-" + ekuSuffix, "RavenTestsServer", log, with2Eku);
+                        var commonNameValue = name[..Math.Min(name.Length, 64)];
+                        certBytes = CertificateUtils.CreateSelfSignedTestCertificate(commonNameValue, "RavenTestsServer", log, with2Eku);
                     }
                     catch (Exception e)
                     {
@@ -171,7 +172,7 @@ public partial class RavenTestBase
                 string serverCertificateForCommunicationPath;
                 if (SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(serverCertificate) == false)
                 {
-                    serverCertificateForCommunicationPath = Path.Combine(Path.GetTempPath(), $"Server-client-{gen}-{RavenVersionAttribute.Instance.Build}-{DateTime.Today:yyyy-MM-dd}-{ekuSuffix}.pfx");
+                    serverCertificateForCommunicationPath = Path.Combine(Path.GetTempPath(), $"{Environment.MachineName}_SCC_{gen}_{RavenVersionAttribute.Instance.Build}_{DateTime.Today:yyyy-MM-dd}_{ekuSuffix}.pfx");
                     if (File.Exists(serverCertificateForCommunicationPath) == false)
                     {
                         byte[] serverClientCertBytes;
@@ -205,25 +206,26 @@ public partial class RavenTestBase
                     serverCertificateForCommunicationPath = serverCertificatePath;
                 }
 
-                var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk, ekuSuffix);
-                var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk, ekuSuffix);
-                var clientCertificate3Path = GenerateClientCertificate(3, serverCertificate, pk, ekuSuffix);
+                var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk, ekuSuffix, gen);
+                var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk, ekuSuffix, gen);
+                var clientCertificate3Path = GenerateClientCertificate(3, serverCertificate, pk, ekuSuffix, gen);
 
                 return new TestCertificatesHolder(serverCertificatePath, serverCertificateForCommunicationPath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
             }
 
-            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, AsymmetricAlgorithm pk, string ekuSuffix)
+            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, AsymmetricAlgorithm pk, string ekuSuffix, int gen)
             {
-                string name = $"{Environment.MachineName}_CC_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}_{ekuSuffix}";
+                string name = $"{Environment.MachineName}_CC_{gen}_{RavenVersionAttribute.Instance.Build}_{index}_{DateTime.Today:yyyy-MM-dd}_{ekuSuffix}";
                 string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
 
                 if (File.Exists(clientCertificatePath) == false)
                 {
+                    var commonNameValue = name[..Math.Min(name.Length, 64)];
                     CertificateUtils.CreateSelfSignedClientCertificate(
-                        name,
+                        commonNameValue,
                         serverCertificate,
                         pk,
-                        out var certBytes, 
+                        out var certBytes,
                         DateTime.UtcNow.Date.AddYears(5));
 
                     try

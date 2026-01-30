@@ -110,6 +110,8 @@ namespace Raven.Server.ServerWide
         public const string LicenseStorageKey = "License/Key";
 
         public const string LicenseLimitsStorageKey = "License/Limits/Key";
+        
+        public const string SystemDirectoryName = "System";
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
         private FileLocker _fileLocker;
@@ -632,7 +634,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 
-            var path = Configuration.Core.DataDirectory.Combine("System");
+            var path = Configuration.Core.DataDirectory.Combine(SystemDirectoryName);
 
             IoChanges = new IoChangesNotifications
             {
@@ -652,7 +654,7 @@ namespace Raven.Server.ServerWide
                 string tempPath = null;
 
                 if (Configuration.Storage.TempPath != null)
-                    tempPath = Configuration.Storage.TempPath.Combine("System").FullPath;
+                    tempPath = Configuration.Storage.TempPath.Combine(SystemDirectoryName).FullPath;
 
                 options = StorageEnvironmentOptions.ForPath(path.FullPath, tempPath, null, IoChanges, CatastrophicFailureNotification);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");

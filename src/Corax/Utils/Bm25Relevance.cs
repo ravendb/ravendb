@@ -159,12 +159,14 @@ public sealed unsafe class Bm25Relevance : IDisposable
     public long Add(long entry)
     {
         if (IsStored == false)
-            return EntryIdEncodings.Decode(entry).EntryId;
+            return (long)EntryIdEncodings.Decode(entry).EntryId;
 
-        (*(_matchBuffer + _currentId), *(_scoreBuffer + _currentId)) = EntryIdEncodings.Decode(entry);
+        var decoded = EntryIdEncodings.Decode(entry);
+        *(_matchBuffer + _currentId) = (long)decoded.EntryId;
+        *(_scoreBuffer + _currentId) = decoded.Frequency;
         _currentId += 1;
 
-        return *(_matchBuffer + _currentId - 1);
+        return (long)*(_matchBuffer + _currentId - 1);
     }
 
     [DoesNotReturn]

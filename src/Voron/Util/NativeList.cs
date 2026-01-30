@@ -27,10 +27,29 @@ public unsafe struct NativeList<T>
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
 
     public int Capacity = 0;
+    
+#if DEBUG
+    private bool _disposed = false;
+    private int _count = 0;
+    public int Count
+    {
+        readonly get
+        {
+            Debug.Assert(_count <= Capacity, "NativeList count is greater than capacity.");
+            Debug.Assert(_disposed == false, "NativeList has been disposed.");
+            return _count;
+        }
+        set
+        {
+            _count = value;
+        }
+    }
+#else
     public int Count;
+#endif
 
     public readonly Span<T> ToSpan() => Count == 0 ? Span<T>.Empty : new Span<T>(_storage.Ptr, Count);
-    
+
     public bool IsValid => RawItems != null;
 
     public NativeList()
@@ -219,6 +238,11 @@ public unsafe struct NativeList<T>
         if(_storage.HasValue)
             ctx.Release(ref _storage);
         Capacity = 0;
+        Count = 0;
+        
+#if DEBUG
+        _disposed = true;
+#endif
     }
 
     public void Clear()

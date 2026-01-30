@@ -58,6 +58,9 @@ public partial class IndexWriter
             {
                 foreach (var (k, v) in field.Textual)
                 {
+                    // RavenDB-25907: Skip incomplete entries (sentinel value from failed allocation)
+                    if (v == Constants.IndexWriter.InvalidStorageIndex)
+                        continue;
                     _sortedTerms[idx] = (TKey)(object)k;
                     _termIndexes[idx] = v;
                     idx++;
@@ -67,6 +70,9 @@ public partial class IndexWriter
             {
                 foreach (var (k, v) in field.Longs)
                 {
+                    // RavenDB-25907: Skip incomplete entries (sentinel value from failed allocation)
+                    if (v == Constants.IndexWriter.InvalidStorageIndex)
+                        continue;
                     _sortedTerms[idx] = (TKey)(object)k;
                     _termIndexes[idx] = v;
                     idx++;
@@ -76,14 +82,18 @@ public partial class IndexWriter
             {
                 foreach (var (k, v) in field.Doubles)
                 {
+                    // RavenDB-25907: Skip incomplete entries (sentinel value from failed allocation)
+                    if (v == Constants.IndexWriter.InvalidStorageIndex)
+                        continue;
                     _sortedTerms[idx] = (TKey)(object)k;
                     _termIndexes[idx] = v;
                     idx++;
                 }
             }
 
-            terms = new Span<TKey>(_sortedTerms, 0, termsCount);
-            indexes = new Span<int>(_termIndexes, 0, termsCount);
+            // Use idx (actual count) instead of termsCount to account for skipped sentinel entries
+            terms = new Span<TKey>(_sortedTerms, 0, idx);
+            indexes = new Span<int>(_termIndexes, 0, idx);
 
             if (typeof(TKey) == typeof(Slice))
                 (MemoryMarshal.Cast<TKey, Slice>(terms)).Sort(indexes, SliceComparer.Instance);

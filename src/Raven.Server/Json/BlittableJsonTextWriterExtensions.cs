@@ -32,6 +32,8 @@ using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Extensions;
@@ -2708,6 +2710,55 @@ namespace Raven.Server.Json
             writer.WriteComma();
             writer.WritePropertyName("NodeTag");
             writer.WriteString(nodeTag);
+            writer.WriteEndObject();
+        }
+
+        public static void WriteNotifications(this AbstractBlittableJsonTextWriter writer, IEnumerable<NotificationTableValue> notifications, int pageSize, int start)
+        {
+            writer.WriteStartObject();
+
+            var countQuery = pageSize == 0;
+            var totalResults = 0;
+            var isFirst = true;
+
+            writer.WritePropertyName("Results");
+            writer.WriteStartArray();
+            foreach (var notification in notifications)
+            {
+                using (notification)
+                {
+                    totalResults++;
+
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+
+                    if (pageSize == 0 && countQuery == false)
+                        countQuery = true;
+
+                    pageSize--;
+
+                    if (countQuery)
+                        continue;
+
+                    if (isFirst == false)
+                    {
+                        writer.WriteComma();
+                    }
+
+                    writer.WriteObject(notification.Json);
+                    isFirst = false;
+                }
+            }
+
+            writer.WriteEndArray();
+
+            writer.WriteComma();
+            writer.WritePropertyName("TotalResults");
+            writer.WriteInteger(totalResults);
+
             writer.WriteEndObject();
         }
     }
