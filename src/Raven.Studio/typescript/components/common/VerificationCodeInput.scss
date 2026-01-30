@@ -1,0 +1,32 @@
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+
+.verification-code-inputs {
+    display: flex;
+    flex-direction: row;
+    gap: sizes.$gutter-xs;
+
+    .form-control.is-invalid {
+        background-image: none;
+        padding: 0.2rem 0.6rem;
+    }
+
+    input {
+        min-height: 42px !important;
+        width: 42px !important;
+        padding: sizes.$gutter-xxs;
+        border-radius: sizes.$gutter-xxs;
+        cursor: pointer;
+        transition: none;
+
+        @media (min-width: sizes.$screen-xs) {
+            min-height: 48px;
+            width: 48px;
+        }
+
+        &:hover {
+            transition: bs5variables.$transition-base;
+            filter: bs5variables.$hover-filter-var;
+        }
+    }
+}

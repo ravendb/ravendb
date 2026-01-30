@@ -116,9 +116,11 @@ public partial class IndexSearcher
         var canUseUnaryMatch = field.HasBoost == false;
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
-        if (terms == null)
+        if (terms == null || allInTerms.Count == 0)
         {
-            // If either the term or the field does not exist the request will be empty. 
+            // The request will be empty if either
+            // - The term or the field does not exist
+            // - List of terms given in query is empty
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 

@@ -244,4 +244,30 @@ export class LicenseStubs {
             UpdateSeverity: "TODO",
         };
     }
+
+    static getLicenseFreeDownload(): DownloadFreeLicenseResponse {
+        return {
+            License: {
+                Id: "8b2ed68b-fa80-419a-b72d-4c9955128e91",
+                Name: "eargerga",
+                Keys: [
+                    "HVWLhe+rAKbzp5PXuWnpoghx6",
+                    "zOez2Y+Wi2c6Flk12nG1KZQyD",
+                    "fmVw/yUn0ws1BUPYLI0v4nSDH",
+                    "Sw36gWeWNn/33tpyKItfBYLov",
+                    "fx/PDSOZZL5zaYv3v4mimBGzt",
+                    "d2cucZR6bYD82j+lAPIXo4frU",
+                    "v309ASAegFgdH2Q0gCePFABYE",
+                    "DNy4wBSYoSQMqKywtLi8wJzEy",
+                    "MzQVFjc4OTo7PD0+nwIfIJ8CI",
+                    "CCfAiEgnwIjIJ8CJCCfAiUgnw",
+                    "ImIJ8CJyCfAiggnwIpIJ8CKiC",
+                    "fAisgnwIsIJ8CLSCfAi4gnwIv",
+                    "IJ8CMCCfAzZAAZ8CQiCfAkMgn",
+                    "wJEIEMkRAliK1yfBEFgKFw=",
+                ],
+            },
+            LicenseDownloadStatus: "Success",
+        };
+    }
 }

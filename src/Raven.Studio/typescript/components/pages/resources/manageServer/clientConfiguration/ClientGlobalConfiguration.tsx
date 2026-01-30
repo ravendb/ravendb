@@ -124,7 +124,7 @@ export default function ClientGlobalConfiguration() {
                                                 message={
                                                     <>
                                                         Set the default separator for automatically generated document
-                                                        identity IDs.
+                                                        IDs (<i>Identity</i>, <i>HiLo</i>, and <i>Server-side</i>).
                                                         <br />
                                                         Use any character except <code>&apos;|&apos;</code> (pipe).
                                                     </>

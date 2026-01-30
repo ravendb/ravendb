@@ -150,9 +150,10 @@ namespace Raven.Server.Documents.PeriodicBackup
         /// <exception cref="ArgumentException">In case of invalid certificate</exception>
         internal FtpClient CreateFtpClient(string url, bool keepAlive)
         {
-            var client = new FtpClient(url);
+            var uri = new Uri(url);
+            var client = new FtpClient(uri.Host, _userName, _password, _port ?? DefaultFtpPort);
             client.Config.ConnectTimeout = 0;
-            client.Credentials = new NetworkCredential(_userName, _password);
+
             if (string.IsNullOrEmpty(_certificateAsBase64) == false)
             {
                 var byteArray = Convert.FromBase64String(_certificateAsBase64);
@@ -171,10 +172,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             client.Config.SocketKeepAlive = keepAlive;
-            if (_port != null)
-                client.Port = (int)_port;
-            else
-                client.Port = DefaultFtpPort;
             client.Connect();
             return client;
         }
@@ -199,17 +196,17 @@ namespace Raven.Server.Documents.PeriodicBackup
         public void TestConnection()
         {
             ExtractUrlAndDirectories(out var url, out var _);
-            using (var client = CreateFtpClient(url, keepAlive: false))
+            try
             {
-                try
+                using (var client = CreateFtpClient(url, keepAlive: false))
                 {
-                    client.Connect();
+                    // CreateFtpClient already calls Connect(), so we don't need to call it again
                 }
-                catch (AuthenticationException e)
-                {
-                    throw new AuthenticationException("Make sure that you provided the correct certificate " +
-                                                      "and that the url matches the one that is defined in it", e);
-                }
+            }
+            catch (AuthenticationException e)
+            {
+                throw new AuthenticationException("Make sure that you provided the correct certificate " +
+                                                  "and that the url matches the one that is defined in it", e);
             }
         }
 

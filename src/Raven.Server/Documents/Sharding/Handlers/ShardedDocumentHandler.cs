@@ -1,4 +1,6 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Documents;
@@ -30,17 +32,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/docs", "GET")]
         public Task Get()
         {
-            return new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsTaskAsync();
+            // Disposal of the processor is done by having it auto-register to the request context disposal mechanism
+            return new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsync().AsTask();
         }
 
         [RavenShardedAction("/databases/*/docs", "POST")]
         public async Task PostGet()
         {
-            // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                await new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync(await ShardedDocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this), context);
-            }
+            TransactionOperationContext context = GetContextScopedToRequest();
+            List<ReadOnlyMemory<char>> ids = await ShardedDocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this);
+            
+            // Disposal of the processor is done by having it auto-register to the request context disposal mechanism
+            await new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this, ids).ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/docs", "DELETE")]

@@ -37,7 +37,7 @@ public partial class IndexWriter
                     keysPtr[i] = keys[i];
                     if ((keys[i] & (long)TermIdMask.EnsureIsSingleMask) != 0)
                     {
-                        keysPtr[i] = EntryIdEncodings.GetContainerId(keys[i]);
+                        keysPtr[i] = (long)EntryIdEncodings.GetContainerId(keys[i]);
                         continue;
                     }
 

@@ -15,6 +15,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { availableS3Regions } from "components/utils/common";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 import { FormLabel } from "components/common/Form";
+import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
 
 export default function AmazonS3() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -41,14 +42,7 @@ export default function AmazonS3() {
                 </FormSwitch>
                 <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
                     <div>
-                        <FormSwitch
-                            control={control}
-                            name={`${fieldBase}.config.isOverrideConfig`}
-                            className="ms-3 w-100"
-                            color="secondary"
-                        >
-                            Override configuration via external script
-                        </FormSwitch>
+                        <OverrideConfigurationViaExternalScriptToggle fieldBase={fieldBase} />
                         {formValues.config.isOverrideConfig ? (
                             <OverrideConfiguration fieldBase={fieldBase} />
                         ) : (

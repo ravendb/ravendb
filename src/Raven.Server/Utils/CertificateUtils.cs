@@ -63,7 +63,7 @@ namespace Raven.Server.Utils
                 var message = $"Cannot validate new client certificate '{userCertificate.GetDisplayName()} - ({userCertificate.Thumbprint})'," +
                               $" failed to build the chain.";
                 explanations?.Add(message);
-                if (Logger.IsInfoEnabled) 
+                if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
 
                 return false;
@@ -79,7 +79,7 @@ namespace Raven.Server.Utils
             {
                 var message = $"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.";
                 explanations?.Add(message);
-                if (Logger.IsInfoEnabled) 
+                if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
 
                 return false;
@@ -95,7 +95,7 @@ namespace Raven.Server.Utils
                 var message = $"Cannot validate new client certificate '{userCertificate.GetDisplayName()} {userCertificate.Thumbprint}'." +
                               $" Found a known certificate '{knownCertificate.Thumbprint}' with the same hash but failed to build its chain.";
                 explanations?.Add(message);
-                if (Logger.IsInfoEnabled) 
+                if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
 
                 return false;
@@ -124,7 +124,7 @@ namespace Raven.Server.Utils
                 explanations.Add($"Client certificate chain info:\n{GenerateCertificateChainDebugLog(userChain)}");
                 explanations.Add($"Known certificate chain info:\n{GenerateCertificateChainDebugLog(knownCertChain)}");
             }
-            
+
             // compare issuers pinning hashes starting from top of the chain (CA) since it's least likely to change
             // chain may have additional elements due to cross-signing, that's why we compare every issuer with each other
             for (var i = knownCertChain.ChainElements.Count - 1; i > 0; i--)
@@ -164,9 +164,9 @@ namespace Raven.Server.Utils
                 ServerCertificateForClients = Convert.ToBase64String(ServerCertificate.Export(X509ContentType.Cert));
 
                 if (SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(ServerCertificate))
-            {
+                {
                     ClientCertificate = serverCertificate;
-            }
+                }
                 else
                 {
                     var clientCertificate = CreateClientCertificateFromServerCertificate(serverCertificate, out _);
@@ -190,7 +190,7 @@ namespace Raven.Server.Utils
                 $"{commonNameValue} CA",
                 out var caSubjectName,
                 log);
-            
+
             CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue: commonNameValue,
                 issuerCN: caSubjectName,
@@ -202,9 +202,10 @@ namespace Raven.Server.Utils
                 log: log,
                 sans: [commonNameValue, "localhost", $"*.{commonNameValue}"],
                 with2Eku: with2Eku);
-            
+
             var selfSignedCertificateBasedOnPrivateKey = CertificateLoaderUtil.CreateCertificate(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
+            GC.KeepAlive(selfSignedCertificateBasedOnPrivateKey); // https://github.com/dotnet/runtime/issues/122642#issuecomment-3720461147
 
             // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
             // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
@@ -264,7 +265,7 @@ namespace Raven.Server.Utils
                 out certBytes);
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
-            
+
             // Create a collection to hold all the certificates.
             var pfxCollection = new X509Certificate2Collection();
 
@@ -300,7 +301,7 @@ namespace Raven.Server.Utils
             if (new X509Certificate2Collection(collection).OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
                 throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
         }
-        
+
         private static void ValidateNoPrivateKeyInServerCert(X509Certificate2 certificate)
         {
             if (certificate.HasPrivateKey)
@@ -352,6 +353,7 @@ namespace Raven.Server.Utils
                 commonNameBuilder.AddCommonName(commonNameValue);
                 subjectName = commonNameBuilder.Build();
             }
+
             log?.AppendLine($"subjectDN = {subjectName}");
             log?.AppendLine($"issuerDN = {issuerCN}");
 
@@ -401,13 +403,15 @@ namespace Raven.Server.Utils
             {
                 rng.GetBytes(serialNumberBytes);
             }
-            
+
+            serialNumberBytes[0] &= 0x7F; // Force positive number, preventing the '00' padding
+
+            log?.AppendLine($"serialNumber bytes generated.");
+
             if (issuerCertBytes is { Length: > 0 })
             {
                 request.CertificateExtensions.Add(new X509Extension(new Oid(Constants.Certificates.ServerCertExtensionOid), issuerCertBytes, false));
             }
-
-            log?.AppendLine($"serialNumber bytes generated.");
 
             // Create the signature generator.
             // This is the correct way to pass the private key for signing in older .NET versions.
@@ -488,7 +492,7 @@ namespace Raven.Server.Utils
 
             // Create the self-signed certificate.
             // The CreateSelfSigned method automatically adds AuthorityKeyIdentifier and SubjectKeyIdentifier.
-            var notBefore = DateTimeOffset.UtcNow.Date;
+            var notBefore = DateTimeOffset.UtcNow.Date.AddDays(-7);
             var notAfter = notBefore.AddYears(2);
             var cert = request.CreateSelfSigned(notBefore, notAfter);
             log?.AppendLine($"Certificate created. NotBefore: {cert.NotBefore}, NotAfter: {cert.NotAfter}");
@@ -627,7 +631,7 @@ namespace Raven.Server.Utils
 
             var subjectAlternativeNames = GetCertificateAlternativeNames(cert).ToList();
             var subject = subjectAlternativeNames.FirstOrDefault();
-            
+
             // fallback to common name
             if (string.IsNullOrEmpty(subject))
                 subject = cert.GetNameInfo(X509NameType.SimpleName, false);
@@ -797,7 +801,7 @@ namespace Raven.Server.Utils
         }
 
         public static string GetDisplayName(this X509Certificate2 certificate)
-            {
+        {
             if (certificate == null)
                 return "(null)";
 
@@ -824,7 +828,7 @@ namespace Raven.Server.Utils
         {
             if (privateKey == null)
                 return null;
-            
+
             const CngExportPolicies exportability = CngExportPolicies.AllowExport | CngExportPolicies.AllowPlaintextExport;
 
             // Thankfully we don't have to deal with all this on Linux

@@ -61,7 +61,6 @@ namespace Raven.Server.Documents.Replication
         public event Action<DatabaseOutgoingReplicationHandler> OutgoingReplicationRemoved;
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
-        internal readonly int MinimalHeartbeatInterval;
 
         public DocumentDatabase Database;
         private SingleUseFlag _isInitialized = new SingleUseFlag();
@@ -112,11 +111,8 @@ namespace Raven.Server.Documents.Replication
             _shutdownToken = database.DatabaseShutdown;
             database.TombstoneCleaner.Subscribe(this);
             server.Cluster.Changes.DatabaseChanged += DatabaseValueChanged;
-            var config = database.Configuration.Replication;
-            var reconnectTime = config.RetryReplicateAfter.AsTimeSpan;
-            _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
-                null, reconnectTime, reconnectTime);
-            MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+            _reconnectAttemptTimer = new Timer(_ => ForceTryReconnectAll(),
+                null, database.Configuration.Replication.RetryReplicateAfter.AsTimeSpan, database.Configuration.Replication.RetryReplicateAfter.AsTimeSpan);
         }
 
         public long GetMinimalEtagForReplication(Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null, string collection = null)

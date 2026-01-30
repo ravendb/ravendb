@@ -37,7 +37,7 @@ public class RavenDB_22469(ITestOutputHelper output) : StorageTest(output)
                 builder.Write(1, Encodings.Utf8.GetBytes($"_{e - i}"));
                 builder.DecrementList();
                 builder.EndWriting();
-                entriesIds.Add(builder.EntryId);
+                entriesIds.Add((long)builder.EntryId);
             }
             indexWriter.Commit();
         }

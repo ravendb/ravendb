@@ -11,6 +11,7 @@ import { useAsync, UseAsyncReturn } from "react-async-hook";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import RichAlert from "components/common/RichAlert";
+import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
 
 export default function Local() {
     const { control } = useFormContext<FormDestinations>();
@@ -43,15 +44,7 @@ export default function Local() {
                 </FormSwitch>
                 <Collapse in={formValues?.isEnabled} className="mt-2">
                     <div>
-                        <FormSwitch
-                            control={control}
-                            name={`${fieldBase}.config.isOverrideConfig`}
-                            className="ms-3 mb-2"
-                            color="secondary"
-                        >
-                            Override configuration via external script
-                        </FormSwitch>
-
+                        <OverrideConfigurationViaExternalScriptToggle fieldBase={fieldBase} />
                         {formValues.config.isOverrideConfig ? (
                             <OverrideConfiguration fieldBase={fieldBase} />
                         ) : (

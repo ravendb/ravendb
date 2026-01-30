@@ -59,6 +59,7 @@ namespace Raven.Server.Smuggler.Documents
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
+        private HashSet<string> _attachmentStreamsAlreadyExported;
 
         public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
         {
@@ -163,22 +164,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents(bool throwOnDuplicateCollection)
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, "Docs");
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, "Docs");
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.RevisionDocuments));
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.RevisionDocuments));
         }
 
         public IDocumentActions Tombstones()
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Tombstones));
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Tombstones));
         }
 
         public IDocumentActions Conflicts()
         {
-            return new StreamDocumentActions(_writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Conflicts));
+            return new StreamDocumentActions(this, _writer, _context, _source, _options, _filterMetadataProperty, nameof(DatabaseItemType.Conflicts));
         }
 
         public IKeyValueActions<long> Identities()
@@ -1418,16 +1419,18 @@ namespace Raven.Server.Smuggler.Documents
 
         private sealed class StreamDocumentActions : StreamActionsBaseWithBuilder, IDocumentActions
         {
+            private readonly StreamDestination _parent;
             private readonly JsonOperationContext _context;
             private readonly ISmugglerSource _source;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly Func<LazyStringValue, bool> _filterMetadataProperty;
-            private HashSet<string> _attachmentStreamsAlreadyExported;
             private Stream _attachmentStreamsTempFile;
 
-            public StreamDocumentActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ISmugglerSource source, DatabaseSmugglerOptionsServerSide options, Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
+            public StreamDocumentActions(StreamDestination parent, AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ISmugglerSource source, DatabaseSmugglerOptionsServerSide options,
+                Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
                 : base(context, writer, propertyName)
             {
+                _parent = parent;
                 _context = context;
                 _source = source;
                 _options = options;
@@ -1449,10 +1452,8 @@ namespace Raven.Server.Smuggler.Documents
                                 await WriteAttachmentStreamAsync(attachment.Base64Hash.Content.ToString(), attachment.Stream, attachment.Tag.ToString());
                             }
                         }
-                        else
-                        {
-                            await WriteUniqueAttachmentStreamsAsync(document, progress);
-                        }
+                        
+                        await WriteUniqueAttachmentStreamsAsync(document, progress);
                     }
 
                     if (First == false)
@@ -1550,8 +1551,7 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
 
-                if (_attachmentStreamsAlreadyExported == null)
-                    _attachmentStreamsAlreadyExported = new HashSet<string>();
+                _parent._attachmentStreamsAlreadyExported ??= new HashSet<string>();
 
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -1562,9 +1562,7 @@ namespace Raven.Server.Smuggler.Documents
                         throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
                     }
 
-                    progress.Attachments.ReadCount++;
-
-                    if (_attachmentStreamsAlreadyExported.Add(hash))
+                    if (_parent._attachmentStreamsAlreadyExported.Add(hash))
                     {
                         await using (var stream = _source.GetAttachmentStream(hash, out string tag))
                         {
@@ -1598,9 +1596,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private async ValueTask WriteAttachmentStreamAsync(string hash, Stream stream, string tag)
             {
-                if (_attachmentStreamsAlreadyExported == null)
-                    _attachmentStreamsAlreadyExported = new HashSet<string>();
-                _attachmentStreamsAlreadyExported.Add(hash);
+                _parent._attachmentStreamsAlreadyExported ??= new HashSet<string>();
+                _parent._attachmentStreamsAlreadyExported.Add(hash);
 
                 if (First == false)
                     Writer.WriteComma();

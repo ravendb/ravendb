@@ -27,7 +27,9 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.System
 {
@@ -42,7 +44,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/dns-n-cert", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task DnsCertBridge()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
             var action = GetQueryStringValueAndAssertIfSingleAndNotEmpty("action"); // Action can be: claim | user-domains | check-availability
 
             using (var reader = new StreamReader(RequestBodyStream()))
@@ -122,7 +124,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/user-domains", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task UserDomains()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -253,7 +255,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/populate-ips", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task PopulateIps()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
             var rootDomain = GetQueryStringValueAndAssertIfSingleAndNotEmpty("rootDomain");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -287,7 +289,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/parameters", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task GetSetupParameters()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
             var setupParameters = await SetupParameters.Get(ServerStore);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -332,7 +334,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/ips", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task GetIps()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             NetworkInterface[] netInterfaces = null;
             try
@@ -426,7 +428,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/hosts", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task GetHosts()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var certificateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-certificate"))
@@ -495,7 +497,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/unsecured/package", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupUnsecuredPackage()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
             var operationCancelToken = CreateHttpRequestBoundOperationToken();
@@ -530,6 +532,7 @@ namespace Raven.Server.Web.System
                         ServerStore,
                         context,
                         operationCancelToken.Token),
+                    persistProgressOnFaultedStatus: true,
                     token: operationCancelToken);
 
                 // unsecured ->  toggle off(no zip only) -> single node  =>> don't create zip
@@ -551,7 +554,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/secured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupSecured()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
             var operationCancelToken = CreateHttpRequestBoundOperationToken();
@@ -571,6 +574,7 @@ namespace Raven.Server.Web.System
                     "Setting up RavenDB in secured mode.",
                     detailedDescription: null,
                     progress => SetupManager.SetupSecuredTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
+                    persistProgressOnFaultedStatus: true,
                     token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
@@ -592,7 +596,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/letsencrypt/agreement", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupAgreement()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             var email = GetQueryStringValueAndAssertIfSingleAndNotEmpty("email");
 
@@ -614,7 +618,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/letsencrypt", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task SetupLetsEncrypt()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
 
@@ -635,6 +639,7 @@ namespace Raven.Server.Web.System
                     "Setting up RavenDB with a Let's Encrypt certificate",
                     detailedDescription: null,
                     progress => SetupManager.SetupLetsEncryptTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
+                    persistProgressOnFaultedStatus: true,
                     token: operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
@@ -652,7 +657,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/continue/extract", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ExtractInfoFromZip()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var continueSetupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "continue-setup-info"))
@@ -737,7 +742,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/continue/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ContinueUnsecuredClusterSetup()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
@@ -756,6 +761,7 @@ namespace Raven.Server.Web.System
                     "Continue Unsecured Cluster Setup.",
                     detailedDescription: null,
                     progress => SetupManager.ContinueUnsecuredClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
+                    persistProgressOnFaultedStatus: true,
                     token: operationCancelToken);
             }
 
@@ -766,7 +772,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/continue", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ContinueClusterSetup()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
 
             var operationCancelToken = CreateHttpRequestBoundOperationToken();
             var operationId = GetLongQueryString("operationId", false);
@@ -785,6 +791,7 @@ namespace Raven.Server.Web.System
                     "Continue Cluster Setup.",
                     detailedDescription: null,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
+                    persistProgressOnFaultedStatus: true,
                     token: operationCancelToken);
             }
 
@@ -794,23 +801,85 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/finish", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task SetupFinish()
         {
-            AssertOnlyInSetupMode();
+            AssertOnlyInSetupMode(ServerStore);
+            
+            Program.ServerRestarted += OnServerRestarted;
+            Program.ServerInitialized += OnServerInitialized;
 
             Task.Run(async () =>
             {
                 // we want to give the studio enough time to actually
                 // get a valid response from the server before we reset
                 await Task.Delay(250);
-
+                
                 Program.RestartServer();
             });
 
             return NoContent();
         }
 
-        private void AssertOnlyInSetupMode()
+        private static void OnServerInitialized(object sender, EventArgs eventArgs)
         {
-            if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
+            Program.ServerInitialized -= OnServerInitialized;
+            
+            var server = (RavenServer)sender;
+            
+            LoggingSource.Instance.SetupLogMode(server.Configuration.Logs.Mode, server.Configuration.Logs.Path.FullPath, server.Configuration.Logs.RetentionTime?.AsTimeSpan, server.Configuration.Logs.RetentionSize?.GetValue(SizeUnit.Bytes), server.Configuration.Logs.Compress);
+        }
+
+        private static void OnServerRestarted(object sender, Program.OnServerRestartedEventArgs eventArgs)
+        {
+            Program.ServerRestarted -= OnServerRestarted;
+            
+            var oldDataPath = eventArgs.OldDataDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var newDataPath = eventArgs.NewDataDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            
+            try
+            {
+                if (newDataPath != oldDataPath)
+                {
+                    var systemPath = Path.Join(oldDataPath, ServerStore.SystemDirectoryName);
+                    var newSystemPath = Path.Join(newDataPath, ServerStore.SystemDirectoryName);
+
+                    CopyDirectory(systemPath, newSystemPath, recursive: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Unable to copy {ServerStore.SystemDirectoryName} directory from {oldDataPath} to {newDataPath}.", ex);
+            }
+        }
+        
+        private static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
+        {
+            var sourceDirectoryInfo = new DirectoryInfo(sourceDir);
+            
+            if (sourceDirectoryInfo.Exists == false)
+                throw new DirectoryNotFoundException($"Source directory not found: {sourceDirectoryInfo.FullName}");
+            
+            var sourceSubdirectories = sourceDirectoryInfo.GetDirectories();
+            
+            Directory.CreateDirectory(destinationDir);
+            
+            foreach (var file in sourceDirectoryInfo.GetFiles())
+            {
+                var targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath, overwrite: true);
+            }
+            
+            if (recursive)
+            {
+                foreach (var subDirectory in sourceSubdirectories)
+                {
+                    var newDestinationDir = Path.Combine(destinationDir, subDirectory.Name);
+                    CopyDirectory(subDirectory.FullName, newDestinationDir, recursive: true);
+                }
+            }
+        }
+
+        internal static void AssertOnlyInSetupMode(ServerStore serverStore)
+        {
+            if (serverStore.Configuration.Core.SetupMode == SetupMode.Initial)
                 return;
 
             throw new AuthorizationException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");

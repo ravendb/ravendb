@@ -167,7 +167,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             if (RequestHandler.Server.Configuration.Security.AuthenticationEnabled == false
                 || (await RequestHandler.Server.Router.TryAuthorizeAsync(routeInformation, httpContext, RequestHandler.DatabaseName)).Authorized)
             {
-                var handlerContext = new RequestHandlerContext
+                using var handlerContext = new RequestHandlerContext
                 {
                     RavenServer = RequestHandler.Server,
                     RouteMatch = localMatch,

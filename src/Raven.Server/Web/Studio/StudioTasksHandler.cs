@@ -298,11 +298,15 @@ namespace Raven.Server.Web.Studio
                 {
                     var backupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, taskId.Value);
                     if (backupStatus == null)
-                        throw new InvalidOperationException($"No backup status found for task ID '{taskId}' in database '{databaseName}'.");
-
-                    baseValue = isFull.Value
-                        ? (backupStatus.LastFullBackup ?? SystemTime.UtcNow).ToLocalTime()
-                        : (backupStatus.LastIncrementalBackup ?? SystemTime.UtcNow).ToLocalTime();
+                    {
+                        baseValue = SystemTime.UtcNow.ToLocalTime();
+                    }
+                    else
+                    {
+                        baseValue = isFull.Value
+                            ? (backupStatus.LastFullBackup ?? SystemTime.UtcNow).ToLocalTime()
+                            : (backupStatus.LastIncrementalBackup ?? SystemTime.UtcNow).ToLocalTime();
+                    }
                 }
             }
 

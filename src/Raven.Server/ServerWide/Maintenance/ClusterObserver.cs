@@ -419,7 +419,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var databaseName = rawRecord.DatabaseName;
             var sharding = rawRecord.Sharding;
-            var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status == MigrationStatus.Moved).Value;
+            var currentMigration = sharding.BucketMigrations.Values.FirstOrDefault(x => x.Status == MigrationStatus.Moved);
             if (currentMigration == null)
                 return;
 
@@ -443,7 +443,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                     var lastFromSrc = context.GetChangeVector(currentMigration.LastSourceChangeVector);
                     var currentFromDest = context.GetChangeVector(lastChangeVector);
-                    var status = ChangeVector.GetConflictStatusForDocument(lastFromSrc, currentFromDest);
+                    var status = ChangeVector.GetConflictStatusForBucket(lastFromSrc, currentFromDest, rawRecord.UnusedDatabaseIds);
                     if (status == ConflictStatus.AlreadyMerged)
                     {
                         confirmCommands ??= new List<DestinationMigrationConfirmCommand>();

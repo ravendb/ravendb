@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -126,7 +126,7 @@ namespace Raven.Server.Utils.Cpu
         }
     }
 
-    internal sealed class WindowsCpuUsageCalculator : CpuUsageCalculator<WindowsInfo>
+    internal abstract class WindowsCpuUsageCalculator : CpuUsageCalculator<WindowsInfo>
     {
         protected override (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(WindowsInfo windowsInfo)
         {
@@ -140,10 +140,148 @@ namespace Raven.Server.Utils.Cpu
             {
                 machineCpuUsage = (sysTotal - systemIdleDiff) * 100.00 / sysTotal;
             }
-
             return (machineCpuUsage, null);
         }
+    }
 
+    internal sealed class WindowsCpuUsageCalculatorMultiGroup : WindowsCpuUsageCalculator
+    {
+        private byte[] _multipleProcessorBuffer;
+        private const int MultipleProcessorStructSize = 48;
+        private readonly int _processorCount = Environment.ProcessorCount;
+        public WindowsCpuUsageCalculatorMultiGroup()
+        {
+            uint returnLength = 0;
+            _multipleProcessorBuffer = new byte[_processorCount * MultipleProcessorStructSize];
+            var status = NtQuerySystemInformation(SystemProcessorPerformanceInformation, _multipleProcessorBuffer, (uint)_multipleProcessorBuffer.Length, ref returnLength);
+            if (status == unchecked((int)0xC0000004)) // STATUS_INFO_LENGTH_MISMATCH
+            {
+                _multipleProcessorBuffer = new byte[returnLength];
+            }
+        }
+
+        protected override WindowsInfo GetProcessInfo()
+        {
+            try
+            {
+                ulong totalIdleTime = 0;
+                ulong totalKernelTime = 0;
+                ulong totalUserTime = 0;
+
+                ushort groupCount = GetActiveProcessorGroupCount();
+
+                var thread = GetCurrentThread();
+
+                for (ushort group = 0; group < groupCount; group++)
+                {
+                    uint processorsInGroup = GetActiveProcessorCount(group);
+                    if (processorsInGroup == 0)
+                        continue;
+
+                    // Build a mask with all CPUs in this group
+                    ulong maskValue = processorsInGroup >= 64
+                        ? ulong.MaxValue
+                        : ((1UL << (int)processorsInGroup) - 1UL);
+
+                    var newAffinity = new GroupAffinity
+                    {
+                        Group = group,
+                        Mask = (UIntPtr)maskValue,
+                        Reserved = new ushort[3]
+                    };
+
+                    if (SetThreadGroupAffinity(thread, ref newAffinity, out var previousAffinity) == false)
+                        continue;
+
+                    try
+                    {
+                        uint returnLength = (uint)(processorsInGroup * MultipleProcessorStructSize);
+                        if (_multipleProcessorBuffer == null || _multipleProcessorBuffer.Length < returnLength)
+                            _multipleProcessorBuffer = new byte[returnLength];
+
+                        var status = NtQuerySystemInformation(SystemProcessorPerformanceInformation, _multipleProcessorBuffer, returnLength, ref returnLength);
+                        if (status == unchecked((int)0xC0000004)) // STATUS_INFO_LENGTH_MISMATCH
+                        {
+                            _multipleProcessorBuffer = new byte[returnLength];
+                            status = NtQuerySystemInformation(SystemProcessorPerformanceInformation, _multipleProcessorBuffer, returnLength, ref returnLength);
+                        }
+
+                        if (status != 0)
+                        {
+                            // if this group fails, continue with others
+                            continue;
+                        }
+
+                        int structCount = (int)(returnLength / MultipleProcessorStructSize);
+                        for (int i = 0; i < structCount; i++)
+                        {
+                            int offset = i * MultipleProcessorStructSize;
+
+                            var idleTime = BitConverter.ToUInt64(_multipleProcessorBuffer, offset);
+                            var kernelTime = BitConverter.ToUInt64(_multipleProcessorBuffer, offset + 8);
+                            var userTime = BitConverter.ToUInt64(_multipleProcessorBuffer, offset + 16);
+
+                            totalIdleTime += idleTime;
+                            totalKernelTime += kernelTime;
+                            totalUserTime += userTime;
+                        }
+                    }
+                    finally
+                    {
+                        // restore original affinity
+                        SetThreadGroupAffinity(thread, ref previousAffinity, out _);
+                    }
+                }
+
+                if (totalIdleTime == 0 && totalKernelTime == 0 && totalUserTime == 0)
+                    return null;
+
+                return new WindowsInfo
+                {
+                    SystemIdleTime = totalIdleTime,
+                    SystemKernelTime = totalKernelTime,
+                    SystemUserTime = totalUserTime
+                };
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to get CPU info for multiple processor groups", e);
+                return null;
+            }
+        }
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        internal static extern int NtQuerySystemInformation(int systemInformationClass, byte[] systemInformation, uint systemInformationLength, ref uint returnLength);
+
+        private const int SystemProcessorPerformanceInformation = 8;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern ushort GetActiveProcessorGroupCount();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern uint GetActiveProcessorCount(ushort groupNumber);
+
+        [DllImport("kernel32.dll")]
+        internal static extern IntPtr GetCurrentThread();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool SetThreadGroupAffinity(
+            IntPtr hThread,
+            ref GroupAffinity groupAffinity,
+            out GroupAffinity previousGroupAffinity);
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct GroupAffinity
+        {
+            public UIntPtr Mask;
+            public ushort Group;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+            public ushort[] Reserved;
+        }
+    }
+    internal sealed class WindowsCpuUsageCalculatorOneGroup : WindowsCpuUsageCalculator
+    {
         protected override WindowsInfo GetProcessInfo()
         {
             var systemIdleTime = new FileTime();

@@ -164,7 +164,7 @@ namespace Raven.Server
 
         private async Task RequestHandler(HttpContext context)
         {
-            var requestHandlerContext = new RequestHandlerContext
+            using var requestHandlerContext = new RequestHandlerContext
             {
                 HttpContext = context
             };
@@ -250,8 +250,8 @@ namespace Raven.Server
                 if (sp != null && requestHandlerContext.HttpContext.WebSockets.IsWebSocketRequest == false) // exclude web sockets
                 {
                     var requestDuration = sp.ElapsedMilliseconds;
-                    requestHandlerContext.RavenServer?.Metrics.Requests.UpdateDuration(requestDuration);
-                    requestHandlerContext.DatabaseMetrics?.Requests.UpdateDuration(requestDuration);
+                    requestHandlerContext.RavenServer?.Metrics.Requests.RecordRequest(requestDuration);
+                    requestHandlerContext.DatabaseMetrics?.Requests.RecordRequest(requestDuration);
                 }
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)

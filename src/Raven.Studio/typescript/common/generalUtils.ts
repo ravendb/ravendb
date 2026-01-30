@@ -28,6 +28,10 @@ class genUtils {
     
     /***  IP Address Methods  ***/
 
+    static isBindAllIpAddress(ip: string) {
+        return ip === "0.0.0.0"
+    }
+    
     static isLocalhostIpAddress(ip: string): boolean {
         return ((ip === 'localhost') || (_.split(ip, '.')[0] === '127') || (ip === '::1'));
     }
@@ -797,6 +801,25 @@ class genUtils {
 
     static normalizeString(value: string) {
         return value.toLowerCase().trim();
+    }
+
+    static isScrolledToBottom(element: HTMLElement) {
+        return Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) < 1;
+    }
+    
+    static getBrowser(): Browser {
+        const userAgent = window.navigator.userAgent.toLowerCase();
+
+        // Chromium-based browsers
+        if (userAgent.includes("chrome") || userAgent.includes("edg") || userAgent.includes("opr")) {
+            return "Chrome";
+        } else if (userAgent.includes("firefox")) {
+            return "Firefox";
+        } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
+            return "Safari";
+        }
+
+        return "Other";
     }
 } 
 

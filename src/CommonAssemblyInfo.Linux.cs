@@ -16,3 +16,4 @@
 [assembly: InternalsVisibleTo("Subscriptions.Benchmark")]
 [assembly: InternalsVisibleTo("Regression.Benchmark")]
 [assembly: InternalsVisibleTo("Raven.Debug")]
+[assembly: InternalsVisibleTo("RequestHandler.Benchmark")]

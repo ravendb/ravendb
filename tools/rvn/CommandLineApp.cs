@@ -8,7 +8,10 @@ using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Voron.Global;
@@ -156,6 +159,9 @@ namespace rvn
                     var acmeUrlVal = acmeUrl.Value();
                     var acmeProfileVal = acmeProfile.Value();
 
+                    if (Enum.TryParse(modeVal, out SetupMode setupMode) == false)
+                        setupMode = SetupMode.Unsecured;
+                    
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
                         SetupJsonPath = setupParamVal,
@@ -178,7 +184,7 @@ namespace rvn
                             {
                                 Console.Error.WriteLine(tuple.Exception.Message);
                             }
-                        }),
+                        }, setupMode),
                         RegisterTcpDnsRecords = generateHelmValuesVal is not null,
                         CancellationToken = token
                     });
@@ -340,11 +346,15 @@ namespace rvn
 
                     
                     X509Certificate2 clientCertificate = new(clientCertificatePathArg.Value);
-                    X509Certificate2 serverCertificate = new(serverCertificatePathArg.Value);
+                    var serverCertForCommunication = CertificateLoaderUtil.CreateCertificate(serverCertificatePathArg.Value, null, CertificateLoaderUtil.FlagsForExport);
+                    if (SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(serverCertForCommunication) == false)
+                    {
+                        serverCertForCommunication = CertificateUtils.CreateClientCertificateFromServerCertificate(serverCertForCommunication, out _);
+                    }
                     var name = Path.GetFileNameWithoutExtension(clientCertificatePathArg.Value);
                     try
                     {
-                        DocumentStore store = new() {Certificate = serverCertificate, Urls = new[] {ravenServerUrlArg.Value}};
+                        DocumentStore store = new() {Certificate = serverCertForCommunication, Urls = new[] {ravenServerUrlArg.Value}};
                         store.Initialize();
                         var operation = new PutClientCertificateOperation(name, clientCertificate, new Dictionary<string,DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                         store.Maintenance.Server.Send(operation);

@@ -630,7 +630,12 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             List<string> members;
 
             using (context.OpenReadTransaction())
-                members = _server.Cluster.ReadDatabaseTopology(context, _name).Members;
+            {
+                var raw = _server.Cluster.ReadRawDatabaseRecord(context, _name);
+                // TODO: for sharded database, this is just a quick fix not to error
+                // we need to figure out the proper whether we need to wait for all shards or just orchestrators
+                members = raw.IsSharded ? raw.Sharding.Orchestrator.Topology.Members : raw.Topology.Members;
+            }
 
             try
             {

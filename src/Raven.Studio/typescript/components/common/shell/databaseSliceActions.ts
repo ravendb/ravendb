@@ -48,8 +48,7 @@ const deleteDatabases =
     };
 
 export const databaseActions = {
-    activeDatabaseChanged: databasesSlice.actions.activeDatabaseChanged,
-    databasesLoaded: databasesSlice.actions.databasesLoaded,
+    ...databasesSlice.actions,
     confirmDeleteDatabases,
     deleteDatabases,
 };

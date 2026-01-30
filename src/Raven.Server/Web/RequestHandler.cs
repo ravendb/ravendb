@@ -75,9 +75,16 @@ namespace Raven.Server.Web
             get { return _context.RouteMatch; }
         }
 
+        public void RegisterForDisposal(IDisposable disposable) => _context.RegisterForDisposal(disposable);
+
         public X509Certificate2 GetCurrentCertificate()
         {
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            return GetCurrentCertificate(HttpContext);
+        }
+        
+        public static X509Certificate2 GetCurrentCertificate(HttpContext httpContext)
+        {
+            var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             return feature?.Certificate;
         }
 

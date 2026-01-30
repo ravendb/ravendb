@@ -416,59 +416,35 @@ namespace Raven.Server.Smuggler.Documents
                         await _rateGate.WaitToProceedAsync();
 
                     var isPreV4Revision = DatabaseSmuggler.IsPreV4Revision(buildType, item.Document.Id, item.Document);
-                    if (isPreV4Revision)
-                    {
-                        result.RevisionDocuments.ReadCount++;
-                        result.RevisionDocuments.SizeInBytes += item.Document.Data.Size;
-                    }
-                    else
-                    {
-                        result.Documents.ReadCount++;
-                        result.Documents.SizeInBytes += item.Document.Data.Size;
-                    }
+                    var counts = isPreV4Revision ? result.RevisionDocuments : result.Documents;
 
-                    if (item.Attachments != null)
-                    {
-                        foreach (var attachment in item.Attachments)
-                        {
-                            if (attachment.Stream != null)
-                            {
-                                if (isPreV4Revision)
-                                {
-                                    result.RevisionDocuments.Attachments.ReadCount++;
-                                    result.RevisionDocuments.Attachments.SizeInBytes += attachment.Stream.Length;
-                                }
-                                else
-                                {
-                                    result.Documents.Attachments.ReadCount++;
-                                    result.Documents.Attachments.SizeInBytes += attachment.Stream.Length;
-                                }
-                            }
-                        }
-                    }
+                    counts.ReadCount++;
+                    counts.SizeInBytes += item.Document.Data.Size;
 
-                    if (result.Documents.ReadCount % 1000 == 0)
+                    AddAttachmentsCount(counts, item);
+
+                    if (counts.ReadCount % 1000 == 0)
                     {
-                        var message = $"Documents: {result.Documents}";
+                        var message = $"Documents: {counts}";
                         AddInfoToSmugglerResult(result, message);
                     }
 
                     if (item.Document == null)
                     {
-                        result.Documents.ErroredCount++;
-                        if (result.Documents.ErroredCount % 1000 == 0)
-                            AddInfoToSmugglerResult(result, $"Error Count: {result.Documents.ErroredCount:#,#;;0}.");
+                        counts.ErroredCount++;
+                        if (counts.ErroredCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Error Count: {counts.ErroredCount:#,#;;0}.");
                         continue;
                     }
 
                     if (item.Document.Id == null)
                         ThrowInvalidData();
 
-                    result.Documents.LastEtag = item.Document.Etag;
+                    counts.LastEtag = item.Document.Etag;
 
                     if (CanSkipDocument(item.Document, buildType))
                     {
-                        SkipDocument(item, result.Documents);
+                        SkipDocument(item, counts);
                         continue;
                     }
 
@@ -477,20 +453,20 @@ namespace Raven.Server.Smuggler.Documents
                         if (item.Document.Data.TryGetMetadata(out var metadata) &&
                             AbstractBackgroundWorkStorage.HasPassed(metadata, _time.GetUtcNow(), Constants.Documents.Metadata.Expires))
                         {
-                            SkipDocument(item, result.Documents);
+                            SkipDocument(item, counts);
                             continue;
                         }
                     }
 
                     if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
                     {
-                        SkipDocument(item, result.Documents);
+                        SkipDocument(item, counts);
                         continue;
                     }
 
                     if (_options.IncludeArchived == false && item.Document.Flags.HasFlag(DocumentFlags.Archived))
                     {
-                        SkipDocument(item, result.Documents);
+                        SkipDocument(item, counts);
                         continue;
                     }
 
@@ -499,10 +475,10 @@ namespace Raven.Server.Smuggler.Documents
                         var patchedDocument = _patcher.Transform(item.Document);
                         if (patchedDocument == null)
                         {
-                            SkipDocument(item, result.Documents);
+                            SkipDocument(item, counts);
 
-                            if (result.Documents.SkippedCount % 1000 == 0)
-                                AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                            if (counts.SkippedCount % 1000 == 0)
+                                AddInfoToSmugglerResult(result, $"Skipped {counts.SkippedCount:#,#;;0} documents.");
                             continue;
                         }
 
@@ -523,7 +499,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    await documentActions.WriteDocumentAsync(item, result.Documents, beforeFlush);
+                    await documentActions.WriteDocumentAsync(item, counts, beforeFlush);
                 }
 
                 await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, documentActions, result);
@@ -556,17 +532,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (item.Document != null)
                         result.RevisionDocuments.SizeInBytes += item.Document.Data.Size;
 
-                    if (item.Attachments != null)
-                    {
-                        foreach (var attachment in item.Attachments)
-                        {
-                            if (attachment.Stream != null)
-                            {
-                                result.RevisionDocuments.Attachments.ReadCount++;
-                                result.RevisionDocuments.Attachments.SizeInBytes += attachment.Stream.Length;
-                            }
-                        }
-                    }
+                    AddAttachmentsCount(result.RevisionDocuments, item);
 
                     if (result.RevisionDocuments.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Revisions {result.RevisionDocuments}");
@@ -1361,6 +1327,31 @@ namespace Raven.Server.Smuggler.Documents
 
                 result.AddError(errorMessage);
             }
+        }
+
+        private static void AddAttachmentsCount(SmugglerProgressBase.CountsWithSkippedCountAndLastEtagAndAttachments counts, DocumentItem item)
+        {
+            if (item.Attachments != null)
+            {
+                foreach (var attachment in item.Attachments)
+                {
+                    if (attachment.Stream != null)
+                    {
+                        counts.Attachments.ReadCount++;
+                        counts.Attachments.SizeInBytes += attachment.Stream.Length;
+                    }
+                }
+            }
+
+            if (item.Document == null)
+                return;
+
+            if (item.Document.Flags.HasFlag(DocumentFlags.HasAttachments) == false ||
+                item.Document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return;
+
+            counts.Attachments.ReadCount += attachments.Length - (item.Attachments?.Count ?? 0);
         }
     }
 }

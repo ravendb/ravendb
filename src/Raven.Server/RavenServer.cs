@@ -46,6 +46,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
@@ -80,7 +81,9 @@ using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
-using Constants = Raven.Server.Monitoring.OpenTelemetry.Constants;
+using Constants = Sparrow.Global.Constants;
+using TelemetryConstants = Raven.Server.Monitoring.OpenTelemetry.Constants;
+using ClientConstants = Raven.Client.Constants;
 
 namespace Raven.Server
 {
@@ -190,6 +193,12 @@ namespace Raven.Server
             Certificate = LoadCertificateAtStartup() ?? CertificateUtils.CertificateHolder.CreateEmpty();
             ReadWellKnownIssuers();
 
+            // Align default conventions with server protocol configuration for internal HTTP calls.
+            // In unsecured + HTTP/2-only (h2c) mode, Kestrel expects HTTP/2 prior-knowledge (no HTTP/1.1 upgrade).
+            // Ensure RequestExecutor uses RequestVersionExact so server-to-self calls succeed, without mutating frozen conventions instances.
+            if (Configuration.Http.Protocols == HttpProtocols.Http2 && Certificate.ServerCertificate == null)
+                DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
                 : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter);
@@ -250,6 +259,57 @@ namespace Raven.Server
 
                     if (Configuration.Http.MaxStreamsPerConnection.HasValue)
                         options.Limits.Http2.MaxStreamsPerConnection = Configuration.Http.MaxStreamsPerConnection.Value;
+
+                    // HTTP/2 flow control: start from the profile, stretch for latency, respect overrides, clamp to RFC bounds.
+                    long connectionWindowBytes;
+                    long streamWindowBytes;
+                    long maxFrameSizeBytes;
+                    switch (Configuration.Http.Http2Profile)
+                    {
+                        case Http2Profile.Performance:
+                            connectionWindowBytes = 32L * Constants.Size.Megabyte;
+                            streamWindowBytes = 4L * Constants.Size.Megabyte;
+                            maxFrameSizeBytes = 1L * Constants.Size.Megabyte;
+                            break;
+                        case Http2Profile.Balanced:
+                        default:
+                            connectionWindowBytes = 16L * Constants.Size.Megabyte;
+                            streamWindowBytes = 2L * Constants.Size.Megabyte;
+                            maxFrameSizeBytes = 256L * Constants.Size.Kilobyte;
+                            break;
+                        case Http2Profile.Conservative:
+                            connectionWindowBytes = 4L * Constants.Size.Megabyte;
+                            streamWindowBytes = 1L * Constants.Size.Megabyte;
+                            maxFrameSizeBytes = 16L * Constants.Size.Kilobyte; 
+                            break;
+                    }
+
+                    if (Configuration.Http.Http2Latency == Http2LatencyHint.High)
+                    {
+                        connectionWindowBytes *= 2;
+                        streamWindowBytes *= 2;
+                    }
+
+                    connectionWindowBytes = Configuration.Http.InitialConnectionWindowSize?.GetValue(SizeUnit.Bytes) ?? connectionWindowBytes;
+                    streamWindowBytes = Configuration.Http.InitialStreamWindowSize?.GetValue(SizeUnit.Bytes) ?? streamWindowBytes;
+                    maxFrameSizeBytes = Configuration.Http.MaxFrameSize?.GetValue(SizeUnit.Bytes) ?? maxFrameSizeBytes;
+
+                    // Clamp to RFC 9113 legal ranges: Section 6.5.2 (windows), Section 4.2 (frame size)
+                    connectionWindowBytes = Math.Clamp(connectionWindowBytes, 64L * Constants.Size.Kilobyte, int.MaxValue);
+                    streamWindowBytes = Math.Clamp(streamWindowBytes, 64L * Constants.Size.Kilobyte, int.MaxValue);
+                    maxFrameSizeBytes = Math.Clamp(maxFrameSizeBytes, 16L * Constants.Size.Kilobyte, 16L * Constants.Size.Megabyte - 1);
+
+                    options.Limits.Http2.InitialConnectionWindowSize = (int)connectionWindowBytes;
+                    options.Limits.Http2.InitialStreamWindowSize = (int)streamWindowBytes;
+                    options.Limits.Http2.MaxFrameSize = (int)maxFrameSizeBytes;
+
+                    if (Logger.IsOperationsEnabled)
+                    {
+                        var connectionWindow = new Sparrow.Size(connectionWindowBytes, SizeUnit.Bytes);
+                        var streamWindow = new Sparrow.Size(streamWindowBytes, SizeUnit.Bytes);
+                        var maxFrameSize = new Sparrow.Size(maxFrameSizeBytes, SizeUnit.Bytes);
+                        Logger.Operations($"HTTP/2: Profile={Configuration.Http.Http2Profile}, ConnWindow={connectionWindow.GetDoubleValue(SizeUnit.Kilobytes):F1}KB, StreamWindow={streamWindow.GetDoubleValue(SizeUnit.Kilobytes):F1}KB, MaxFrame={maxFrameSize.GetDoubleValue(SizeUnit.Kilobytes):F1}KB, MaxStreams={options.Limits.Http2.MaxStreamsPerConnection}");
+                    }
 
                     options.ConfigureEndpointDefaults(listenOptions => listenOptions.Protocols = Configuration.Http.Protocols);
 
@@ -468,25 +528,25 @@ namespace Raven.Server
                     builder.AddRuntimeInstrumentation();
                 
                 if (configuration.GeneralEnabled)
-                    builder.AddMeter(Constants.Meters.GeneralMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.GeneralMeter);
                 
                 if (configuration.Requests)
-                    builder.AddMeter(Constants.Meters.RequestsMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.RequestsMeter);
 
                 if (configuration.ServerStorage)
-                    builder.AddMeter(Constants.Meters.StorageMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.StorageMeter);
                 
                 if (configuration.GcEnabled)
-                    builder.AddMeter(Constants.Meters.GcMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.GcMeter);
                 
                 if (configuration.TotalDatabases)
-                    builder.AddMeter(Constants.Meters.TotalDatabasesMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.TotalDatabasesMeter);
                 
                 if (configuration.Resources)
-                    builder.AddMeter(Constants.Meters.Resources);
+                    builder.AddMeter(TelemetryConstants.Meters.Resources);
                 
                 if (configuration.CPUCredits)
-                    builder.AddMeter(Constants.Meters.CpuCreditsMeter);
+                    builder.AddMeter(TelemetryConstants.Meters.CpuCreditsMeter);
                 
                 if (configuration.ConsoleExporter)
                     builder.AddConsoleExporter();
@@ -3278,13 +3338,30 @@ namespace Raven.Server
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 chain.ChainPolicy.DisableCertificateDownloads = true;
                 chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-                chain.ChainPolicy.CustomTrustStore.Add(knownIssuer);
+                var index = chain.ChainPolicy.CustomTrustStore.Add(knownIssuer);
 
+                log?.AppendLine($"Known issuer {knownIssuer.GetDisplayName()} ({knownIssuer.Thumbprint}) added to CustomTrustStore at index {index}");
+                
+                foreach (var certificate2 in chain.ChainPolicy.CustomTrustStore)
+                {
+                    log?.AppendLine($"CustomTrustStore certificate: {certificate2.GetDisplayName()} ({certificate2.Thumbprint})");
+                }
+                
                 if (chain.Build(cert))
                 {
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
                     log?.AppendLine($"Issuer is a well known issuer: {issuer} for {cert.GetDisplayName()} ({cert.Thumbprint})");
                     return true;
+                }
+
+                foreach (var chainStatus in chain.ChainStatus)
+                {
+                    log?.AppendLine($"Chain status: {chainStatus.Status} - {chainStatus.StatusInformation}");
+                }
+
+                foreach (var element in chain.ChainElements)
+                {
+                    log?.AppendLine($"Chain element: {element.Certificate.GetDisplayName()} ({element.Certificate.Thumbprint})");
                 }
             }
 
