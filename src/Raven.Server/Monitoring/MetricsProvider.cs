@@ -414,7 +414,7 @@ public sealed class MetricsProvider
         result.MapReduceIndexReducedPerSec = database.Metrics.MapReduceIndexes.ReducedPerSec.OneMinuteRate;
         result.RequestsPerSec = database.Metrics.Requests.RequestsPerSec.OneMinuteRate;
         result.RequestsCount = (int)database.Metrics.Requests.RequestsPerSec.Count;
-        result.RequestAverageDurationInMs = database.Metrics.Requests.AverageDuration.GetRate();
+        result.RequestAverageDurationInMs = database.Metrics.Requests.AverageDuration;
         return result;
     }
 

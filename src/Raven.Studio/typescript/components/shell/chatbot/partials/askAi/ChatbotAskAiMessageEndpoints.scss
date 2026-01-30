@@ -1,0 +1,26 @@
+@use "Content/scss/sizes";
+@use "Content/scss/variables";
+@use "Content/scss/colors";
+
+.retrieve-endpoints {
+    .retrieve-endpoints-header {
+        display: flex;
+        align-items: center;
+        padding: sizes.$gutter-xxs;
+        font-size: 0.875em;
+
+        i {
+            font-size: 0.875em;
+        }
+    }
+
+    ul {
+        margin-bottom: 0 !important;
+    }
+
+    .retrieve-endpoints-actions {
+        .btn {
+            font-size: 0.875em;
+        }
+    }
+}

@@ -36,7 +36,7 @@ export function mapLocalToDto(destination: LocalDestination): Raven.Client.Docum
     };
 }
 
-function mapAmazonToDto(destination: S3Destination | GlacierDestination) {
+export function mapAmazonToDto(destination: S3Destination | GlacierDestination) {
     return {
         AwsRegionName: destination.awsRegionName,
         AwsAccessKey: destination.awsAccessKey,

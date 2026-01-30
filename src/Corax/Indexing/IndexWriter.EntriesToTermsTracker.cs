@@ -18,11 +18,11 @@ public partial class IndexWriter
     private class EntriesToTermsTracker : IDisposable
     {
         private readonly IndexWriter _writer;
-        private ContextBoundNativeList<long> _entriesForTermsRemovalsBuffer;
-        private NativeList<long> _entriesForTermsAdditionsBufferEntryId;
+        private ContextBoundNativeList<DocumentEntryId> _entriesForTermsRemovalsBuffer;
+        private NativeList<DocumentEntryId> _entriesForTermsAdditionsBufferEntryId;
         private NativeList<ContainerEntryId> _entriesForTermsAdditionsBufferTermId;
-        private readonly List<long> _additionsForTerm, _removalsForTerm;
-        private readonly HashSet<long> _entriesAlreadyAdded;
+        private readonly List<DocumentEntryId> _additionsForTerm, _removalsForTerm;
+        private readonly HashSet<DocumentEntryId> _entriesAlreadyAdded;
         private ContainerEntryId _termContainerId;
         
         public EntriesToTermsTracker(IndexWriter writer)
@@ -49,7 +49,7 @@ public partial class IndexWriter
             SetRange(_removalsForTerm, entries.Removals);
             ProcessCurrentEntries();
             
-            void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
+            void SetRange(List<DocumentEntryId> list, in NativeList<TermInEntryModification> span)
             {
                 list.Clear();
                 list.EnsureCapacity(span.Count);
@@ -77,7 +77,7 @@ public partial class IndexWriter
         private void ProcessCurrentEntries()
         {
             _entriesForTermsRemovalsBuffer.EnsureCapacityFor(_removalsForTerm.Count + _entriesForTermsRemovalsBuffer.Count);
-            foreach (long removal in CollectionsMarshal.AsSpan(_removalsForTerm))
+            foreach (DocumentEntryId removal in CollectionsMarshal.AsSpan(_removalsForTerm))
             {
                 // if already added, we don't need to remove it in this batch
                 if (_entriesAlreadyAdded.Contains(removal))
@@ -91,7 +91,7 @@ public partial class IndexWriter
             if (_entriesForTermsAdditionsBufferEntryId.HasCapacityFor(_additionsForTerm.Count) == false)
                 _entriesForTermsAdditionsBufferEntryId.Grow(_writer._entriesAllocator, _additionsForTerm.Count);
             
-            foreach (long addition in CollectionsMarshal.AsSpan(_additionsForTerm))
+            foreach (DocumentEntryId addition in CollectionsMarshal.AsSpan(_additionsForTerm))
             {
                 if (_entriesAlreadyAdded.Add(addition) == false)
                     continue;
@@ -112,13 +112,15 @@ public partial class IndexWriter
             var entriesToTermsTree = _writer._entriesToTermsTree.LookupFor<Int64LookupKey>(fieldName);
             if (_entriesForTermsRemovalsBuffer.Count > 0)
             {
-                Sort.Run(_entriesForTermsRemovalsBuffer.ToSpan());
+                // Sort using long representation since VxSort only supports primitive types
+                var longSpan = DocumentEntryId.AsLongSpan(_entriesForTermsRemovalsBuffer.ToSpan());
+                Sort.Run(longSpan);
 
                 entriesToTermsTree.InitializeCursorState();
 
                 foreach (var entryId in _entriesForTermsRemovalsBuffer)
                 {
-                    Int64LookupKey key = entryId;
+                    Int64LookupKey key = (long)entryId;
                     if (entriesToTermsTree.TryGetNextValue(ref key, out _))
                         entriesToTermsTree.TryRemoveExistingValue(ref key, out _);
                 }
@@ -132,7 +134,7 @@ public partial class IndexWriter
                 entriesToTermsTree.InitializeCursorState();
                 for (int idX = 0; idX < _entriesForTermsAdditionsBufferEntryId.Count; ++idX)
                 {
-                    Int64LookupKey key = entriesIds[idX];
+                    Int64LookupKey key = (long)entriesIds[idX];
                     entriesToTermsTree.TryGetNextValue(ref key, out _);
                     entriesToTermsTree.AddOrSetAfterGetNext(ref key, (long)entriesTerms[idX]);
                 }

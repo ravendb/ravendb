@@ -50,7 +50,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 {
                     if (connectionString.Authentication.Certificate.CertificatesBase64.Length == 1)
                     {
+#pragma warning disable SYSLIB0057
                         var cert = new X509Certificate2(Convert.FromBase64String(connectionString.Authentication.Certificate.CertificatesBase64.First()));
+#pragma warning restore SYSLIB0057
                         settings.ClientCertificate(cert);
                     }
                     else
@@ -59,7 +61,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                         foreach (var certificateBase64 in connectionString.Authentication.Certificate.CertificatesBase64)
                         {
+#pragma warning disable SYSLIB0057
                             certificates.Add(new X509Certificate2(Convert.FromBase64String(certificateBase64)));
+#pragma warning restore SYSLIB0057
                         }
 
                         settings.ClientCertificates(certificates);

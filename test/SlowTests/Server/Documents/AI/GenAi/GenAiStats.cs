@@ -5,6 +5,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;

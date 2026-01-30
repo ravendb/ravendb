@@ -28,6 +28,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
     protected T Client { get; }
 
     protected abstract long MinOnePartUploadSizeInBytes { get; }
+    protected readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
 
     protected DirectUploadStream(Parameters parameters)
     {
@@ -43,6 +44,8 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         _multiPartUploader.Initialize();
 
         parameters.OnBackupException += () => _abortUpload = true;
+
+        _retentionPolicyParameters = parameters.RetentionPolicyParameters;
     }
 
     public override void Flush()
@@ -157,7 +160,15 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
         }
     }
 
-    protected abstract void OnCompleteUpload();
+    protected void OnCompleteUpload()
+    {
+        if (_retentionPolicyParameters == null)
+            return;
+
+        OnCompleteUploadInternal();
+    }
+
+    protected abstract void OnCompleteUploadInternal();
 
     public override bool CanRead => false;
     public override bool CanSeek => false;

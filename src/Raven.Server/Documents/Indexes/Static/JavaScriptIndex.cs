@@ -23,7 +23,6 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Sparrow;
 using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -66,6 +65,10 @@ function map(name, lambda) {
             engine.SetClrFunc("loadAttachment", LoadAttachment);
             engine.SetClrFunc("loadAttachments", LoadAttachments);
             engine.SetClrFunc("id", GetDocumentId);
+            
+            var schemaValidatorObject = new JsObject(engine);
+            schemaValidatorObject.SetClfFunc("getErrorsFor", GetErrorsFor);
+            engine.SetValue("schema", schemaValidatorObject);
         }
 
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
@@ -126,7 +129,7 @@ function map(name, lambda) {
 
                 var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
                 
-                if (mapReferencedCollections[i].HasLoadVector)
+                if (mapReferencedCollections[i].HasLoadVector && mapReferencedCollections[i].LoadVectorIsUsingDefaultCollection)
                     referencedCollections.Add(new(EmbeddingsHelper.GetEmbeddingDocumentCollectionName(mapCollection)));
 
                 if (referencedCollections.Count > 0)
@@ -201,6 +204,14 @@ function map(name, lambda) {
             scope.RegisterJavaScriptUtils(_javaScriptUtils);
 
             return _javaScriptUtils.LoadAttachments(self, args);
+        }
+        
+        private JsValue GetErrorsFor(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+            
+            return _javaScriptUtils.GetErrorsFor(self, args);
         }
     }
 
@@ -390,6 +401,7 @@ function map(name, lambda) {
                 ReferencedCollections = loadVisitor.ReferencedCollection,
                 HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences,
                 HasLoadVector = loadVisitor.HasLoadVector,
+                LoadVectorIsUsingDefaultCollection = loadVisitor.LoadVectorIsUsingDefaultCollection,
                 HasCreateVector = loadVisitor.HasCreateVector,
             };
         }
@@ -614,8 +626,12 @@ function createVector(value) {
     return { $vector: { $value: value } }
 }
 
-function loadVector(pathToEmbedding, aiTaskIdentifier) {
-    return { $loadvector: { $name: aiTaskIdentifier, $value: pathToEmbedding } }
+function loadVector(pathToEmbedding, aiTaskIdentifier, embeddingSourceDocumentId, embeddingSourceDocumentCollectionName) {
+    if (arguments.length == 2) {
+        return { $loadvector: { $name: aiTaskIdentifier, $value: pathToEmbedding } }
+    }
+    
+    return { $loadvector: { $name: aiTaskIdentifier, $value: pathToEmbedding, $embeddingSourceDocumentId: embeddingSourceDocumentId, $embeddingSourceDocumentCollectionName: embeddingSourceDocumentCollectionName } }
 }
 ";
 
@@ -644,6 +660,8 @@ function loadVector(pathToEmbedding, aiTaskIdentifier) {
             public bool HasLoadVector;
             
             public bool HasCreateVector;
+            
+            public bool LoadVectorIsUsingDefaultCollection;
         }
     }
 }

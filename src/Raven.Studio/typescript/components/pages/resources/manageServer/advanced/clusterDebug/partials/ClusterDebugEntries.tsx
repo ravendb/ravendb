@@ -41,7 +41,7 @@ export function ClusterDebugEntries(props: ClusterDebugEntriesProps) {
             const jsonString = JSON.stringify(entry, null, 4);
             await dialog({
                 title: "Cluster Log Entry",
-                message: <Code elementToCopy={jsonString} code={jsonString} language="json" />,
+                message: <Code code={jsonString} language="json" />,
                 modalSize: "lg",
             });
         },

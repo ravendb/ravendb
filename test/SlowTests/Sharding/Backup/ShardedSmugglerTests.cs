@@ -268,7 +268,9 @@ namespace SlowTests.Sharding.Backup
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
             using (var pullReplicationCertificate =
-                new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
+#pragma warning disable SYSLIB0057
+                   new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
+#pragma warning restore SYSLIB0057
             {
                 privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
             }
@@ -500,7 +502,9 @@ namespace SlowTests.Sharding.Backup
             var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings, RegisterForDisposal = true });
 
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
+#pragma warning disable SYSLIB0057
             var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
             using (var hubStore = GetDocumentStore(new Options

@@ -18,6 +18,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineData(1241232)]
+    [InlineData(237493337)]
     public void CanReturnAllOfVector(int seed)
     {
         const int vectorSize = 1536;
@@ -45,7 +46,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
 
         using (var rTx = Env.ReadTransaction())
         {
-            var qV = MemoryMarshal.Cast<float, byte>(storage[random.Next(storage.Count)]);
+            var qV = MemoryMarshal.Cast<float, byte>(storage[random.Next(1, storage.Count + 1)]);
             using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, nameof(CanReturnAllOfVector), 1024, qV, 0f);
 
             var totalReturned = 0;

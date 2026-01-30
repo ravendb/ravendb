@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -37,45 +38,52 @@ namespace Raven.Server.Web
             }
         }
 
-        public bool IsLocalRequest()
+        public static bool IsLocalRequest(HttpContext httpContext)
         {
-            if (HttpContext.Connection.RemoteIpAddress == null && HttpContext.Connection.LocalIpAddress == null)
+            if (httpContext.Connection.RemoteIpAddress == null && httpContext.Connection.LocalIpAddress == null)
             {
                 return true;
             }
-            if (HttpContext.Connection.RemoteIpAddress.Equals(HttpContext.Connection.LocalIpAddress))
+            if (httpContext.Connection.RemoteIpAddress.Equals(httpContext.Connection.LocalIpAddress))
             {
                 return true;
             }
-            if (IPAddress.IsLoopback(HttpContext.Connection.RemoteIpAddress))
+            if (IPAddress.IsLoopback(httpContext.Connection.RemoteIpAddress))
             {
                 return true;
             }
             return false;
         }
 
-        public string RequestIp => IsLocalRequest() ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+        public string RequestIp => GetRequestIp(HttpContext);
+
+        public static string GetRequestIp(HttpContext httpContext) => IsLocalRequest(httpContext) ? Environment.MachineName : httpContext.Connection.RemoteIpAddress.ToString();
 
         public void LogAuditForServer(string action, string target, Exception e = null)
         {
+            LogAuditForServer(action, target, HttpContext, e);
+        }
+
+        public static void LogAuditForServer(string action, string target, HttpContext httpContext, Exception e = null)
+        {
             var auditLogger = RavenLogManager.Instance.GetAuditLoggerForServer();
-            LogAuditForInternal(auditLogger, action, target, e);
+            LogAuditForInternal(auditLogger, action, target, httpContext, e);
         }
 
         public void LogAuditForDatabase(string databaseName, string action, string target, Exception e = null)
         {
             var auditLogger = RavenLogManager.Instance.GetAuditLoggerForDatabase(databaseName);
-            LogAuditForInternal(auditLogger, action, target, e);
+            LogAuditForInternal(auditLogger, action, target, HttpContext, e);
         }
 
-        internal void LogAuditForInternal(RavenAuditLogger auditLogger, string action, string target, Exception e = null)
+        internal static void LogAuditForInternal(RavenAuditLogger auditLogger, string action, string target, HttpContext httpContext, Exception e = null)
         {
             Debug.Assert(auditLogger.IsAuditEnabled, "auditlog info is disabled");
 
-            var clientCert = GetCurrentCertificate();
+            var clientCert = GetCurrentCertificate(httpContext);
 
             var sb = new StringBuilder();
-            sb.Append(RequestIp);
+            sb.Append(GetRequestIp(httpContext));
             sb.Append(", ");
             if (clientCert != null)
                 sb.Append($"CN={clientCert.GetDisplayName()} [{clientCert.Thumbprint}], ");

@@ -21,8 +21,9 @@ internal class AiConversation : IAiConversationOperations
 
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
-    private readonly List<AiAgentActionResponse> _actionResponses = [];
-    private readonly List<ContentPart> _promptParts = new();
+    private readonly Dictionary<string, AiAgentActionResponse> _actionResponses = [];
+    private readonly List<AiAgentArtificialActionResponse> _artificialActions = [];
+    private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     public string ChangeVector => _changeVector;
 
@@ -58,6 +59,38 @@ internal class AiConversation : IAiConversationOperations
             return _conversationId;
         }
     }
+    
+    public void AddArtificialActionWithResponse(string toolId, string actionResponse)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
+        ValidationMethods.AssertNotNullOrEmpty(actionResponse, nameof(actionResponse));
+
+        _artificialActions.Add(new AiAgentArtificialActionResponse
+        {
+            ToolId = toolId,
+            Content = actionResponse,
+        });
+    }
+
+    public void AddArtificialActionWithResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class
+    {
+        ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
+        if (actionResponse == null)
+            throw new ArgumentNullException(nameof(actionResponse), $"Action response for '{toolId}' cannot be null.");
+
+        if (actionResponse is string str)
+        {
+            AddArtificialActionWithResponse(toolId, str);
+            return;
+        }
+
+        using (_aiOperations.AllocateOperationContext(out var context))
+        {
+            var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
+            var json = jsonSerializer.ToBlittable(actionResponse, context);
+            AddArtificialActionWithResponse(toolId, json.ToString());
+        }
+    }
 
     public void AddActionResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class
     {
@@ -84,11 +117,15 @@ internal class AiConversation : IAiConversationOperations
         ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
         ValidationMethods.AssertNotNullOrEmpty(actionResponse, nameof(actionResponse));
 
-        _actionResponses.Add(new AiAgentActionResponse
+        if (_actionResponses.ContainsKey(toolId))
+            throw new InvalidOperationException($"An action response for tool-id '{toolId}' was already added. Each tool call must have exactly one response. " +
+                                                $"If you're using {nameof(Handle)}, return the value from the handler (don't call {nameof(AddActionResponse)} manually).");
+
+        _actionResponses[toolId] = new AiAgentActionResponse
         {
             ToolId = toolId,
             Content = actionResponse
-        });
+        };
     }
 
     public void SetUserPrompt(string userPrompt)
@@ -107,9 +144,11 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
+    public void Handle<TArgs, TResult>(string actionName, Func<TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError) 
+        where TArgs : class 
+        where TResult : class
     {
-        Handle<TArgs>(actionName, (_, token) => action(token), aiHandleError);
+        Handle<TArgs, TResult>(actionName, (_, token) => action(token), aiHandleError);
     }
 
     public void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
@@ -117,15 +156,14 @@ internal class AiConversation : IAiConversationOperations
         Handle<TArgs>(actionName, (_, token) => action(token), aiHandleError);
     }
 
-    public void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError)
+    public void Handle<TArgs, TResult>(string actionName, Func<AiAgentActionRequest, TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError)
         where TArgs : class
+        where TResult : class
     {
-        Receive<TArgs>(actionName, (request, args) =>
+        Receive<TArgs>(actionName, async (request, args) =>
         {
-            return action(request, args).ContinueWith(t =>
-            {
-                AddActionResponse(request.ToolId, t.Result);
-            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            var result = await action(request, args).ConfigureAwait(false);
+            AddActionResponse(request.ToolId, result);
         }, aiHandleError);
     }
 
@@ -241,7 +279,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, _actionResponses, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
 
         try
         {
@@ -268,6 +306,7 @@ internal class AiConversation : IAiConversationOperations
             // clear the user prompt and tool responses after running the conversation
             _promptParts.Clear();
             _actionResponses.Clear();
+            _artificialActions.Clear();
         }
     }
 

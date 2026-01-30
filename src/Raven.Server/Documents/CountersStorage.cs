@@ -2113,7 +2113,7 @@ namespace Raven.Server.Documents
                         using (document.Data = document.Data.Clone(context))
                         {
                             _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, document.Data, flags: document.Flags,
-                                nonPersistentFlags: document.NonPersistentFlags);
+                                nonPersistentFlags: document.NonPersistentFlags | NonPersistentDocumentFlags.SkipSchemaValidation);
                         }
                     }
                     catch (InvalidOperationException e)
@@ -2194,7 +2194,7 @@ namespace Raven.Server.Documents
             if (newData == null)
                 return null;
 
-            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
+            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags | NonPersistentDocumentFlags.SkipSchemaValidation);
             return putResult.ChangeVector;
         }
 

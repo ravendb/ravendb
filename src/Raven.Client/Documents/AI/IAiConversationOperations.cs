@@ -13,11 +13,13 @@ public interface IAiConversationOperations
     /// Registers an asynchronous handler for an action tool.
     /// </summary>
     /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <typeparam name="TResult">The type of the result returned by the handler.</typeparam>
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
-        where TArgs : class;
+    void Handle<TArgs, TResult>(string actionName, Func<TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class
+        where TResult : class;
 
     /// <summary>
     /// Registers a synchronous handler for an action tool.
@@ -32,11 +34,13 @@ public interface IAiConversationOperations
     /// Registers an asynchronous handler for an action tool.
     /// </summary>
     /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <typeparam name="TResult">The type of the result returned by the handler.</typeparam>
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
-        where TArgs : class;
+    void Handle<TArgs, TResult>(string actionName, Func<AiAgentActionRequest, TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class
+        where TResult : class;
 
     /// <summary>
     /// Registers a synchronous handler for an action tool.
@@ -192,6 +196,36 @@ public interface IAiConversationOperations
     /// The response object to supply to the agent.
     /// </param>
     void AddActionResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class;
+
+    /// <summary>
+    /// Injects an artificial action (tool call) and a string response into the model's conversation context.
+    /// This is an advanced mechanism to programmatically prompt the agent, causing it to "believe" 
+    /// it successfully executed a tool and received the specified <paramref name="actionResponse"/>.
+    /// </summary>
+    /// <param name="toolId">
+    /// The name of the tool to simulate the agent called.
+    /// </param>
+    /// <param name="actionResponse">
+    /// The string response to supply to the agent as the result of the simulated action.
+    /// </param>
+    void AddArtificialActionWithResponse(string toolId, string actionResponse);
+
+
+    /// <summary>
+    /// Injects an artificial action (tool call) and a typed response object into the model's conversation context.
+    /// This allows for sophisticated programmatic prompting by making the agent "believe" 
+    /// it successfully executed a tool and received a structured <paramref name="actionResponse"/>.
+    /// </summary>
+    /// <typeparam name="TResponse">
+    /// The CLR type of the response object. Must be a reference type.
+    /// </typeparam>
+    /// <param name="toolId">
+    /// The name of the tool to simulate the agent called.
+    /// </param>
+    /// <param name="actionResponse">
+    /// The response object to supply to the agent as the result of the simulated action.
+    /// </param>
+    void AddArtificialActionWithResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class;
 
     /// <summary>
     /// Sets the next user prompt to send to the AI agent.

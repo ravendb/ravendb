@@ -1,12 +1,16 @@
+
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Voron.Util.Settings;
@@ -146,11 +150,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new NotSupportedException("Trying to use direct upload when we configure a backup to a local folder.");
             }
 
-            var hasAws = BackupConfiguration.CanBackupUsing(configuration.S3Settings);
-            var hasGlacier = BackupConfiguration.CanBackupUsing(configuration.GlacierSettings);
-            var hasAzure = BackupConfiguration.CanBackupUsing(configuration.AzureSettings);
-            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(configuration.GoogleCloudSettings);
-            var hasFtp = BackupConfiguration.CanBackupUsing(configuration.FtpSettings);
+            return DestinationForDirectUpload(localConfiguration, configuration.S3Settings, configuration.AzureSettings, configuration.GlacierSettings, configuration.GoogleCloudSettings, configuration.FtpSettings);
+        }
+
+        internal static BackupConfiguration.BackupDestination DestinationForDirectUpload(Config.Categories.BackupConfiguration localConfiguration, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
+        {
+            var hasAws = BackupConfiguration.CanBackupUsing(s3Settings);
+            var hasAzure = BackupConfiguration.CanBackupUsing(azureSettings);
+            var hasGlacier = BackupConfiguration.CanBackupUsing(glacierSettings);
+            var hasGoogleCloud = BackupConfiguration.CanBackupUsing(googleCloudSettings);
+            var hasFtp = BackupConfiguration.CanBackupUsing(ftpSettings);
 
             var destinations = new List<bool> { hasAws, hasGlacier, hasAzure, hasGoogleCloud, hasFtp };
             if (destinations.Count(x => x) != 1)
@@ -189,13 +198,26 @@ namespace Raven.Server.Documents.PeriodicBackup
                 serverStore.Configuration.Backup.AssertRegionAllowed(configuration.GlacierSettings.AwsRegionName);
         }
 
-        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration backupConfiguration, ServerStore serverStore, RavenServer.AuthenticateConnection authConnection)
+        public static void AssertPeriodicBackup(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration backupConfiguration,
+            ServerStore serverStore, string databaseName, RavenServer.AuthenticateConnection authConnection)
         {
             serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
 
             UpdateLocalPathIfNeeded(configuration, serverStore);
             AssertBackupConfiguration(configuration, backupConfiguration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+
+            List<BackupSettings> previousBackupSettings;
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
+                var previousBackup = rawRecord.PeriodicBackups?.FirstOrDefault(x => string.Equals(x.TaskId, configuration.TaskId));
+                previousBackupSettings = GetBackupSettingsList(previousBackup);
+            }
+
+            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, 
+                authConnection?.Status, previousBackupSettings);
 
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
         }
@@ -206,8 +228,69 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             AssertBackupConfigurationInternal(configuration);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
+            AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, 
+                authConnection?.Status, previousBackupSettings: null);
 
             SecurityClearanceValidator.AssertSecurityClearance(configuration, authConnection?.Status);
+        }
+
+        private static void AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(
+            BackupConfiguration configuration,
+            ServerStore serverStore,
+            RavenServer.AuthenticationStatus? authConnectionStatus,
+            List<BackupSettings> previousBackupSettings)
+        {
+            if (authConnectionStatus is null or RavenServer.AuthenticationStatus.ClusterAdmin)
+                return;
+
+            if (serverStore.Configuration.Security.RestrictExternalScriptUsageForNonClusterAdmin == false)
+                return;
+
+            var backupSettings = GetBackupSettingsList(configuration);
+            
+            for (var i = 0; i < backupSettings.Count; i++)
+            {
+                var current = backupSettings?[i]?.GetBackupConfigurationScript;
+                var previous = previousBackupSettings?[i]?.GetBackupConfigurationScript;
+
+                if (current == null && previous == null)
+                    continue;
+
+                if (current != null && previous != null && previous.Equals(current))
+                    continue;
+
+                throw new SecurityException($"Setting up the configuration for {GetConfigurationName()} via an external script is not allowed for non cluster admins.");
+
+                string GetConfigurationName()
+                {
+                    return backupSettings[i] switch
+                    {
+                        LocalSettings => "Local",
+                        S3Settings => "S3",
+                        GlacierSettings => "Glacier",
+                        AzureSettings => "Azure",
+                        GoogleCloudSettings => "Google Cloud",
+                        FtpSettings => "FTP",
+                        _ => null
+                    };
+                }
+            }
+        }
+
+        private static List<BackupSettings> GetBackupSettingsList(BackupConfiguration configuration)
+        {
+            if (configuration == null)
+                return null;
+
+            return
+            [
+                configuration.LocalSettings,
+                configuration.S3Settings,
+                configuration.GlacierSettings,
+                configuration.AzureSettings,
+                configuration.GoogleCloudSettings,
+                configuration.FtpSettings
+            ];
         }
 
         public sealed class ActualPathResult

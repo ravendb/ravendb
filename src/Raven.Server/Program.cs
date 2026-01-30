@@ -50,6 +50,17 @@ namespace Raven.Server
 
         public static unsafe int Main(string[] args)
         {
+            using var termSignalRegistration =
+                PosixSignalRegistration.Create(
+                    PosixSignal.SIGTERM,
+                    (_) => Environment.Exit(0));
+
+            // Replicates the previous behavior on Windows
+            using var sigHupSignalRegistration =
+                PosixSignalRegistration.Create(
+                    PosixSignal.SIGHUP,
+                    (_) => Environment.Exit(0));
+
             bool useLegacyHttpClientFactory = false;
             var useLegacyHttpClientFactoryAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_USELEGACYHTTPCLIENTFACTORY");
             if (useLegacyHttpClientFactoryAsString != null && bool.TryParse(useLegacyHttpClientFactoryAsString, out useLegacyHttpClientFactory) == false)
@@ -216,6 +227,8 @@ namespace Raven.Server
             RavenConfiguration configBeforeRestart = configuration;
             do
             {
+                var oldDataDirectory = configBeforeRestart.Core.DataDirectory.FullPath;
+            
                 if (rerun)
                 {
                     Console.WriteLine("\nRestarting Server...");
@@ -236,6 +249,12 @@ namespace Raven.Server
 
                 try
                 {
+                    ServerRestarted?.Invoke(null, new OnServerRestartedEventArgs()
+                    {
+                        OldDataDirectory = oldDataDirectory,
+                        NewDataDirectory = configuration.Core.DataDirectory.FullPath
+                    });
+                    
                     using (var server = new RavenServer(configuration))
                     {
                         try
@@ -252,6 +271,7 @@ namespace Raven.Server
                             }
 
                             server.Initialize();
+                            ServerInitialized?.Invoke(server, null);
 
                             configuration.UpdateLicenseType(server.ServerStore.LicenseManager.LicenseStatus.Type);
 
@@ -326,7 +346,7 @@ namespace Raven.Server
                                     $"1) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
                                     $"2) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
                                     $"3) Add RAVEN_ServerUrl to the Environment Variables.{Environment.NewLine}" +
-                                    "For more information go to https://ravendb.net/l/EJS81M/7.1";
+                                    "For more information go to https://ravendb.net/l/EJS81M/7.2";
                             }
                             else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
@@ -425,8 +445,7 @@ namespace Raven.Server
 
             if ((configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null) && Logger.IsInfoEnabled)
                 Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current values: workerThreads - {effectiveMinWorkerThreads}, completionPortThreads - {effectiveMinCompletionPortThreads}.");
-
-
+            
             if (configuration.Server.ThreadPoolMaxWorkerThreads != null || configuration.Server.ThreadPoolMaxCompletionPortThreads != null)
             {
                 ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
@@ -446,6 +465,14 @@ namespace Raven.Server
         public static ManualResetEvent RestartServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ShutdownCompleteMre = new ManualResetEvent(false);
         public static Action RestartServer;
+        public static event EventHandler<OnServerRestartedEventArgs> ServerRestarted;
+        public static event EventHandler ServerInitialized;
+        
+        public class OnServerRestartedEventArgs : EventArgs
+        {
+            public string OldDataDirectory { get; set; }
+            public string NewDataDirectory { get; set; }
+        } 
 
         public static bool IsRunningNonInteractive;
 

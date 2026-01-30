@@ -366,6 +366,11 @@ namespace Voron.Data.Tables
             return _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
         }
 
+        internal FixedSizeTree GetAllocationStorageSizeFst()
+        {
+            return _parentTree.FixedTreeFor(AllocationStorageSize, valSize: sizeof(int));
+        }
+
         [DoesNotReturn]
         private static void ThrowInvalidPageReleased(long pageNumber)
         {
@@ -445,6 +450,12 @@ namespace Voron.Data.Tables
 
                 llt.Environment.Options.DataPager.MaybePrefetchMemory(new SectionsIterator(it));
             }
+        }
+
+        public void FreePreAllocatedFreePages()
+        {
+            foreach (var page in AllPages())
+                _llt.FreePage(page);
         }
 
         public sealed class Report

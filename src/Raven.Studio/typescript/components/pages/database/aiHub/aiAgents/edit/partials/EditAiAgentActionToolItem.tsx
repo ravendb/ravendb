@@ -157,9 +157,9 @@ function ActionFieldSampleObjectSyntaxHelp() {
                 The values the LLM will supply can be based on the ongoing conversation or on data retrieved using query
                 tools.
             </div>
-            <Code code={exampleCode} elementToCopy={exampleCode} language="json" />
+            <Code code={exampleCode} language="json" />
             <div className="mt-2">Example 2 (no parameters will be used):</div>
-            <Code code={exampleCodeNoParameters} elementToCopy={exampleCodeNoParameters} language="json" />
+            <Code code={exampleCodeNoParameters} language="json" />
         </div>
     );
 }
@@ -191,7 +191,7 @@ function ActionFieldJsonSchemaSyntaxHelp() {
 
     return (
         <div>
-            <Code code={exampleCode} elementToCopy={exampleCode} language="json" />
+            <Code code={exampleCode} language="json" />
         </div>
     );
 }

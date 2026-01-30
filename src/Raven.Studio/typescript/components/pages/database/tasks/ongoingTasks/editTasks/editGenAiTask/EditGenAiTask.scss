@@ -86,9 +86,33 @@
                 }
             }
         }
+
+        .reasoning {
+            .accordion-collapse {
+                transition: none !important;
+            }
+
+            .dot-list-item-line {
+                background: colors.$ai-gradient !important;
+                opacity: 0.5;
+            }
+
+            .dot-list-item-dot {
+                background: colors.$ai-gradient !important;
+            }
+        }
     }
 
     .ace-hover {
         filter: colors.$hover-filter-var;
+    }
+
+    .tool-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: sizes.$border-radius-sm;
     }
 }

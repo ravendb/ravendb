@@ -27,7 +27,7 @@ export default function ConnectionTestError({ message }: ConnectionTestErrorProp
                     </div>
                 </Accordion.Header>
                 <Accordion.Body>
-                    <Code language="csharp" code={message} elementToCopy={message} />
+                    <Code language="csharp" code={message} />
                 </Accordion.Body>
             </Accordion.Item>
         </Accordion>

@@ -41,7 +41,7 @@ namespace FastTests.Voron.Util
         {
             var int64Size = Marshal.SizeOf<long>();
             var buffer = new byte[int64Size];
-            stream.Read(buffer, 0, int64Size);
+            _ = stream.Read(buffer, 0, int64Size);
 
             return BitConverter.ToInt64(buffer, 0);
         }
@@ -51,7 +51,7 @@ namespace FastTests.Voron.Util
         {
             var int32Size = Marshal.SizeOf<int>();
             var buffer = new byte[int32Size];
-            stream.Read(buffer, 0, int32Size);
+            _ = stream.Read(buffer, 0, int32Size);
 
             return BitConverter.ToInt32(buffer, 0);
         }
@@ -65,7 +65,7 @@ namespace FastTests.Voron.Util
         {
             var stringLength = stream.ReadInt32();
             var buffer = new byte[stringLength];
-            stream.Read(buffer, 0, stringLength);
+            _ = stream.Read(buffer, 0, stringLength);
 
             return encoding.GetString(buffer);
         }

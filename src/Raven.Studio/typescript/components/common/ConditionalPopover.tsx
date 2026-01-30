@@ -14,10 +14,11 @@ interface ConditionalPopoverProps extends Required<PropsWithChildren>, ClassName
     conditions: Condition | Condition[];
     popoverPlacement?: Placement;
     className?: string;
+    style?: React.CSSProperties;
 }
 
 export function ConditionalPopover(props: ConditionalPopoverProps) {
-    const { children, popoverPlacement, className } = props;
+    const { children, popoverPlacement, className, style } = props;
 
     const [target, setTarget] = useState<HTMLElement>();
 
@@ -26,7 +27,7 @@ export function ConditionalPopover(props: ConditionalPopoverProps) {
 
     return (
         <>
-            <div ref={setTarget} className={classNames("d-flex w-fit-content", className)}>
+            <div ref={setTarget} className={classNames("d-flex w-fit-content", className)} style={style}>
                 {children}
             </div>
             {message != null && (

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
 
             using (doc.Data)
             {
-                PutDocument(context, docId, expectedChangeVector: null, document: doc.Data, nonPersistentFlags: type.ResolveConflictFlag);
+                PutDocument(context, docId, expectedChangeVector: null, document: doc.Data, nonPersistentFlags: type.ResolveConflictFlag | NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
 
@@ -133,7 +133,9 @@ namespace Raven.Server.Documents
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 _documentsStorage._forTestingPurposes?.OnBeforeOpenTableWhenPutDocumentWithSpecificId?.Invoke(id);
-                
+
+                _documentDatabase.SchemaValidatorCache?.Validate(collectionName.Name, document, nonPersistentFlags, context);
+
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);

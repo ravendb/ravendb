@@ -126,7 +126,9 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediateBytes);
+#pragma warning disable SYSLIB0057
         var intermediate = new X509Certificate2(intermediateBytes);
+#pragma warning restore SYSLIB0057
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}-2",
@@ -136,7 +138,9 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediate2Bytes);
+#pragma warning disable SYSLIB0057
         var intermediate2 = new X509Certificate2(intermediate2Bytes);
+#pragma warning restore SYSLIB0057
 
         var clientKp = RSA.Create(2048);
 
@@ -149,7 +153,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client = new X509Certificate2(clientBytes);
+#pragma warning restore SYSLIB0057
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -160,7 +166,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client2 = new X509Certificate2(client2Bytes);
+#pragma warning restore SYSLIB0057
 
         return (ca, intermediate, intermediate2, client, client2);
     }
@@ -181,7 +189,9 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediateBytes);
+#pragma warning disable SYSLIB0057
         var intermediate = new X509Certificate2(intermediateBytes);
+#pragma warning restore SYSLIB0057
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{IntermediateName}-{suffix}-2",
@@ -191,7 +201,9 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediate2Bytes);
+#pragma warning disable SYSLIB0057
         var intermediate2 = new X509Certificate2(intermediate2Bytes);
+#pragma warning restore SYSLIB0057
 
         var clientKp = RSA.Create(2048);
 
@@ -204,7 +216,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client = new X509Certificate2(clientBytes);
+#pragma warning restore SYSLIB0057
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -215,7 +229,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client2 = new X509Certificate2(client2Bytes);
+#pragma warning restore SYSLIB0057
 
         return (ca, ca2, intermediate, intermediate2, client, client2);
     }
@@ -233,7 +249,9 @@ public class RavenDB_22210 : RavenTestBase
             isCaCertificate: true,
             notAfter: DateTime.UtcNow.Date.AddYears(2),
             certBytes: out var intermediateBytes);
+#pragma warning disable SYSLIB0057
         var intermediate = new X509Certificate2(intermediateBytes);
+#pragma warning restore SYSLIB0057
 
         var clientKp = RSA.Create(2048);
 
@@ -246,7 +264,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client = new X509Certificate2(clientBytes);
+#pragma warning restore SYSLIB0057
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -257,7 +277,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client2 = new X509Certificate2(client2Bytes);
+#pragma warning restore SYSLIB0057
 
         return (ca, intermediate, client, client2);
     }
@@ -276,7 +298,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var clientBytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client = new X509Certificate2(clientBytes);
+#pragma warning restore SYSLIB0057
 
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
             commonNameValue: $"{ClientRenewedName}-{suffix}",
@@ -287,7 +311,9 @@ public class RavenDB_22210 : RavenTestBase
             notAfter: DateTime.UtcNow.Date.AddYears(1),
             certBytes: out var client2Bytes,
             subjectPrivateKey: clientKp);
+#pragma warning disable SYSLIB0057
         var client2 = new X509Certificate2(client2Bytes);
+#pragma warning restore SYSLIB0057
 
         return (client, client2);
     }

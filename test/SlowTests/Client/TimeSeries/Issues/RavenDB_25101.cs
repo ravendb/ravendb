@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
@@ -73,6 +75,76 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(ts1Seconds, tsSeconds);
                     Assert.Equal(ts2Seconds, tsSeconds);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
+        public async Task CanQueryTimeSeriesAggregationOnSegmentBoundary()
+        {
+            var today = DateTime.Today.AddDays(-1);
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "U1",
+                        Age = 30,
+                    }, "users/1");
+
+                    await session.StoreAsync(new User
+                    {
+                        Name = "U2",
+                        Age = 30,
+                    }, "users/2");
+
+                    var tsf1 = session.TimeSeriesFor("users/1", "HeartRate");
+                    var tsf2 = session.TimeSeriesFor("users/2", "HeartRate");
+
+                    for (int i = 0; i < 25; i++)
+                    {
+                        tsf1.Append(today.AddHours(i), [60 + i]);
+                        tsf2.Append(today.AddHours(i), [60 + i]);
+                    }
+
+                    tsf2.Append(today.AddHours(25), [60 + 25]);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var offset = TimeZoneInfo.Local.GetUtcOffset(today);
+                    var query = session.Query<User>()
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
+                            .GroupBy(g => g.Days(1)).Offset(offset)
+                            .Select(ts => new
+                            {
+                                Sum = ts.Sum(),
+                                Count = ts.Count()
+                            })
+                            .ToList());
+
+                    var agg = await query.ToListAsync();
+                    Assert.Equal(agg.Count, 2);
+                    var r1 = agg[0];
+                    Assert.Equal(r1.Results.Length, 2);
+                    Assert.Equal(r1.Results[0].Count[0], 24);
+                    Assert.Equal(r1.Results[0].From, today.Add(offset).ToUniversalTime());
+                    Assert.Equal(r1.Results[0].To, today.AddDays(1).Add(offset).ToUniversalTime());
+                    Assert.Equal(r1.Results[1].Count[0], 1);
+                    Assert.Equal(r1.Results[1].From, today.AddDays(1).Add(offset).ToUniversalTime());
+                    Assert.Equal(r1.Results[1].To, today.AddDays(2).Add(offset).ToUniversalTime());
+
+                    var r2 = agg[1];
+                    Assert.Equal(r2.Results.Length, 2);
+                    Assert.Equal(r2.Results[0].Count[0], 24);
+                    Assert.Equal(r2.Results[0].From, today.Add(offset).ToUniversalTime());
+                    Assert.Equal(r2.Results[0].To, today.AddDays(1).Add(offset).ToUniversalTime());
+                    Assert.Equal(r2.Results[1].Count[0], 2);
+                    Assert.Equal(r2.Results[1].From, today.AddDays(1).Add(offset).ToUniversalTime());
+                    Assert.Equal(r2.Results[1].To, today.AddDays(2).Add(offset).ToUniversalTime());
                 }
             }
         }

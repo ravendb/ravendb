@@ -274,6 +274,14 @@
                                   data-bind="text: editedIndex().additionalSources().length || undefined"></span>
                         </a>
                     </li>
+                    <li role="presentation" id="schemaDefinitionsTab">
+                        <a href="#schemaDefinitions" aria-controls="schemaDefinitions" role="tab" data-toggle="tab">
+                            <i class="icon-additional-sources"></i>
+                            <span>Schema Definitions</span>
+                            <span class="label label-primary margin-left margin-left-sm"
+                                  data-bind="text: editedIndex().schemaDefinitions().length || undefined"></span>
+                        </a>
+                    </li>
                 </ul>
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane fade in active" id="fields">
@@ -596,6 +604,54 @@
                             </ul>
                             <div class="flex-grow margin-left" data-bind="html: $root.additionalSourcePreviewHtml">
                             </div>
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="tab-pane fade" id="schemaDefinitions">
+                        <div class="margin-bottom-sm">
+                            <button type="button" data-bind="click: addSchemaDefinition, requiredAccess: 'DatabaseReadWrite'" class="btn btn-default">
+                                <i class="icon-plus"></i> <span>Add new schema definition</span>
+                            </button>
+                        </div>
+                        <div data-bind="foreach: editedIndex().schemaDefinitions">
+                            <hr data-bind="visible: $index() > 0" />
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <div>
+                                        Select collection for schema definition
+                                    </div>
+                                    <div class="form-group" data-bind="validationElement: collectionName">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Select collection">
+                                                <span data-bind="text: collectionName() || 'Select collection'"></span>&nbsp;&nbsp;<span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" role="menu" data-bind="foreach: $root.collections">
+                <li data-bind="click: () => $parent.collectionName($data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-9">
+                                    <div class="clearfix">
+                                        <div class="btn-group-sm pull-right" role="group" aria-label="...">
+                                            <button type="button" class="btn btn-default btn-sm" data-bind="click: _.partial($root.formatSchemaDefinition, $data)" title="Format JSON">
+                                                <i class="icon-indent"></i><span>Format</span>
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" data-bind="click: _.partial($root.removeSchemaDefinition, $data), requiredAccess: 'DatabaseReadWrite'" title="Delete this schema definition">
+                                                <i class="icon-trash"></i> <span>Delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="margin-bottom">
+                                        <pre class="form-control"
+                                             data-bind="aceEditor: { code: schemaText, minHeight: 300, maxHeight: 300, allowResize: true, getFocus: false, lang: 'ace/mode/json_newline_friendly', readOnly: $root.isReadOnlyAccess() }"
+                                            ></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center text-muted" data-bind="visible: !editedIndex().schemaDefinitions().length">
+                            <i class="icon-lg icon-empty-set"></i>
+                            <h2 class="margin-top margin-top-sm">No schema definitions added</h2>
                         </div>
                     </div>
                 </div>

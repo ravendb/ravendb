@@ -36,7 +36,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
         {
             using (var builder = writer.Index("doc1"))
             {
-                doc1Id = builder.EntryId;
+                doc1Id = (long)builder.EntryId;
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc1"));
                 builder.IncrementList();
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"));
@@ -47,7 +47,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
 
             using (var builder = writer.Index("doc2"))
             {
-                doc2Id = builder.EntryId;
+                doc2Id = (long)builder.EntryId;
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc2"));
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1, 1.0);
                 builder.EndWriting();
@@ -55,7 +55,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
 
             using (var builder = writer.Index("doc3"))
             {
-                doc3Id = builder.EntryId;
+                doc3Id = (long)builder.EntryId;
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc3"));
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1, 1.0);
                 builder.EndWriting();
@@ -134,7 +134,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
         {
             using (var builder = writer.Index("doc1"))
             {
-                doc1Id = builder.EntryId;
+                doc1Id = (long)builder.EntryId;
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc1"));
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"));
                 builder.EndWriting();
@@ -142,7 +142,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
 
             using (var builder = writer.Index("doc2"))
             {
-                doc2Id = builder.EntryId;
+                doc2Id = (long)builder.EntryId;
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc2"));
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1, 1.0);
                 builder.EndWriting();
@@ -150,7 +150,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
 
             using (var builder = writer.Index("doc3"))
             {
-                doc3Id = builder.EntryId;
+                doc3Id = (long)builder.EntryId;
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc3"));
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1, 1.0);
                 builder.EndWriting();
@@ -298,21 +298,21 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
         {
             if (fieldPath != "Int" || fieldId != 1)
                 return;
-            intTextualField.Add(builder.EntryId);
+            intTextualField.Add((long)builder.EntryId);
         }
 
         void InsertNumericalValue(string fieldPath, int fieldId)
         {
             if (fieldPath != "Int" || fieldId != 1)
                 return;
-            intNumericalField.Add(builder.EntryId);
-            intTextualField.Add(builder.EntryId);
+            intNumericalField.Add((long)builder.EntryId);
+            intTextualField.Add((long)builder.EntryId);
         }
 
         void UpdateDocument()
         {
-            intTextualField.Remove(builder.EntryId);
-            intNumericalField.Remove(builder.EntryId);
+            intTextualField.Remove((long)builder.EntryId);
+            intNumericalField.Remove((long)builder.EntryId);
         }
 
         void EndWritingPreviousEntry()
@@ -411,7 +411,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
                 {
                     builder.Write(0, "id()", Encodings.Utf8.GetBytes($"doc{i}"));
                     builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1L, 1D);
-                    allNumerical.Add(builder.EntryId);
+                    allNumerical.Add((long)builder.EntryId);
                     builder.EndWriting();
                 }
             }
@@ -438,7 +438,7 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             {
                 builder.Write(0, "id()", Encodings.Utf8.GetBytes("doc1"));
                 builder.Write(1, "Int", Encodings.Utf8.GetBytes("1"), 1L, 1D);
-                allNumerical.Add(builder.EntryId);
+                allNumerical.Add((long)builder.EntryId);
                 builder.EndWriting();
             }
 

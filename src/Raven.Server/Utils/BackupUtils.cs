@@ -34,7 +34,7 @@ using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConf
 
 namespace Raven.Server.Utils;
 
-internal static class BackupUtils
+public static class BackupUtils
 {
     internal static bool IgnoreHealthChecksBeforeBackup = false;
 

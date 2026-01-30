@@ -93,8 +93,10 @@ public class RavenDB_24495 : ClusterTestBase
         var bcBytes = BouncyCastleCertificateUtils.CreateSelfSignedTestCertificate(cn, issuerName: null, with2Eku: true);
         var dotnetBytes = CertificateUtils.CreateSelfSignedTestCertificate(cn, issuerName: null, with2Eku: true);
 
+#pragma warning disable SYSLIB0057
         using var bcCert = new X509Certificate2(bcBytes);
         using var dnCert = new X509Certificate2(dotnetBytes);
+#pragma warning restore SYSLIB0057
 
         // Assert basic equivalence
         Assert.Equal($"CN={cn}", GetSubjectCN(bcCert));

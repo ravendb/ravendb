@@ -3,64 +3,77 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
 using Voron;
 using Voron.Impl;
 
-
 namespace Raven.Server.Documents;
 
-public abstract unsafe class AbstractBackgroundWorkStorage
+public abstract unsafe class AbstractBackgroundWorkStorage<TWorkInfo> : AbstractBackgroundWorkStorageBase
+    where TWorkInfo : DocumentExpirationInfo, new()
 {
     protected readonly DocumentDatabase Database;
     protected readonly string MetadataPropertyName;
-    private readonly string _treeName;
+    protected readonly string _treeName;
 
     protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, string treeName, string metadataPropertyName)
     {
         tx.CreateTree(treeName);
-        
+
         Database = database;
         _treeName = treeName;
         MetadataPropertyName = metadataPropertyName;
     }
 
+    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string identifier, DateTime currentTime);
+    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<TWorkInfo> expiredDocs, ref int totalCount);
+    protected abstract TWorkInfo GetBackgroundWorkInfo(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice);
+
+    [DoesNotReturn]
+    protected static void ThrowWrongDateFormat(DocumentDatabase database, Slice treeKey, string expirationDate)
+    {
+        throw new InvalidOperationException(
+            $"The due date format for document '{treeKey}' is not valid: '{expirationDate}'. Use the following format: {database.Time.GetUtcNow():O}");
+    }
+
     public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
+    {
+        DateTime processDateUniversalTime = ProcessDateUniversalTime(Database, lowerId, processDateString);
+        PutTicksDirectly(context, lowerId, processDateUniversalTime.Ticks);
+    }
+
+    internal static DateTime ProcessDateUniversalTime(DocumentDatabase database, Slice lowerId, string processDateString)
     {
         if (DateTime.TryParseExact(processDateString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                 out DateTime processDate) == false)
-            ThrowWrongDateFormat(lowerId, processDateString);
+            ThrowWrongDateFormat(database, lowerId, processDateString);
 
-        // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
-        // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
+        // We explicitly enable adding items that have already been expired, we have to, because if the time lag is short, it is possible
+        // that we add an item that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
         // and we'll use the normal cleanup routine to clean things up later.
 
         var processDateUniversalTime = processDate.ToUniversalTime();
-        var ticksBigEndian = Bits.SwapBytes(processDateUniversalTime.Ticks);
+        return processDateUniversalTime;
+    }
+
+    internal void PutTicksDirectly(DocumentsOperationContext context, Slice lowerId, long processDateUniversalTimeTicks)
+    {
+        var ticksBigEndian = Bits.SwapBytes(processDateUniversalTimeTicks);
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
             tree.MultiAdd(ticksSlice, lowerId);
     }
-    
-    [DoesNotReturn]
-    private void ThrowWrongDateFormat(Slice lowerId, string expirationDate)
-    {
-        throw new InvalidOperationException(
-            $"The due date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {Database.Time.GetUtcNow():O}");
-    }
 
-    public Queue<DocumentExpirationInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
+    public Queue<TWorkInfo> GetDocuments(BackgroundWorkParameters options, ref int totalCount, out Stopwatch duration, CancellationToken cancellationToken)
     {
         var currentTicks = options.CurrentTime.Ticks;
-
+        var isFirstInTopology = ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag);
         var entriesTree = options.Context.Transaction.InnerTransaction.ReadTree(_treeName);
         using (var it = entriesTree.Iterate(false))
         {
@@ -70,7 +83,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                 return null;
             }
 
-            var toProcess = new Queue<DocumentExpirationInfo>();
+            var toProcess = new Queue<TWorkInfo>();
             duration = Stopwatch.StartNew();
 
             do
@@ -91,36 +104,35 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                                 return toProcess;
 
                             var clonedId = multiIt.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-
+                            TWorkInfo item;
                             try
                             {
-                                using (var document = Database.DocumentsStorage.Get(options.Context, clonedId,
-                                           DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector))
-                                {
-                                    if (document == null ||
-                                        document.TryGetMetadata(out var metadata) == false ||
-                                        HasPassed(metadata, options.CurrentTime, MetadataPropertyName) ==
-                                        false)
-                                    {
-                                        toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
-                                        totalCount++;
-                                        continue;
-                                    }
-
-                                    if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                                        break;
-
-                                    toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
-                                    totalCount++;
-                                }
+                                item = GetBackgroundWorkInfo(options, clonedId, ticksAsSlice);
                             }
                             catch (DocumentConflictException)
                             {
-                                HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
+                                item = new TWorkInfo { Status = BackgroundWorkInfoStatus.Conflict };
+                            }
+
+                            switch (item.Status)
+                            {
+                                case BackgroundWorkInfoStatus.Process when isFirstInTopology == false:
+                                case BackgroundWorkInfoStatus.Conflict when isFirstInTopology == false:
+                                    break;
+                                case BackgroundWorkInfoStatus.Process:
+                                case BackgroundWorkInfoStatus.Delete:
+                                    toProcess.Enqueue(item);
+                                    totalCount++;
+                                    break;
+                                case BackgroundWorkInfoStatus.Conflict:
+                                    HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
                             }
 
                         } while (multiIt.MoveNext()
-                                 && toProcess.Count < options.AmountToTake 
+                                 && toProcess.Count < options.AmountToTake
                                  && totalCount < options.MaxItemsToProcess);
                     }
                 }
@@ -132,63 +144,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         }
     }
 
-    public class DocumentExpirationInfo
-    {
-        public Slice Ticks { get; }
-        public Slice LowerId { get; }
-        public string Id { get; }
-
-        private DocumentExpirationInfo()
-        {
-        }
-
-        public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id)
-        {
-            Ticks = ticks;
-            LowerId = lowerId;
-            Id = id;
-        }
-    }
-
-    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);
-
-    public static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
-    {
-        var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), nodeTag, StringComparison.OrdinalIgnoreCase);
-        if (isFirstInTopology == false)
-        {
-            // this can happen when we are running the expiration/refresh/data archival on a node that isn't 
-            // the primary node for the database. In this case, we still run the cleanup
-            // procedure, but we only account for documents that have already been 
-            // marked for processing, to cleanup the queue. We'll stop on the first
-            // document that is scheduled to be processed (expired/refreshed/archived) and wait until the 
-            // primary node will act on it. In this way, we reduce conflicts between nodes
-            // performing the same action concurrently.     
-            return false;
-        }
-
-        return true;
-    }
-
-    public static bool HasPassed(BlittableJsonReaderObject metadata, DateTime currentTime, string metadataPropertyToCheck)
-    {
-        if (metadata.TryGet(metadataPropertyToCheck, out LazyStringValue dateFromMetadata) == false) 
-            return false;
-        
-        if (LazyStringParser.TryParseDateTime(dateFromMetadata.Buffer, dateFromMetadata.Length, out DateTime date, out _, properlyParseThreeDigitsMilliseconds: true) != LazyStringParser.Result.DateTime)
-            if (DateTime.TryParseExact(dateFromMetadata.ToString(CultureInfo.InvariantCulture), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind, out date) == false)
-                return false;
-        
-        if (date.Kind != DateTimeKind.Utc) 
-            date = date.ToUniversalTime();
-                
-        return currentTime >= date;
-    }
-    
-    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
-
-    public int ProcessDocuments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> toProcess, DateTime currentTime)
+    public int ProcessDocuments(DocumentsOperationContext context, Queue<TWorkInfo> toProcess, DateTime currentTime)
     {
         var processedCount = 0;
         var dequeueCount = 0;
@@ -223,6 +179,5 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
         return processedCount;
     }
-    
-}
 
+}

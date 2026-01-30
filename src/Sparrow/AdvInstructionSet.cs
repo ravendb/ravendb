@@ -49,13 +49,16 @@ namespace Sparrow
             {
                 case "256":
                     IsAcceleratedVector512 = false;
-                    goto case "128";
+                    break;
                 case "128":
                     IsAcceleratedVector256 = false;
+                    IsAcceleratedVector512 = false;
                     break;
                 case "0":
                 case "all":
                     IsAcceleratedVector128 = false;
+                    IsAcceleratedVector256 = false;
+                    IsAcceleratedVector512 = false;
                     break;
             }
         }

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly ServerStore _serverStore;
         private readonly CancellationToken _cancellationToken;
         private readonly RavenGoogleCloudClient _client;
-        private readonly string _remoteFolderName;
+        public string _remoteFolderName { get; set; }
 
         public RestoreFromGoogleCloud([NotNull] ServerStore serverStore, RestoreFromGoogleCloudConfiguration restoreFromConfiguration, CancellationToken cancellationToken)
         {
@@ -51,16 +51,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             return result;
-        }
-
-        public string GetBackupPath(string fileName)
-        {
-            return fileName;
-        }
-
-        public string GetBackupLocation()
-        {
-            return _remoteFolderName;
         }
 
         public Task ValidateConfigurationsAsync()

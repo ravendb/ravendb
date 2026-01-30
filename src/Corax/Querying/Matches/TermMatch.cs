@@ -173,7 +173,7 @@ namespace Corax.Querying.Matches
             {
                 _current = bm25Relevance is not null
                     ? current
-                    : EntryIdEncodings.DecodeAndDiscardFrequency(value),
+                    : (long)EntryIdEncodings.DecodeAndDiscardFrequency(value),
                 _bm25Relevance = bm25Relevance,
                 _returnedValue = false
             };
@@ -237,7 +237,7 @@ namespace Corax.Querying.Matches
                         long current = decodedMatches[decodedIndex];
                         long decodedEntryId = typeof(TBoostingMode) == typeof(HasBoosting)
                             ? term._bm25Relevance.Add(current)
-                            : EntryIdEncodings.DecodeAndDiscardFrequency(current);
+                            : (long)EntryIdEncodings.DecodeAndDiscardFrequency(current);
 
                         while (buffer[bufferIndex] < decodedEntryId)
                         {
@@ -332,11 +332,11 @@ namespace Corax.Querying.Matches
                     if (it.Fill(postingListBuffer, out var postingListCount, maxValidValue) == false || postingListCount == 0)
                         break;
                     
-                    var postingListMinValue = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, 0));
+                    var postingListMinValue = (long)EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, 0));
                     if (matchesMax < postingListMinValue)
                         continue;
                     
-                    var postingListMaxValue = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, postingListCount - 1));
+                    var postingListMaxValue = (long)EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, postingListCount - 1));
                     var matchesMinValue = Unsafe.Add(ref matchesStartPtr, matchesIdx);
                     if (postingListMaxValue < matchesMinValue)
                         continue;
@@ -345,7 +345,7 @@ namespace Corax.Querying.Matches
                     while (postingListIdx < postingListCount && matchesIdx < matchesCount)
                     {
                         var currentMatchesMin = Unsafe.Add(ref matchesStartPtr, matchesIdx);
-                        var currentPostingListMin = EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, postingListIdx));
+                        var currentPostingListMin = (long)EntryIdEncodings.DecodeAndDiscardFrequency(Unsafe.Add(ref postingListStartPtr, postingListIdx));
                         
                         if (typeof(TBoostingMode) == typeof(HasBoosting) && currentMatchesMin == currentPostingListMin)
                             term._bm25Relevance.Add(Unsafe.Add(ref postingListStartPtr, postingListIdx));

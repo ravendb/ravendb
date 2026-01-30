@@ -20,6 +20,9 @@ import ConflictResolution = require("components/pages/database/settings/conflict
 import Integrations = require("components/pages/database/settings/integrations/Integrations");
 import UnusedDatabaseIds = require("components/pages/database/settings/unusedDatabaseIds/UnusedDatabaseIds");
 import RevisionsBinCleaner = require("components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleaner");
+import RemoteAttachments = require("components/pages/database/settings/remoteAttachments/RemoteAttachments");
+import DocumentSchema = require("components/pages/database/settings/documentSchema/DocumentSchema");
+import DocumentSchemaPlayground = require("components/pages/database/settings/documentSchema/partials/DocumentSchemaPlayground");
 
 export = getSettingsMenuItem;
 
@@ -159,6 +162,24 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             },
         }),
         new leafMenuItem({
+            route: 'databases/settings/documentSchema',
+            moduleId: reactUtils.bridgeToReact(DocumentSchema.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Document Schema',
+            nav: true,
+            css: 'icon-document-schema',
+            dynamicHash: appUrls.documentSchema,
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/documentSchema/playground',
+            moduleId: reactUtils.bridgeToReact(DocumentSchemaPlayground.default, "nonShardedView"),
+            title: 'Document Schema Playground',
+            nav: false,
+            css: 'icon-document',
+            dynamicHash: appUrls.documentSchemaPlayground,
+            itemRouteToHighlight: "databases/settings/documentSchema",
+        }),
+        new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: reactUtils.bridgeToReact(DocumentRevisions.default, "nonShardedView"),
             shardingMode: "allShards",
@@ -216,6 +237,32 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 innerActions: [
                     { name: "Enable Data Archival" },
                     { name: "Set custom archival frequency" },
+                ],
+            },
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/remoteAttachments',
+            moduleId: reactUtils.bridgeToReact(RemoteAttachments.default, 'nonShardedView'),
+            shardingMode: "allShards",
+            title: "Remote Attachments",
+            nav: true,
+            css: "icon-remote-attachment",
+            dynamicHash: appUrls.remoteAttachments,
+            requiredAccess: "DatabaseAdmin",
+            search: {
+                innerActions: [
+                    {
+                        name: "Enable Remote Attachments",
+                        alternativeNames: ["Turn on Remote Attachments", "Activate Remote Attachments"]
+                    },
+                    {
+                        name: "Add New destination",
+                        alternativeNames: ["Create destination", "Add Remote destination", "New Attachment destination"]
+                    },
+                    {
+                        name: "Delete destination",
+                        alternativeNames: ["Remove destination", "Remote remote destination", "Delete remote attachment"]
+                    },
                 ],
             },
         }),

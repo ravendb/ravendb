@@ -8,13 +8,13 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
@@ -55,7 +55,8 @@ namespace Tests.Infrastructure
         protected const string Server42Version = "4.2.124";
         protected const string Server52Version = "5.2.100";
         protected const string Server53Version = "5.3.100";
-        protected const string Server54Version = "5.4.201-nightly-20240706-0301";
+        protected const string Server54Version = "5.4.211";
+        protected const string Server62Version = "6.2.9"; 
 
         protected DocumentStore GetDocumentStore(
             string serverVersion,
@@ -373,6 +374,17 @@ namespace Tests.Infrastructure
             private Dictionary<string, string> _environmentVariables = new();
 
             public static readonly InterversionTestOptions Default = new InterversionTestOptions(true);
+
+            public static readonly InterversionTestOptions Sharded = new InterversionTestOptions(false)
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Sharding = new ShardingConfiguration()
+                    {
+                        Shards = new Dictionary<int, DatabaseTopology>() { { 0, new DatabaseTopology() }, { 1, new DatabaseTopology() }, { 2, new DatabaseTopology() }, }
+                    };
+                }
+            };
 
             public InterversionTestOptions() : this(false)
             {

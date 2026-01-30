@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 var indexResponse = AsyncHelpers.RunSync(() => _client.Indices.GetAsync(new GetIndexRequestDescriptor(Indices.Index(indexName))));
 
-                if (indexResponse.Indices.TryGetValue(indexName, out var state))
+                if (indexResponse.Indices != null && indexResponse.Indices.TryGetValue(indexName, out var state))
                 {
                     var mappingsProperties = state.Mappings.Properties;
 

@@ -42,13 +42,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     var historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId($"{AiAgentConversationHistoryIdPrefix}{_database.IdentityPartsSeparator}", _database.DocumentsStorage.GenerateNextEtag(), out _);
                     historyId = $"{historyId}${_id}";
 
-                    var putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, historyDoc);
+                    var putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, historyDoc, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
                     _conversation.LinkedConversations.Add(putHistoryResult.Id);
                 }
             }
 
             _conversationDoc = _conversation.ToBlittable(context);
-            PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
+            PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
 
             return 1;
         }

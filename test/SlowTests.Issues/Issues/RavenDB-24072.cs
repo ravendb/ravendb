@@ -35,8 +35,8 @@ public class RavenDB_24072 : RavenTestBase
                 
                 await session.StoreAsync(dto);
                 await session.SaveChangesAsync();
-                
-                var command = new GenerateClassFromDocumentCommand("dtos/1", "csharp");
+
+                var command = new GenerateClassFromDocumentCommand("dtos/1", collection: null, "csharp");
 
                 await session.Advanced.RequestExecutor.ExecuteAsync(command, session.Advanced.Context);
 

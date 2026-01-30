@@ -32,6 +32,15 @@ class jsonUtil {
             return ko.toJSON(object, (k:string, v:string) => ignoredFields.indexOf(k) == -1 ? v : null).replace(/\\r\\n/g, '\\n');
         }
     }
+
+    static isValidJson(json: string) {
+        try {
+            JSON.parse(json);
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
 } 
 
 export = jsonUtil

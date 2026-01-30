@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.ServerWide.Commands;
 using static Raven.Server.ServerWide.Commands.ClusterTransactionCommand;
@@ -21,6 +22,8 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
     protected override ArraySegment<BatchRequestParser.CommandData> GetParsedCommands(ShardedBatchCommand command) => command.ParsedCommands;
 
     protected override ClusterConfiguration GetClusterConfiguration() => RequestHandler.DatabaseContext.Configuration.Cluster;
+
+    protected override SchemaValidatorCache SchemaValidatorCache => RequestHandler.DatabaseContext.SchemaValidatorCache;
 
     public override Task WaitForDatabaseCompletion(Task<HashSet<string>> onDatabaseCompletionTask, long index, ClusterTransactionOptions options, CancellationToken token)
     {

@@ -192,7 +192,7 @@ namespace Raven.Server.Utils
                 $"{commonNameValue} CA",
                 out var caSubjectName,
                 log);
-            
+
             CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue: commonNameValue,
                 issuerCN: caSubjectName,
@@ -207,6 +207,7 @@ namespace Raven.Server.Utils
 
             var selfSignedCertificateBasedOnPrivateKey = CertificateLoaderUtil.CreateCertificate(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
+            GC.KeepAlive(selfSignedCertificateBasedOnPrivateKey); // https://github.com/dotnet/runtime/issues/122642#issuecomment-3720461147
 
             // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
             // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
@@ -271,7 +272,9 @@ namespace Raven.Server.Utils
             var pfxCollection = new X509Certificate2Collection();
 
             // Import the existing PFX file (client certificate) into the collection
+#pragma warning disable SYSLIB0057
             pfxCollection.Import(certBytes, null, CertificateLoaderUtil.FlagsForExport);
+#pragma warning restore SYSLIB0057
 
             // Add the server certificate to the collection
             pfxCollection.Add(CertificateLoaderUtil.CreateCertificate(serverCertBytes, flags: CertificateLoaderUtil.FlagsForExport));
@@ -354,6 +357,7 @@ namespace Raven.Server.Utils
                 commonNameBuilder.AddCommonName(commonNameValue);
                 subjectName = commonNameBuilder.Build();
             }
+
             log?.AppendLine($"subjectDN = {subjectName}");
             log?.AppendLine($"issuerDN = {issuerCN}");
 
@@ -404,12 +408,14 @@ namespace Raven.Server.Utils
                 rng.GetBytes(serialNumberBytes);
             }
 
+            serialNumberBytes[0] &= 0x7F; // Force positive number, preventing the '00' padding
+
+            log?.AppendLine($"serialNumber bytes generated.");
+
             if (issuerCertBytes is { Length: > 0 })
             {
                 request.CertificateExtensions.Add(new X509Extension(new Oid(Constants.Certificates.ServerCertExtensionOid), issuerCertBytes, false));
             }
-
-            log?.AppendLine($"serialNumber bytes generated.");
 
             // Create the signature generator.
             // This is the correct way to pass the private key for signing in older .NET versions.
@@ -490,7 +496,7 @@ namespace Raven.Server.Utils
 
             // Create the self-signed certificate.
             // The CreateSelfSigned method automatically adds AuthorityKeyIdentifier and SubjectKeyIdentifier.
-            var notBefore = DateTimeOffset.UtcNow.Date;
+            var notBefore = DateTimeOffset.UtcNow.Date.AddDays(-7);
             var notAfter = notBefore.AddYears(2);
             var cert = request.CreateSelfSigned(notBefore, notAfter);
             log?.AppendLine($"Certificate created. NotBefore: {cert.NotBefore}, NotAfter: {cert.NotAfter}");
@@ -520,7 +526,9 @@ namespace Raven.Server.Utils
 
             // Return a new X509Certificate2 object from the generated PFX byte array.
             var flags = X509KeyStorageFlags.PersistKeySet;
+#pragma warning disable SYSLIB0057
             return new X509Certificate2(clientCertBytes, string.Empty, flags);
+#pragma warning restore SYSLIB0057
         }
 
         public static X509Certificate2 ExtractServerCertificateFromExtension(X509Certificate2 clientCert)
@@ -540,7 +548,9 @@ namespace Raven.Server.Utils
                 {
                     // The RawData property of the extension contains the DER-encoded certificate bytes.
                     // The native .NET X509Certificate2 constructor can directly create a certificate from these bytes.
+#pragma warning disable SYSLIB0057
                     serverCertificateFromExtension = new X509Certificate2(extension.RawData);
+#pragma warning restore SYSLIB0057
                 }
                 catch (CryptographicException)
                 {
@@ -564,7 +574,9 @@ namespace Raven.Server.Utils
                             // Try to create a certificate from this position
                             var certBytes = new byte[rawData.Length - i];
                             Array.Copy(rawData, i, certBytes, 0, certBytes.Length);
+#pragma warning disable SYSLIB0057
                             serverCertificateFromExtension = new X509Certificate2(certBytes);
+#pragma warning restore SYSLIB0057
                             break;
                         }
                         catch
@@ -790,7 +802,9 @@ namespace Raven.Server.Utils
 
             // Return a new X509Certificate2 object from the exported PFX data.
             var flags = X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet;
+#pragma warning disable SYSLIB0057
             return new X509Certificate2(pfxBytes, string.Empty, flags);
+#pragma warning restore SYSLIB0057
         }
 
         public static string GetBasicCertificateInfo(this X509Certificate2 certificate)

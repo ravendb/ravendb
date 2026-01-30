@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.AI;
@@ -21,6 +22,7 @@ using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -76,6 +78,8 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
+        public SchemaValidationConfiguration SchemaValidation;
+
         public DocumentsCompressionConfiguration DocumentsCompression;
 
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
@@ -103,6 +107,8 @@ namespace Raven.Client.ServerWide
         public RefreshConfiguration Refresh;
 
         public DataArchivalConfiguration DataArchival;
+
+        public RemoteAttachmentsConfiguration RemoteAttachments;
 
         public IntegrationConfigurations Integrations;
 
@@ -208,6 +214,8 @@ namespace Raven.Client.ServerWide
 
         public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex, int revisionsToKeep, IndexDeploymentMode globalDeploymentMode)
         {
+            ValidateSchemaCollections(definition);
+
             var lockMode = IndexLockMode.Unlock;
 
             IndexDefinitionCompareDifferences? differences = null;
@@ -277,6 +285,25 @@ namespace Raven.Client.ServerWide
             }
 
             definition.ClusterState.LastIndex = raftIndex;
+        }
+
+        private void ValidateSchemaCollections(IndexDefinition definition)
+        {
+            if (SchemaValidation == null || definition.Reduce == null || definition.OutputReduceToCollection == null)
+                return;
+
+            if (SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.OutputReduceToCollection, out _))
+            {
+                throw new InvalidOperationException($"Cannot create index '{definition.Name}' which outputs to collection " +
+                                                    $"'{definition.OutputReduceToCollection}' that has a schema validation configured.");
+            }
+
+            if (definition.PatternReferencesCollectionName != null &&
+                SchemaValidation.ValidatorsPerCollection.TryGetValue(definition.PatternReferencesCollectionName, out _))
+            {
+                throw new InvalidOperationException($"Cannot create index '{definition.Name}' which outputs the pattern to collection " +
+                                                    $"'{definition.PatternReferencesCollectionName}' that has a schema validation configured.");
+            }
         }
 
         internal void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)

@@ -12,7 +12,7 @@ class shardAwareContainer extends viewModelBase {
     context: shardingContext;
     usingExternalContext: boolean;
 
-    activationData: any;
+    activationData: any[];
 
     child = ko.observable<shardViewModelBase>();
     view = require("views/common/sharding/shardAwareContainer.html");
@@ -31,7 +31,9 @@ class shardAwareContainer extends viewModelBase {
     activate(args: any, parameters?: any) {
         super.activate(args, parameters);
         
-        this.activationData = args;
+        // Store as array to preserve all arguments for child activation
+        // Durandal's invoke() spreads arrays via .apply(), ensuring child receives both args and parameters
+        this.activationData = parameters !== undefined ? [args, parameters] : [args];
     }
 
     compositionComplete() {

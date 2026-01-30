@@ -173,7 +173,7 @@ public partial class IndexSearcher
         else if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
             var smallSetId = EntryIdEncodings.GetContainerId(containerId);
-            Container.Get(_transaction.LowLevelTransaction, new ContainerEntryId(smallSetId), out var small);
+            Container.Get(_transaction.LowLevelTransaction, smallSetId, out var small);
             matches = TermMatch.YieldSmall(this, Allocator, small, termRatioToWholeCollection, field.HasBoost);
         }
         else
@@ -187,7 +187,7 @@ public partial class IndexSearcher
     public PostingList GetPostingList(long containerId)
     {
         var setId = EntryIdEncodings.GetContainerId(containerId);
-        var setStateSpan = Container.GetReadOnly(_transaction.LowLevelTransaction, new ContainerEntryId(setId));
+        var setStateSpan = Container.GetReadOnly(_transaction.LowLevelTransaction, setId);
 
         ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
         var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
@@ -259,7 +259,7 @@ public partial class IndexSearcher
         if ((containerId & (long)TermIdMask.PostingList) != 0)
         {
             var setId = EntryIdEncodings.GetContainerId(containerId);
-        var setStateSpan = Container.GetReadOnly(_transaction.LowLevelTransaction, new ContainerEntryId(setId));
+            var setStateSpan = Container.GetReadOnly(_transaction.LowLevelTransaction, setId);
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             return setState.NumberOfEntries;
         }
@@ -267,7 +267,7 @@ public partial class IndexSearcher
         if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
             var smallSetId = EntryIdEncodings.GetContainerId(containerId);
-            var small = Container.GetReadOnly(_transaction.LowLevelTransaction, new ContainerEntryId(smallSetId));
+            var small = Container.GetReadOnly(_transaction.LowLevelTransaction, smallSetId);
             var itemsCount = VariableSizeEncoding.Read<int>(small, out _);
 
             return itemsCount;

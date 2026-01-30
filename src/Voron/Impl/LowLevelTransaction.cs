@@ -917,7 +917,11 @@ namespace Voron.Impl
 
             for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
             {
-                FreePage(page.PageNumber + i);
+                FreePage(page.PageNumber + i
+#if DEBUG
+                    , isOverflowShrink: true
+#endif
+                );
             }
 
             // need to set the proper number of pages in the scratch page
@@ -1053,14 +1057,21 @@ namespace Voron.Impl
             UntrackDirtyPage(pageNumber);
         }
 
-        public void FreePage(long pageNumber)
+        public void FreePage(long pageNumber
+#if DEBUG
+            , bool isOverflowShrink = false
+#endif
+        )
         {
             if (_txState != TxState.None)
                 ThrowObjectDisposed();
 
             try
             {
-                TrackOverflowPageRemoval(pageNumber);
+#if DEBUG
+                if (isOverflowShrink == false)
+                    TrackOverflowPageRemoval(pageNumber);
+#endif
                 UntrackPage(pageNumber);
                 Debug.Assert(pageNumber >= 0);
 

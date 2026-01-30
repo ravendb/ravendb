@@ -339,7 +339,9 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
+#pragma warning disable SYSLIB0057
                 serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
+#pragma warning restore SYSLIB0057
             }
             catch (CryptographicException e)
             {
@@ -408,8 +410,10 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
+#pragma warning disable SYSLIB0057
                 serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null,
                     CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
+#pragma warning restore SYSLIB0057
             }
             catch (CryptographicException e)
             {

@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
         public T Current => CurrentItem;
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             foreach (var workEnumerator in WorkEnumerators)
             {

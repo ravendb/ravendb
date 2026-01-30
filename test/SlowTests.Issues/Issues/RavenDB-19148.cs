@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_19148 : ClusterTestBase
+public class RavenDB_19148 : DisableParallelTestBase
 {
     public RavenDB_19148(ITestOutputHelper output) : base(output)
     {
@@ -23,7 +23,7 @@ public class RavenDB_19148 : ClusterTestBase
     {
         var suffix = Guid.NewGuid().ToString().Split('-')[0];
         var caCommonNameValue = $"auth-{suffix}";
-        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caName);
+        var ca = CertificateUtils.CreateCertificateAuthorityCertificate(caCommonNameValue, out var caName, generateNewKeyPair: true);
         CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey($"admin-{suffix}", caName, (ca.GetExportableRsaPrivateKey(), ca.GetRSAPublicKey()), true, false,
             DateTime.UtcNow.Date.AddMonths(3), out var certBytes);
         CertificateUtils.RemoveOldTestCertificatesFromOsStore(caCommonNameValue);
@@ -37,7 +37,9 @@ public class RavenDB_19148 : ClusterTestBase
         using (var store = new DocumentStore
         {
             Urls = new[] { result.Leader.WebUrl },
+#pragma warning disable SYSLIB0057
             Certificate = new X509Certificate2(certBytes),
+#pragma warning restore SYSLIB0057
             Conventions =
             {
                 DisposeCertificate = false

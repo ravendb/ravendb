@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
+using Raven.Server.Documents.BackgroundWork;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Voron;
-using static Raven.Server.Documents.AbstractBackgroundWorkStorage;
 
 namespace Raven.Server.Documents.DataArchival;
 
@@ -34,7 +34,7 @@ internal class ArchiveDocumentsCommand : MergedTransactionCommand<DocumentsOpera
     {
         return new ArchiveDocumentsCommandDto 
         {
-            ToArchive = _toArchive.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray(),
+            ToArchive = _toArchive.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id, Status: x.Status)).ToArray(),
             CurrentTime = _currentTime
         };
     }
@@ -48,13 +48,13 @@ internal class ArchiveDocumentsCommandDto: IReplayableCommandDto<DocumentsOperat
         var toArchive = new Queue<DocumentExpirationInfo>();
         foreach (var item in ToArchive)
         {
-            toArchive.Enqueue(new DocumentExpirationInfo(item.Ticks.Clone(context.Allocator), item.LowerId.Clone(context.Allocator), item.Id));
+            toArchive.Enqueue(new DocumentExpirationInfo(item.Ticks.Clone(context.Allocator), item.LowerId.Clone(context.Allocator), item.Id, item.Status));
         }
         var command = new ArchiveDocumentsCommand(toArchive, database, CurrentTime);
         return command;
     }
 
-    public (Slice Ticks, Slice LowerId, string Id)[] ToArchive { get; set; }
+    public (Slice Ticks, Slice LowerId, string Id, BackgroundWorkInfoStatus Status)[] ToArchive { get; set; }
 
     public DateTime CurrentTime { get; set; }
 }

@@ -28,6 +28,10 @@ class genUtils {
     
     /***  IP Address Methods  ***/
 
+    static isBindAllIpAddress(ip: string) {
+        return ip === "0.0.0.0"
+    }
+    
     static isLocalhostIpAddress(ip: string): boolean {
         return ((ip === 'localhost') || (_.split(ip, '.')[0] === '127') || (ip === '::1'));
     }
@@ -799,6 +803,25 @@ class genUtils {
         return value.toLowerCase().trim();
     }
 
+    static isScrolledToBottom(element: HTMLElement) {
+        return Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) < 1;
+    }
+    
+    static getBrowser(): Browser {
+        const userAgent = window.navigator.userAgent.toLowerCase();
+
+        // Chromium-based browsers
+        if (userAgent.includes("chrome") || userAgent.includes("edg") || userAgent.includes("opr")) {
+            return "Chrome";
+        } else if (userAgent.includes("firefox")) {
+            return "Firefox";
+        } else if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
+            return "Safari";
+        }
+
+        return "Other";
+    }
+
     static getSingleRoute(route: string | string[]): string {
         if (!route) {
             return null;
@@ -815,19 +838,12 @@ class genUtils {
         return Number(tokens).toLocaleString();
     }
 
-    static getNestedField(object: any, path: string) {
-        const keys = path.split(".");
-        let current = object;
-    
-        for (const key of keys) {
-            if (current && typeof current === "object") {
-                current = current[key];
-            } else {
-                return null;
-            }
+    static prettifyJson(content: string, spacing: number = 2) {
+        try {
+            return JSON.stringify(JSON.parse(content), null, spacing);
+        } catch {
+            return content;
         }
-    
-        return current;
     }
 } 
 

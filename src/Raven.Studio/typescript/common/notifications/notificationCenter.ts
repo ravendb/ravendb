@@ -45,6 +45,7 @@ import pagingDetails = require("viewmodels/common/notificationCenter/detailViewe
 import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
 import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
+import remoteAttachmentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/remoteAttachmentErrorDetails");
 import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
@@ -52,6 +53,7 @@ import licenseLimitDetails = require("viewmodels/common/notificationCenter/detai
 import requestLatencyDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/requestLatencyDetails");
 import transactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/transactionCommandsDetails");
 import dumpRawIndexDataDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/dumpRawIndexDataDetails");
+import validateSchemaDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/validateSchemaDetails");
 
 import studioSettings = require("common/settings/studioSettings");
 import optimizeIndexDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/optimizeIndexDetails");
@@ -65,6 +67,7 @@ import cpuCreditsBalanceDetails = require("viewmodels/common/notificationCenter/
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
 import typeUtils = require("common/typeUtils");
 import aiAgentExceededTokenThreshold = require("viewmodels/common/notificationCenter/detailViewer/alerts/aiAgentExceededTokenThreshold");
+
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void> | void;
@@ -162,6 +165,7 @@ class notificationCenter {
             transactionCommandsDetails,
             dumpRawIndexDataDetails,
             optimizeIndexDetails,
+            validateSchemaDetails,
             
             // virtual operations:
             virtualBulkInsertDetails,
@@ -191,6 +195,7 @@ class notificationCenter {
             conflictExceededDetails,
             complexFieldsAlertDetails,
             aiAgentExceededTokenThreshold,
+            remoteAttachmentErrorDetails,
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );
 
@@ -413,9 +418,9 @@ class notificationCenter {
         return db ? this.databaseOperationsWatch : this.globalOperationsWatch;
     }
 
-    monitorOperation(db: database | string,
+    monitorOperation<T = unknown>(db: database | string,
         operationId: number,
-        onProgress: (progress: unknown) => void = null): JQueryPromise<unknown> {
+        onProgress: (progress: T) => void = null): JQueryPromise<T> {
 
         return this.getOperationsWatch(db).monitorOperation(operationId, onProgress);
     }

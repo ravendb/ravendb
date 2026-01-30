@@ -229,10 +229,10 @@ if($output.Blocked)
                     // model response message
                     msgAsObj = messages[3] as BlittableJsonReaderObject;
                     Assert.NotNull(msgAsObj);
-                    Assert.True(msgAsObj.TryGet("content", out content));
+                    Assert.True(msgAsObj.TryGet("content", out BlittableJsonReaderObject contentObj));
                    
-                    Assert.True(content.Contains("\"Blocked\":"));
-                    Assert.True(content.Contains("\"Reason\":"));
+                    Assert.True(contentObj.TryGet("Blocked", out bool _));
+                    Assert.True(contentObj.TryGet("Reason", out string _));
 
                     Assert.True(msgAsObj.TryGet("role", out role));
                     Assert.Equal("assistant", role);

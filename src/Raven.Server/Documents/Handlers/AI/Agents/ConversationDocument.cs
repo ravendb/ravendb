@@ -103,6 +103,33 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
         // here we generate artificial tools calls, so the model will have a better grasp
         // of what information we are actually giving it
+        AddArtificialToolCall(context, result);
+
+        return result;
+        
+        static bool ShouldAddToInitialContext(AiAgentToolQueryOptions options)
+        {
+            if (options?.AddToInitialContext is null)
+                return false;
+            
+            return options.AddToInitialContext.Value;
+        }
+    }
+
+    public void AddToolResponse(JsonOperationContext context, string toolId, string content)
+    {
+        AddMessage(context, context.ReadObject(
+            new DynamicJsonValue
+            {
+                ["tool_call_id"] = toolId,
+                ["role"] = "tool",
+                ["content"] = content
+            },
+            "user/tool"), usage: null);
+    }
+
+    public void AddArtificialToolCall(JsonOperationContext context, List<AiToolCall> result)
+    {
         var tools = new DynamicJsonArray();
         foreach (AiToolCall call in result)
         {
@@ -123,16 +150,6 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleAssistantValue,
             [ChatCompletionClient.Constants.ResponseFields.ToolCalls] = tools
         }, "tools/msg"), usage: null);
-
-        return result;
-        
-        static bool ShouldAddToInitialContext(AiAgentToolQueryOptions options)
-        {
-            if (options?.AddToInitialContext is null)
-                return false;
-            
-            return options.AddToInitialContext.Value;
-        }
     }
 
     private string ParametersToString(List<AiAgentParameter> parameters)

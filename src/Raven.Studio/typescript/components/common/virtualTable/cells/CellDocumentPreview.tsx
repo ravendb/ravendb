@@ -43,7 +43,7 @@ export default function CellDocumentPreview({ document }: CellDocumentPreviewPro
                 </Modal.Header>
                 <Modal.Body className="pb-3">
                     <pre style={{ maxHeight: "400px" }} className="overflow-auto m-0 mt-3">
-                        <Code language="json" code={jsonBody} elementToCopy={jsonBody} />
+                        <Code language="json" code={jsonBody} />
                     </pre>
                 </Modal.Body>
                 <Modal.Footer>

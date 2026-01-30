@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
-            BackupConfigurationHelper.AssertPeriodicBackup(configuration, GetBackupConfiguration(), RequestHandler.ServerStore, authConnection);
+            BackupConfigurationHelper.AssertPeriodicBackup(configuration, GetBackupConfiguration(), RequestHandler.ServerStore, RequestHandler.DatabaseName, authConnection);
         }
 
         protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, PeriodicBackupConfiguration configuration, long index)

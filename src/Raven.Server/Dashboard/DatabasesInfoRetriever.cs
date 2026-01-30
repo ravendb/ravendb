@@ -114,7 +114,7 @@ namespace Raven.Server.Dashboard
 
             var rate = (int)RefreshRate.TotalSeconds;
             trafficWatchInfo.TrafficWatch.RequestsPerSecond = (int)Math.Ceiling(serverStore.Server.Metrics.Requests.RequestsPerSec.GetRate(rate));
-            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
+            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration;
 
             using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -136,7 +136,7 @@ namespace Raven.Server.Dashboard
                             {
                                 Database = databaseName,
                                 RequestsPerSecond = database.Metrics.Requests.RequestsPerSec.GetIntRate(rate),
-                                AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
+                                AverageRequestDuration = database.Metrics.Requests.AverageDuration,
                                 DocumentWritesPerSecond = database.Metrics.Docs.PutsPerSec.GetIntRate(rate),
                                 AttachmentWritesPerSecond = database.Metrics.Attachments.PutsPerSec.GetIntRate(rate),
                                 CounterWritesPerSecond = database.Metrics.Counters.PutsPerSec.GetIntRate(rate),
@@ -249,7 +249,7 @@ namespace Raven.Server.Dashboard
                 {
                     Database = database.Name,
                     RequestsPerSecond = database.Metrics.Requests.RequestsPerSec.GetIntRate(rate),
-                    AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
+                    AverageRequestDuration = database.Metrics.Requests.AverageDuration,
                     DocumentWritesPerSecond = database.Metrics.Docs.PutsPerSec.GetIntRate(rate),
                     AttachmentWritesPerSecond = database.Metrics.Attachments.PutsPerSec.GetIntRate(rate),
                     CounterWritesPerSecond = database.Metrics.Counters.PutsPerSec.GetIntRate(rate),
@@ -639,6 +639,7 @@ namespace Raven.Server.Dashboard
         private static NotificationCounts GetNotificationCounts(DocumentDatabase database)
         {
             var result = new NotificationCounts();
+            var now = SystemTime.UtcNow;
             
             var storage = database.NotificationCenter.Storage;
             
@@ -647,23 +648,29 @@ namespace Raven.Server.Dashboard
             {
                 foreach (var alert in storage.ReadActionsOfType(context, NotificationType.AlertRaised))
                 {
-                    var reason = Bits.SwapBytes(alert.Reason);
+                    if (alert.PostponedUntil == null || alert.PostponedUntil <= now)
+                    {
+                        var reason = Bits.SwapBytes(alert.Reason);
 
-                    var reasonName = ((AlertReason)reason).ToString();
+                        var reasonName = ((AlertReason)reason).ToString();
                     
-                    result.Increment(NotificationType.AlertRaised, reasonName);
+                        result.Increment(NotificationType.AlertRaised, reasonName);
+                    }
                     
                     alert.Dispose();
                 }
                 
                 foreach (var performanceHint in storage.ReadActionsOfType(context, NotificationType.PerformanceHint))
                 {
-                    var reason = Bits.SwapBytes(performanceHint.Reason);
+                    if (performanceHint.PostponedUntil == null || performanceHint.PostponedUntil <= now)
+                    {
+                        var reason = Bits.SwapBytes(performanceHint.Reason);
 
-                    var reasonName = ((PerformanceHintReason)reason).ToString();
-                    
-                    result.Increment(NotificationType.PerformanceHint, reasonName);
-                    
+                        var reasonName = ((PerformanceHintReason)reason).ToString();
+
+                        result.Increment(NotificationType.PerformanceHint, reasonName);
+                    }
+
                     performanceHint.Dispose();
                 }
             }

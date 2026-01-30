@@ -10,19 +10,34 @@ namespace Raven.Server.Documents.Commands;
 public sealed class GenerateClassFromDocumentCommand : RavenCommand<string>
 {
     private readonly string _id;
+    private readonly string _collection;
     private readonly string _lang;
 
-    public GenerateClassFromDocumentCommand(string id, string lang)
+    public GenerateClassFromDocumentCommand(string id, string collection, string lang)
     {
-        _id = id ?? throw new ArgumentException(nameof(id));
-        _lang = lang;
+        if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(collection))
+            throw new InvalidOperationException("Either id or collection must be provided.");
+
+        _id = id;
+        _collection = collection;
+        _lang = lang ?? throw new ArgumentException(nameof(lang));
         ResponseType = RavenCommandResponseType.Raw;
     }
 
     public override bool IsReadRequest => true;
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        url = $"{node.Url}/databases/{node.Database}/docs/class?id={Uri.EscapeDataString(_id)}&lang={Uri.EscapeDataString(_lang)}";
+        url = $"{node.Url}/databases/{node.Database}/docs/class?lang={Uri.EscapeDataString(_lang)}";
+
+        if (string.IsNullOrEmpty(_collection) == false)
+        {
+            url += $"&collection={Uri.EscapeDataString(_collection)}";
+        }
+
+        if (string.IsNullOrEmpty(_id) == false)
+        {
+            url += $"&id={Uri.EscapeDataString(_id)}";
+        }
 
         return new HttpRequestMessage
         {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.AI.Settings;
@@ -247,7 +249,7 @@ internal class ChatCompletionClient : IDisposable
             var choice = (BlittableJsonReaderObject)choices[0];
             if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
-                if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
+                if (TryGetDeltaContent(delta, out LazyStringValue content))
                 {
                     toolCallState.AddAndReset();
 
@@ -274,7 +276,8 @@ internal class ChatCompletionClient : IDisposable
             }
         }
 
-        if (toolCallState.AllToolCalls?.Count >= 0)
+        // Some OpenAI-like APIs return an empty array instead of omitting the field when no tool calls are made
+        if (toolCallState.AllToolCalls?.Count > 0)
         {
             DynamicJsonArray toolCalls = new();
             foreach (var call in toolCallState.AllToolCalls)
@@ -308,13 +311,29 @@ internal class ChatCompletionClient : IDisposable
             Message = streamingContext.ReadObject(new DynamicJsonValue
             {
                 [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
-                [Constants.ResponseFields.Content] = message!.ToString(),
+                [Constants.ResponseFields.Content] = message,
             }, "persisted/streamed/message"),
             Result = message,
         };
     }
 
-    public async Task<string> TestCompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
+    private static bool TryGetDeltaContent(BlittableJsonReaderObject delta, out LazyStringValue content)
+    {
+        // Try content, then reasoning_content, then reasoning (for LM Studio and other reasoning model compatibility)
+        if (delta.TryGet(Constants.ResponseFields.Content, out content) && content?.Length > 0)
+            return true;
+
+        if (delta.TryGet(Constants.ResponseFields.ReasoningContent, out content) && content?.Length > 0)
+            return true;
+
+        if (delta.TryGet(Constants.ResponseFields.Reasoning, out content) && content?.Length > 0)
+            return true;
+
+        content = null;
+        return false;
+    }
+
+    public async Task<(string Result, string Message)> TestCompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
     {
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext context);
         var prompt = context.ReadObject(new DynamicJsonValue
@@ -331,7 +350,7 @@ internal class ChatCompletionClient : IDisposable
 
         var request = CreateCompletionRequest(context, [prompt, user], attachments: null, tools: null, useTools: false, streaming: false, schema);
         var r = await CompleteAsync(context, request, new AiUsage(), token);
-        return r.Result.ToString();
+        return (r.Result.ToString(), r.Message.ToString());
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
@@ -349,13 +368,13 @@ internal class ChatCompletionClient : IDisposable
         }
 
         var result = responseParser.GetContent(context);
+
         return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
     }
 
     private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response, BlittableJsonReaderObject responseContent)
     {
         public BlittableJsonReaderObject Message;
-        private string _content;
         private BlittableJsonReaderObject _choice0;
 
         public void EnsureSuccessfulResponse()
@@ -376,21 +395,19 @@ internal class ChatCompletionClient : IDisposable
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
 
-            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
-                Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
+            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false)
             {
-                throw UnexpectedResponseException.Create(message: "No message/content property in choice", response, responseContent);
+                throw UnexpectedResponseException.Create(message: "No message property in choice", response, responseContent);
             }
 
             if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
                 throw UnexpectedResponseException.Create(message: "No usage in response content", response, responseContent);
-
             usage.UpdateFrom(usageJson);
         }
 
         public bool TryParseToolCalls(out List<AiToolCall> toolCalls)
         {
-            if (Message.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls) is false)
+            if (Message.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls) is false || calls.Length == 0)
             {
                 toolCalls = null;
                 return false;
@@ -412,16 +429,24 @@ internal class ChatCompletionClient : IDisposable
 
         public BlittableJsonReaderObject GetContent(JsonOperationContext context)
         {
-            if (string.IsNullOrEmpty(_content))
+            // Try content, then reasoning_content, then reasoning (for LM Studio and other OpenAI-like APIs that still use the older mechanism)
+            if (TryGetDeltaContent(Message, out var content) == false)
             {
                 _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                _ = _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || Message.TryGet(Constants.ResponseFields.Refusal, out refusal);
+                var refusal = client.GetRefusal(_choice0, Message);
+                if (string.IsNullOrEmpty(refusal))
+                    throw UnexpectedResponseException.Create(message: "No response content", response, responseContent);
 
                 RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
             }
 
-            return context.Sync.ReadForMemory(_content, "ai/output");
+            var result = context.Sync.ReadForMemory(content, "ai/output");
+            Message.Modifications ??= new DynamicJsonValue(Message);
+            Message.Modifications[Constants.ResponseFields.Content] = result;
+
+            return result;
         }
+
     }
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
@@ -625,9 +650,17 @@ internal class ChatCompletionClient : IDisposable
             await responseStream.CopyToAsync(ms, token);
             var contentLength = (int)ms.Position;
             ms.Position = 0;
+
             try
             {
                 return await context.ReadForMemoryAsync(ms, "response/object").ConfigureAwait(false);
+            }
+            catch (InvalidDataException ide) when (ide.Message.Contains("Cannot have a '<' in this position at  (1,2) around:")) // likely HTML response
+            {
+                ms.Position = 0;
+                string content = Encoding.UTF8.GetString(ms.GetMemory().Span[..contentLength]);
+
+                throw UnexpectedResponseException.Create(message: "Received an unrecognized response from the server", response, content);
             }
             catch (Exception e)
             {
@@ -639,86 +672,72 @@ internal class ChatCompletionClient : IDisposable
     }
 
     [DoesNotReturn]
-    private void HandleUnsuccessfulResponse(HttpResponseMessage response, BlittableJsonReaderObject responseContent)
+    private void HandleUnsuccessfulResponse(HttpResponseMessage response, BlittableJsonReaderObject content)
     {
         var headers = response.Headers;
         var reqId = GetRequestId(headers);
 
-        if (responseContent.TryGet(Constants.ResponseFields.Error, out BlittableJsonReaderObject errBjo) is false || errBjo.TryGet(Constants.ResponseFields.Message, out string message) is false)
-            throw UnexpectedResponseException.Create(message: "Unexpected response", response, responseContent);
+        var error = _settings.ParseError(content, response);
+        var message = error.Message;
 
-        switch (response.StatusCode)
+        switch (error.ErrorType)
         {
-            case HttpStatusCode.TooManyRequests:
-
-                if (errBjo.TryGet(Constants.ResponseFields.ErrorType, out string type) == false)
-                    throw UnexpectedResponseException.Create(message: "No type specified", response, responseContent);
-
-                switch (type)
+            case ErrorType.InsufficientQuota:
+                throw new InsufficientQuotaException(message)
                 {
-                    case Constants.ResponseFields.ErrorTypeInsufficientQuota:
-                        throw new InsufficientQuotaException(message)
-                        {
-                            RequestId = reqId
-                        };
-
-                    case Constants.ResponseFields.ErrorTypeTokens:
-                    case Constants.ResponseFields.ErrorTypeRequests:
-
-                        var retryAfter = TimeSpan.Zero;
-                        if (headers.Contains(Constants.Headers.RetryAfter) == false)
-                        {
-                            throw new TooManyTokensException(message)
-                            {
-                                RequestId = reqId
-                            };
-                        }
-
-                        if (headers.TryGetValues(Constants.Headers.TokensResetTime, out var resetTokensValues))
-                        {
-                            // TPM
-                            var retryAfterAsString = resetTokensValues.FirstOrDefault();
-                            if (TryParseResetTime(retryAfterAsString, out retryAfter) == false)
-                                throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
-                        }
-
-                        if (headers.TryGetValues(Constants.Headers.RequestsResetTime, out var resetRequestsValues))
-                        {
-                            // RPM
-                            var retryAfterAsString = resetRequestsValues.FirstOrDefault();
-                            if (TryParseResetTime(retryAfterAsString, out var retryAfterForReqs) == false)
-                                throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
-
-                            retryAfter = retryAfterForReqs > retryAfter ? retryAfterForReqs : retryAfter;
-                        }
-
-                        // TPM/RPM - should retry only for this exception
-                        throw new
-                            RateLimitException(message)
-                            {
-                                RetryAfter = retryAfter,
-                                RequestId = reqId
-                            };
-                    default:
-                        throw new TooManyRequestsException(message)
-                        {
-                            RequestId = reqId
-                        };
+                    RequestId = reqId
+                };
+            case ErrorType.Other429:
+            case ErrorType.TooManyTokens:
+            case ErrorType.TooManyRequests:
+                var retryAfter = TimeSpan.Zero;
+                if (headers.Contains(Constants.Headers.RetryAfterMs) == false && headers.Contains(Constants.Headers.RetryAfter) == false)
+                {
+                    throw new TooManyTokensException(message)
+                    {
+                        RequestId = reqId
+                    };
                 }
+
+                if (headers.TryGetValues(Constants.Headers.XRateLimitResetTokens, out var resetTokensValues))
+                {
+                    // TPM
+                    var retryAfterAsString = resetTokensValues.FirstOrDefault();
+                    if (TryParseResetTime(retryAfterAsString, out retryAfter) == false)
+                        throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
+                }
+
+                if (headers.TryGetValues(Constants.Headers.XRateLimitResetRequests, out var resetRequestsValues))
+                {
+                    // RPM
+                    var retryAfterAsString = resetRequestsValues.FirstOrDefault();
+                    if (TryParseResetTime(retryAfterAsString, out var retryAfterForReqs) == false)
+                        throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
+
+                    retryAfter = retryAfterForReqs > retryAfter ? retryAfterForReqs : retryAfter;
+                }
+
+                // TPM/RPM - should retry only for this exception
+                throw new
+                    RateLimitException(message)
+                    {
+                        RetryAfter = retryAfter,
+                        RequestId = reqId
+                    };
+            case ErrorType.RefusedToAnswer:
+                RefusedToAnswerException.Throw(message, content.ToString(), null, reqId);
+                break;
             default:
-                if (errBjo.TryGet("code", out string errorCode) && errorCode == "content_filter")
-                {
-                    RefusedToAnswerException.Throw("content_filter", responseContent.ToString(), "content_filter", reqId);
-                }
-
-                UnsuccessfulRequestException.Throw(responseContent.ToString(), response.StatusCode, reqId);
+                UnsuccessfulAiRequestException.Throw(content.ToString(), response.StatusCode, reqId);
                 break;
         }
     }
 
+    private string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message) => _settings.GetRefusal(choice0, message);
+
     internal static string GetRequestId(HttpResponseHeaders headers)
     {
-        if (headers.TryGetValues(Constants.Headers.RequestId, out IEnumerable<string> values))
+        if (headers.TryGetValues(Constants.Headers.XRequestId, out IEnumerable<string> values))
         {
             return values.FirstOrDefault() ?? string.Empty;
         }
@@ -950,11 +969,14 @@ internal class ChatCompletionClient : IDisposable
             public const string Choices = "choices";
             public const string Message = "message";
             public const string Content = "content";
+            public const string ReasoningContent = "reasoning_content";
+            public const string Reasoning = "reasoning";
             public const string FinishReason = "finish_reason";
             public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";
             public const string Error = "error";
+            public const string ErrorCode = "code";
             public const string ErrorType = "type";
             public const string ErrorTypeInsufficientQuota = "insufficient_quota";
             public const string ErrorTypeTokens = "tokens";
@@ -972,10 +994,11 @@ internal class ChatCompletionClient : IDisposable
 
         public static class Headers
         {
-            public const string RetryAfter = "retry-after-ms";
-            public const string TokensResetTime = "x-ratelimit-reset-tokens";
-            public const string RequestsResetTime = "x-ratelimit-reset-requests";
-            public const string RequestId = "X-Request-ID";
+            public const string RetryAfterMs = "retry-after-ms";
+            public const string RetryAfter = "retry-after";
+            public const string XRateLimitResetTokens = "x-ratelimit-reset-tokens";
+            public const string XRateLimitResetRequests = "x-ratelimit-reset-requests";
+            public const string XRequestId = "X-Request-ID";
         }
 
         public static class JsonSchemaFields
@@ -1064,6 +1087,21 @@ public static class ChatCompletionClientExtensions
     {
         foreach (var message in messages)
         {
+            if (message.TryGet(ChatCompletionClient.Constants.RequestFields.Content, out object content))
+            {
+                // we need to stringify the content before sending to the model
+                if (content is BlittableJsonReaderObject blittableJson)
+                {
+                    // clone once, not to change the original, since we are going to persist it
+                    var msg = message.CloneOnTheSameContext();
+                    var modifications = msg.Modifications ??= new DynamicJsonValue(msg);
+                    modifications[ChatCompletionClient.Constants.RequestFields.Content] = blittableJson.ToString();
+                    // clone twice, so the changes will take effect
+                    yield return msg.CloneOnTheSameContext();
+                    continue;
+                }
+            }
+
             yield return message;
         }
 

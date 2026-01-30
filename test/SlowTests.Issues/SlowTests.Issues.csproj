@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.22</RuntimeFrameworkVersion>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests.Issues</AssemblyName>
     <PackageId>SlowTests.Issues</PackageId>
@@ -99,6 +99,7 @@
     <PackageReference Include="FubarDev.FtpServer" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="xunit.runner.visualstudio">

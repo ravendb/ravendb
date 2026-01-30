@@ -13,6 +13,7 @@ const editSchema = yup.object({
     // Basic
     name: yup.string().required(),
     identifier: yup.string().required(),
+    state: yup.string<"Disabled" | "Enabled">().required(),
     connectionStringName: yup.string().required(),
     systemPrompt: yup.string().required(),
     sampleObject: yup.string().nullable(),
@@ -52,6 +53,7 @@ const editSchema = yup.object({
                     }
                 ),
             description: yup.string().nullable(),
+            isSendToModel: yup.boolean(),
         })
     ),
 

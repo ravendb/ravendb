@@ -1,0 +1,69 @@
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.PeriodicBackup.DirectDownload;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+
+namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
+
+internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHandler, TOperationContext> : AbstractAttachmentStrategyProcessor<TRequestHandler, TOperationContext>, IBulkPostAttachmentStrategy
+    where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+{
+    protected AbstractBulkPostAttachmentStrategyProcessor([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    {
+    }
+
+    public abstract void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
+    public abstract (Task<Stream> Stream, bool IsLocal) GetAttachmentStream(DocumentsOperationContext context, Dictionary<string, DirectFileDownloader> downloaders, Attachment attachment, OperationCancelToken token);
+
+    public void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName(nameof(AttachmentDetails.Name));
+        writer.WriteString(attachment.Name);
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.Hash));
+        writer.WriteString(attachment.Base64Hash.ToString());
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
+        writer.WriteString(attachment.ContentType);
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.Size));
+        writer.WriteInteger(attachment.Size);
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
+        writer.WriteString(attachment.ChangeVector);
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
+        writer.WriteString(documentId);
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.RemoteParameters));
+        if (attachment.RemoteParameters == null)
+        {
+            writer.WriteNull();
+        }
+        else
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName(nameof(RemoteAttachmentParameters.Identifier));
+            writer.WriteString(attachment.RemoteParameters.Identifier);
+
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(RemoteAttachmentParameters.At));
+            writer.WriteDateTime(attachment.RemoteParameters.At, true);
+
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(RemoteAttachmentParameters.Flags));
+            writer.WriteInteger((int)attachment.RemoteParameters.Flags);
+
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndObject();
+    }
+}

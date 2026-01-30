@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             // no-op
         }
 
-        public override List<IndexingError> GetErrors()
+        public override List<IndexingError> GetErrors(int start = 0, int pageSize = int.MaxValue)
         {
             return new List<IndexingError>
             {

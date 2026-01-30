@@ -5,7 +5,8 @@ namespace Corax.Indexing;
 
 internal struct TermInEntryModification : IEquatable<TermInEntryModification>, IComparable<TermInEntryModification>
 {
-    public long EntryId;
+    // Document entry ID (index-layer identifier, not storage-layer ContainerEntryId)
+    public DocumentEntryId EntryId;
     public int TermsPerEntryIndex; 
     public short Frequency;
     
@@ -17,7 +18,7 @@ internal struct TermInEntryModification : IEquatable<TermInEntryModification>, I
 
     public override string ToString() => EntryId + ", " + Frequency;
 
-    public TermInEntryModification(long entryId, int termPerEntryIndex, short frequency, InserterMode inserterMode)
+    public TermInEntryModification(DocumentEntryId entryId, int termPerEntryIndex, short frequency, InserterMode inserterMode)
     {
         EntryId = entryId;
         TermsPerEntryIndex = termPerEntryIndex;

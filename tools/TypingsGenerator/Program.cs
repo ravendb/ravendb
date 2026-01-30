@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -75,12 +74,9 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
-using Raven.Server.Documents.ETL.Providers.Raven.Test;
-using Raven.Server.Documents.ETL.Providers.RelationalDatabase;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -96,7 +92,6 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
@@ -183,6 +178,8 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(SortedSet<>))
+                .WithTypeMapping(new TsInterface(new TsName("Record<Raven.Server.Commercial.ConfigurationStepType, Raven.Server.Commercial.SetupActionInfo>")),
+                    typeof(IDictionary<ConfigurationStepType, SetupActionInfo>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ISet<>))
                 .WithTypeMapping(new TsInterface(new TsName("dictionary<Raven.Client.Documents.Queries.Timings.QueryTimings>")),
                     typeof(IDictionary<string, QueryTimings>))
@@ -611,6 +608,7 @@ namespace TypingsGenerator
 
             // AI
             scripter.AddType(typeof(AiModelsRequest));
+            scripter.AddType(typeof(ConversationDocument));
 
             // AI Agent
             scripter.AddType(typeof(AiAgentConfiguration));
@@ -684,6 +682,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupMode));
             scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
+            scripter.AddType(typeof(ConfigurationStepType));
+            scripter.AddType(typeof(SetupActionInfo));
 
             // compare exchange
             scripter.AddType(typeof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem));

@@ -2,10 +2,13 @@ import React from "react";
 import Col from "react-bootstrap/Col";
 import { useOS } from "components/hooks/useOS";
 import Dropdown from "react-bootstrap/Dropdown";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
+import { useAppSelector } from "components/store";
 
 const KeyboardShortcuts = () => {
     const os = useOS();
     const isMac = os === "MacOS";
+    const isAiAssistantDisabled = useAppSelector(aiAssistantSelectors.isDisabled);
 
     return (
         <Col sm={12} className="studio-search__legend-col p-0">
@@ -31,6 +34,11 @@ const KeyboardShortcuts = () => {
                     <div className="d-flex align-items-center gap-1">
                         <kbd>Esc</kbd> <span>Close</span>
                     </div>
+                    {!isAiAssistantDisabled && (
+                        <div className="d-flex align-items-center gap-1 ms-auto">
+                            <kbd>{isMac ? "⌘" : "Ctrl"}</kbd> <kbd>/</kbd> <span>Ask AI</span>
+                        </div>
+                    )}
                 </Dropdown.Header>
             </div>
         </Col>

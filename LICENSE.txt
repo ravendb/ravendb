@@ -7,12 +7,12 @@ INSTALLING THIS SOFTWARE. BY INSTALLING, COPYING, OR
 OTHERWISE USING THE SOFTWARE, YOU AGREE TO BE BOUND BY
 THE TERMS OF THIS EULA.
 
-The RavenDB software, and any files that are delivered to you by Hibernating
-Rhinos Ltd (via on-line transmission or otherwise) to "patch," update, or
+The RavenDB software, and any files that are delivered to you by RavenDB Ltd 
+(via on-line transmission or otherwise) to "patch," update, or
 otherwise modify the Software, as well as any printed materials and any online
 or electronic documentation (the "Manual"), and any and all copies and
 derivative works of such software program and materials (collectively the
-"Software") are the copyrighted work of Hibernating Rhinos Ltd, or its
+"Software") are the copyrighted work of RavenDB Ltd, or its
 suppliers and licensors (collectively referred to herein as "Licensor"). All use
 of the Software is governed by the terms of this EULA. The Software is
 distributed solely for use by authorized individuals or entities according to the
@@ -199,28 +199,28 @@ expenses incurred by such prevailing party in the litigation.
 
 8. Support
 
-Hibernating Rhinos Ltd provides support for customer who purchased the support options
+RavenDB Ltd provides support for customer who purchased the support options
 shown at: https://ravendb.net/support. Any support will be provided  pursuant to 
 the Support Policy which is incorporated by reference into this EULA and which may be 
 amended from time to time.
 
 9. Changes to the Agreement
 
-Hibernating Rhinos Ltd reserves the right, at its sole discretion, to change,
+RavenDB Ltd reserves the right, at its sole discretion, to change,
 modify, add to, supplement or delete any of the terms and conditions of this
-EULA when Hibernating Rhinos Ltd upgrades the Software, effective upon
-prior notice as follows: Hibernating Rhinos Ltd will post notification of any
-such changes to this EULA on the HibernateRhinos.com website and will post
+EULA when RavenDB Ltd upgrades the Software, effective upon
+prior notice as follows: RavenDB Ltd will post notification of any
+such changes to this EULA on the RavenDB.net website and will post
 the revised version of this EULA in this location, and may provide such other
-notice as Hibernating Rhinos Ltd may elect in its sole discretion, which may
+notice as RavenDB Ltd may elect in its sole discretion, which may
 include by email, postal mail or pop-up screen. If any future changes to this
 EULA are unacceptable to you or cause you to no longer be in compliance
 with this EULA, you may terminate this EULA in accordance with Section 5
 herein. Your installation and use of any updated or modifications to the
 Software following notice of changes to this EULA as described above will
-mean you accept any and all such changes. Hibernating Rhinos Ltd may
+mean you accept any and all such changes. RavenDB Ltd may
 change, modify, suspend, or discontinue any aspect of the Software at any
-time. Hibernating Rhinos Ltd may also impose limits on certain features or
+time. RavenDB Ltd may also impose limits on certain features or
 restrict your access to parts or all of the Software without notice or liability.
 You have no interest, monetary or otherwise, in any feature or content
 contained in the Software.

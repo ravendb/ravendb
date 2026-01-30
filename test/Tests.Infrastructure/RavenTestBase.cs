@@ -27,7 +27,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Exceptions;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -241,7 +241,8 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
-                            [RavenConfiguration.GetKey(x => x.Queries.RegexTimeout)] = (500).ToString()
+                            [RavenConfiguration.GetKey(x => x.Queries.RegexTimeout)] = (500).ToString(),
+                            [RavenConfiguration.GetKey(x => x.Ai.GenAiSendToModelTimeout)] = 10.ToString()
                         }
                     };
 

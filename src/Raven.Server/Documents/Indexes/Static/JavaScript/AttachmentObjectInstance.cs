@@ -6,7 +6,9 @@ using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Exceptions.Attachments;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
@@ -25,6 +27,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private JsValue GetContentAsString(JsValue self, JsValue[] args)
         {
+            if (_attachment.RemoteFlags == RemoteAttachmentFlags.Remote)
+                throw new RemoteAttachmentIndexingException($"Attempted to '{nameof(GetContentAsString)}' on remote attachment named '{_attachment.Name}' which is no longer available locally.");
+
             var encoding = Encoding.UTF8;
             if (args.Length > 0)
             {
@@ -82,9 +87,16 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     value = new PropertyDescriptor(new JsString(_attachment.Hash), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.Size))
                     value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.RemoteFlags))
+                    value = new PropertyDescriptor(new JsString(_attachment.RemoteFlags.ToString()), writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.RemoteAt))
+                    value = _attachment.RemoteAt != DateTime.MaxValue ? new PropertyDescriptor(new JsDate(_engine, _attachment.RemoteAt!.Value), writable: false, enumerable: false, configurable: false) : null;
+                else if (property == nameof(IAttachmentObject.RemoteIdentifier))
+                    value = string.IsNullOrEmpty(_attachment.RemoteIdentifier)
+                        ? null
+                        : new PropertyDescriptor(new JsString(_attachment.RemoteIdentifier), writable: false, enumerable: false, configurable: false);
                 else if (property == GetContentAsStringMethodName)
                     value = new PropertyDescriptor(new ClrFunction(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
-
                 if (value != null)
                     _properties[property] = value;
             }

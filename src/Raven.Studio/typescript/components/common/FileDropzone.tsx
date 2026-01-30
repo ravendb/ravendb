@@ -10,14 +10,20 @@ interface FileDropzoneProps {
     onChange: (files: File[]) => void;
     maxFiles?: number;
     validExtensions?: string[];
+    initialFiles?: File[];
 }
 
-export default function FileDropzone({ onChange, validExtensions = [], maxFiles = Infinity }: FileDropzoneProps) {
+export default function FileDropzone({
+    onChange,
+    validExtensions = [],
+    maxFiles = Infinity,
+    initialFiles = [],
+}: FileDropzoneProps & { [key: string]: any }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { value: isDragging, toggle: toggleIsDragging } = useBoolean(false);
 
-    const [files, setFiles] = useState<File[]>([]);
+    const [files, setFiles] = useState<File[]>(initialFiles);
     const [error, setError] = useState<string>();
 
     const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -62,6 +68,7 @@ export default function FileDropzone({ onChange, validExtensions = [], maxFiles 
         <div>
             <div className={classNames("file-dropzone", { isDragging })}>
                 <input
+                    data-testid="file-input"
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileInput}

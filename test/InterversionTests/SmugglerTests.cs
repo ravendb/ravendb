@@ -28,56 +28,61 @@ namespace InterversionTests
     {
         readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
 
-        private static readonly DatabaseItemType _operateOnTypes42 = DatabaseItemType.Documents |
-                                                                     DatabaseItemType.RevisionDocuments |
-                                                                     DatabaseItemType.Indexes |
-                                                                     DatabaseItemType.Identities |
-                                                                     DatabaseItemType.Tombstones |
-                                                                     DatabaseItemType.LegacyAttachments |
-                                                                     DatabaseItemType.Conflicts |
-                                                                     DatabaseItemType.CompareExchange |
-                                                                     DatabaseItemType.LegacyDocumentDeletions |
-                                                                     DatabaseItemType.LegacyAttachmentDeletions |
-                                                                     DatabaseItemType.DatabaseRecord |
-                                                                     DatabaseItemType.Unknown |
-                                                                     DatabaseItemType.Attachments |
-                                                                     DatabaseItemType.CounterGroups |
-                                                                     DatabaseItemType.Subscriptions |
-                                                                     DatabaseItemType.CompareExchangeTombstones;
+        public const DatabaseItemType _operateOnTypes42 = DatabaseItemType.Documents |
+                                                          DatabaseItemType.RevisionDocuments |
+                                                          DatabaseItemType.Indexes |
+                                                          DatabaseItemType.Identities |
+                                                          DatabaseItemType.Tombstones |
+                                                          DatabaseItemType.LegacyAttachments |
+                                                          DatabaseItemType.Conflicts |
+                                                          DatabaseItemType.CompareExchange |
+                                                          DatabaseItemType.LegacyDocumentDeletions |
+                                                          DatabaseItemType.LegacyAttachmentDeletions |
+                                                          DatabaseItemType.DatabaseRecord |
+                                                          DatabaseItemType.Unknown |
+                                                          DatabaseItemType.Attachments |
+                                                          DatabaseItemType.CounterGroups |
+                                                          DatabaseItemType.Subscriptions |
+                                                          DatabaseItemType.CompareExchangeTombstones;
 
-        private static readonly DatabaseRecordItemType _operateOnRecordTypes42 = DatabaseRecordItemType.ConflictSolverConfig |
-                                                                                 DatabaseRecordItemType.Settings |
-                                                                                 DatabaseRecordItemType.Revisions |
-                                                                                 DatabaseRecordItemType.Expiration |
-                                                                                 DatabaseRecordItemType.PeriodicBackups |
-                                                                                 DatabaseRecordItemType.ExternalReplications |
-                                                                                 DatabaseRecordItemType.RavenConnectionStrings |
-                                                                                 DatabaseRecordItemType.SqlConnectionStrings |
-                                                                                 DatabaseRecordItemType.RavenEtls |
-                                                                                 DatabaseRecordItemType.SqlEtls |
-                                                                                 DatabaseRecordItemType.Client |
-                                                                                 DatabaseRecordItemType.Sorters |
-                                                                                 DatabaseRecordItemType.SinkPullReplications |
-                                                                                 DatabaseRecordItemType.HubPullReplications;
+        public const DatabaseRecordItemType _operateOnRecordTypes42 = DatabaseRecordItemType.ConflictSolverConfig |
+                                                                      DatabaseRecordItemType.Settings |
+                                                                      DatabaseRecordItemType.Revisions |
+                                                                      DatabaseRecordItemType.Expiration |
+                                                                      DatabaseRecordItemType.PeriodicBackups |
+                                                                      DatabaseRecordItemType.ExternalReplications |
+                                                                      DatabaseRecordItemType.RavenConnectionStrings |
+                                                                      DatabaseRecordItemType.SqlConnectionStrings |
+                                                                      DatabaseRecordItemType.RavenEtls |
+                                                                      DatabaseRecordItemType.SqlEtls |
+                                                                      DatabaseRecordItemType.Client |
+                                                                      DatabaseRecordItemType.Sorters |
+                                                                      DatabaseRecordItemType.SinkPullReplications |
+                                                                      DatabaseRecordItemType.HubPullReplications;
 
-        private static readonly DatabaseItemType _operateOnTypes54 = _operateOnTypes42 |
-                                                                     DatabaseItemType.TimeSeries |
-                                                                     DatabaseItemType.ReplicationHubCertificates;
+        public const DatabaseItemType _operateOnTypes54 = _operateOnTypes42 |
+                                                                      DatabaseItemType.TimeSeries |
+                                                                      DatabaseItemType.ReplicationHubCertificates;
 
 
-        private static readonly DatabaseRecordItemType _operateOnRecordTypes54 = _operateOnRecordTypes42 |
-                                                                                 DatabaseRecordItemType.TimeSeries |
-                                                                                 DatabaseRecordItemType.DocumentsCompression |
-                                                                                 DatabaseRecordItemType.Analyzers |
-                                                                                 DatabaseRecordItemType.LockMode |
-                                                                                 DatabaseRecordItemType.OlapConnectionStrings |
-                                                                                 DatabaseRecordItemType.OlapEtls |
-                                                                                 DatabaseRecordItemType.ElasticSearchConnectionStrings |
-                                                                                 DatabaseRecordItemType.ElasticSearchEtls |
-                                                                                 DatabaseRecordItemType.PostgreSQLIntegration |
-                                                                                 DatabaseRecordItemType.QueueConnectionStrings |
-                                                                                 DatabaseRecordItemType.QueueEtls;
+        public const DatabaseRecordItemType _operateOnRecordTypes54 = _operateOnRecordTypes42 |
+                                                                      DatabaseRecordItemType.TimeSeries |
+                                                                      DatabaseRecordItemType.DocumentsCompression |
+                                                                      DatabaseRecordItemType.Analyzers |
+                                                                      DatabaseRecordItemType.LockMode |
+                                                                      DatabaseRecordItemType.OlapConnectionStrings |
+                                                                      DatabaseRecordItemType.OlapEtls |
+                                                                      DatabaseRecordItemType.ElasticSearchConnectionStrings |
+                                                                      DatabaseRecordItemType.ElasticSearchEtls |
+                                                                      DatabaseRecordItemType.PostgreSQLIntegration |
+                                                                      DatabaseRecordItemType.QueueConnectionStrings |
+                                                                      DatabaseRecordItemType.QueueEtls;
 
+
+        public const DatabaseItemType _operateOnTypes62 = _operateOnTypes54;
+        public const DatabaseRecordItemType _operateOnRecordTypes62 = _operateOnRecordTypes54 |
+                                                                      DatabaseRecordItemType.QueueSinks |
+                                                                      DatabaseRecordItemType.DataArchival;
         public enum ExcludeOn
         {
             Non,

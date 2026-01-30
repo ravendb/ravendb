@@ -15,6 +15,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using static Sparrow.Extensions.RavenDateTimeExtensions;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace Raven.Client.Documents.Session.Operations
 {

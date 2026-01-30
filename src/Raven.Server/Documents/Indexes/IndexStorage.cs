@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public unsafe List<IndexingError> ReadErrors()
+        public unsafe List<IndexingError> ReadErrors(int start, int pageSize)
         {
             var errors = new List<IndexingError>();
 
@@ -346,8 +346,11 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                foreach (var tvr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, 0))
+                foreach (var tvr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, start))
                 {
+                    if (pageSize-- <= 0)
+                        break;
+
                     var error = new IndexingError();
 
                     var ptr = tvr.Result.Reader.Read(0, out int size);

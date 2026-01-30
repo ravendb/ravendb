@@ -1,6 +1,7 @@
 ﻿import { RootState } from "components/store";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databasesSliceInternal } from "components/common/shell/databasesSlice";
+import { createSelector } from "@reduxjs/toolkit";
 
 const selectActiveDatabaseName = (store: RootState) => store.databases.activeDatabaseName;
 
@@ -36,6 +37,11 @@ function selectActiveDatabase(store: RootState) {
     return selectDatabaseByName(activeDatabaseName)(store);
 }
 
+const selectIsRestrictExternalScriptUsageForNonClusterAdmin = createSelector(
+    (store: RootState) => store.databases.activeDatabaseSettings,
+    (settings): boolean => settings["Security.RestrictExternalScriptUsageForNonClusterAdmin"] === "True"
+);
+
 export const databaseSelectors = {
     activeDatabaseName: selectActiveDatabaseName,
     activeDatabase: selectActiveDatabase,
@@ -43,4 +49,5 @@ export const databaseSelectors = {
     allDatabaseNames: selectAllDatabaseNames,
     allDatabasesCount: selectAllDatabasesCount,
     databaseByName: selectDatabaseByName,
+    isRestrictExternalScriptUsageForNonClusterAdmin: selectIsRestrictExternalScriptUsageForNonClusterAdmin,
 };

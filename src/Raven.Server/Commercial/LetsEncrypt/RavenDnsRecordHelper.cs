@@ -79,7 +79,7 @@ public static class RavenDnsRecordHelper
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
                 response = await ApiHttpClient.PostAsync("api/v2/dns-n-cert/register",
-                    new StringContent(serializeObject, Encoding.UTF8, "application/json"), parameters.Token).ConfigureAwait(false);
+                    new StringContent(serializeObject, Encoding.UTF8, "application/json"), token: parameters.Token).ConfigureAwait(false);
 
                 parameters.Progress?.AddInfo("Waiting for DNS records to update...");
             }
@@ -118,7 +118,7 @@ public static class RavenDnsRecordHelper
                     try
                     {
                         await TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), cts.Token);
-                        response = await ApiHttpClient.PostAsync($"api/v2/dns-n-cert/registration-result?id={id}", new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token).ConfigureAwait(false);
+                        response = await ApiHttpClient.PostAsync($"api/v2/dns-n-cert/registration-result?id={id}", new StringContent(serializeObject, Encoding.UTF8, "application/json"), token: cts.Token).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {
@@ -390,7 +390,7 @@ public static class RavenDnsRecordHelper
             HttpResponseMessage response;
             try
             {
-                response = await ApiHttpClient.PostAsync("api/v2/dns-n-cert/register", new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
+                response = await ApiHttpClient.PostAsync("api/v2/dns-n-cert/register", new StringContent(serializeObject, Encoding.UTF8, "application/json"), token: token).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -414,7 +414,7 @@ public static class RavenDnsRecordHelper
                     try
                     {
                         await TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), cts.Token);
-                        response = await ApiHttpClient.PostAsync($"api/v2/dns-n-cert/registration-result?id={id}", new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token).ConfigureAwait(false);
+                        response = await ApiHttpClient.PostAsync($"api/v2/dns-n-cert/registration-result?id={id}", new StringContent(serializeObject, Encoding.UTF8, "application/json"), token: cts.Token).ConfigureAwait(false);
                     }
                     catch (Exception e)
                     {

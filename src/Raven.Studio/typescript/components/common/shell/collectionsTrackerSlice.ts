@@ -51,7 +51,12 @@ const selectCollectionNames = createSelector(
     (collections) => collections.filter((name) => name !== collectionNames.allDocuments)
 );
 
+const selectUserCollectionNames = createSelector(selectCollectionNames, (collections) =>
+    collections.filter((name) => name !== collectionNames.empty && name !== collectionNames.hilo)
+);
+
 export const collectionsTrackerSelectors = {
     collections: (store: RootState) => collectionsSelectors.selectAll(store.collectionsTracker.collections),
     collectionNames: selectCollectionNames,
+    userCollectionNames: selectUserCollectionNames,
 };

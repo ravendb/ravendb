@@ -1,5 +1,7 @@
 /// <reference path="../tsd.d.ts"/>
 
+import License = Raven.Server.Commercial.License;
+
 interface disposable {
     dispose(): void;
 }
@@ -127,6 +129,7 @@ interface attachmentItem {
     name: string;
     contentType: string;
     size: number;
+    remoteParameters?: RemoteAttachmentParameters;
 }
 
 interface timeSeriesItem {
@@ -149,6 +152,35 @@ interface timeSeriesDeleteCriteria {
     selection?: Raven.Client.Documents.Session.TimeSeriesValue[];
 }
 
+type FreeLicenseType = "Community" | "Developer"
+
+interface SendFreeLicenseVerificationRequest {
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    Country: string;
+    JobTitle: string;
+    Company: string;
+    HowDoYouPlanToUseRavenDb: string;
+    Type: FreeLicenseType;
+    MarketingConsent: boolean;
+    AcceptTheTermsAndConditions: boolean;
+    Industry: string;
+    LicenseType: Raven.Server.Commercial.LicenseType;
+}
+
+interface DownloadFreeLicenseRequest {
+    Email: string;
+    VerificationCode: string;
+}
+
+type FreeLicenseDownloadStatus = "Success" | "InvalidCredentials" | "CodeExpired" | "CodeAlreadyUsed";
+
+interface DownloadFreeLicenseResponse {
+    License: License;
+    LicenseDownloadStatus: FreeLicenseDownloadStatus;
+}
+
 type postTimeSeriesDeleteAction = "reloadCurrent" | "changeTimeSeries" | "doNothing";
 
 interface filterTimeSeriesDates<T> {
@@ -156,11 +188,18 @@ interface filterTimeSeriesDates<T> {
     endDate: T;
 }
 
+type RemoteAttachmentFlags = "Remote" | "None";
+
+interface RemoteAttachmentParameters extends Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters {
+    Flags: RemoteAttachmentFlags;
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;
     Name: string;
     Size: number;
+    RemoteParameters?: RemoteAttachmentParameters;
 }
 
 interface connectedDocument {
@@ -562,6 +601,11 @@ interface documentBase extends dictionary<any> {
 interface domainAvailabilityResult {
     Available: boolean;
     IsOwnedByMe: boolean;
+}
+
+interface ClaimDomainResult extends Omit<Raven.Server.Commercial.UserDomainsWithIps, "Domains"> {
+    Email: string
+    Domains: Record<string, string[]>
 }
 
 interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>, any> {
@@ -1100,6 +1144,8 @@ interface TrafficWatchPostgresChange extends Raven.Client.Documents.Changes.Traf
     Query: string;
 }
 
+type Browser = "Chrome" | "Firefox" | "Safari" | "Other";
+
 type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.OpenAiSettings
     | Raven.Client.Documents.Operations.AI.AzureOpenAiSettings
@@ -1119,4 +1165,33 @@ interface AiModelsRequestDto {
 
 interface GetAiAgentResultDto {
     AiAgents: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration[];
+}
+
+type AiAssistantResponseStatus = "Success" | "InvalidCredentials" | "InvalidData" | "ConsentRequired" | "OutOfTokens" | "RequestTooLarge" | "Aborted" | "InternalError";
+
+interface ValidateSchemaRequestDto {
+    SchemaDefinition: string;
+    Collection: string;
+    MaxErrorMessages?: number;
+    MaxDocumentsToValidate?: number;
+    StartEtag?: string;
+}
+
+interface ValidateSchemaResponseDto {
+    OperationId: number;
+    OperationNodeTag: string;
+}
+
+interface ValidateSchemaResult {
+    ErrorCount: number;
+    Errors: Record<string, string>
+    LastEtag: number;
+    ValidatedCount: number;
+}
+
+type ValidateDocumentStatus = "Valid" | "MissingSchema" | "Invalid";
+
+interface ValidateDocumentResult {
+    Status: ValidateDocumentStatus;
+    ErrorMessages?: string[];
 }

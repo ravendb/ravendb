@@ -16,6 +16,9 @@ import buildInfo = require("models/resources/buildInfo");
 import genUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
+import { aiAssistantActions } from "./aiAssistantSlice";
+import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
+import router from "plugins/router";
 
 let initialized = false;
 
@@ -42,7 +45,18 @@ function initRedux() {
     databasesManager.default.onUpdateCallback = throttledUpdateDatabases;
 
     activeDatabaseTracker.default.database.subscribe((db) => {
-        globalDispatch(databaseActions.activeDatabaseChanged(db?.name ?? null));
+        const dbName = db?.name ?? null;
+        globalDispatch(databaseActions.activeDatabaseChanged(dbName));
+        globalDispatch(chatbotActions.attachedContextUnrelatedRemoved());
+        globalDispatch(
+            chatbotActions.attachedContextUpserted({
+                id: "DatabaseName",
+                type: "DatabaseName",
+                label: dbName,
+                value: dbName,
+                state: "included",
+            })
+        );
 
         if (!db) {
             globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
@@ -82,6 +96,11 @@ function initRedux() {
 
     licenseModel.licenseStatus.subscribe((licenseStatus) => {
         globalDispatch(licenseActions.statusLoaded(licenseStatus));
+
+        if (!licenseStatus.HasAiAssistant) {
+            globalDispatch(chatbotActions.chatbotTabSet("resources"));
+        }
+
         throttledUpdateLicenseLimitsUsage();
     });
     licenseModel.supportCoverage.subscribe((supportCoverage) => {
@@ -106,12 +125,48 @@ function initRedux() {
     accessManager.clientCertificateThumbprint.subscribe((clientCertificateThumbprint) =>
         globalDispatch(accessManagerActions.clientCertificateThumbprintSet(clientCertificateThumbprint))
     );
+
+    // ai assistant
+    let prevLicenseId: string = undefined;
+
+    licenseModel.licenseStatus.subscribe(
+        (value) => {
+            prevLicenseId = value?.Id;
+        },
+        licenseModel.licenseStatus,
+        "beforeChange"
+    );
+
+    licenseModel.licenseStatus.subscribe(
+        (value) => {
+            if (value?.Id !== prevLicenseId) {
+                globalDispatch(aiAssistantActions.checkConsent());
+                globalDispatch(aiAssistantActions.checkUsage());
+            }
+        },
+        licenseModel.licenseStatus,
+        "change"
+    );
+
+    router.activeInstruction.subscribe((instruction) => {
+        globalDispatch(
+            chatbotActions.attachedContextUpserted({
+                id: "View",
+                type: "View",
+                label: instruction?.config?.title,
+                value: instruction?.config?.title,
+                state: "included",
+            })
+        );
+    });
 }
 
 declare module "yup" {
     interface StringSchema {
         basicUrl(msg?: string): this;
         base64(msg?: string): this;
+        ipv4(msg?: string): this;
+        phone(msg?: string): this;
     }
 }
 
@@ -160,6 +215,21 @@ function initYup() {
 
     yup.addMethod<yup.StringSchema>(yup.string, "base64", function (msg = "Please enter valid base64 string") {
         return this.matches(/^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/, msg);
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "ipv4", function (msg = "Please enter valid IPv4 address") {
+        return this.matches(/(^(\d{1,3}\.){3}(\d{1,3})$)/, msg);
+    });
+
+    yup.addMethod<yup.StringSchema>(yup.string, "phone", function (msg = "Please enter valid phone number") {
+        const phoneRegExp =
+            /^((\\+[1-9]{1,4}[ \\-]*)|(\\([0-9]{2,3}\\)[ \\-]*)|([0-9]{2,4})[ \\-]*)*?[0-9]{3,4}?[ \\-]*[0-9]{3,4}?$/;
+        return this.test("phone", msg, (value) => {
+            if (value && value.length > 0) {
+                return phoneRegExp.test(value);
+            }
+            return true;
+        });
     });
 }
 

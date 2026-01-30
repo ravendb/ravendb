@@ -2,15 +2,15 @@
 {
     public enum PerformanceHintReason
     {
-        None,
-        Indexing,
-        Replication,
-        Paging,
-        RequestLatency,
-        UnusedCapacity,
-        SlowIO,
-        SqlEtl_SlowSql,
-        HugeDocuments,
-        Indexing_References
+        None = 0,
+        Indexing = 1,
+        Replication = 2,
+        Paging = 3,
+        RequestLatency = 4,
+        UnusedCapacity = 5,
+        SlowIO = 6,
+        SqlEtl_SlowSql = 7,
+        HugeDocuments = 8,
+        Indexing_References = 9
     }
 }

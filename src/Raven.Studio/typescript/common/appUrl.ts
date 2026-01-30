@@ -122,6 +122,9 @@ class appUrl {
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
         revisionsBinCleaner: ko.pureComputed(() => appUrl.forRevisionsBinCleaner(appUrl.currentDatabase())),
+        remoteAttachments: ko.pureComputed(() => appUrl.forRemoteAttachments(appUrl.currentDatabase())),
+        documentSchema: ko.pureComputed(() => appUrl.forDocumentSchema(appUrl.currentDatabase())),
+        documentSchemaPlayground: ko.pureComputed(() => appUrl.forDocumentSchemaPlayground(appUrl.currentDatabase())),
 
         statusStorageReport: ko.pureComputed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
         statusBucketsReport: ko.pureComputed(() => appUrl.forStatusBucketsReport(appUrl.currentDatabase())),
@@ -416,6 +419,14 @@ class appUrl {
     static forDocumentsCompression(db: database): string {
         return "#databases/settings/documentsCompression?" + appUrl.getEncodedDbPart(db);
     }
+
+    static forDocumentSchema(db: database | string): string {
+        return "#databases/settings/documentSchema?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forDocumentSchemaPlayground(db: database | string): string {
+        return "#databases/settings/documentSchema/playground?" + appUrl.getEncodedDbPart(db);
+    }
     
     static forTimeSeries(db: database): string {
         return "#databases/settings/timeSeries?" + appUrl.getEncodedDbPart(db);
@@ -439,6 +450,10 @@ class appUrl {
     
     static forRevisionsBinCleaner(db: database | string): string {
         return "#databases/settings/revisionsBinCleaner?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forRemoteAttachments(db: database): string {
+        return "#databases/settings/remoteAttachments?" + appUrl.getEncodedDbPart(db);
     }
 
     static forConnectionStrings(db: database | string, type?: connectionStringsTypes.StudioConnectionType, name?: string): string {

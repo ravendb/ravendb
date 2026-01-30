@@ -73,7 +73,7 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
     {
     }
 
-    public Task InitializeAsync()
+    public virtual Task InitializeAsync()
     {
         return ConcurrentTestsSemaphore.WaitAsync()
             .ContinueWith(x =>

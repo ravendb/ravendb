@@ -8,6 +8,11 @@ namespace Raven.Server.Commercial;
 public abstract class SetupInfoBase
 {
     public bool EnableExperimentalFeatures { get; set; }
+    public string DataDirectory { get; set; }
+    public string SetupCertificatePath { get; set; }
+    public string LogsPath { get; set; }
+    public string AutoIndexingEngineType { get; set; }
+    public string StaticIndexingEngineType { get; set; }
     public StudioConfiguration.StudioEnvironment Environment { get; set; }
     public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
     public string LocalNodeTag { get; set; }

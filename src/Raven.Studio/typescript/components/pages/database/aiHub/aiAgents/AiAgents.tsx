@@ -10,7 +10,6 @@ import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import Button from "react-bootstrap/Button";
-import Row from "react-bootstrap/Row";
 import { useState } from "react";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import AiAgentCard from "./partials/AiAgentCard";
@@ -103,7 +102,7 @@ export default function AiAgents() {
                 </div>
             )}
             {asyncGetAiAgents.result && (
-                <Row className="mt-3">
+                <div className="grid gap-2 mt-3">
                     {asyncGetAiAgents.result
                         .filter((config) => config.Name.toLowerCase().includes(nameFilter.trim().toLowerCase()))
                         .sort((a, b) => a.Name.localeCompare(b.Name))
@@ -114,7 +113,7 @@ export default function AiAgents() {
                                 reloadAiAgents={asyncGetAiAgents.execute}
                             />
                         ))}
-                </Row>
+                </div>
             )}
         </div>
     );

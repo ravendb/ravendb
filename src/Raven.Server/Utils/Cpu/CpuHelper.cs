@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Logging;
@@ -23,7 +24,10 @@ namespace Raven.Server.Utils.Cpu
             ICpuUsageCalculator calculator;
             if (PlatformDetails.RunningOnPosix == false)
             {
-                calculator = new WindowsCpuUsageCalculator();
+                if (GetActiveProcessorGroupCount() > 1)
+                    calculator = new WindowsCpuUsageCalculatorMultiGroup();
+                else
+                    calculator = new WindowsCpuUsageCalculatorOneGroup();
             }
             else if (PlatformDetails.RunningOnMacOsx)
             {
@@ -94,5 +98,8 @@ namespace Raven.Server.Utils.Cpu
                 return (0, 0);
             }
         }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern ushort GetActiveProcessorGroupCount();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using Raven.Client.Documents.Operations.AI;
 using Sparrow.Json;
@@ -75,4 +76,30 @@ internal abstract class AbstractChatCompletionClientSettings
             public const string OpenAiProject = "OpenAI-Project";
         }
     }
+
+    public abstract AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response);
+
+    public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
+    {
+        _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
+            || message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal);
+
+        return refusal;
+    }
+}
+
+public class AiError
+{
+    public string Message { get; set; }
+    public ErrorType ErrorType { get; set; }
+}
+
+public enum ErrorType
+{
+    Unknown,
+    InsufficientQuota,
+    TooManyTokens,
+    TooManyRequests,
+    Other429,
+    RefusedToAnswer,
 }

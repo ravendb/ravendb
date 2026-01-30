@@ -3,8 +3,8 @@
     <Description>rvn is a CLI utility for RavenDB</Description>
     <Authors>RavenDB</Authors>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.22</RuntimeFrameworkVersion>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>database;nosql;doc db</PackageTags>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
@@ -71,95 +71,14 @@
     <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Server\Smuggler\Documents\Processors\BuildVersion.cs" />
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x64.dll" Link="librvnpal.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.win7.x64.dll" Link="librvnpal.win7.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows32)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x86.dll" Link="librvnpal.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.win7.x86.dll" Link="librvnpal.win7.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinux64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.arm.64.so" Link="librvnpal.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.arm.32.so" Link="librvnpal.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.arm.32.so" Link="libzstd.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOS64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.dylib" Link="librvnpal.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOSArm64)' == 'true'">
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.arm64.dylib" Link="librvnpal.mac.arm64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libzstd\libzstd.mac.arm64.dylib" Link="libzstd.mac.arm64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Polly" />
-    <PackageReference Include="System.Formats.Asn1" />
-    <PackageReference Include="System.Reflection.Metadata" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
-    <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   <ItemGroup>

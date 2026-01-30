@@ -6,10 +6,11 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
+using Raven.Server.Documents.BackgroundWork;
 
 namespace Raven.Server.Documents.DataArchival;
 
-public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
+public sealed class DataArchivalStorage : DocumentBackgroundWorkStorage
 {
     private const string DocumentsByArchiveAtDateTime = "DocumentsByArchiveAtDateTime";
 
@@ -40,7 +41,7 @@ public sealed class DataArchivalStorage : AbstractBackgroundWorkStorage
 
             using (var updated = context.ReadObject(doc.Data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
-                Database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                Database.DocumentsStorage.Put(context, id, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction), nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
             }
         }
     }

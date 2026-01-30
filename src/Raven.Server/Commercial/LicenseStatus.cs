@@ -242,6 +242,8 @@ namespace Raven.Server.Commercial
 
         public bool HasAiAgent => Enabled(LicenseAttribute.AiAgent);
 
+        public bool HasAiAssistant => Enabled(LicenseAttribute.AiAssistant);
+
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
         public bool HasPostgreSqlIntegration => Enabled(LicenseAttribute.PostgreSqlIntegration);
@@ -271,6 +273,10 @@ namespace Raven.Server.Commercial
         public bool HasMultiNodeSharding => Enabled(LicenseAttribute.MultiNodeSharding);
 
         public bool CanSetupDefaultRevisionsConfiguration => Enabled(LicenseAttribute.SetupDefaultRevisionsConfiguration);
+
+        public bool HasRemoteAttachments => Enabled(LicenseAttribute.RemoteAttachments);
+
+        public bool HasSchemaValidation => Enabled(LicenseAttribute.SchemaValidation);
 
         public int? MaxNumberOfRevisionsToKeep => GetValue<int?>(LicenseAttribute.MaxNumberOfRevisionsToKeep, agplValue: 2);
 
@@ -354,6 +360,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasEmbeddingsGeneration)] = HasEmbeddingsGeneration,
                 [nameof(HasGenAi)] = HasGenAi,
                 [nameof(HasAiAgent)] = HasAiAgent,
+                [nameof(HasAiAssistant)] = HasAiAssistant,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
                 [nameof(HasServerWideBackups)] = HasServerWideBackups,
@@ -384,6 +391,8 @@ namespace Raven.Server.Commercial
                 [nameof(MaxNumberOfCustomAnalyzersPerDatabase)] = MaxNumberOfCustomAnalyzersPerDatabase,
                 [nameof(MaxNumberOfCustomAnalyzersPerCluster)] = MaxNumberOfCustomAnalyzersPerCluster,
                 [nameof(CanSetupDefaultRevisionsConfiguration)] = CanSetupDefaultRevisionsConfiguration,
+                [nameof(HasRemoteAttachments)] = HasRemoteAttachments,
+                [nameof(HasSchemaValidation)] = HasSchemaValidation,
             };
         }
     }

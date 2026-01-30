@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
@@ -41,6 +42,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.ServerWide.Commands.AI;
 using AddEmbeddingsGenerationCommand = Raven.Server.ServerWide.Commands.AI.AddEmbeddingsGenerationCommand;
+using Raven.Client.Documents.Operations.SchemaValidation;
 
 namespace Raven.Server.ServerWide
 {
@@ -79,6 +81,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, DataArchivalConfiguration> DataArchivalConfiguration = GenerateJsonDeserializationRoutine<DataArchivalConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, RemoteAttachmentsConfiguration> RemoteAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RemoteAttachmentsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
@@ -109,6 +113,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, DocumentsCompressionConfiguration> DocumentsCompressionConfiguration = GenerateJsonDeserializationRoutine<DocumentsCompressionConfiguration>();
+        
+        public static readonly Func<BlittableJsonReaderObject, SchemaValidationConfiguration> SchemaValidationConfiguration = GenerateJsonDeserializationRoutine<SchemaValidationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsCollectionConfiguration> RevisionsCollectionConfiguration = GenerateJsonDeserializationRoutine<RevisionsCollectionConfiguration>();
 
@@ -198,6 +204,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
             [nameof(EditDataArchivalCommand)] = GenerateJsonDeserializationRoutine<EditDataArchivalCommand>(),
+            [nameof(EditRemoteAttachmentsCommand)] = GenerateJsonDeserializationRoutine<EditRemoteAttachmentsCommand>(),
             [nameof(EditDocumentsCompressionCommand)] = GenerateJsonDeserializationRoutine<EditDocumentsCompressionCommand>(),
             [nameof(EditRefreshCommand)] = GenerateJsonDeserializationRoutine<EditRefreshCommand>(),
             [nameof(CreateNewShardCommand)] = GenerateJsonDeserializationRoutine<CreateNewShardCommand>(),
@@ -319,7 +326,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdatePrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<UpdatePrefixedShardingSettingCommand>(),
             [nameof(RevisionsBinConfigurationCommand)] = GenerateJsonDeserializationRoutine<RevisionsBinConfigurationCommand>(),
             [nameof(AddOrUpdateAiAgentCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateAiAgentCommand>(),
-            [nameof(DeleteAiAgentCommand)] = GenerateJsonDeserializationRoutine<DeleteAiAgentCommand>()
+            [nameof(DeleteAiAgentCommand)] = GenerateJsonDeserializationRoutine<DeleteAiAgentCommand>(),
+            [nameof(EditSchemaValidationConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditSchemaValidationConfigurationCommand>()
         };
     }
 }

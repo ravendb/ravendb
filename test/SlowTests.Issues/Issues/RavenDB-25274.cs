@@ -57,7 +57,9 @@ public class RavenDB_25274 : RavenTestBase
             certificateBytes = ms2.ToArray();
         }
 
+#pragma warning disable SYSLIB0057
         var certificate = new X509Certificate2(certificateBytes, password);
+#pragma warning restore SYSLIB0057
         Assert.Equal(notAfter.Date, certificate.NotAfter.ToUniversalTime().Date);
     }
 }
