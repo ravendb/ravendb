@@ -1,5 +1,5 @@
 import Modal from "components/common/Modal";
-import { Controller, ControllerRenderProps, FieldValues, FormProvider, useForm } from "react-hook-form";
+import { Controller, ControllerRenderProps, FieldValues, FormProvider, useForm, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { Icon } from "components/common/Icon";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -14,9 +14,10 @@ import Button from "react-bootstrap/Button";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import moment from "moment";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
-import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
+import RichAlert from "components/common/RichAlert";
 
 type AddAttachmentWithRemoteParametersModalProps = {
     document: KnockoutObservable<document>;
@@ -33,7 +34,7 @@ export default function AddAttachmentWithRemoteParametersModal({
 }: AddAttachmentWithRemoteParametersModalProps) {
     const { databasesService } = useServices();
     const asyncGetRemoteAttachmentParametersConfig = useAsyncCallback(() =>
-        databasesService.getRemoteAttachmentsConfiguration(db.name)
+        databasesService.getRemoteAttachmentsDestinations(db.name)
     );
 
     const form = useForm({
@@ -51,6 +52,10 @@ export default function AddAttachmentWithRemoteParametersModal({
     const asyncUploadFileWithRemoteParameters = useAsyncCallback((file: File, dto: RemoteAttachmentParameters) =>
         uploader.uploadFileWithRemoteParameters(file, dto)
     );
+
+    const selectedDestination = useWatch({
+        control, name: "identifier"
+    })
 
     const handleSubmit = async (formData: AttachmentWithRemoteParametersFormData) => {
         try {
@@ -109,6 +114,11 @@ export default function AddAttachmentWithRemoteParametersModal({
                                 name="identifier"
                                 control={control}
                             />
+                            {asyncGetRemoteAttachmentParametersConfig.result?.Destinations[selectedDestination]?.Disabled && (
+                                <RichAlert className="mt-2" icon="warning" variant="warning">
+                                    Destination is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the destination is enabled.
+                                </RichAlert>
+                            )}
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Scheduled upload time</FormLabel>
@@ -158,14 +168,27 @@ const mapToDto = (values: AttachmentWithRemoteParametersFormData): RemoteAttachm
     };
 };
 
-const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?: RemoteAttachmentsConfiguration) => {
+const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?: RemoteAttachmentsStudioConfiguration) => {
     if (!remoteAttachmentsConfiguration) {
         return [];
     }
-    return Object.keys(remoteAttachmentsConfiguration.Destinations).map((d) => ({ label: d, value: d }));
+    return Object.keys(remoteAttachmentsConfiguration.Destinations).map((destination) => {
+        const destinationKey = remoteAttachmentsConfiguration.Destinations[destination];
+        const label = (
+            <span>
+                {destination}
+                {destinationKey.Disabled && (
+                        <PopoverWithHoverWrapper message="Destination is disabled, so it will not be uploaded to the server. Destination must be enabled to do it.">
+                            <Icon icon="warning" color="warning" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                )}
+            </span>
+        );
+        return { label, value: destination };
+    });
 };
 
-function getDefaultValues(configResult: RemoteAttachmentsConfiguration): AttachmentWithRemoteParametersFormData {
+function getDefaultValues(configResult: RemoteAttachmentsStudioConfiguration): AttachmentWithRemoteParametersFormData {
     const options = getRemoteAttachmentsDestinationsOptions(configResult);
     // if there is only one destination, use it as default
     if (options.length === 1) {

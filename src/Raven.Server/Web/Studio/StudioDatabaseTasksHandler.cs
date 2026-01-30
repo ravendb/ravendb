@@ -34,5 +34,12 @@ namespace Raven.Server.Web.Studio
             using (var processor = new StudioDatabaseTasksHandlerProcessorForGetSuggestConflictResolution(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenAction("/databases/*/studio-tasks/remote-attachments/configuration", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetRemoteAttachmentsConfiguration()
+        {
+            using (var processor = new StudioDatabaseTasksHandlerProcessorForGetRemoteAttachmentsConfiguration(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
