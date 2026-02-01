@@ -1268,7 +1268,7 @@ namespace Voron.Data.BTrees
             return (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
         }
 
-        public List<long> AllPages()
+        public List<long> AllPages(bool skipNestedFixedSizeTrees = false)
         {
             ThrowIfDisposedOnDebug(_llt);
 
@@ -1311,7 +1311,8 @@ namespace Voron.Data.BTrees
                         if (_header.RootObjectType == RootObjectType.Table) // tables might have mixed values, fixed size trees inside have dedicated handling
                             continue;
 
-                        if ((_header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
+                        if ((_header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees && 
+                            skipNestedFixedSizeTrees is false)
                         {
                             var valueReader = GetValueReaderFromHeader(node);
 
