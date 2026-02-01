@@ -612,6 +612,32 @@ public unsafe partial class Pager : IDisposable
         return _functions.ConvertToWritePointer(this, state, ptr);
     }
 
+    public List<long> GetSparsePages(State state)
+    {
+        List<long> results = [];
+        long offset = 0;
+        while (true)
+        {
+            var rc = Pal.rvn_pager_get_next_sparse_region(state.Handle, offset, out var start, out var size, out var errorCode);
+            if (rc is not PalFlags.FailCodes.Success)
+                PalHelper.ThrowLastError(rc, errorCode, "Failed to get sprase regions for " + state.Pager.FileName);
+
+            if (size == -1 && start == -1)
+                break;
+
+            for (long i = 0; i < size; i += Constants.Storage.PageSize)
+            {
+                results.Add((start + i) / Constants.Storage.PageSize);
+            }
+            var next = start + size;
+            if (next <= offset)
+                break;// should never happen
+            offset = next;
+
+        }
+        return results;
+    }
+
     public void SetSparseRange(State state, long offset, long size)
     {
         var rc = Pal.rvn_pager_set_sparse_region(state.Handle, offset, size, out int errorCode);
