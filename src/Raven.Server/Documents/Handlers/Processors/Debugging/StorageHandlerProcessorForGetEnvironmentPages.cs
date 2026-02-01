@@ -145,7 +145,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         await sw.WriteLineAsync("------------------");
     }
 
-    private async Task RenderEmojis(StorageEnvironment env,Dictionary<long, string> owners, List<(long Start, long End)> gaps, long totalPages)
+    private async Task RenderEmojis(StorageEnvironment env, Dictionary<long, string> owners, List<(long Start, long End)> gaps, long totalPages)
     {
         await using var sw = new StreamWriter(RequestHandler.ResponseBodyStream(), Encoding.UTF8);
         HttpContext.Response.Headers.ContentType = "text/html; charset=utf-8";
@@ -165,6 +165,22 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         {
             if (page < totalPages)
                 pages[page] = owner;
+        }
+
+        var sparse = env.DataPager.GetSparsePages(env.CurrentStateRecord.DataPagerState);
+        foreach (var page in sparse)
+        {
+            if (page >= totalPages)
+                continue; // race betwee starting this check and the file growing, probably
+
+            if (pages[page] != "Freed Page")
+            {
+                pages[page] = "SPARSE!!! AND " + pages[page];
+            }
+            else
+            {
+                pages[page] = "Sparse";
+            }
         }
 
         var usedOwners = new Dictionary<string, (string Emoji, string Description)>();
@@ -248,6 +264,8 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
     private static (string Emoji, string Description) GetEmojiAndDescription(string owner)
     {
+        if(owner.StartsWith("SPARSE!!! AND "))
+            return ("🚨", "Sparse DUPE (BUG!)");
         if (owner == "Gap")
             return ("🚨", "Gap (BUG!)");
         if (owner == "Sparse")
