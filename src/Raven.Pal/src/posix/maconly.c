@@ -6,6 +6,7 @@
 
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
@@ -140,6 +141,79 @@ EXPORT int32_t
 rvn_sync_directories(void* handle, char** folders, int32_t count, int32_t *detailed_error_code)
 {
     return rvn_sync_directories_sync(handle, folders, count, detailed_error_code);
+}
+
+EXPORT int32_t
+rvn_pager_get_next_sparse_region(void* handle,
+    int64_t offset,
+    int64_t* start,
+    int64_t* size,
+    int32_t* detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    if (handle_ptr->global_state->status_flags & PAGER_STATUS_SPARSE_NOT_SUPPORTED)
+    {
+        *start = -1;
+        *size = -1;
+        return SUCCESS;
+    }
+    int fd = handle_ptr->file_fd;
+    // macOS: use F_LOG2PHYS_EXT to find holes
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+
+    off_t current = offset;
+    off_t file_size = st.st_size;
+
+    // Search for the start of a hole
+    while (current < file_size)
+    {
+        struct log2phys l2p = {0};
+        l2p.l2p_contigbytes = file_size - current;
+        l2p.l2p_devoffset = current;
+
+        if (fcntl(fd, F_LOG2PHYS_EXT, &l2p) == -1)
+        {
+            if (errno == ENOTSUP)
+            {
+                *start = -1;
+                *size = -1;
+                return SUCCESS;
+            }
+            *detailed_error_code = errno;
+            return FAIL_SEEK_FILE;
+        }
+
+        // l2p_devoffset == -1 means the region is a hole (not allocated)
+        if (l2p.l2p_devoffset == -1)
+        {
+            // Found start of a hole, now find its extent
+            off_t hole_start = current;
+            off_t hole_end = current + l2p.l2p_contigbytes;
+
+            // Clamp to file size
+            if (hole_end > file_size)
+                hole_end = file_size;
+
+            *start = hole_start;
+            *size = hole_end - hole_start;
+            return SUCCESS;
+        }
+
+        // Skip over data region
+        current += l2p.l2p_contigbytes;
+        if (l2p.l2p_contigbytes == 0)
+            current++; // Avoid infinite loop
+    }
+
+    // No hole found
+    *start = -1;
+    *size = -1;
+    return SUCCESS;
 }
 
 #endif

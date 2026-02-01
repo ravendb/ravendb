@@ -177,6 +177,13 @@ rvn_pager_set_sparse_region(void* handle,
     int32_t* detailed_error_code);
 
 EXPORT int32_t
+rvn_pager_get_next_sparse_region(void* handle,
+    int64_t offset,
+    int64_t* start,
+    int64_t* size,
+    int32_t* detailed_error_code);
+
+EXPORT int32_t
 rvn_pager_get_file_size(void* handle,
     int64_t* total_size,
     int64_t* phyiscal_size,

@@ -104,6 +104,106 @@ rvn_pager_get_file_size(void *handle,
     return SUCCESS;
 }
 
+
+EXPORT int32_t
+rvn_pager_get_next_sparse_region(void* handle,
+    int64_t offset,
+    int64_t* start,
+    int64_t* size,
+    int32_t* detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+
+    if (handle_ptr->status_flags & PAGER_STATUS_SPARSE_NOT_SUPPORTED)
+    {
+        *start = -1;
+        *size = -1;
+        return SUCCESS;
+    }
+
+    // Get file size first
+    FILE_STANDARD_INFO standard_info = {0};
+    if (!GetFileInformationByHandleEx(handle_ptr->file_handle, FileStandardInfo, &standard_info, sizeof(FILE_STANDARD_INFO)))
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_GET_FILE_SIZE;
+    }
+
+    int64_t file_size = standard_info.EndOfFile.QuadPart;
+    if (offset >= file_size)
+    {
+        *start = -1;
+        *size = -1;
+        return SUCCESS;
+    }
+
+    int64_t current_offset = offset;
+
+    while (current_offset < file_size)
+    {
+        FILE_ALLOCATED_RANGE_BUFFER query_range;
+        query_range.FileOffset.QuadPart = current_offset;
+        query_range.Length.QuadPart = file_size - current_offset;
+
+        FILE_ALLOCATED_RANGE_BUFFER allocated_range;
+        DWORD bytes_returned;
+
+        if (!DeviceIoControl(handle_ptr->file_handle,
+                             FSCTL_QUERY_ALLOCATED_RANGES,
+                             &query_range,
+                             sizeof(query_range),
+                             &allocated_range,
+                             sizeof(allocated_range),
+                             &bytes_returned,
+                             NULL))
+        {
+            DWORD err = GetLastError();
+            if (err == ERROR_MORE_DATA)
+            {
+                // We have at least one range, continue processing
+            }
+            else
+            {
+                *detailed_error_code = err;
+                return FAIL_SEEK_FILE;
+            }
+        }
+
+        if (bytes_returned == 0)
+        {
+            // No allocated ranges from current_offset to EOF - entire region is a hole
+            *start = current_offset;
+            *size = file_size - current_offset;
+            return SUCCESS;
+        }
+
+        // Check if there's a hole before this allocated range
+        int64_t alloc_start = allocated_range.FileOffset.QuadPart;
+        if (alloc_start > current_offset)
+        {
+            // Found a hole
+            *start = current_offset;
+            *size = alloc_start - current_offset;
+            return SUCCESS;
+        }
+
+        // No hole here, move past this allocated range and continue
+        int64_t next_offset = alloc_start + allocated_range.Length.QuadPart;
+        if (next_offset <= current_offset)
+        {
+            // Shouldn't happen, but avoid infinite loop
+            break;
+        }
+        current_offset = next_offset;
+    }
+
+    // No holes found
+    *start = -1;
+    *size = -1;
+    return SUCCESS;
+}
+
+
 EXPORT int32_t
 rvn_pager_set_sparse_region(void *handle,
                             int64_t offset,
