@@ -1514,7 +1514,10 @@ namespace Raven.Server.Documents.Revisions
         internal static long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId, long delta)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            return numbers.Increment(prefixedLowerId, delta);
+            var result = numbers.Increment(prefixedLowerId, delta);;
+            if(result == 0)
+                numbers.Delete(prefixedLowerId);
+            return result;
         }
 
         public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, ChangeVector changeVector,
