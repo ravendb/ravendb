@@ -220,4 +220,73 @@ rvn_sync_directories(void* handle, char** folders, int32_t count, int32_t *detai
     return rvn_sync_directories_sync(handle, folders, count, detailed_error_code);
 }
 
+EXPORT int32_t
+rvn_pager_get_next_sparse_region(void* handle,
+    int64_t offset,
+    int64_t* start,
+    int64_t* size,
+    int32_t* detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    if (handle_ptr->global_state->status_flags & PAGER_STATUS_SPARSE_NOT_SUPPORTED)
+    {
+        *start = -1;
+        *size = -1;
+        return SUCCESS;
+    }
+    int fd = handle_ptr->file_fd;
+    // Find the next hole starting at or after offset
+    off_t hole_start = lseek(fd, offset, SEEK_HOLE);
+    if (hole_start == -1)
+    {
+        if (errno == ENXIO)
+        {
+            // No hole found from offset to EOF (entire range is data)
+            *start = -1;
+            *size = -1;
+            return SUCCESS;
+        }
+        if (errno == ENOTSUP)
+        {
+            *start = -1;
+            *size = -1;
+            return FAIL_SPARSE_NOT_SUPPORTED;
+        }
+        *detailed_error_code = errno;
+        return FAIL_SEEK_FILE;
+    }
+
+    // Find the end of the hole (start of next data region)
+    off_t hole_end = lseek(fd, hole_start, SEEK_DATA);
+    if (hole_end == -1)
+    {
+        if (errno == ENXIO)
+        {
+            // Hole extends to EOF
+            struct stat st;
+            if (fstat(fd, &st) == -1)
+            {
+                *detailed_error_code = errno;
+                return FAIL_STAT_FILE;
+            }
+            if (hole_start >= st.st_size)
+            {
+                // We're at or past EOF
+                *start = -1;
+                *size = -1;
+                return SUCCESS;
+            }
+            *start = hole_start;
+            *size = st.st_size - hole_start;
+            return SUCCESS;
+        }
+        *detailed_error_code = errno;
+        return FAIL_SEEK_FILE;
+    }
+
+    *start = hole_start;
+    *size = hole_end - hole_start;
+    return SUCCESS;
+}
+
 #endif
