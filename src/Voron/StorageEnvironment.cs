@@ -358,7 +358,7 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId == false)
                 {
                     databaseGuidId = new Guid(buffer);
-                    }
+                }
                 else
                 {
                     databaseGuidId = Guid.NewGuid();
@@ -924,7 +924,7 @@ namespace Voron
                         case TempBufferType.Scratch:
                             tempBuffers += file.AllocatedSpaceInBytes;
                             break;
-                           default:
+                        default:
                             throw new InvalidOperationException($"Unknown temp file type: {file.Type}");
                     }
                 }
@@ -1030,9 +1030,10 @@ namespace Voron
             }
 
             var globalAllocator = new NewPageAllocator(tx.LowLevelTransaction, tx.LowLevelTransaction.RootObjects);
-            RegisterPages(globalAllocator.GetAllocationStorageFst().AllPages(), "Global/PreAllocatedPages/Bitmaps");
             RegisterPages(globalAllocator.AllPages(), "Global/PreAllocatedPages");
-            RegisterPages(tx.LowLevelTransaction.RootObjects.AllPages(), "RootObjects");
+            // we skip skipNestedFixedSizeTrees for the root objects, we'll iterate over those below
+            RegisterPages(tx.LowLevelTransaction.RootObjects.AllPages(skipNestedFixedSizeTrees: true), "RootObjects");
+            RegisterPages(globalAllocator.GetAllocationStorageFst().AllPages(), "Global/PreAllocatedPages/Bitmaps");
             using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 if (rootIterator.Seek(Slices.BeforeAllKeys))
@@ -1047,7 +1048,7 @@ namespace Voron
                             case RootObjectType.VariableSizeTree:
                                 var tree = tx.ReadTree(currentKey);
                                 RegisterPages(tree.AllPages(), name + " (VST)");
-                                ref readonly var treeHeader =  ref tree.ReadHeader();
+                                ref readonly var treeHeader = ref tree.ReadHeader();
                                 if (treeHeader.Flags.HasFlag(TreeFlags.CompactTrees) ||
                                     treeHeader.Flags.HasFlag(TreeFlags.Lookups))
                                 {
@@ -1093,6 +1094,7 @@ namespace Voron
                                 var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
                                 var tableSchema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
                                 var table = tx.OpenTable(tableSchema, currentKey);
+                                table.EnsureTablePageAllocator();
                                 RegisterPages(table.TablePageAllocator.GetAllocationStorageFst().AllPages(), name + "/PreAllocatedPages/Bitmaps");
                                 RegisterPages(table.TablePageAllocator.AllPages(), name + "/PreAllocatedPages");
                                 if (tableSchema.Key is { IsGlobal: false })
@@ -1171,7 +1173,10 @@ namespace Voron
             {
                 foreach (long page in allPages)
                 {
-                    r.Add(page, name);
+                    if (r.TryAdd(page, name) is false)
+                    {
+                        throw new ArgumentException("Page " + page + " is already registered to " + r[page] + ", cannot register it to: " + name);
+                    }
                 }
             }
 

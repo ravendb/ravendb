@@ -67,7 +67,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private void EnsureTablePageAllocator()
+        internal void EnsureTablePageAllocator()
         {
             _tablePageAllocator ??= new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
         }
