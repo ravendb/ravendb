@@ -60,7 +60,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var docs = new BlockingCollection<RegexMe>();
 
-                    worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
+                    _ = worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
 
                     for (int i = 0; i < 4; i++)
                     {
@@ -101,7 +101,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var docs = new BlockingCollection<RegexMe>();
 
-                    worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
+                    _ = worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
 
                     for (int i = 0; i < 4; i++)
                     {
@@ -161,7 +161,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var docs = new BlockingCollection<Message>();
 
-                    worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
+                    _ = worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
 
                     for (int i = 0; i < 2; i++)
                     {
@@ -198,7 +198,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var docs = new BlockingCollection<RegexMe>();
 
-                    worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
+                    _ = worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
 
                     Assert.True(docs.TryTake(out var doc, _waitForDocTimeout));
                     Assert.True(Regex.IsMatch(doc.Text, pattern, RegexOptions.Singleline));
@@ -233,7 +233,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var docs = new BlockingCollection<RegexMe>();
 
-                    worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
+                    _ = worker.Run(batch => batch.Items.ForEach(i => docs.Add(i.Result)));
 
                     Assert.True(docs.TryTake(out var doc, _waitForDocTimeout));
                     Assert.True(Regex.IsMatch(doc.Text, pattern, RegexOptions.Multiline));
