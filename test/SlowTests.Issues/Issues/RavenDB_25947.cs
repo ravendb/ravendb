@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using FastTests;
+﻿using System.Threading.Tasks;
 using FastTests.Voron;
-using Org.BouncyCastle.Crypto.Prng;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Platform;
 using Tests.Infrastructure;
-using Voron;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
@@ -29,17 +20,18 @@ namespace SlowTests.Issues
                 var data = new string('x', 2048);
                 for (int i = 0; i < 4000; i++)
                 {
-                    tree.Add($"key/{i}", data);
+                    tree.Add($"key/{i:D9}", data);
                 }
 
                 int x = 0;
                 for (int i = 0; i < 15; i+=2)
                 {
+                    // disjoint frees, so we keep them in the allocator 
                     x += 100;
                     for (int j = 0; j < 50; j++)
                     {
                         x++;
-                        tree.Delete($"key/{x}");
+                        tree.Delete($"key/{x:D9}");
                     }
                 }
 

@@ -173,7 +173,7 @@ namespace Voron.Data.Tables
                 {
                     if (it.SeekToLast() == false)
                     {
-                        // shouldn't actually happen, but same behavior as running out of space
+                        // happens the first time we allocate, or when we deleted all the sections
                         page = AllocateMoreSpace(fst);
                         SetValue(fst, page.PageNumber, 0);
                         return page;
@@ -252,7 +252,20 @@ namespace Voron.Data.Tables
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
-                PtrBitVector.SetBitInPointer(ptr, positionInBitmap, false);
+                var vec = new PtrBitVector(ptr, _numberOfPagesToAllocate);
+
+                var result = vec.Set(positionInBitmap, false);
+                if (result is not 0)
+                    return; // if there are any other bits set, we _know_ it can't be zero, can save scanning whole thing
+                if (vec.AllEmpty() is false)
+                    return; // there are still busy pages here
+
+                // can delete & free it all...
+                fst.Delete(pageNumber);
+                for (int i = 0; i < _numberOfPagesToAllocate; i++)
+                {
+                    _llt.FreePage(pageNumber + i);
+                }
             }
         }
 
@@ -284,11 +297,14 @@ namespace Voron.Data.Tables
 
                 var positionInBuffer = (int)(pageNumber - it.CurrentKey);
 
-                UnsetValue(fst, it.CurrentKey, positionInBuffer);
                 var page = _llt.ModifyPage(pageNumber);
                 Memory.Set(page.Pointer, 0, Constants.Storage.PageSize);
                 page.PageNumber = pageNumber;
                 page.Flags = PageFlags.Single;
+
+                // we may free a set of pages because a whole segment is empty
+                // so we want to first clear its content, then actually do the freeing...
+                UnsetValue(fst, it.CurrentKey, positionInBuffer);
             }
         }
 
