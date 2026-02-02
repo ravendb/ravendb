@@ -1,5 +1,5 @@
 ﻿#include <windows.h>
-#include <VersionHelpers.h>
+#include <versionhelpers.h>
 #include <stdio.h>
 
 #include "rvn.h"

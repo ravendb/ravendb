@@ -2,7 +2,7 @@
 #define NTDDI_VERSION NTDDI_WIN10_NI
 
 #include <windows.h>
-#include <VersionHelpers.h>
+#include <versionhelpers.h>
 #include <stdio.h>
 #include <ioringapi.h>
 
@@ -10,6 +10,11 @@
 #include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_win.h"
+
+// Define missing constant for zig's mingw headers
+#ifndef IORING_E_SUBMISSION_QUEUE_FULL
+#define IORING_E_SUBMISSION_QUEUE_FULL ((HRESULT)0x80460002L)
+#endif
 
 typedef HRESULT(WINAPI *PFN_QueryIoRingCapabilities)(IORING_CAPABILITIES *);
 typedef HRESULT(WINAPI *PFN_CloseIoRing)(HIORING);
