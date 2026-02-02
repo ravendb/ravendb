@@ -150,7 +150,7 @@ function HeaderTitle() {
                     className="font-monospace border border-experimental font-monospace font-size-10 px-1"
                     pill
                 >
-                    Experimental
+                    Preview
                 </Badge>
             </div>
         );
