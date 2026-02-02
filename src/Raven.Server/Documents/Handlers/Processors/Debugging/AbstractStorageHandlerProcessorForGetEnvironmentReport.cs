@@ -84,7 +84,7 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
         if (env == null)
             return;
         
-        using (var tx = context.OpenWriteTransaction())
+        using (var tx = context.OpenReadTransaction())
         {
             var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed, flat);
             writer.WriteStartObject();
