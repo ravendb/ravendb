@@ -227,14 +227,11 @@ namespace Voron.Debugging
                 treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
             }
 
-            long _tablesAllocatedSpaceInBytes = 0;
             var tables = new List<TableReport>();
             foreach (var table in input.Tables)
             {
                 var tableReport = table.GetReport(input.IncludeDetails, this);
                 tables.Add(tableReport);
-
-                _tablesAllocatedSpaceInBytes += tableReport.AllocatedSpaceInBytes;
             }
 
             var journals = new JournalsReport
@@ -251,18 +248,15 @@ namespace Voron.Debugging
             if (input.IncludeDetails == false && _skippedStreamsDetailsEntry != null)
             {
                 // we don't have the actual trees' streams size at this point
-                // so we calculate the original size as if we read the streams by:
-                // [DataFile allocated space] - [DataFile free space] - [Tables allocated space] - [FixedTrees allocated space] - [pre allocated buffers space] 
-
-                var treesCalculatedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes;
-
+                // so we calculate the estimated value using  the page counts on the streams' tree.
                 foreach (var tree in trees)
                 {
-                    if (tree.Streams?.Streams != null && tree.Streams.Streams.Count > 0 && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
+                    if (tree.Streams?.Streams is { Count: > 0 } && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
                     {
-                        _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes;
-                        _skippedStreamsDetailsEntry.Length = treesCalculatedSpaceInBytes;
-                        tree.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes - streamsAllocatedSpaceInBytes;
+                        long sizeInBytes = (tree.OverflowPages + tree.LeafPages + tree.BranchPages) * Constants.Storage.PageSize;
+                        _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = sizeInBytes;
+                        _skippedStreamsDetailsEntry.Length = sizeInBytes;
+                        tree.AllocatedSpaceInBytes = sizeInBytes - streamsAllocatedSpaceInBytes;
                         break;
                     }
                 }
@@ -390,7 +384,7 @@ namespace Voron.Debugging
                 PageCount = fst.PageCount,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(fst.PageCount),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(fst.PageCount) * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(fst.PageCount) * density) : PagesToBytes(fst.PageCount),
                 MultiValues = null,
             };
             return treeReport;
@@ -416,7 +410,7 @@ namespace Voron.Debugging
                 PageCount = pageCount,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : PagesToBytes(pageCount) ,
             };
 
             return treeReport;
@@ -445,7 +439,7 @@ namespace Voron.Debugging
                 OverflowPages = 0,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : PagesToBytes(pageCount) ,
             };
 
             return treeReport;
@@ -475,7 +469,7 @@ namespace Voron.Debugging
                 OverflowPages = 0,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(pageCount) * density) : PagesToBytes(pageCount) ,
             };
 
             return treeReport;
@@ -525,7 +519,7 @@ namespace Voron.Debugging
                 PageCount = totalPages ,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(totalPages),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(totalPages) * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(totalPages) * density) : PagesToBytes(totalPages) ,
             };
 
             return treeReport;
@@ -569,7 +563,7 @@ namespace Voron.Debugging
                 PageCount = state.PageCount,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(state.PageCount) + (streams?.AllocatedSpaceInBytes ?? 0),
-                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(state.PageCount) * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(state.PageCount) * density) : PagesToBytes(state.PageCount),
                 MultiValues = multiValues,
                 Streams = streams,
                 BalanceHistogram = pageBalance,

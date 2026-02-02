@@ -996,7 +996,9 @@ namespace Voron
 
             return generator.Generate(new ReportInput
             {
-                ActualSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalDiskSpace,
+                // we need to use the actual file size (not the disk size), because we are looking at the max
+                // size that the file has been allocated as
+                ActualSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalFileSize,
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
@@ -1121,17 +1123,12 @@ namespace Voron
                                     RegisterPages(t.AllPages(), name + "/" + index.Name);
                                 }
 
-                                RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
-                                RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
                                 var readResult = tableTree.Read(TableSchema.ActiveSectionSlice);
                                 long pageNumber = readResult.Reader.Read<long>();
                                 var activeDataSmallSection = new ActiveRawDataSmallSection(tx, pageNumber);
-                                // off by one here because of the section header
-                                r.Add(activeDataSmallSection.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");
-                                for (long page = 0; page < activeDataSmallSection.NumberOfPages; page++)
-                                {
-                                    r.Add(activeDataSmallSection.PageNumber + page + 1, name + "/" + TableSchema.ActiveSectionSlice + "/page");
-                                }
+                                RegisterSectionPages(activeDataSmallSection, name + "/" + TableSchema.ActiveSectionSlice);
+                                RegisterTableSection(tableTree, name, TableSchema.ActiveCandidateSectionSlice);
+                                RegisterTableSection(tableTree, name, TableSchema.InactiveSectionSlice);
                                 break;
                             case RootObjectType.Container:
                                 var container = tx.OpenContainer(currentKey);
@@ -1197,10 +1194,15 @@ namespace Voron
                     do
                     {
                         var section = new RawDataSection(tx.LowLevelTransaction, it.CurrentKey);
-                        r.Add(section.PageNumber, name + "/" + TableSchema.ActiveSectionSlice + "/header");
+                        if (r.TryAdd(section.PageNumber, name + "/" + sectionName + "/header") is false)
+                        {
+                            // we may have it already, because it is the active section, or in the candidate section
+                            // and in the inaction section list as well (it is expected, so we'll put that in order)
+                            continue;
+                        }
                         for (long page = 0; page < section.NumberOfPages; page++)
                         {
-                            r.Add(section.PageNumber + page + 1, name + "/" + TableSchema.ActiveSectionSlice + "/page");
+                            r.Add(section.PageNumber + page + 1, name + "/" +sectionName + "/page");
                         }
                     } while (it.MoveNext());
                 }
@@ -1234,6 +1236,24 @@ namespace Voron
                 if (numeric.State.TermsContainerId.IsValid)
                 {
                     RegisterContainer(numeric.State.TermsContainerId, name + "/TermsContainer");
+                }
+            }
+
+            void RegisterSectionPages(ActiveRawDataSmallSection activeDataSmallSection, string prefix)
+            {
+                if (r.TryAdd(activeDataSmallSection.PageNumber, prefix + "/header") is false)
+                {
+                    throw new ArgumentException($"{activeDataSmallSection.PageNumber} already exist as '{r[activeDataSmallSection.PageNumber]}' but tried ot add it to '{prefix}/header'");
+                }
+
+                for (long page = 0; page < activeDataSmallSection.NumberOfPages; page++)
+                { 
+                    // off by one here because of the section header
+                    long number = activeDataSmallSection.PageNumber + page + 1;
+                    if (r.TryAdd(number, prefix + "/page") is false)
+                    {
+                        throw new ArgumentException($"{number} already exists as '{r[number]}' but tried to add it as '{prefix}/page'");
+                    }
                 }
             }
         }
