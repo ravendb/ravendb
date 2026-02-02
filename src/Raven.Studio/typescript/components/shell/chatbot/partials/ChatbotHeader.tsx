@@ -10,6 +10,7 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import AiAssistantDisabledInSettingsMessage from "components/common/aiAssistant/AiAssistantDisabledInSettingsMessage";
 import "./ChatbotHeader.scss";
 import useConfirm from "components/common/ConfirmDialog";
+import Badge from "react-bootstrap/Badge";
 
 export default function ChatbotHeader() {
     const dispatch = useAppDispatch();
@@ -141,9 +142,16 @@ function HeaderTitle() {
 
     if (chatbotTab === "aiAssistant") {
         return (
-            <div>
-                <Icon icon="ask-ai" className="ai-gradient" />
+            <div className="d-flex align-items-center gap-1">
+                <Icon icon="ask-ai" className="ai-gradient" margin="m-0" />
                 AI Assistant
+                <Badge
+                    bg="faded-experimental"
+                    className="font-monospace border border-experimental font-monospace font-size-10 px-1"
+                    pill
+                >
+                    Experimental
+                </Badge>
             </div>
         );
     }
