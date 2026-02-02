@@ -1,4 +1,4 @@
-param ( [switch]$skip_version_increment = $false, [switch]$clang_only = $false )
+param ( [switch]$skip_version_increment = $false )
 
 
 if ($null -eq (Get-Command "zig" -ErrorAction SilentlyContinue)) {
@@ -53,47 +53,25 @@ $linux_only = `
     "src/posix/linuxonly.c",
     "src/posix/ioring.c"
 
-$vcbin = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build"
-$clbin = (gci "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\" | sort Name -Descending | select -First 1).FullName
-$clbin = "$clbin\bin\Hostx64"
-
 Remove-Item .\runtimes -Force -Recurse -ErrorAction Ignore
 Remove-Item .\artifacts -Force -Recurse -ErrorAction Ignore
 
-mkdir runtimes/win-x86/native -ErrorAction Ignore > $null
-mkdir runtimes/win-x64/native -ErrorAction Ignore > $null
-mkdir runtimes/linux-x64/native -ErrorAction Ignore > $null
-mkdir runtimes/linux-arm/native -ErrorAction Ignore > $null
-mkdir runtimes/linux-arm64/native -ErrorAction Ignore > $null
-mkdir runtimes/osx-arm64/native -ErrorAction Ignore > $null
+New-Item -ItemType Directory -Path runtimes/win-x86/native -Force > $null
+New-Item -ItemType Directory -Path runtimes/win-x64/native -Force > $null
+New-Item -ItemType Directory -Path runtimes/linux-x64/native -Force > $null
+New-Item -ItemType Directory -Path runtimes/linux-arm/native -Force > $null
+New-Item -ItemType Directory -Path runtimes/linux-arm64/native -Force > $null
+New-Item -ItemType Directory -Path runtimes/osx-arm64/native -Force > $null
 
 
 Write-Output "Building Windows x86"
-if ($clang_only) {
-    zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86-windows -o runtimes/win-x86/native/librvnpal.dll $shared $win_files 
-}
-else {
-    cmd /c """$vcbin\vcvars32.bat"" & ""$clbin\x86\cl"" /Fdruntimes/win-x86/native/librvnpal.pdb /Zi -Feruntimes/win-x86/native/librvnpal.dll -I inc /O2 /analyze /sdl /LD $shared $win_files /link"
-    Remove-Item *.obj
-    Remove-Item  librvnpal.x*
-    Remove-Item *.nativecodeanalysis.xml        
-}
-
-Write-Output "Building Linux x64"
-
-zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files $linux_only
-
+zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86-windows-gnu -o runtimes/win-x86/native/librvnpal.dll $shared $win_files
 
 Write-Output "Building Windows x64"
-if ($clang_only) {
-    zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files 
-}
-else {
-    cmd /c """$vcbin\vcvars64.bat"" & ""$clbin\x64\cl"" /Fdruntimes/win-x64/native/librvnpal.pdb /Zi -Feruntimes/win-x64/native/librvnpal.dll -I inc /O2 /analyze /sdl /LD $shared $win_files /link"
-    Remove-Item *.obj
-    Remove-Item  librvnpal.x*
-    Remove-Item *.nativecodeanalysis.xml
-}
+zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows-gnu -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files
+
+Write-Output "Building Linux x64"
+zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files $linux_only
 
 Write-Output "Building Linux ARM32 (Rasbperry Pi)"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target arm-linux-gnueabihf -o runtimes/linux-arm/native/librvnpal.so $shared $posix_files $linux_only 
@@ -104,22 +82,28 @@ zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-linux-gnu ../../libs/li
 Write-Output "Building Linux Mac ARM64"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-macos-none -o runtimes/osx-arm64/native/librvnpal.dylib $shared $posix_files "src/posix/maconly.c" 
 
-mkdir artifacts  -ErrorAction Ignore  > $null
+New-Item -ItemType Directory -Path artifacts -Force  > $null
 Move-Item .\runtimes artifacts  -ErrorAction Ignore
 $PalNuspec = (Get-Content pal.nuspec.template)
 $NuspecVersion = "$($PalVerStr[0]).$($PalVerStr[1]).$([convert]::ToInt32($PalVerStr.Substring(2)))"
 $PalNuspec = $PalNuspec.Replace("NUGET_PACKAGE_VERSION", $NuspecVersion)
-Set-Content artifacts\pal.nuspec  -Value $PalNuspec
+Set-Content artifacts/pal.nuspec  -Value $PalNuspec
+
+# dummy project, required to have donet pack working
+Set-Content artifacts/project.csproj -Value "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>netstandard2.0</TargetFramework></PropertyGroup></Project>"
 
 Set-Location artifacts
-Remove-Item *.nupkg
-../../../scripts/assets/bin/nuget.exe pack .\pal.nuspec
-Remove-Item ../../../libs/Raven.Pal.*
+Remove-Item *.nupkg -ErrorAction Ignore
+
+dotnet pack project.csproj -p:NuspecFile=pal.nuspec -p:NoBuild=true --output . 
+
+Remove-Item ../../../libs/Raven.Pal.* -ErrorAction Ignore
 Copy-Item *.nupkg ../../../libs
 Set-Location ..
-
+    
 $dirPackagesPath = Resolve-Path -Path "../../Directory.Packages.props"
 [xml]$dirPkgs = Get-Content $dirPackagesPath
 $packageNode = $dirPkgs.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq "Raven.Pal" }
 $packageNode.Version = $NuspecVersion
 $dirPkgs.Save($dirPackagesPath)
+Set-Location ..
