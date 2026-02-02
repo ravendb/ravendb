@@ -66,8 +66,8 @@ struct IoRingSetup
     HANDLE event;
     HANDLE thread;
     HANDLE has_error;
-    int errored;
-    struct workitem *head;
+    long errored;
+    struct workitem *volatile head;
 };
 
 struct IoRingSetup IoRing;
@@ -106,7 +106,7 @@ void queue_work(struct workitem *head, struct workitem *last)
     {
         struct workitem *cur_head = IoRing.head;
         last->next = cur_head;
-        if (InterlockedCompareExchangePointer(&IoRing.head, head, cur_head) == cur_head)
+        if (InterlockedCompareExchangePointer((void *volatile *)&IoRing.head, head, cur_head) == cur_head)
             break;
     }
 }
@@ -163,7 +163,7 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
             bool must_wait = false;
             if (!work) // we may have _previous_ work to run through
             {
-                work = InterlockedExchangePointer(&IoRing.head, 0);
+                work = InterlockedExchangePointer((void *volatile *)&IoRing.head, 0);
             }
             while (work)
             {
@@ -189,7 +189,6 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
             if (FAILED(hr))
                 goto error;
 
-            struct submittion *completed = NULL;
             IORING_CQE cqe;
             while (IoRing.PopIoRingCompletion(ring, &cqe) == S_OK)
             {
@@ -237,7 +236,7 @@ error:
     {
         WaitForSingleObject(IoRing.event, INFINITE);
         ResetEvent(IoRing.event);
-        work = InterlockedExchangePointer(&IoRing.head, 0);
+        work = InterlockedExchangePointer((void *volatile *)&IoRing.head, 0);
         while (work)
         {
             struct workitem *n = work->next;
