@@ -19,6 +19,9 @@
 #include <string.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <linux/fs.h>
+#include <linux/fiemap.h>
+#include <sys/ioctl.h>
 
 #include "rvn.h"
 #include "rvn_internal.h"
@@ -234,58 +237,108 @@ rvn_pager_get_next_sparse_region(void* handle,
         *size = -1;
         return SUCCESS;
     }
+    
     int fd = handle_ptr->file_fd;
-    // Find the next hole starting at or after offset
-    off_t hole_start = lseek(fd, offset, SEEK_HOLE);
-    if (hole_start == -1)
+    
+    // Get file size
+    struct stat st;
+    if (fstat(fd, &st) == -1)
     {
-        if (errno == ENXIO)
-        {
-            // No hole found from offset to EOF (entire range is data)
-            *start = -1;
-            *size = -1;
-            return SUCCESS;
-        }
-        if (errno == ENOTSUP)
-        {
-            *start = -1;
-            *size = -1;
-            return FAIL_SPARSE_NOT_SUPPORTED;
-        }
         *detailed_error_code = errno;
-        return FAIL_SEEK_FILE;
+        return FAIL_STAT_FILE;
     }
-
-    // Find the end of the hole (start of next data region)
-    off_t hole_end = lseek(fd, hole_start, SEEK_DATA);
-    if (hole_end == -1)
+    
+    int64_t file_size = st.st_size;
+    if (offset >= file_size)
     {
-        if (errno == ENXIO)
+        *start = -1;
+        *size = -1;
+        return SUCCESS;
+    }
+    
+    // Allocate space for FIEMAP request (1 extent at a time for simplicity)
+    char buf[sizeof(struct fiemap) + sizeof(struct fiemap_extent)];
+    struct fiemap *fiemap = (struct fiemap *)buf;
+    
+    int64_t current_pos = offset;
+    int64_t hole_start = -1;
+    
+    while (current_pos < file_size)
+    {
+        memset(fiemap, 0, sizeof(buf));
+        fiemap->fm_start = current_pos;
+        fiemap->fm_length = file_size - current_pos;
+        fiemap->fm_extent_count = 1;
+        fiemap->fm_flags = 0;
+        
+        if (ioctl(fd, FS_IOC_FIEMAP, fiemap) == -1)
         {
-            // Hole extends to EOF
-            struct stat st;
-            if (fstat(fd, &st) == -1)
+            if (errno == ENOTTY || errno == EOPNOTSUPP)
             {
-                *detailed_error_code = errno;
-                return FAIL_STAT_FILE;
-            }
-            if (hole_start >= st.st_size)
-            {
-                // We're at or past EOF
                 *start = -1;
                 *size = -1;
                 return SUCCESS;
             }
+            *detailed_error_code = errno;
+            return FAIL_SEEK_FILE;
+        }
+        
+        if (fiemap->fm_mapped_extents == 0)
+        {
+            // No more extents from current_pos to EOF - rest is a hole
+            if (hole_start == -1)
+                hole_start = current_pos;
+            
             *start = hole_start;
-            *size = st.st_size - hole_start;
+            *size = file_size - hole_start;
             return SUCCESS;
         }
-        *detailed_error_code = errno;
-        return FAIL_SEEK_FILE;
+        
+        struct fiemap_extent *extent = &fiemap->fm_extents[0];
+        int64_t extent_start = extent->fe_logical;
+        int64_t extent_end = extent_start + extent->fe_length;
+        
+        // Check if there's a gap (true hole) before this extent
+        if (extent_start > current_pos)
+        {
+            if (hole_start == -1)
+                hole_start = current_pos;
+            
+            *start = hole_start;
+            *size = extent_start - hole_start;
+            return SUCCESS;
+        }
+        
+        // Check if this extent is unwritten (preallocated)
+        if (extent->fe_flags & FIEMAP_EXTENT_UNWRITTEN)
+        {
+            // This is an unwritten extent - end of file, but not a
+            // sparse region we care about
+            current_pos = extent_end;
+            continue;
+        }
+        
+        // This is a data extent, move past it
+        hole_start = -1; // Reset hole tracking
+        current_pos = extent_end;
+        
+        // Check if this was the last extent
+        if (extent->fe_flags & FIEMAP_EXTENT_LAST)
+        {
+            // Check if there's space after the last extent
+            if (current_pos < file_size)
+            {
+                *start = current_pos;
+                *size = file_size - current_pos;
+                return SUCCESS;
+            }
+            break;
+        }
     }
-
-    *start = hole_start;
-    *size = hole_end - hole_start;
+    
+    // No holes found
+    *start = -1;
+    *size = -1;
     return SUCCESS;
 }
 

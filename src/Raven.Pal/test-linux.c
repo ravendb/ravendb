@@ -4,13 +4,15 @@
 #include "internal_posix.h"
 
 //  The command to build and run this is:
-//  /home/ayende/zig-linux-x86_64-0.14.0-dev.2851+b074fb7dd/zig cc -Wall -O0 -g -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o test src/shared_all.c src/rvngetpalver.c src/posix/fileutils.c src/posix/geterrorstring.c src/posix/getsysteminformation.c src/posix/journal.c src/posix/mapping.c src/posix/pager.c src/posix/sync.c src/posix/virtualmemory.c src/posix/writefileheader.c src/posix/linuxonly.c test-linux.c
+//  zig cc -Wall -O0 -g -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o test src/shared_all.c src/rvngetpalver.c src/posix/fileutils.c src/posix/geterrorstring.c src/posix/getsysteminformation.c src/posix/journal.c src/posix/mapping.c src/posix/pager.c src/posix/sync.c src/posix/virtualmemory.c src/posix/writefileheader.c src/posix/linuxonly.c test-linux.c
 int main()
 {
     void *handle;
     void *mem;
     void *wmem;
     int64_t size;
+    int64_t start = 0;
+    int64_t offset=0;
     int32_t err;
 
     struct rvn_configuration cfg = {
@@ -20,19 +22,19 @@ int main()
     int32_t ec;
     int32_t rc = rvn_startup_configure(&cfg, &ec);
 
-    rc = rvn_init_pager("test.db", 1024 * 64, OPEN_FILE_WRITABLE_MAP, &handle, &mem, &wmem, &size, &err);
-    char buf[8192] = {0};
-    buf[1] = 'a';
-    struct page_to_write p[] = {
-        {.count_of_pages = 1, .page_num = 0, .ptr = buf},
-        {.count_of_pages = 1, .page_num = 1, .ptr = buf},
-        {.count_of_pages = 1, .page_num = 4, .ptr = buf},
-    };
-    rc = rvn_write_io_ring(handle, p, 3, &err);
-    rc = rvn_write_io_ring(handle, p, 3, &err);
-
-    char *paths[] = {"/tmp", "/home/oren/ravendb/src/Raven.Pal", "~", "/home/missing/dir"};
-
-    rc = rvn_sync_directories(handle, paths, 3, &err);
+    rc = rvn_init_pager("/home/ayende/work/ravendb/8.0/src/Raven.Server/bin/release/net10.0/Databases/t/Raven.voron", 1024 * 64, OPEN_FILE_WRITABLE_MAP, &handle, &mem, &wmem, &size, &err);
+    
+    while(1){
+        rc = rvn_pager_get_next_sparse_region(handle, start, &offset, &size, &err);
+        if(size == -1 && offset == -1)
+            break;
+        if(rc != SUCCESS)
+            break;
+        printf("Hole - Start: %.2f MB, End: %.2f MB, Size: %.2f MB\n", 
+               offset / (1024.0 * 1024.0), 
+               (offset + size) / (1024.0 * 1024.0), 
+               size / (1024.0 * 1024.0));
+        start = offset + size;   
+    }
     return rc;
 }
