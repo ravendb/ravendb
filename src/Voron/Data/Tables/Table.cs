@@ -538,13 +538,13 @@ namespace Voron.Data.Tables
                 _tx.ForgetAbout(id);
 
                 using (var decompressValue = DecompressValue(_tx, ptr, size, out ByteString buffer))
-            {
-                ptr = buffer.Ptr;
-                size = buffer.Length;
+                {
+                    ptr = buffer.Ptr;
+                    size = buffer.Length;
 
                     var tvr = new TableValueReader(ptr, size);
                     DeleteValueFromIndex(id, ref tvr);
-            }
+                }
             }
             else
             {
@@ -598,7 +598,15 @@ namespace Voron.Data.Tables
 
             var rawDataSection = ActiveDataSmallSection.Free(id);
             if (ActiveDataSmallSection.Contains(id))
+            {
+                if (ActiveDataSmallSection.NumberOfEntries is 0)
+                {
+                    // if we have _zero_ entries in the active section, we
+                    // can immediately delete it...
+                    DiscardEmptyActiveSection();
+                }
                 return;
+            }
 
             var density = rawDataSection.Density;
             if (density > 0.5)
@@ -1225,6 +1233,52 @@ namespace Voron.Data.Tables
                 _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
             }
         }
+
+        private void DiscardEmptyActiveSection()
+        {
+            long oldActiveSectionPageNumber = ActiveDataSmallSection.PageNumber;
+            InactiveSections.Delete(oldActiveSectionPageNumber);
+            ActiveCandidateSection.Delete(oldActiveSectionPageNumber);
+            ActiveDataSmallSection.DeleteSection(oldActiveSectionPageNumber);
+
+            using (var it = ActiveCandidateSection.Iterate())
+            {
+                // we try to find an active candidate section to use
+                if (it.Seek(long.MinValue))
+                {
+                    var sectionPageNumber = it.CurrentKey;
+
+                    _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, sectionPageNumber);
+                    ActiveCandidateSection.Delete(sectionPageNumber);
+                }
+                else
+                {
+                    // there are no candidates, so we'll scan to find the size of the previous sections
+                    using (var itInactive = InactiveSections.Iterate())
+                    {
+                        // let's find the biggest section that we previously created...
+                        ushort numberOfPages = 16;
+                        if (itInactive.Seek(long.MinValue))
+                        {
+                            do
+                            {
+                                var sectionPages = new RawDataSection(_tx.LowLevelTransaction, itInactive.CurrentKey).NumberOfPages;
+                                numberOfPages = Math.Max(numberOfPages, (ushort)sectionPages);
+                            } while (itInactive.MoveNext());
+                        }
+                        _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx, Name, _tableType, numberOfPages);
+                    }
+                }
+            }
+
+            _activeDataSmallSection.DataMoved += OnDataMoved;
+            var candidatePage = _activeDataSmallSection.PageNumber;
+            using (Slice.External(_tx.Allocator, (byte*)&candidatePage, sizeof(long), out Slice pageNumber))
+            {
+                _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
+            }
+        }
+
 
         private bool TryFindMatchFromCandidateSections(int size, out long id)
         {
@@ -2552,6 +2606,12 @@ namespace Voron.Data.Tables
             var inactiveSections = InactiveSections;
             report.AddStructure(inactiveSections, includeDetails);
 
+            HashSet<long> alreadyAdded =
+            [
+                ActiveDataSmallSection.PageNumber
+            ];
+            report.AddData(ActiveDataSmallSection, includeDetails);
+
             foreach (var section in new[] { inactiveSections, activeCandidateSection })
             {
                 using (var it = section.Iterate(_prefetch))
@@ -2560,14 +2620,15 @@ namespace Voron.Data.Tables
                     {
                         do
                         {
+                            if(alreadyAdded.Add(it.CurrentKey) is false)
+                                continue;
+                            
                             var referencedSection = new RawDataSection(_tx.LowLevelTransaction, it.CurrentKey);
                             report.AddData(referencedSection, includeDetails);
                         } while (it.MoveNext());
                     }
                 }
             }
-
-            report.AddData(ActiveDataSmallSection, includeDetails);
 
             EnsureTablePageAllocator();
             report.AddPreAllocatedBuffers(TablePageAllocator, includeDetails);
