@@ -15,9 +15,10 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import moment from "moment";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import RichAlert from "components/common/RichAlert";
+import { components, GroupBase, OptionProps } from "react-select";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
-import RichAlert from "components/common/RichAlert";
 
 type AddAttachmentWithRemoteParametersModalProps = {
     document: KnockoutObservable<document>;
@@ -113,12 +114,12 @@ export default function AddAttachmentWithRemoteParametersModal({
                                 )}
                                 name="identifier"
                                 control={control}
+                                components={{ Option: RemoteAttachmentDestinationOption }}
                             />
-                            {asyncGetRemoteAttachmentParametersConfig.result?.Destinations[selectedDestination]?.Disabled && (
-                                <RichAlert className="mt-2" icon="warning" variant="warning">
-                                    Destination is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the destination is enabled.
-                                </RichAlert>
-                            )}
+                            <RemoteAttachmentWarning
+                                config={asyncGetRemoteAttachmentParametersConfig.result}
+                                selectedDestination={selectedDestination}
+                            />
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Scheduled upload time</FormLabel>
@@ -153,6 +154,31 @@ export default function AddAttachmentWithRemoteParametersModal({
     );
 }
 
+interface RemoteAttachmentWarningProps {
+    config: RemoteAttachmentsStudioConfiguration;
+    selectedDestination: string;
+}
+
+function RemoteAttachmentWarning({ config, selectedDestination }: RemoteAttachmentWarningProps) {
+    if (config?.Disabled) {
+        return (
+            <RichAlert className="mt-2" icon="warning" variant="warning">
+                Remote attachments feature is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the feature is enabled.
+            </RichAlert>
+        );
+    }
+
+    if (config?.Destinations[selectedDestination]?.Disabled) {
+        return (
+            <RichAlert className="mt-2" icon="warning" variant="warning">
+                Destination is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the destination is enabled.
+            </RichAlert>
+        );
+    }
+
+    return null;
+}
+
 const schema = yup.object({
     file: yup.mixed().required("File is required"),
     identifier: yup.string().required("Identifier is required"),
@@ -174,17 +200,7 @@ const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?
     }
     return Object.keys(remoteAttachmentsConfiguration.Destinations).map((destination) => {
         const destinationKey = remoteAttachmentsConfiguration.Destinations[destination];
-        const label = (
-            <span>
-                {destination}
-                {destinationKey.Disabled && (
-                        <PopoverWithHoverWrapper message="Destination is disabled, so it will not be uploaded to the server. Destination must be enabled to do it.">
-                            <Icon icon="warning" color="warning" margin="ms-1" />
-                        </PopoverWithHoverWrapper>
-                )}
-            </span>
-        );
-        return { label, value: destination };
+        return { label: destination, value: destination, disabled: destinationKey.Disabled };
     });
 };
 
@@ -204,4 +220,30 @@ function getDefaultValues(configResult: RemoteAttachmentsStudioConfiguration): A
         uploadDate: new Date(),
         file: null,
     };
+}
+
+interface RemoteAttachmentDestination {
+    value: string;
+    label: string;
+    disabled?: boolean;
+}
+
+type RemoteAttachmentDestinationOptionProps = OptionProps<
+    RemoteAttachmentDestination,
+    false,
+    GroupBase<RemoteAttachmentDestination>
+>;
+
+function RemoteAttachmentDestinationOption(props: RemoteAttachmentDestinationOptionProps) {
+    const { data, label } = props;
+    return (
+        <components.Option {...props}>
+                {label}
+                {data.disabled && (
+                    <PopoverWithHoverWrapper message="Destination is disabled, so it will not be uploaded to the server. Destination must be enabled to do it.">
+                        <Icon icon="warning" color="warning" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                )}
+        </components.Option>
+    );
 }
