@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70852; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70875; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -48,6 +48,9 @@ namespace Sparrow.Server.Platform
             catch (Exception ex)
             {
                 var errString = $"{LIBRVNPAL} version might be invalid, missing or not usable on current platform.";
+                
+                if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    errString += " Try installing KB2999226 from https://support.microsoft.com/en-us/topic/update-for-universal-c-runtime-in-windows-c0514201-7fe6-95a3-b0a5-287930f3560c please.";
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && ex is not IncorrectDllException)
                     errString += 
