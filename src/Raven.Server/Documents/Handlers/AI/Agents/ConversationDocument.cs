@@ -314,13 +314,17 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             };
             tools.Add(context.ReadObject(tool, "tool"));
         }
-        configuration.Actions.Add(new AiAgentToolAction
+
+        if (persistedAttachmentsNames is { Count: > 0 })
         {
-            Name = "__RetrieveAttachment",
-            Description =
-                $"Retrieves one or more attachments by their names. Use this to re-read files. {Environment.NewLine} Available Attachments: {string.Join(", ", persistedAttachmentsNames)}",
-            ParametersSampleObject = "{\"names\": [\"**ATTENTION IMPORTANT INSTRUCTION**: use **ONLY** the names from the tool description\"]}",
-        });
+            configuration.Actions.Add(new AiAgentToolAction
+            {
+                Name = "__RetrieveAttachment",
+                Description =
+                    $"Retrieves one or more attachments by their names. Use this to re-read files. {Environment.NewLine} Available Attachments: {string.Join(", ", persistedAttachmentsNames)}",
+                ParametersSampleObject = "{\"names\": [\"**ATTENTION IMPORTANT INSTRUCTION**: use **ONLY** the names from the tool description\"]}",
+            });
+        }
         foreach (var a in configuration.Actions ?? [])
         {
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
