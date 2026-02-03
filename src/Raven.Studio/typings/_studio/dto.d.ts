@@ -1195,3 +1195,11 @@ interface ValidateDocumentResult {
     Status: ValidateDocumentStatus;
     ErrorMessages?: string[];
 }
+
+type RemoteAttachmentsDestinationStudioConfiguration =
+    Pick<Raven.Client.Documents.Attachments.RemoteAttachmentsDestinationConfiguration, "Disabled">;
+
+type RemoteAttachmentsStudioConfiguration =
+    Pick<Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration, "Disabled"> & {
+        Destinations: Record<string, RemoteAttachmentsDestinationStudioConfiguration>;
+    };

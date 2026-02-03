@@ -147,6 +147,14 @@ public sealed class RemoteAttachmentsDestinationConfiguration : IDynamicJson
         };
     }
 
+    internal DynamicJsonValue ToStudioJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Disabled)] = Disabled
+        };
+    }
+
     internal bool HasUploader()
     {
         if (Disabled)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -188,57 +189,13 @@ if($output.Blocked)
                 {
                     Assert.True(item.ModelOutput.Output.TryGet("Blocked", out bool _));
                     Assert.True(item.ModelOutput.Output.TryGet("Reason", out string _));
-                }
 
-                // assert conversation documents were created
-                foreach (var item in result.Results)
-                {
+                    // assert conversation documents were created
                     var doc = item.ModelOutput.ConversationDocument;
                     Assert.NotNull(doc);
 
-                    Assert.True(doc.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages));
-                    Assert.Equal(4, messages.Length);
-
-                    // prompt message
-                    var msgAsObj = messages[0] as BlittableJsonReaderObject;
-                    Assert.NotNull(msgAsObj);
-                    Assert.True(msgAsObj.TryGet("content", out string content));
-                    Assert.Equal(config.Prompt, content);
-
-                    Assert.True(msgAsObj.TryGet("role", out string role));
-                    Assert.Equal("system", role);
-
-                    // agent parameters message
-                    msgAsObj = messages[1] as BlittableJsonReaderObject;
-                    Assert.NotNull(msgAsObj);
-                    Assert.True(msgAsObj.TryGet("content", out content));
-                    Assert.Contains("AI Agent Parameters", content);
-
-                    Assert.True(msgAsObj.TryGet("role", out role));
-                    Assert.Equal("user", role);
-
-                    // context object message
-                    msgAsObj = messages[2] as BlittableJsonReaderObject;
-                    Assert.NotNull(msgAsObj);
-                    Assert.True(msgAsObj.TryGet("content", out content));
-                    Assert.True(comments.Any(c => content.Contains($"\"Text\":\"{c.Text}\",\"Author\":\"{c.Author}\",\"Id\":\"{c.Id}\"")));
-
-                    Assert.True(msgAsObj.TryGet("role", out role));
-                    Assert.Equal("user", role);
-
-                    // model response message
-                    msgAsObj = messages[3] as BlittableJsonReaderObject;
-                    Assert.NotNull(msgAsObj);
-                    Assert.True(msgAsObj.TryGet("content", out BlittableJsonReaderObject contentObj));
-                   
-                    Assert.True(contentObj.TryGet("Blocked", out bool _));
-                    Assert.True(contentObj.TryGet("Reason", out string _));
-
-                    Assert.True(msgAsObj.TryGet("role", out role));
-                    Assert.Equal("assistant", role);
-
+                    AssertDocument(doc, config, comments);
                 }
-
             }
         }
     }
@@ -255,5 +212,64 @@ if($output.Blocked)
 
         [JsonProperty("content")]
         public JToken Content { get; set; }
+    }
+
+    private static void AssertDocument(BlittableJsonReaderObject document, GenAiConfiguration configuration, List<GenAiBasics.Comment> comments)
+    {
+        try
+        {
+            Assert.True(document.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages));
+            Assert.Equal(4, messages.Length);
+
+            // prompt message
+            var msgAsObj = messages[0] as BlittableJsonReaderObject;
+            Assert.NotNull(msgAsObj);
+            Assert.True(msgAsObj.TryGet("content", out string content));
+            Assert.Equal(configuration.Prompt, content);
+
+            Assert.True(msgAsObj.TryGet("role", out string role));
+            Assert.Equal("system", role);
+
+            // agent parameters message
+            msgAsObj = messages[1] as BlittableJsonReaderObject;
+            Assert.NotNull(msgAsObj);
+            Assert.True(msgAsObj.TryGet("content", out content));
+            Assert.Contains("AI Agent Parameters", content);
+
+            Assert.True(msgAsObj.TryGet("role", out role));
+            Assert.Equal("user", role);
+
+            // context object message
+            msgAsObj = messages[2] as BlittableJsonReaderObject;
+            Assert.NotNull(msgAsObj);
+            Assert.True(msgAsObj.TryGet("content", out content));
+            Assert.True(comments.Any(c => content.Contains($"\"Text\":\"{c.Text}\",\"Author\":\"{c.Author}\",\"Id\":\"{c.Id}\"")));
+
+            Assert.True(msgAsObj.TryGet("role", out role));
+            Assert.Equal("user", role);
+
+            // model response message
+            msgAsObj = messages[3] as BlittableJsonReaderObject;
+            Assert.NotNull(msgAsObj);
+            Assert.True(msgAsObj.TryGet("content", out BlittableJsonReaderObject contentObj));
+
+            Assert.True(contentObj.TryGet("Blocked", out bool _));
+            Assert.True(contentObj.TryGet("Reason", out string _));
+
+            Assert.True(msgAsObj.TryGet("role", out role));
+            Assert.Equal("assistant", role);
+        }
+        catch (Exception e)
+        {
+            var sb = new StringBuilder()
+                .AppendLine("Conversation document assertion failed: unexpected structure or missing/invalid fields.")
+                .AppendLine()
+                .AppendLine("Document:")
+                .AppendLine(document.ToString())
+                .AppendLine("Failure:")
+                .AppendLine(e.Message);
+            
+            Assert.Fail(sb.ToString());
+        }
     }
 }

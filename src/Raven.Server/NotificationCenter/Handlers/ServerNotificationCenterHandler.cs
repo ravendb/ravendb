@@ -9,16 +9,42 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Handlers.Processors;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
+using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
     public sealed class ServerNotificationCenterHandler : ServerNotificationHandlerBase
     {
+        [RavenAction("/admin/server/notifications", "GET", AuthorizationStatus.Operator, SkipUsagesCount = true, IsDebugInformationEndpoint = true)]
+        public async Task GetNotifications()
+        {
+            var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;
+            var type = GetStringQueryString("type", required: false);
+            var start = GetIntValueQueryString("pageStart", required: false) ?? 0;
+            var pageSize = GetIntValueQueryString("pageSize", required: false) ?? int.MaxValue;
+        
+            var filter = NotificationCenterHelper.GetAndEnsureValidTypeParameters(type);
+            var shouldFilter = type != null;
+        
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (ServerStore.NotificationCenter.GetStored(out var storedNotifications, postponed))
+                {
+                    var filteredNotifications = shouldFilter ? NotificationCenterHelper.FilterNotifications(storedNotifications, filter) : storedNotifications;
+
+                    writer.WriteNotifications(filteredNotifications, pageSize, start);
+                }
+            }
+        }
+        
         [RavenAction("/server/notification-center/watch", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {

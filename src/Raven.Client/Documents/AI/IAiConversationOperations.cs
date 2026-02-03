@@ -13,11 +13,13 @@ public interface IAiConversationOperations
     /// Registers an asynchronous handler for an action tool.
     /// </summary>
     /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <typeparam name="TResult">The type of the result returned by the handler.</typeparam>
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
-        where TArgs : class;
+    void Handle<TArgs, TResult>(string actionName, Func<TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class
+        where TResult : class;
 
     /// <summary>
     /// Registers a synchronous handler for an action tool.
@@ -32,11 +34,13 @@ public interface IAiConversationOperations
     /// Registers an asynchronous handler for an action tool.
     /// </summary>
     /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <typeparam name="TResult">The type of the result returned by the handler.</typeparam>
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
-        where TArgs : class;
+    void Handle<TArgs, TResult>(string actionName, Func<AiAgentActionRequest, TArgs, Task<TResult>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class
+        where TResult : class;
 
     /// <summary>
     /// Registers a synchronous handler for an action tool.

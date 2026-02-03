@@ -80,6 +80,7 @@ import saveRemoteAttachmentsConfigurationCommand from "commands/database/setting
 import getSchemaValidationCommand from "commands/database/settings/getSchemaValidationCommand";
 import saveSchemaValidationCommand from "commands/database/settings/saveSchemaValidationCommand";
 import validateSchemaCommand from "commands/database/settings/validateSchemaCommand";
+import getRemoteAttachmentsDestinationsCommand from "commands/database/settings/getRemoteAttachmentsDestinationsCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -376,6 +377,12 @@ export default class DatabasesService {
         ...args: ConstructorParameters<typeof saveRemoteAttachmentsConfigurationCommand>
     ) {
         return new saveRemoteAttachmentsConfigurationCommand(...args).execute();
+    }
+
+    async getRemoteAttachmentsDestinations(
+        ...args: ConstructorParameters<typeof getRemoteAttachmentsDestinationsCommand>
+    ) {
+        return new getRemoteAttachmentsDestinationsCommand(...args).execute();
     }
 
     async getSchemaValidation(...args: ConstructorParameters<typeof getSchemaValidationCommand>) {
