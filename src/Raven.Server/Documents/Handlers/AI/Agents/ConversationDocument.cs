@@ -319,7 +319,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             configuration.Actions.Add(new AiAgentToolAction
             {
-                Name = "__RetrieveAttachment",
+                Name = ChatCompletionClient.Constants.ToolNames.RetrieveAttachment,
                 Description =
                     $"Retrieves one or more attachments by their names. Use this to re-read files. {Environment.NewLine} Available Attachments: {string.Join(", ", persistedAttachmentsNames)}",
                 ParametersSampleObject = "{\"names\": [\"**ATTENTION IMPORTANT INSTRUCTION**: use **ONLY** the names from the tool description\"]}",

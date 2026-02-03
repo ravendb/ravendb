@@ -700,7 +700,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             [nameof(ConversationResult<object>.Response)] = response,
             [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(
                 _document.OpenActionCalls
-                    .Where(t => t.Value.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment, StringComparison.OrdinalIgnoreCase) == false)
+                    .Where(t => t.Value.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
                     .Select(t => t.Value.ToJson())
             ),
             [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson(),

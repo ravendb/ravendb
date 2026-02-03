@@ -5,9 +5,9 @@ import endpoints = require("endpoints");
 class saveSubscriptionTaskCommand extends commandBase {
     private readonly databaseName: string;
     private readonly taskId: number;
-    private readonly payload: Raven.Client.Documents.Subscriptions.ISubscriptionCreationOptions & { Query?: string; };
+    private readonly payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions;
 
-    constructor(db: database | string, payload: Raven.Client.Documents.Subscriptions.ISubscriptionCreationOptions & { Query?: string; },  taskId?: number) {
+    constructor( db: database | string, payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions,  taskId?: number) {
         super();
         this.databaseName = (typeof db === "string" ? db : db.name);
         this.taskId = taskId;
