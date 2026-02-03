@@ -26,6 +26,13 @@ public struct CoraxBooleanItem : IQueryMatch
     public bool IsBoosting => Boosting.HasValue;
     public float? Boosting;
     public long Count { get; }
+
+    /// <summary>
+    /// Indicates if this is a NotEquals operation that can be optimized when combined with AND.
+    /// When true, the caller can use MaterializeNegatedTermMatch to get just the term match
+    /// and combine it with AndNot instead of And(x, AndNot(AllEntries, term)).
+    /// </summary>
+    public bool IsNegated => Operation is UnaryMatchOperation.NotEquals;
     
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => throw new InvalidOperationException($"{nameof(DuplicatesOccurrenceStatus)} should never be used in {nameof(CoraxBooleanItem)}");
 
@@ -84,8 +91,8 @@ public struct CoraxBooleanItem : IQueryMatch
     {
         long timeTicks = 0L;
         var fieldHasTime = index.IndexFieldsPersistence.HasTimeValues(field.FieldName.ToString());
-        var isTimeValue = fieldHasTime 
-                          && term is not null 
+        var isTimeValue = fieldHasTime
+                          && term is not null
                           && QueryBuilderHelper.TryGetTime(index, term, out timeTicks);
         term = isTimeValue ? timeTicks : term;
         
@@ -212,10 +219,32 @@ public struct CoraxBooleanItem : IQueryMatch
                 
             if (Operation is UnaryMatchOperation.NotEquals)
                 match = _indexSearcher.AndNot(_indexSearcher.AllEntries(), match);
-                
+
             return match;
         }
 
+        return MaterializeRangeOrBetween(ref streamingOptimization);
+    }
+
+    /// <summary>
+    /// Materializes only the term match for NotEquals operations, without wrapping in AllEntries.
+    /// This allows the caller to optimize And(X, AndNot(AllEntries, term)) to AndNot(X, term).
+    /// Should only be called when IsNegated is true.
+    /// </summary>
+    public IQueryMatch MaterializeNegatedTermMatch()
+    {
+        Debug.Assert(Operation is UnaryMatchOperation.NotEquals, "MaterializeNegatedTermMatch should only be called for NotEquals operations");
+
+        return Term switch
+        {
+            long l => _indexSearcher.TermQuery(Field, l),
+            double d => _indexSearcher.TermQuery(Field, d),
+            _ => _indexSearcher.TermQuery(Field, TermAsString)
+        };
+    }
+
+    private IQueryMatch MaterializeRangeOrBetween(ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
+    {
         IQueryMatch baseMatch;
         bool streamingEnabled = streamingOptimization.SkipOrderByClause;
         bool forwardIterator = (streamingOptimization is {SkipOrderByClause: true, Forward: false}) == false;
