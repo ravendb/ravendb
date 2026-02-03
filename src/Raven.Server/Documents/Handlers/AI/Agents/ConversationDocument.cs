@@ -349,22 +349,22 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             
             return options.AllowModelQueries.Value;
         }
+    }
 
-        static DynamicJsonValue GetTool(JsonOperationContext context, string name, string description, string paramsSchema)
+    private static DynamicJsonValue GetTool(JsonOperationContext context, string name, string description, string paramsSchema)
+    {
+        var tool = new DynamicJsonValue
         {
-            var tool = new DynamicJsonValue
+            [ChatCompletionClient.Constants.JsonSchemaFields.Type] = "function",
+            [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
             {
-                [ChatCompletionClient.Constants.JsonSchemaFields.Type] = "function",
-                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
-                {
-                    [ChatCompletionClient.Constants.ResponseFields.Name] = name,
-                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
-                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
-                },
-                [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
-            };
-            return tool;
-        }
+                [ChatCompletionClient.Constants.ResponseFields.Name] = name,
+                [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
+                ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+            },
+            [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
+        };
+        return tool;
     }
 
     private static bool TryCreateParameterDescriptionMessage(List<AiAgentParameter> parameters, out string message)

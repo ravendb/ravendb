@@ -15,7 +15,7 @@ public class AiAgentActionRequest : IDynamicJson
     [ForceJsonSerialization]
     internal string SubConversation;
 
-    public bool IsEqual(AiAgentActionRequest other)
+    internal bool IsEqual(AiAgentActionRequest other)
     {
         if (other == null)
             return false;

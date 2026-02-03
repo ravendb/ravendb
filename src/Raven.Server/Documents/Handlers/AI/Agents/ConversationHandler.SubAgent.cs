@@ -1,24 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.Extensions;
-using Raven.Server.Web;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -137,74 +128,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return subAgent;
         }
 
-        private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
-        {
-            IDisposable disposable = null;
-
-            try
-            {
-                disposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-
-                var result = new SubConversationResult(disposable);
-
-                await foreach (var (getRequestResult, i) in ExecuteMultiRequestsAsync(context, new DynamicJsonArray(requests.Select(x => x.Req))))
-                {
-                    var currentCall = requests[i].Call;
-                    var toolCall = FindToolFrom(_configuration, currentCall.Name);
-                    if (toolCall == null)
-                        throw new InvalidOperationException($"Ai-Agent has no tool in name '{currentCall.Name}'");
-
-                    switch (toolCall)
-                    {
-                        case AiAgentToolSubAgent:
-                            try
-                            {
-                                var subAgentResult = getRequestResult.Invoke();
-                                if (TryCloseSubAgentCall(context, conversationId, subAgentResult, currentCall, result) == false)
-                                    return result;
-                            }
-                            catch (Exception e)
-                            {
-                                result.Messages.Add(context.ReadObject(
-                                        new DynamicJsonValue
-                                        {
-                                            ["tool_call_id"] = currentCall.Id,
-                                            ["role"] = "tool",
-                                            ["content"] = "Error has been occurred during the tool call execution: " + e.Message,
-                                            ["subConversation"] = conversationId,
-                                        }, "tool-call/response"));
-                                result.OpenToolCallsToRemove.Add(currentCall.Id);
-                            }
-                            break;
-                        case AiAgentToolQuery:
-                            var requestResult = getRequestResult.Invoke();
-                            if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
-                                throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
-
-                            result.Messages.Add(context.ReadObject(
-                                new DynamicJsonValue
-                                {
-                                    ["tool_call_id"] = currentCall.Id,
-                                    ["role"] = "tool",
-                                    ["content"] = GetToolResultContent(queryResult)
-                                }, "tool-call/response"));
-                            break;
-                        default:
-                            throw new InvalidOperationException(
-                                $"Type mismatch for tool '{currentCall.Name}' in sub-conversation '{conversationId}'. " +
-                                $"Expected type: '{nameof(AiAgentToolSubAgent)}' or '{nameof(AiAgentToolQuery)}', Actual type: '{toolCall.GetType().Name}'.");
-                    }
-                }
-
-                return result;
-            }
-            catch
-            {
-                disposable?.Dispose();
-                throw;
-            }
-        }
-
         private bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
     SubConversationResult result)
         {
@@ -264,46 +187,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     "The existing ActionCall does not match the newly attempted ActionCall insertion.\n" +
                     "If this mismatch is valid, ensure higher-level logic prevents conflicting ActionCalls with the same ToolId."
                 );
-            }
-        }
-
-        private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs)
-        {
-            var multiGetHandler = new MultiGetHandler();
-            multiGetHandler.Init(new RequestHandlerContext
-            {
-                Database = database,
-                RavenServer = server.Server,
-                HttpContext = new DefaultHttpContext()
-            });
-
-            multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
-
-            using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
-            using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
-            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
-            {
-                await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
-                memoryStream.Position = 0;
-                using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
-                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
-                    throw new InvalidOperationException("Missing Results from multi-get reply");
-
-                for (int i = 0; i < results.Length; i++)
-                {
-                    var response = (BlittableJsonReaderObject)results[i];
-                    if (response.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
-                        throw new InvalidOperationException("Missing status code");
-                    if (response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult) is false)
-                        throw new InvalidOperationException("Missing Result from query request output");
-
-                    yield return (() =>
-                    {
-                        if (statusCode != 200)
-                            throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
-                        return requestResult;
-                    }, i);
-                }
             }
         }
 
