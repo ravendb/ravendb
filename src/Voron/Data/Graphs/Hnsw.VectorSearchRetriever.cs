@@ -31,7 +31,7 @@ public partial class Hnsw
         private readonly Memory<byte> _vector;
         private IEnumerator<bool> _resultsEnumerator;
 
-        public SimilarityMethod SimilarityMethod => _searchState.Options.SimilarityMethod;
+        public SimilarityMethod? SimilarityMethod => _searchState?.Options.SimilarityMethod;
         
         public bool IsEmpty => _searchState.IsEmpty;
         
@@ -40,6 +40,8 @@ public partial class Hnsw
         public bool IsSortedByDistance = true;
         
         public int NumberOfCandidates => _vectorsSearcher.NumberOfCandidates;
+
+        public long CandidatesProcessed => _vectorsSearcher?.CandidatesProcessed ?? 0;
         
         public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity)
         {
@@ -61,6 +63,7 @@ public partial class Hnsw
 
         public int Fill(Span<long> matches, Span<float> distances)
         {
+            long newVectorCount = 0;
             if (_vectorsSearcher.TryGetCurrentCandidates(out var indexes) == false)
                 return 0;
 
@@ -106,8 +109,10 @@ public partial class Hnsw
                 var nodeIdx = indexes[_currentNode];
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
-                distance = _searchState.QueryDistance(_vector.Span, nodeIdx);
-
+                
+                distance = _searchState.QueryDistance(_vector.Span, nodeIdx, ref newVectorCount);
+                Debug.Assert(newVectorCount == 0, "newVectorCount == 0");
+                
                 if (distance > _maximumDistance)
                 {
                     _currentNode++;
@@ -148,6 +153,7 @@ public partial class Hnsw
             if (_vectorsSearcher.TryGetCurrentCandidates(out var indexes) == false)
                 return 0;
 
+            long newVectorCount = 0;
             int index = 0;
             float distance = float.NaN;
             while (index < matches.Length && _returnedCandidates < _vectorsSearcher.NumberOfCandidates)
@@ -244,8 +250,10 @@ public partial class Hnsw
                 var nodeIdx = indexes[_currentNode];
                 ref var node = ref _searchState.GetNodeByIndex(nodeIdx);
                 var rawPostingListId = node.PostingListId & Constants.Graphs.VectorId.ContainerType;
-                distance = _searchState.QueryDistance(_vector.Span, nodeIdx);
-
+                
+                distance = _searchState.QueryDistance(_vector.Span, nodeIdx, ref newVectorCount);
+                Debug.Assert(newVectorCount == 0, "newVectorCount == 0");
+                
                 if (distance > _maximumDistance)
                 {
                     _currentNode++;

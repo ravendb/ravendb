@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -99,7 +100,7 @@ public struct VectorSearchMatch : IQueryMatch
             _filterMatchesCount = _filterResults.Count;
         }
         
-        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold);
+        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold, _numberOfCandidates);
         var llt = _indexSearcher._transaction.LowLevelTransaction;
         var vector = _vectorToSearch.GetEmbeddingMemory();
         var fieldName = _metadata.FieldName;
@@ -297,7 +298,12 @@ public struct VectorSearchMatch : IQueryMatch
             parameters: new Dictionary<string, string>()
             {
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
-                { nameof(Hnsw.SimilarityMethod), _vectorSearchRetriever.SimilarityMethod.ToString() },
+                { nameof(Hnsw.SimilarityMethod), _vectorSearchRetriever.SimilarityMethod?.ToString() ?? "Query not initialized." },
+                { "IsExact", _isExact.ToString() },
+                { "IsScanning", _scanningQuery.ToString() },
+                { "Minimum match", _minimumMatch.ToString(CultureInfo.InvariantCulture) },
+                { "Number of candidates", _numberOfCandidates.ToString() },
+                { "Number of candidates scanned", (_vectorSearchRetriever.CandidatesProcessed).ToString()}
             });
     }
 

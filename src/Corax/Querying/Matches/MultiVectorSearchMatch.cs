@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
@@ -80,7 +82,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             _filterMatchesCount = _filterResults.Count;
         }
 
-        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold);
+        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold, _numberOfCandidates);
         ContextBoundNativeList<long> nodesIdsToScan = default;
         if (_scanningQuery)
         {
@@ -255,8 +257,12 @@ public struct MultiVectorSearchMatch : IQueryMatch
         return new QueryInspectionNode(nameof(MultiVectorSearchMatch),
             parameters: new Dictionary<string, string>()
             {
-                { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
-                { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers[0].SimilarityMethod.ToString() },
+                { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },                
+                { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers.FirstOrDefault().SimilarityMethod?.ToString() ?? "Query not initialized." },
+                { "IsExact", _isExact.ToString() },
+                { "IsScanning", _scanningQuery.ToString() },
+                { "Minimum match", _minimumMatch.ToString(CultureInfo.InvariantCulture) },
+                { "Number of candidates", _numberOfCandidates.ToString() },
             });
     }
 

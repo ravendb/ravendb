@@ -21,7 +21,12 @@ public partial class IndexSearcher
 {
     internal static class VectorSearchUtils
     {
-        public static bool ShouldScan(IndexSearcher indexSearcher, long filterMatchesCount, bool isExact, IQueryMatch filterQuery, int scanningThreshold) => filterQuery != null && (filterMatchesCount < scanningThreshold || isExact);
+        public static bool ShouldScan(IndexSearcher indexSearcher, long filterMatchesCount, bool isExact, IQueryMatch filterQuery, int scanningThreshold, int numberOfCandidates)
+        {
+            var shouldScan = filterQuery != null && (filterMatchesCount < scanningThreshold || isExact || filterMatchesCount * 0.5 < numberOfCandidates);
+
+            return shouldScan;
+        }
 
         public static GrowableBitArray LoadFilterMatches(IndexSearcher indexSearcher, ref IQueryMatch query)
         {

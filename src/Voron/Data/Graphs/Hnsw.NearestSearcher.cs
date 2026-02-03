@@ -27,9 +27,9 @@ public partial class Hnsw
             private NativeList<int> _indexes;
             private NativeList<long> _nodeIds;
             private readonly HashSet<int> _alreadyReturnedEdges;
-            private readonly HashSet<int> _candidatesProcessed;
-
-            public long CandidatesProcessed { get => _candidatesProcessed?.Count ?? 0; }
+            private long _vectorReadCounter = 0;
+            
+            public long CandidatesProcessed { get => _vectorReadCounter; }
             
             public int NumberOfCandidates { get; init; }
 
@@ -56,7 +56,6 @@ public partial class Hnsw
                 if (_hasFilterMatch)
                 {
                     _alreadyReturnedEdges = new();
-                    _candidatesProcessed = new();
                 }
             }
 
@@ -70,7 +69,7 @@ public partial class Hnsw
                 Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
                 Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
 
-                float lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex);
+                float lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
                 var visitedCounter = ++_searchState._visitsCounter;
                 {
                     ref var startingPoint = ref _searchState.GetNodeByIndex(_startingPointIndex);
@@ -91,7 +90,6 @@ public partial class Hnsw
 
                 while (candidatesQ.TryDequeue(out var cur, out var curDistance))
                 {
-                    _candidatesProcessed?.Add(cur);
                     if (-curDistance < lowerBound &&
                         nearestEdgesQ.Count == _internalNumberOfCandidates)
                     {
@@ -122,9 +120,9 @@ public partial class Hnsw
                         next.Visited = visitedCounter;
 
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
-                                        || _hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex);
+                                        || (_hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex));
 
-                        float nextDist = -_searchState.QueryDistance(_vector.Span, nextIndex);
+                        float nextDist = -_searchState.QueryDistance(_vector.Span, nextIndex, ref _vectorReadCounter);
                         if (nearestEdgesQ.Count < _internalNumberOfCandidates)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
@@ -196,10 +194,9 @@ public partial class Hnsw
 
                 while (_searchState._nearestEdgesQ.TryDequeue(out var edgeId, out var d))
                 {
-                    // When filtering is enabled, avoid returning the same edge more than once.
-                    Debug.Assert(_hasFilterMatch == false || _alreadyReturnedEdges!.Contains(edgeId) == false);
+                    if (_hasFilterMatch && _alreadyReturnedEdges!.Add(edgeId) == false)
+                        continue;
 
-                    _alreadyReturnedEdges?.Add(edgeId);
                     _candidates.AddUnsafe(edgeId);
                 }
 
@@ -211,29 +208,13 @@ public partial class Hnsw
                 if (_hasFilterMatch == false)
                     return false;
 
-                const int minCount = 1_048_576;
-                const int maxCount = 8_388_608;
-                const float maxFactor = 4;
-                const float minFactor = 1.5f;
-                
-                switch (filterDocsCount)
-                {
-                    case <= minCount:
-                        return filterDocsCount * maxFactor < CandidatesProcessed;
-                    case >= maxCount:
-                        return filterDocsCount * minFactor < CandidatesProcessed;
-                }
-
-
-                var normalized = (filterDocsCount - minCount) / (float)(maxCount - minCount);
-                var t = (MathF.Cos(normalized * MathF.PI) + 1.0f) / 2f;
-                var factor = minFactor + (maxFactor - minFactor) * t;
-                return filterDocsCount * factor < CandidatesProcessed;
+                var nodeVisitLimit = Math.Min(filterDocsCount / 2, _searchState.Options.CountOfVectors / 5);
+                return _vectorReadCounter < nodeVisitLimit;
             }
 
             private static int GetPrefetchExtendSize(int numberOfCandidates) => numberOfCandidates switch
             {
-                <= 131_072 => numberOfCandidates,
+                <= 131_072 =>  numberOfCandidates / 2,
                 _ => (int)Math.Sqrt(131_072L * numberOfCandidates)
             };
 
