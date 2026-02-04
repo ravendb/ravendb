@@ -69,4 +69,15 @@ namespace Raven.Client.Exceptions
     public sealed class TooManyTokensException(string message) : TooManyRequestsException(message)
     {
     }
+
+    public sealed class MissingAiAgentParameterException : RavenException
+    {
+        public MissingAiAgentParameterException(string message) : base(message)
+        {
+        }
+
+        public MissingAiAgentParameterException(string message, Exception e) : base(message, e)
+        {
+        }
+    }
 }

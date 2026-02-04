@@ -66,6 +66,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     throw;
                 }
+                catch (MissingAiAgentParameterException)
+                {
+                    throw;
+                } 
                 catch (Exception e)
                 {
                     throw new AiException($"Failed to 'communicate' with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)

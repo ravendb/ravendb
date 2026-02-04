@@ -54,6 +54,7 @@ const editSchema = yup.object({
                 ),
             description: yup.string().nullable(),
             isSendToModel: yup.boolean(),
+            Policy: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameter.AiAgentParameterPolicy>(),
         })
     ),
 

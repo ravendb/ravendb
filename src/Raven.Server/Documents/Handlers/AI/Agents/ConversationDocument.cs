@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -57,7 +58,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         foreach (var parameter in relevantParameters)
         {
             if (Parameters == null || Parameters.TryGet(parameter.Name, out object _) == false)
-                throw new ArgumentException($"Parameter '{parameter.Name}' is missing.");
+                throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing.");
         }
 
         var promptMessage = configuration.SystemPrompt;
@@ -315,17 +316,23 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             tools.Add(context.ReadObject(tool, "tool"));
         }
 
-        foreach(var subAgent in configuration.SubAgents ?? [])
+        foreach (var subAgent in configuration.SubAgents ?? [])
         {
             AiAgentConfiguration subAgentConfiguration = handler.GetAiAgentConfiguration(subAgent.Identifier);
             var parameters = new Dictionary<string, string>();
-            foreach (AiAgentParameter parameter in configuration.Parameters)
-            {
-                parameters[parameter.Name] = parameter.Description;
-            }
-            // The child parameter description overrides the parent’s, since the description must match the parameter provided to the child.
             foreach (AiAgentParameter parameter in subAgentConfiguration.Parameters ?? [])
             {
+                // when parent parameters have 'InheritFromParent' flag we are passing them as they are
+                // so we don't add it to the sub-agent tool schema
+                // (we copy its value from the parent later -> when we create the request to the sub-agent)
+
+                if (configuration.Parameters.Any(p => p.Name == parameter.Name) &&
+                    parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration) == false)
+                {
+                    // mutual and should be inherited from parent -> skip
+                    continue;
+                }
+
                 parameters[parameter.Name] = parameter.Description;
             }
 

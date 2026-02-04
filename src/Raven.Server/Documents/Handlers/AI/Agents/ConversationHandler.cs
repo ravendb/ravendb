@@ -486,23 +486,6 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return null;
     }
 
-    private static BlittableJsonReaderObject MergeParams(JsonOperationContext context, BlittableJsonReaderObject scopeParameters, BlittableJsonReaderObject callArguments)
-    {
-        if (scopeParameters is null)
-            return callArguments;
-
-        callArguments.Modifications ??= new DynamicJsonValue(callArguments);
-        BlittableJsonReaderObject.PropertyDetails prop = default;
-        for (int i = 0; i < scopeParameters.Count; i++)
-        {
-            // Important: we *override* any parameter from the model with the user provided values
-            // to ensure the safety & security of this feature. Model cannot override those values, period.
-            scopeParameters.GetPropertyByIndex(i, ref prop);
-            callArguments.Modifications[prop.Name] = prop.Value;
-        }
-        return context.ReadObject(callArguments, "call/params");
-    }
-
     public AiAgentConfiguration GetAiAgentConfiguration(string identifier)
     {
         using (server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
@@ -722,6 +705,12 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                             var subAgentResult = getRequestResult.Invoke();
                             if (TryCloseSubAgentCall(context, conversationId, subAgentResult, currentCall, result) == false)
                                 return result;
+                        }
+                        catch (MissingAiAgentParameterException me)
+                        {
+                            // Missing parameter detected in sub-agent execution
+                            // Wrapped to preserve context for nested sub-agent depth (>= 3 levels)
+                            throw new MissingAiAgentParameterException($"Missing parameter on sub-conversation '{conversationId}'", me);
                         }
                         catch (Exception e)
                         {
