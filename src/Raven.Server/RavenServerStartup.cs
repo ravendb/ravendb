@@ -48,7 +48,7 @@ namespace Raven.Server
     {
         private RequestRouter _router;
         private RavenServer _server;
-        private long _requestId;
+        private static long _requestId;
         private readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<RavenServerStartup>();
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
@@ -314,7 +314,7 @@ namespace Raven.Server
         /// <param name="context"></param>
         /// <param name="elapsedMilliseconds"></param>
         /// <param name="database"></param>
-        private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
+        internal static void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
         {
             var requestId = Interlocked.Increment(ref _requestId);
             var contextItem = context.Items["TrafficWatch"];
