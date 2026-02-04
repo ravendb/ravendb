@@ -1341,7 +1341,7 @@ namespace Voron.Data.Tables
         {
             var fst = GetFixedSizeTree(index);
 
-            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount, overallDuration);
+            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount, overallDuration, EstimationAccuracy.EstimateIfLongRunning);
         }
 
         public long GetNumberOfEntriesFor(TableSchema.FixedSizeKeyIndexDef index)
