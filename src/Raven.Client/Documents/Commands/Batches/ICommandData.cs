@@ -49,6 +49,8 @@ namespace Raven.Client.Documents.Commands.Batches
         JsonPatch,
         ClientAnyCommand,
         ClientModifyDocumentCommand,
-        HeartBeat
+        HeartBeat,
+
+        BatchTrackChanges
     }
 }

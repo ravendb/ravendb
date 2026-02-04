@@ -55,22 +55,12 @@ namespace Raven.Client.Documents.Session.Operations
                     _session.DisableAtomicDocumentWritesInClusterWideTransaction);
             }
 
-            return new SingleNodeBatchCommand(_session.Conventions, result.SessionCommands, result.Options);
+            return new SingleNodeBatchWithTrackingCommand(_session.Conventions, result.SessionCommands, result.TrackChangesCommandData, result.Options);
+
         }
 
         public void SetResult(BatchCommandResult result)
         {
-            CommandType GetCommandType(BlittableJsonReaderObject batchResult)
-            {
-                if (batchResult.TryGet(nameof(ICommandData.Type), out string typeAsString) == false)
-                    return CommandType.None;
-
-                if (Enum.TryParse(typeAsString, ignoreCase: true, out CommandType type) == false)
-                    return CommandType.None;
-
-                return type;
-            }
-
             if (result.Results == null) //precaution
             {
                 ThrowOnNullResults();
@@ -86,34 +76,13 @@ namespace Raven.Client.Documents.Session.Operations
                         $"Cluster transaction was send to a node that is not supporting it. So it was executed ONLY on the requested node on {_session.RequestExecutor.Url}.");
             }
 
-            for (var i = 0; i < _sessionCommandsCount; i++)
+            if (result.Results[0] is BlittableJsonReaderObject blittableJsonReaderObject && GetCommandType(blittableJsonReaderObject) == CommandType.BatchTrackChanges)
             {
-                var batchResult = result.Results[i] as BlittableJsonReaderObject;
-                if (batchResult == null)
-                    continue;
-
-                var type = GetCommandType(batchResult);
-
-                switch (type)
-                {
-                    case CommandType.PUT:
-                        HandlePut(i, batchResult, isDeferred: false);
-                        break;
-                    case CommandType.ForceRevisionCreation:
-                        HandleForceRevisionCreation(batchResult);
-                        break;
-                    case CommandType.DELETE:
-                        HandleDelete(batchResult);
-                        break;
-                    case CommandType.CompareExchangePUT:
-                        HandleCompareExchangePut(batchResult);
-                        break;
-                    case CommandType.CompareExchangeDELETE:
-                        HandleCompareExchangeDelete(batchResult);
-                        break;
-                    default:
-                        throw new NotSupportedException($"Command '{type}' is not supported.");
-                }
+                HandleBatchOperationResult(start: 1, result);
+            }
+            else
+            {
+                HandleBatchOperationResult(start: 0, result);
             }
 
             for (var i = _sessionCommandsCount; i < _allCommandsCount; i++)
@@ -171,6 +140,51 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             FinalizeResult();
+        }
+
+        private void HandleBatchOperationResult(int start, BatchCommandResult result)
+        {
+            for (var i = start; i < _sessionCommandsCount; i++)
+            {
+                var batchResult = result.Results[i] as BlittableJsonReaderObject;
+                if (batchResult == null)
+                    continue;
+
+                var type = GetCommandType(batchResult);
+
+                switch (type)
+                {
+                    case CommandType.PUT:
+                        HandlePut(i - start, batchResult, isDeferred: false);
+                        break;
+                    case CommandType.ForceRevisionCreation:
+                        HandleForceRevisionCreation(batchResult);
+                        break;
+                    case CommandType.DELETE:
+                        HandleDelete(batchResult);
+                        break;
+                    case CommandType.CompareExchangePUT:
+                        HandleCompareExchangePut(batchResult);
+                        break;
+                    case CommandType.CompareExchangeDELETE:
+                        HandleCompareExchangeDelete(batchResult);
+                        break;
+       
+                    default:
+                        throw new NotSupportedException($"Command '{type}' is not supported.");
+                }
+            }
+        }
+
+        private CommandType GetCommandType(BlittableJsonReaderObject batchResult)
+        {
+            if (batchResult.TryGet(nameof(ICommandData.Type), out string typeAsString) == false)
+                return CommandType.None;
+
+            if (Enum.TryParse(typeAsString, ignoreCase: true, out CommandType type) == false)
+                return CommandType.None;
+
+            return type;
         }
 
         private void FinalizeResult()

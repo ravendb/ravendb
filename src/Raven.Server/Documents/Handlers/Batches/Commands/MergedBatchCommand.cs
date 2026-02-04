@@ -143,6 +143,15 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     break;
 
+                case CommandType.BatchTrackChanges:
+                    var result = cmd.BatchTrackChangesCommand.ExecuteDirectly(context);
+                    Reply.Add(new DynamicJsonValue
+                    {
+                        [nameof(BatchRequestParser.CommandData.Type)] = cmd.Type,
+                        ["Result"] = result
+                    });
+                    break;
+
                 case CommandType.DELETE:
                     if (cmd.IdPrefixed == false)
                     {

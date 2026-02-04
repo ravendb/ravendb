@@ -34,9 +34,38 @@ namespace Raven.Client.Documents.Commands.Batches
         }
     }
 
+    internal class SingleNodeBatchWithTrackingCommand : SingleNodeBatchCommand
+    {
+        private readonly BatchTrackChangesCommandData _trackChangesCommand;
+
+        public SingleNodeBatchWithTrackingCommand(DocumentConventions conventions,  IList<ICommandData> commands, BatchTrackChangesCommandData trackChangesCommand, 
+            BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode) : base(conventions, commands, options, mode)
+        {
+            _trackChangesCommand = trackChangesCommand;
+        }
+
+        protected override IList<ICommandData> Initialize(IList<ICommandData> commands)
+        {
+            if (_trackChangesCommand == null) 
+                return base.Initialize(commands);
+
+            var cmds = new List<ICommandData>{ _trackChangesCommand };
+            foreach (var command in commands)
+            {
+                HandlePutAttachmentCommandData(command);
+                cmds.Add(command);
+            }
+
+            _commandsAsJson = new BlittableJsonReaderObject[cmds.Count];
+
+            return cmds;
+
+        }
+    }
+
     public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
-        private readonly BlittableJsonReaderObject[] _commandsAsJson;
+        protected BlittableJsonReaderObject[] _commandsAsJson;
         private bool? _supportsAtomicWrites;
         private HashSet<Stream> _uniqueAttachmentStreams;
         private readonly DocumentConventions _conventions;
@@ -56,15 +85,21 @@ namespace Raven.Client.Documents.Commands.Batches
             _options = options;
             _mode = mode;
 
-            _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
+            Timeout = options?.RequestTimeout;
+        }
+
+        protected virtual IList<ICommandData> Initialize(IList<ICommandData> commands)
+        {
+            _commandsAsJson = new BlittableJsonReaderObject[commands.Count];
             foreach (var command in commands)
             {
                 HandlePutAttachmentCommandData(command);
             }
-            Timeout = options?.RequestTimeout;
+
+            return commands;
         }
 
-        private void HandlePutAttachmentCommandData(ICommandData command)
+        protected void HandlePutAttachmentCommandData(ICommandData command)
         {
             if (command is not PutAttachmentCommandData putAttachmentCommandData) 
                 return;
@@ -81,12 +116,16 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            //TODO: egor the best would be to combine the loop in Initialize with if (_supportsAtomicWrites == null)
+            var commands = Initialize(_commands);
+
             if (_supportsAtomicWrites == null)
             {
                 _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
-                for (var i = 0; i < _commands.Count; i++)
+
+                for (var i = 0; i < commands.Count; i++)
                 {
-                    var command = _commands[i];
+                    var command = commands[i];
 
                     var json = command.ToJson(_conventions, ctx);
 

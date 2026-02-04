@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -38,6 +39,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
+    [SuppressMessage("ReSharper", "CanSimplifyDictionaryLookupWithTryAdd")]
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
         internal long _asyncTasksCounter;
@@ -209,6 +211,7 @@ namespace Raven.Client.Documents.Session
             new Dictionary<(string, CommandType, string), ICommandData>();
 
         public readonly bool NoTracking;
+        public readonly TrackingMode TrackingMode;
 
         internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
@@ -235,7 +238,10 @@ namespace Raven.Client.Documents.Session
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
-            NoTracking = options.NoTracking;
+
+            //TODO: egor drop this NoTracking
+            NoTracking = options.TrackingMode == TrackingMode.NoTracking;
+            TrackingMode = options.TrackingMode;
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(DatabaseName, entity));
@@ -650,6 +656,20 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
+
+            if (TrackingMode == TrackingMode.TrackAllEntities)
+            {
+                if (string.IsNullOrEmpty(documentInfo.ChangeVector) == false) // this is tracked in session
+                {
+                    _trackedEntities.Add(id, documentInfo.ChangeVector);
+                }
+                else
+                {
+                    // we are not checking it since this entity is not in session
+                    _trackedEntities.Add(id, null);
+                }
+            }
+
             _countersByDocId?.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector, expectedChangeVector ?? documentInfo?.ChangeVector));
         }
@@ -858,6 +878,11 @@ more responsive application.
             foreach (var deferredCommand in result.DeferredCommands)
                 deferredCommand.OnBeforeSaveChanges(this);
 
+            if (TrackingMode == TrackingMode.TrackAllEntities)
+            {
+                PrepareForEntitiesTrack(result);
+            }
+
             return result;
         }
 
@@ -1027,6 +1052,8 @@ more responsive application.
                 result.OnSuccess.ClearDeletedEntities();
         }
 
+        private readonly Dictionary<string, string> _trackedEntities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
             using (DocumentsByEntity.PrepareEntitiesPuts())
@@ -1041,6 +1068,11 @@ more responsive application.
                     {
                         if (shouldIgnoreEntityChanges(this, entity.Value.Entity, entity.Value.Id))
                             continue;
+                    }
+
+                    if (TrackingMode == TrackingMode.TrackAllEntities)
+                    {
+                        _trackedEntities.Add(entity.Value.Id, entity.Value.ChangeVector);
                     }
 
                     if (IsDeleted(entity.Value.Id))
@@ -1122,6 +1154,32 @@ more responsive application.
                     }
 
                     result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, entity.Value.ChangeVector, document, forceRevisionCreationStrategy));
+                }
+            }
+        }
+
+        private void PrepareForEntitiesTrack(SaveChangesData result)
+        {
+            if (result.SessionCommands.Count > 0 || result.DeferredCommands.Count > 0)
+            {
+                if (_trackedEntities.Any() || _knownMissingIds.Any())
+                {
+                    var batchTrackingEntities = new Dictionary<string, string>(_trackedEntities, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var id in _knownMissingIds)
+                    {
+                        if (batchTrackingEntities.TryGetValue(id, out var cv) == false)
+                        {
+                            batchTrackingEntities.Add(id, string.Empty);
+                        }
+                        else if (cv == null)
+                        {
+                            // this is when we delete by id a document that is not tracked in session
+                            batchTrackingEntities.Remove(id);
+                        }
+                    }
+
+                    result.TrackChangesCommandData = new BatchTrackChangesCommandData(batchTrackingEntities);
                 }
             }
         }
@@ -2382,6 +2440,7 @@ more responsive application.
             public readonly List<ICommandData> DeferredCommands;
             public readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary;
             public readonly List<ICommandData> SessionCommands = new List<ICommandData>();
+            public BatchTrackChangesCommandData TrackChangesCommandData;
             public readonly List<object> Entities = new List<object>();
             public readonly BatchOptions Options;
             internal readonly ActionsToRunOnSuccess OnSuccess;
@@ -2466,7 +2525,8 @@ more responsive application.
 
         protected void UpdateSessionAfterSaveChanges(BatchCommandResult result)
         {
-            var returnedTransactionIndex = result.TransactionIndex;
+            _trackedEntities.Clear();
+             var returnedTransactionIndex = result.TransactionIndex;
             _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
             _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
         }

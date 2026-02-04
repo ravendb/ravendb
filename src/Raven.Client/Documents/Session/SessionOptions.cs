@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Session
@@ -40,6 +41,24 @@ namespace Raven.Client.Documents.Session
         NonTransactionalMultiBucket
     }
 
+    public enum TrackingMode
+    {
+        /// <summary>
+        /// Do not force any behavior from the Client API and rely on Server's default
+        /// </summary>
+        Default,
+
+        /// <summary>
+        /// Disable tracking for all entities in the session<br/>
+        /// </summary>
+        NoTracking,
+
+        /// <summary>
+        /// Enable tracking for all entities in the session<br/>
+        /// </summary>
+        TrackAllEntities
+    }
+
     /// <summary>
     /// Configure the Session's behavior
     /// </summary>
@@ -54,7 +73,14 @@ namespace Raven.Client.Documents.Session
         /// Disable tracking for all entities in the session<br/>
         /// </summary>
         /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.NoTracking"/></remarks>
-        public bool NoTracking { get; set; }
+      //  [Obsolete("This bool is obsolete! Will be removed in next major version of the product! please use `TrackingMode` instead", true)]
+        public bool NoTracking { get => TrackingMode == TrackingMode.NoTracking; set => TrackingMode = TrackingMode.NoTracking; }
+
+        /// <summary>
+        /// Enable tracking for all entities in the session<br/>
+        /// </summary>
+        /// <remarks>For more details visit: <inheritdoc cref="Session.TrackingMode"/></remarks>
+        public TrackingMode TrackingMode { get; set; }
 
         /// <summary>
         /// Disable caching of HTTP responses for the session<br/>

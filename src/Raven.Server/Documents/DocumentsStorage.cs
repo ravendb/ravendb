@@ -903,7 +903,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document>  GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take)
+        public IEnumerable<Document>  GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -922,11 +922,11 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     continue; // we need to calculate totalCount correctly
 
-                yield return TableValueToDocument(context, ref reader);
+                yield return TableValueToDocument(context, ref reader, fields);
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
@@ -935,7 +935,7 @@ namespace Raven.Server.Documents
                 listOfIds.Add(slice);
             }
 
-            return GetDocuments(context, listOfIds, start, take);
+            return GetDocuments(context, listOfIds, start, take, fields);
         }
 
         public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take)
