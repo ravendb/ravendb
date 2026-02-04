@@ -389,7 +389,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             args.Modifications[prop.Name] = prop.Value;
         }
 
-        return args;
+        return context.ReadObject(args, "args");
     }
 
     public AiConnectionString GetAiConnectionString()
