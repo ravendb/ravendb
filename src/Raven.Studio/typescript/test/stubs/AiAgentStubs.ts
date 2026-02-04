@@ -55,7 +55,7 @@ export class AiAgentStubs {
                         {
                             Name: "company",
                             Description: null,
-                            Policy: "None"
+                            Policy: "Default"
                         },
                     ],
                     ChatTrimming: null,

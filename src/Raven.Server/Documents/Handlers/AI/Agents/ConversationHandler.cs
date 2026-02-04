@@ -706,11 +706,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                             if (TryCloseSubAgentCall(context, conversationId, subAgentResult, currentCall, result) == false)
                                 return result;
                         }
-                        catch (MissingAiAgentParameterException me)
+                        catch (MissingAiAgentParameterException)
                         {
                             // Missing parameter detected in sub-agent execution
-                            // Wrapped to preserve context for nested sub-agent depth (>= 3 levels)
-                            throw new MissingAiAgentParameterException($"Missing parameter on sub-conversation '{conversationId}'", me);
+                            throw;
                         }
                         catch (Exception e)
                         {

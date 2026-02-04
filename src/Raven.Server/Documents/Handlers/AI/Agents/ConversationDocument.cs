@@ -320,20 +320,27 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             AiAgentConfiguration subAgentConfiguration = handler.GetAiAgentConfiguration(subAgent.Identifier);
             var parameters = new Dictionary<string, string>();
-            foreach (AiAgentParameter parameter in subAgentConfiguration.Parameters ?? [])
-            {
-                // when parent parameters have 'InheritFromParent' flag we are passing them as they are
-                // so we don't add it to the sub-agent tool schema
-                // (we copy its value from the parent later -> when we create the request to the sub-agent)
 
-                if (configuration.Parameters.Any(p => p.Name == parameter.Name) &&
-                    parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration) == false)
+            // We only add what the sub-agent has that the root agent doesn't have
+            // the mutual params will be added to the request when we create it
+            foreach (var parameter in subAgentConfiguration.Parameters ?? [])
+            {
+                if (configuration.Parameters?.Any(p => p.Name == parameter.Name) == true)
                 {
-                    // mutual and should be inherited from parent -> skip
+                    // parents has this parameter -> we copy its value from the parent later -> when we create the request to the sub-agent
                     continue;
                 }
 
-                parameters[parameter.Name] = parameter.Description;
+                if (parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration))
+                {
+                    // the parent doesn't have this parameter BUT it's allowed to be generated -> we add it to the tool schema
+                    parameters[parameter.Name] = parameter.Description;
+                    continue;
+                }
+
+                throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing from the parent scope." + 
+                                                           " To allow the root agent to generate this value dynamically, " + 
+                                                           "set the 'AllowedModelGeneration' flag to true in the sub-agent parameter policy.");
             }
 
             var argsSampleObject = DynamicJsonValue.Convert(parameters);

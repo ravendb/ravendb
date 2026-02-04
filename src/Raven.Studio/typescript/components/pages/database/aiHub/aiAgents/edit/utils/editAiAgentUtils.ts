@@ -45,7 +45,7 @@ function mapFromDto(
                 name: x.Name,
                 description: x.Description,
                 isSendToModel: x.SendToModel ?? true,
-                Policy: x.Policy ?? "None",
+                Policy: x.Policy ?? "Default",
             })) ?? [],
         queries:
             dto.Queries?.map((x) => ({

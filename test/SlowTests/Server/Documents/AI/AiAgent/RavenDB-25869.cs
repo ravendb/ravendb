@@ -4,10 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -62,7 +59,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     }
                 }
             };
-            changeUserNameAgent.Parameters.Add(new AiAgentParameter("userId", "The id of the user whose name should be changed"));
+            changeUserNameAgent.Parameters.Add(new AiAgentParameter("userId", "The id of the user whose name should be changed", 
+                AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
             var changeUserNameAgentId = (await store.AI.CreateAgentAsync(changeUserNameAgent, MoviesSampleObject.Instance)).Identifier;
 
 
@@ -82,7 +80,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     }
                 ]
             };
-            userProfileAgent.Parameters.Add(new AiAgentParameter("userId", "The current user id"));
+            userProfileAgent.Parameters.Add(new AiAgentParameter("userId", "The current user id",
+                AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
             var userProfileAgentId = (await store.AI.CreateAgentAsync(userProfileAgent, MoviesSampleObject.Instance)).Identifier;
 
             var chat = store.AI.Conversation(userProfileAgentId, "chats/1",
@@ -238,6 +237,80 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             chat.SetUserPrompt("change my name from 'Shahar' to 'Aviv'");
             await Assert.ThrowsAsync<MissingAiAgentParameterException>(() => chat.RunAsync<MoviesSampleObject>());
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ThreeLevelsOfNesting(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+            await RavenDB_24887_2.CreateMoviesDatabase(store);
+
+            var userAgent3 = new AiAgentConfiguration("user-info-agent-3",
+                config.ConnectionStringName,
+                "Your role responsibility is to provide the user's name when requested."
+            )
+            {
+                Queries = new List<AiAgentToolQuery>()
+            {
+                new AiAgentToolQuery
+                {
+                    Name = "GetUserName",
+                    Description = "Get the user name",
+                    Query = "from Users " +
+                            "where id() = $userId " +
+                            "select Name",
+                    ParametersSampleObject = "{}"
+                },
+            }
+            };
+            userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var userAgent3Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent3, MoviesSampleObject.Instance)).Identifier;
+
+
+            var userAgent2 = new AiAgentConfiguration("user-info-agent-2",
+                config.ConnectionStringName,
+                "Your role responsibility is to provide the user's name when requested."
+            )
+            {
+                SubAgents =
+                [
+                    new AiAgentToolSubAgent
+                {
+                    Identifier = userAgent3Id,
+                    Description = "Use to ask about user name."
+                }
+                ]
+            };
+            userAgent2.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with", sendToModel: false));
+            var userAgent2Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent2, MoviesSampleObject.Instance)).Identifier;
+
+
+            var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
+                config.ConnectionStringName,
+                "Your role responsibility is to provide the user's name when requested."
+            )
+            {
+                SubAgents =
+                [
+                    new AiAgentToolSubAgent
+                {
+                    Identifier = userAgent2Id,
+                    Description = "Use to ask about user name."
+                }
+                ]
+            };
+            userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
+            var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
+
+            var chat = store.AI.Conversation(userAgent1Id, "chats/1",
+                new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
+            chat.SetUserPrompt("Whats my name?");
+            var r = await chat.RunAsync<MoviesSampleObject>();
+            Assert.NotNull(r.Answer);
+            Assert.Contains("shahar", r.Answer.Answer.ToLower());
+            Assert.Equal(AiConversationResult.Done, r.Status);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]

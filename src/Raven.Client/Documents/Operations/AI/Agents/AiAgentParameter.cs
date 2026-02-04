@@ -105,7 +105,7 @@ public class AiAgentParameter : IDynamicJson
     /// with the same name, the parent does not generate a new value for the sub-agent; the parent's value is passed
     /// to the sub-agent as-is.
     /// </remarks>
-    public AiAgentParameterPolicy Policy { get; set; } = AiAgentParameterPolicy.None;
+    public AiAgentParameterPolicy Policy { get; set; } = AiAgentParameterPolicy.Default;
 
     public DynamicJsonValue ToJson()
     {
@@ -121,7 +121,7 @@ public class AiAgentParameter : IDynamicJson
     [Flags]
     public enum AiAgentParameterPolicy
     {
-        None = 0,
+        Default = 0,
         AllowedModelGeneration = 1
     }
 }
