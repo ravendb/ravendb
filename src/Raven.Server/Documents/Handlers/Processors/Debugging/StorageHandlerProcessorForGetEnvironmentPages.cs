@@ -171,7 +171,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         foreach (var page in sparse)
         {
             if (page >= totalPages)
-                continue; // race betwee starting this check and the file growing, probably
+                continue; // race between starting this check and the file growing, probably
 
             if (pages[page] != "Freed Page")
             {

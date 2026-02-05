@@ -620,7 +620,7 @@ public unsafe partial class Pager : IDisposable
         {
             var rc = Pal.rvn_pager_get_next_sparse_region(state.Handle, offset, out var start, out var size, out var errorCode);
             if (rc is not PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(rc, errorCode, "Failed to get sprase regions for " + state.Pager.FileName);
+                PalHelper.ThrowLastError(rc, errorCode, "Failed to get sparse regions for " + state.Pager.FileName);
 
             if (size == -1 && start == -1)
                 break;
