@@ -1243,7 +1243,7 @@ namespace Voron
             {
                 if (r.TryAdd(activeDataSmallSection.PageNumber, prefix + "/header") is false)
                 {
-                    throw new ArgumentException($"{activeDataSmallSection.PageNumber} already exist as '{r[activeDataSmallSection.PageNumber]}' but tried ot add it to '{prefix}/header'");
+                    throw new ArgumentException($"{activeDataSmallSection.PageNumber} already exist as '{r[activeDataSmallSection.PageNumber]}' but tried to add it to '{prefix}/header'");
                 }
 
                 for (long page = 0; page < activeDataSmallSection.NumberOfPages; page++)

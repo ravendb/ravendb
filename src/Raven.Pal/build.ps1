@@ -89,7 +89,7 @@ $NuspecVersion = "$($PalVerStr[0]).$($PalVerStr[1]).$([convert]::ToInt32($PalVer
 $PalNuspec = $PalNuspec.Replace("NUGET_PACKAGE_VERSION", $NuspecVersion)
 Set-Content artifacts/pal.nuspec  -Value $PalNuspec
 
-# dummy project, required to have donet pack working
+# dummy project, required to have dotnet pack working
 Set-Content artifacts/project.csproj -Value "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><TargetFramework>netstandard2.0</TargetFramework></PropertyGroup></Project>"
 
 Set-Location artifacts
