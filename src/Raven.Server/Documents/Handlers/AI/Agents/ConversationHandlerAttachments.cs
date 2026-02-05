@@ -43,7 +43,16 @@ internal static class ConversationHandlerAttachments
 
         if (attachment == null)
         {
-            return $"Error: Attachment '{fileName}' not found in conversation '{conversationId}'";
+            request.Attachments ??= new List<AiAttachment>();
+            request.Attachments.Add(new AiAttachment
+            {
+                Name = fileName,
+                Type = ChatCompletionClient.Constants.AttachmentsRequestFields.MediaTypeApplicationPdf,
+                Data = string.Empty,
+                Source = AiAttachmentSource.NotFound
+            });
+
+            return $"Attachment: {fileName}";
         }
 
         var base64 = GetAttachmentDataAsBase64(attachment);
@@ -98,7 +107,7 @@ internal static class ConversationHandlerAttachments
 
         foreach (var call in toolCalls)
         {
-            if (string.Equals(call.Name, ChatCompletionClient.Constants.ToolNames.RetrieveAttachment))
+            if (call.IsInternalToolCall())
                 return true;
         }
 
@@ -116,7 +125,7 @@ internal static class ConversationHandlerAttachments
     {
         foreach (var call in toolCalls)
         {
-            if (string.Equals(call.Name, ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
+            if (call.IsInternalToolCall() == false)
                 continue;
 
             var result = new List<string>();

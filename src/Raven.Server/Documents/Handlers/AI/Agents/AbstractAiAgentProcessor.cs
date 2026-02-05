@@ -134,14 +134,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             DatabaseBatchCommandsReader commandsReader,
             CancellationToken token)
         {
-            var requestBody = await ParseMultipart(commandsReader, context, RequestHandler.RequestBodyStream(), contentType, RequestHandler.IdentityPartsSeparator, token);
+            var requestBody = await ParseMultipartAsync(commandsReader, context, RequestHandler.RequestBodyStream(), contentType, RequestHandler.IdentityPartsSeparator, token);
 
             requestBody.AttachmentCommands = await commandsReader.GetCommandAsync(null);
 
             return requestBody;
         }
 
-        public async Task<RequestBody> ParseMultipart(DatabaseBatchCommandsReader commandsReader, JsonOperationContext context, Stream stream, string contentType, char separator, CancellationToken token)
+        public async Task<RequestBody> ParseMultipartAsync(DatabaseBatchCommandsReader commandsReader, JsonOperationContext context, Stream stream, string contentType, char separator, CancellationToken token)
         {
             var boundary = MultipartRequestHelper.GetBoundary(
                 MediaTypeHeaderValue.Parse(contentType),

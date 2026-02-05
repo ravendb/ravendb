@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Exceptions.Documents.Attachments;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -96,13 +97,37 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
             chat.SetUserPrompt("What is in this image?");
-            chat.CopyAttachmentFrom("heart.png", sourceDocId);
+            chat.CopyAttachmentFrom(sourceDocId, "heart.png");
             await chat.RunAsync<OutputSchema>(CancellationToken.None);
             chat.AddUserPrompt("what images do you have uploaded?");
             var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             Assert.Contains("heart", result.Answer.Answer);
             Assert.Equal(AiConversationResult.Done, result.Status);
             Assert.NotNull(result.Answer);
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CopiedAttachmentWithMissingAttachments(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            var agent = new AiAgentConfiguration("image-analyzer", config.ConnectionStringName,
+                "You are my friend have a chat with me");
+            agent.Identifier = "image-analyzer";
+            agent.Parameters.Add(new AiAgentParameter("company", "The company ID"));
+
+            await store.AI.CreateAgentAsync(agent, new OutputSchema());
+
+            string sourceDocId = "docs/1";
+
+            var chat = store.AI.Conversation(agent.Identifier, "chats/", new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
+
+            chat.SetUserPrompt("What is in this image?");
+            chat.CopyAttachmentFrom(sourceDocId, "hearts.png");
+            await Assert.ThrowsAsync<AttachmentDoesNotExistException>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -271,6 +296,3 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
     }
 }
-
-
-

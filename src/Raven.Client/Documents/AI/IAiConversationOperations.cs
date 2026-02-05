@@ -248,15 +248,15 @@ public interface IAiConversationOperations
     /// Adds a file attachment as a stream to the conversation turn.
     /// </summary>
     /// <param name="stream">The data stream of the file.</param>
-    /// <param name="mimeType">The MIME media type of the attachment content (e.g. image/png).</param>
-    void AddAttachment(Stream stream, string mimeType);
+    /// <param name="contentType">The MIME media type of the attachment content (e.g. image/png).</param>
+    void AddAttachment(Stream stream, string contentType);
 
     /// <summary>
     /// Copies an existing attachment from a document in RavenDB into the conversation context.
     /// </summary>
-    /// <param name="fileName">The name to assign to the file in the conversation context.</param>
     /// <param name="sourceDocumentId">The ID of the document in RavenDB that contains the attachment.</param>
-    void CopyAttachmentFrom(string fileName, string sourceDocumentId);
+    /// <param name="fileName">The name to assign to the file in the conversation context.</param>
+    void CopyAttachmentFrom(string sourceDocumentId, string fileName);
 
     /// <summary>
     /// This is called if the model invoked an action that has no register handler using

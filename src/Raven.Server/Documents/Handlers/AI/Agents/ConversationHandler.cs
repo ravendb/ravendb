@@ -29,7 +29,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
-using static Raven.Server.Documents.Handlers.AI.Agents.ConversationDocument;
 using GetRequest = Raven.Client.Documents.Commands.MultiGet.GetRequest;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
@@ -102,7 +101,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
         else
         {
-            _document = ToDocument(_conversationId, conversation.Data, _configuration);
+            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
 
             if (_document.Agent != agentId)
             {
@@ -126,7 +125,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
 
-        if (_request.AttachmentCommands is not null)
+        if (_request.AttachmentCommands.ParsedCommands is { Count: >0})
         {
             using var it = _request.AttachmentCommands.AttachmentStreams?.GetEnumerator() ?? default;
 
@@ -404,7 +403,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         foreach (var openActionCall in _document.OpenActionCalls)
         {
-            if (openActionCall.Value.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
+            if (openActionCall.Value.IsInternalToolCall() == false)
             {
                 return true; //we have at least one user tool to handle
             }
@@ -594,7 +593,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 if (_document.OpenActionCalls.TryGetValue(t.ToolId, out var openCall) == false)
                     throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{_conversationId}'");
 
-                if (openCall.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment))
+                if (openCall.IsInternalToolCall())
                 {
                     continue;
                 }
@@ -623,7 +622,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         {
             foreach (var openCall in _document.OpenActionCalls.Values)
             {
-                if (openCall.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
+                if (openCall.IsInternalToolCall() == false)
                 {
                     // We have pending tool-call results from the user;
                     // skip reduction - persist the document now without history,
@@ -700,7 +699,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             [nameof(ConversationResult<object>.Response)] = response,
             [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(
                 _document.OpenActionCalls
-                    .Where(t => t.Value.Name.Equals(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
+                    .Where(t => t.Value.IsInternalToolCall() == false)
                     .Select(t => t.Value.ToJson())
             ),
             [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson(),

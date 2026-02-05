@@ -230,7 +230,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                     {
                         PutAttachmentCommandHelper.PrepareStream(stream);
                         var streamContent = new AttachmentStreamContent(stream, CancellationToken);
-                        streamContent.Headers.TryAddWithoutValidation("Command-Type", "AttachmentStream");
+                        streamContent.Headers.TryAddWithoutValidation(Constants.Headers.CommandType, Constants.Headers.AttachmentStream);
                         multipartContent.Add(streamContent);
                     }
                 }

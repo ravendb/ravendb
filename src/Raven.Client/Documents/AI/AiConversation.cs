@@ -48,17 +48,18 @@ internal class AiConversation : IAiConversationOperations
         _changeVector = changeVector;
     }
     
-    public void AddAttachment(Stream stream, string mimeType)
+    public void AddAttachment(Stream stream, string contentType)
     {
         if (stream == null)
             throw new ArgumentNullException(nameof(stream));
 
-        var fileName = Guid.NewGuid().ToString();
-        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", fileName, stream, mimeType, changeVector: string.Empty));
+        var fileName = Guid.NewGuid().ToString(); //do we want an ending?
+        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", fileName, stream, contentType, changeVector: string.Empty));
     }
 
-    public void CopyAttachmentFrom(string fileName, string sourceDocumentId)
+    public void CopyAttachmentFrom(string sourceDocumentId, string fileName)
     {
+        ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
         ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
         ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
 
@@ -299,8 +300,7 @@ internal class AiConversation : IAiConversationOperations
                 Status = AiConversationResult.Done
             };
         }
-
-var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback);
 
         try
         {
