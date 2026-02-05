@@ -1,21 +1,24 @@
 import useBoolean from "components/hooks/useBoolean";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { Icon } from "components/common/Icon";
 import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import RichAlert from "../RichAlert";
 import { aiAssistantActions, aiAssistantSelectors } from "../shell/aiAssistantSlice";
 import { aiAssistantConstants } from "./aiAssistantConstants";
 import { AiAssistantEulaModal } from "./AiAssistantEulaModal";
+import IconAsciiPlaceholder from "components/shell/chatbot/partials/askAi/iconAscii/IconAsciiPlaceholder";
+import classNames from "classnames";
 
 interface AiAssistantConsentStatusCheckerProps {
     className?: string;
     onConsentGiven?: () => void;
+    showAsciiIcon?: boolean;
 }
 
 export default function AiAssistantConsentStatusChecker({
     className,
     onConsentGiven,
+    showAsciiIcon = false,
 }: AiAssistantConsentStatusCheckerProps) {
     const dispatch = useAppDispatch();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
@@ -49,11 +52,13 @@ export default function AiAssistantConsentStatusChecker({
                         <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>
                     )}
                     {consentStatus.data === "ConsentRequired" && (
-                        <div>
-                            To use our built-in AI features, such as <i>AI Assistant</i>, you need to provide consent.
-                            <br />
-                            The feature will remain unavailable until accepted.
-                            <div className="hstack justify-content-end mt-3">
+                        <div className={classNames(showAsciiIcon && "vstack justify-content-center p-4 text-center")}>
+                            {showAsciiIcon && <IconAsciiPlaceholder />}
+                            <p className={classNames("mb-0", showAsciiIcon && "mt-2")}>
+                                To use our built-in AI features, such as <em>AI Assistant</em>, you need to provide
+                                consent. The feature will remain unavailable until accepted.
+                            </p>
+                            <div className={classNames(showAsciiIcon ? "mt-3 justify-content-center" : "hstack mt-2")}>
                                 <Button variant="primary" className="rounded-pill" onClick={toggleEulaOpen}>
                                     Review the consent
                                 </Button>

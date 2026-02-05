@@ -133,7 +133,12 @@ function AgentMessageBody({ message }: AgentMessageProps) {
     }
 
     if (message.state === "ConsentRequired") {
-        return <AiAssistantConsentStatusChecker onConsentGiven={() => dispatch(chatbotActions.retryRunChat())} />;
+        return (
+            <AiAssistantConsentStatusChecker
+                onConsentGiven={() => dispatch(chatbotActions.retryRunChat())}
+                showAsciiIcon
+            />
+        );
     }
 
     if (message.state === "RequestTooLarge" || message.state === "Aborted" || message.state === "InternalError") {

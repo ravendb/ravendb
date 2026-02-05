@@ -131,7 +131,19 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                                     label={
                                         <>
                                             Consent
-                                            <PopoverWithHoverWrapper message="To use our built-in AI features, such as AI Assistant, you need to provide consent. If you do not accept, the feature will remain unavailable until you do.">
+                                            <PopoverWithHoverWrapper
+                                                message={
+                                                    <span>
+                                                        To use AI Assistant, you need to accept the Terms of Use.{" "}
+                                                        {aiAssistantConsentStatus.data === "Success" && (
+                                                            <span>
+                                                                If you wish to withdraw the consent, please contact
+                                                                support.
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                }
+                                            >
                                                 <Icon icon="info-new" margin="ms-1" />
                                             </PopoverWithHoverWrapper>
                                         </>

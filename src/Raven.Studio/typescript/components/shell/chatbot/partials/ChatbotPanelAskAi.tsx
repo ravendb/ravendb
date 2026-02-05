@@ -27,7 +27,11 @@ export default function ChatbotPanelAskAi() {
                     messagesCount !== 0 && "d-none"
                 )}
             >
-                <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
+                <AiAssistantConsentStatusChecker
+                    className="p-2 flex-grow"
+                    onConsentGiven={onConsentGiven}
+                    showAsciiIcon
+                />
                 <ChatbotAskAiWelcome />
             </div>
             {isConsentSuccess && (

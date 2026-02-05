@@ -117,7 +117,7 @@ export default function AiAssistantWindow({
             <div className="ai-assistant-window-inner p-2 rounded-2">
                 <div className="hstack justify-content-between align-items-center mb-2">
                     <div>
-                        <Icon icon="ai-assistant" />
+                        <Icon icon="ask-ai" />
                         AI Assistant
                     </div>
                     <Button variant="link" className="text-reset" onClick={handleClose} size="sm">
@@ -135,13 +135,13 @@ export default function AiAssistantWindow({
                 <AiAssistStatus status={assistResult.data?.Status} />
                 {assistResult.data?.Status === "Success" && (
                     <div>
-                        <div className="mb-2">{successMessage}</div>
                         <Form.Control
                             value={refinedPromptTypewriter}
                             readOnly
                             as="textarea"
-                            className="refined-prompt-textarea mb-2"
+                            className="refined-prompt-textarea"
                         />
+                        <small className="text-muted">{successMessage}</small>
                         <div className="hstack gap-2 justify-content-end">
                             <Button variant="secondary" className="rounded-pill" onClick={handleClose}>
                                 <Icon icon="cancel" />

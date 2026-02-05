@@ -7,12 +7,13 @@ export default function ChatbotPanelConsent() {
             <IconAsciiPlaceholder />
             <h3 className="mt-4 mb-0 fw-semibold">AI Assistant</h3>
             <div className="mt-2">
-                To use our built-in AI features, such as <i>AI Assistant</i>, you need to provide consent.
+                The built-in AI Assistant is designed to supercharge your workflow. To enable this feature, please
+                review and accept the Terms of Use.
                 <br />
                 The feature will remain unavailable until accepted.
                 <div className="mt-3">
                     <Button variant="primary" className="rounded-pill">
-                        Review the consent
+                        Review Terms of Use
                     </Button>
                 </div>
             </div>
