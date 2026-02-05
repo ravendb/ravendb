@@ -5,11 +5,13 @@ import AiAssistantConsentStatusChecker from "components/common/aiAssistant/AiAss
 import ChatbotAskAiWelcome from "./askAi/ChatbotAskAiWelcome";
 import ChatbotAskAiPromptPanel from "components/shell/chatbot/partials/askAi/ChatbotAskAiPromptPanel";
 import classNames from "classnames";
+import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
 
 export default function ChatbotPanelAskAi() {
     const dispatch = useAppDispatch();
     const lastRunData = useAppSelector(chatbotSelectors.lastRunData);
     const messagesCount = useAppSelector(chatbotSelectors.messagesCount);
+    const isConsentSuccess = useAppSelector(aiAssistantSelectors.isConsentSuccess);
 
     const onConsentGiven = () => {
         if (lastRunData) {
@@ -28,8 +30,12 @@ export default function ChatbotPanelAskAi() {
                 <AiAssistantConsentStatusChecker className="p-2 flex-grow" onConsentGiven={onConsentGiven} />
                 <ChatbotAskAiWelcome />
             </div>
-            <ChatbotMessages />
-            <ChatbotAskAiPromptPanel />
+            {isConsentSuccess && (
+                <>
+                    <ChatbotMessages />
+                    <ChatbotAskAiPromptPanel />
+                </>
+            )}
         </div>
     );
 }
