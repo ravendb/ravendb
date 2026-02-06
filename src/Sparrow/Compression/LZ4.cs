@@ -323,8 +323,8 @@ namespace Sparrow.Compression
                         }
                         else if (typeof(TTableType) == typeof(ByU32))
                         {
-                            ulong value = (*((ulong*)forwardIp) * prime5bytes >> (40 - ByU32HashLog));
-                            forwardH = (int)(value & ByU32HashMask);
+                            ulong value = (*(ulong*)forwardIp << 24) * prime5bytes >> (64 - ByU32HashLog);
+                            forwardH = (int)value;
                             ctx->hashTable[h] = (int)(ip - @base);
                         }
                         else throw new NotSupportedException("TTableType directive is not supported.");
@@ -869,9 +869,9 @@ namespace Sparrow.Compression
                     /* --- copy match within block (fast loop) --- */
                     cpy = op + length;
 
-                    if (offset < 8)
+                    if (offset < 16)
                     {
-                        CopySmallOffset(op, match, cpy, offset);
+                        CopyWithOverlap(op, match, cpy, offset);
                     }
                     else
                     {
@@ -1198,7 +1198,32 @@ namespace Sparrow.Compression
         }
 
         /// <summary>
-        /// v1.9.0: Optimized copy for small offsets (1, 2, 4).
+        /// Copy match data for offsets &lt; 16 where source and destination overlap.
+        /// For offset &lt; 8: pattern-based or table-based copy (avoids load-blocked-by-store hazards).
+        /// For offset 8-15: 8-byte copy + WildCopy8 (safe because each 8-byte read is from already-written data).
+        /// WildCopy32 cannot be used here because its 16-byte Vector128 loads would read unwritten output.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void CopyWithOverlap(byte* op, byte* match, byte* cpy, int offset)
+        {
+            if (offset < 8)
+            {
+                CopySmallOffset(op, match, cpy, offset);
+            }
+            else
+            {
+                // Offset 8-15: straight 8-byte copy establishes the base,
+                // then WildCopy8 (8-byte steps) is overlap-safe since offset >= 8.
+                *((ulong*)op) = *(ulong*)match;
+                op += 8;
+                match += 8;
+                if (op < cpy)
+                    WildCopy8(op, match, cpy);
+            }
+        }
+
+        /// <summary>
+        /// Optimized copy for small offsets (1, 2, 4).
         /// For these offsets, we build an 8-byte pattern and use pattern repetition
         /// instead of overlapped byte-by-byte copies. This avoids load-blocked-by-store
         /// hazards that occur when reading from recently written memory locations.
