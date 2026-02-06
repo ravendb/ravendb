@@ -245,8 +245,8 @@ namespace Sparrow.Compression
 
                         if (typeof(TTableType) == typeof(ByU16))
                         {
-                            ulong value = *((ulong*)forwardIp) * prime5bytes >> (40 - ByU16HashLog);
-                            forwardH = (int)(value & ByU16HashMask);
+                            uint value = *((uint*)forwardIp) * prime4bytes >> ((MINMATCH * 8) - ByU16HashLog);
+                            forwardH = (int)value;
                             ((ushort*)ctx->hashTable)[h] = (ushort)(ip - @base);
                         }
                         else if (typeof(TTableType) == typeof(ByU32))
@@ -506,13 +506,16 @@ namespace Sparrow.Compression
         {
             if (typeof(TTableType) == typeof(ByU16))
             {
-                ulong value = *((ulong*)sequence) * prime5bytes >> (40 - ByU16HashLog);
-                return (int)(value & ByU16HashMask);
+                // v1.7.3: Use 4-byte read and 4-byte prime for small hash tables
+                // This is faster than 8-byte read for small data compression
+                uint value = *((uint*)sequence) * prime4bytes >> ((MINMATCH * 8) - ByU16HashLog);
+                return (int)value;
             }
             else if (typeof(TTableType) == typeof(ByU32))
             {
-                ulong value = (*((ulong*)sequence) * prime5bytes >> (40 - ByU32HashLog));
-                return (int)(value & ByU32HashMask);
+                // v1.7.3: Use 5-byte prime with improved shift calculation for 64-bit
+                ulong value = (*(ulong*)sequence << 24) * prime5bytes >> (64 - ByU32HashLog);
+                return (int)value;
             }
 
             return ThrowException<int>(new NotSupportedException("TTableType directive is not supported."));
@@ -536,6 +539,8 @@ namespace Sparrow.Compression
         private const int ByU32HashLog = LZ4_HASHLOG;
         private const ulong ByU32HashMask = (1 << ByU32HashLog) - 1;
 
+        // v1.7.3: Use 4-byte prime for ByU16 (small hash table), 5-byte prime for ByU32
+        private const uint prime4bytes = 2654435761U;
         private const ulong prime5bytes = 889523592379UL;
 
         public static long Decode64LongBuffers(
@@ -779,7 +784,11 @@ namespace Sparrow.Compression
                 }
                 else
                 {
-                    WildCopy(op, match, cpy);
+                    // v1.7.3: Optimize for short matches (most common case)
+                    // Copy 8 bytes first, then only call WildCopy if length > 16
+                    *((ulong*)op) = *(ulong*)match;
+                    if (length > 16)
+                        WildCopy(op + 8, match + 8, cpy);
                 }
 
                 op = cpy;   /* correction */
