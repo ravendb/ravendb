@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using System.Runtime.CompilerServices;
+#if NET7_0_OR_GREATER
+using System.Runtime.Intrinsics;
+#endif
 
 namespace Sparrow.Compression
 {
@@ -28,6 +31,8 @@ namespace Sparrow.Compression
         private const byte RUN_MASK = ((1 << RUN_BITS) - 1);
 
         private const uint LZ4_MAX_INPUT_SIZE = 0x7E000000;  /* 2 113 929 216 bytes */
+        private const int FASTLOOP_SAFE_DISTANCE = 64;
+        private const int MATCH_SAFEGUARD_DISTANCE = (2 * COPYLENGTH) - MINMATCH; /* == 12 */
 
         /// <summary>
         /// LZ4_MEMORY_USAGE :
@@ -40,6 +45,10 @@ namespace Sparrow.Compression
         private const int LZ4_HASHLOG = LZ4_MEMORY_USAGE - 2;
         private const int HASH_SIZE_U32 = 1 << LZ4_HASHLOG;
         private const int MAX_INPUT_LENGTH_PER_SEGMENT = int.MaxValue/2;
+
+        private const uint TABLE_TYPE_CLEARED = 0;
+        private const uint TABLE_TYPE_BY_U16 = 1;
+        private const uint TABLE_TYPE_BY_U32 = 2;
 
         private interface ILimitedOutputDirective { };
         private struct NotLimited : ILimitedOutputDirective { };
@@ -73,7 +82,28 @@ namespace Sparrow.Compression
             public uint dictSize;
             public uint currentOffset;
             public byte* dictionary;
-            public uint initCheck;
+            public uint tableType;
+        }
+
+        [ThreadStatic]
+        private static LZ4_stream_t_internal* _cachedCtx;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static LZ4_stream_t_internal* GetCachedCtx()
+        {
+            var ctx = _cachedCtx;
+            if (ctx != null) return ctx;
+            return AllocateCachedCtx();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static LZ4_stream_t_internal* AllocateCachedCtx()
+        {
+            var ptr = (LZ4_stream_t_internal*)Sparrow.Utils.NativeMemory.AllocateMemory(
+                sizeof(LZ4_stream_t_internal));
+            Memory.Set((byte*)ptr, 0, (uint)sizeof(LZ4_stream_t_internal));
+            _cachedCtx = ptr;
+            return ptr;
         }
 
         public static long Encode64LongBuffer(
@@ -107,6 +137,27 @@ namespace Sparrow.Compression
             return totalOutputSize;
         }
 
+        private static void LZ4_prepareTable(LZ4_stream_t_internal* ctx, int inputSize, uint tableType)
+        {
+            if (ctx->tableType != TABLE_TYPE_CLEARED)
+            {
+                if (ctx->tableType != tableType
+                    || (tableType == TABLE_TYPE_BY_U16 && ctx->currentOffset + (uint)inputSize >= 0xFFFFu)
+                    || (tableType == TABLE_TYPE_BY_U32 && ctx->currentOffset > 1u << 30)
+                    || inputSize >= 4 * Constants.Size.Kilobyte)
+                {
+                    Memory.Set((byte*)ctx->hashTable, 0, HASH_SIZE_U32 * sizeof(int));
+                    ctx->currentOffset = 0;
+                    ctx->tableType = TABLE_TYPE_CLEARED;
+                }
+            }
+            if (ctx->currentOffset != 0 && tableType == TABLE_TYPE_BY_U32)
+                ctx->currentOffset += 64 * (uint)Constants.Size.Kilobyte;
+
+            ctx->dictionary = null;
+            ctx->dictSize = 0;
+        }
+
         public static int Encode64(
                 byte* input,
                 byte* output,
@@ -117,21 +168,39 @@ namespace Sparrow.Compression
             if (acceleration < 1)
                 acceleration = ACCELERATION_DEFAULT;
 
-            LZ4_stream_t_internal ctx = new LZ4_stream_t_internal();
+            LZ4_stream_t_internal* ctx = GetCachedCtx();
 
             if (outputLength >= MaximumOutputLength(inputLength))
             {
                 if (inputLength < LZ4_64Klimit)
-                    return LZ4_compress_generic<NotLimited, ByU16, NoDict, NoDictIssue>(&ctx, input, output, inputLength, 0, acceleration);
+                {
+                    LZ4_prepareTable(ctx, inputLength, TABLE_TYPE_BY_U16);
+                    if (ctx->currentOffset != 0)
+                        return LZ4_compress_generic<NotLimited, ByU16, NoDict, DictSmall>(ctx, input, output, inputLength, 0, acceleration);
+                    else
+                        return LZ4_compress_generic<NotLimited, ByU16, NoDict, NoDictIssue>(ctx, input, output, inputLength, 0, acceleration);
+                }
                 else
-                    return LZ4_compress_generic<NotLimited, ByU32, NoDict, NoDictIssue>(&ctx, input, output, inputLength, 0, acceleration);
+                {
+                    LZ4_prepareTable(ctx, inputLength, TABLE_TYPE_BY_U32);
+                    return LZ4_compress_generic<NotLimited, ByU32, NoDict, NoDictIssue>(ctx, input, output, inputLength, 0, acceleration);
+                }
             }
             else
             {
                 if (inputLength < LZ4_64Klimit)
-                    return LZ4_compress_generic<LimitedOutput, ByU16, NoDict, NoDictIssue>(&ctx, input, output, inputLength, outputLength, acceleration);
+                {
+                    LZ4_prepareTable(ctx, inputLength, TABLE_TYPE_BY_U16);
+                    if (ctx->currentOffset != 0)
+                        return LZ4_compress_generic<LimitedOutput, ByU16, NoDict, DictSmall>(ctx, input, output, inputLength, outputLength, acceleration);
+                    else
+                        return LZ4_compress_generic<LimitedOutput, ByU16, NoDict, NoDictIssue>(ctx, input, output, inputLength, outputLength, acceleration);
+                }
                 else
-                    return LZ4_compress_generic<LimitedOutput, ByU32, NoDict, NoDictIssue>(&ctx, input, output, inputLength, outputLength, acceleration);
+                {
+                    LZ4_prepareTable(ctx, inputLength, TABLE_TYPE_BY_U32);
+                    return LZ4_compress_generic<LimitedOutput, ByU32, NoDict, NoDictIssue>(ctx, input, output, inputLength, outputLength, acceleration);
+                }
             }
         }
 
@@ -181,7 +250,7 @@ namespace Sparrow.Compression
 
             if (typeof(TDictionaryType) == typeof(NoDict))
             {
-                @base = source;
+                @base = source - ctx->currentOffset;
                 lowLimit = source;
             }
             else if (typeof(TDictionaryType) == typeof(WithPrefix64K))
@@ -201,6 +270,9 @@ namespace Sparrow.Compression
 
             if (inputSize < LZ4_minLength) // Input too small, no compression (all literals)
                 goto _last_literals;
+
+            ctx->currentOffset += (uint)inputSize;
+            ctx->tableType = (typeof(TTableType) == typeof(ByU16)) ? TABLE_TYPE_BY_U16 : TABLE_TYPE_BY_U32;
 
             // First Byte
             LZ4_putPosition<TTableType>(ip, ctx, @base);
@@ -257,7 +329,7 @@ namespace Sparrow.Compression
                         }
                         else throw new NotSupportedException("TTableType directive is not supported.");
                     }
-                    while (((typeof(TDictionaryType) == typeof(DictSmall)) ? (match < lowRefLimit) : false) ||
+                    while (((typeof(TDictionaryIssue) == typeof(DictSmall)) ? (match < lowRefLimit) : false) ||
                            ((typeof(TTableType) == typeof(ByU16)) ? false : (match + MAX_DISTANCE < ip)) ||
                            (*(uint*)(match + refDelta) != *((uint*)ip)));
                 }
@@ -295,7 +367,7 @@ namespace Sparrow.Compression
                     }
 
                     /* Copy Literals */
-                    WildCopy(op, anchor, (op + litLength));
+                    WildCopy8(op, anchor, (op + litLength));
                     op += litLength;
                 }
 
@@ -384,7 +456,7 @@ namespace Sparrow.Compression
                 }
 
                 LZ4_putPosition<TTableType>(ip, ctx, @base);
-                if (((typeof(TDictionaryType) == typeof(DictSmall)) ? (match >= lowRefLimit) : true) && (match + MAX_DISTANCE >= ip) && (*(uint*)(match + refDelta) == *(uint*)(ip)))
+                if (((typeof(TDictionaryIssue) == typeof(DictSmall)) ? (match >= lowRefLimit) : true) && (match + MAX_DISTANCE >= ip) && (*(uint*)(match + refDelta) == *(uint*)(ip)))
                 {
                     token = op++; *token = 0;
                     goto _next_match;
@@ -624,16 +696,14 @@ namespace Sparrow.Compression
 
             bool checkOffset = ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (dictSize < 64 * Constants.Size.Kilobyte));
 
-            // v1.8.2: Two-stage shortcut boundaries for fast path
-            // shortiend: safe input end (14 bytes max literal + 2 bytes offset)
-            // shortoend: safe output end (14 bytes max literal + 18 bytes max match)
+            // Two-stage shortcut boundaries for safe loop
             byte* shortiend = iend - (typeof(TEndCondition) == typeof(EndOnInputSize) ? 14 : 8) - 2;
             byte* shortoend = oend - (typeof(TEndCondition) == typeof(EndOnInputSize) ? 14 : 8) - 18;
 
             // Special Cases
-            if ((typeof(TEarlyEnd) == typeof(Partial)) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;                          // targetOutputSize too high => decode everything
+            if ((typeof(TEarlyEnd) == typeof(Partial)) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;
             if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (outputSize == 0))
-                return ((inputSize == 1) && (*ip == 0)) ? 0 : -1;  // Empty output buffer
+                return ((inputSize == 1) && (*ip == 0)) ? 0 : -1;
             if ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (outputSize == 0))
                 return (*ip == 0 ? 1 : -1);
 
@@ -642,35 +712,195 @@ namespace Sparrow.Compression
             {
                 int length;
                 byte* match;
+                byte* cpy;
+                byte token;
+                int offset;
 
-                /* get literal length */
-                byte token = *ip++;
+                /* ============================================================
+                 * FAST LOOP: decode sequences while output has >= FASTLOOP_SAFE_DISTANCE bytes remaining.
+                 * All wild copies in this path are safe because we have enough slack.
+                 * ============================================================ */
+                if ((oend - op) >= FASTLOOP_SAFE_DISTANCE &&
+                    typeof(TEndCondition) == typeof(EndOnInputSize))
+                {
+                    token = *ip++;
+                    length = token >> ML_BITS;
+
+                    /* --- fast literal copy --- */
+                    if (length == RUN_MASK)
+                    {
+                        long addl = read_variable_length(&ip, iend - RUN_MASK);
+                        if (addl < 0) goto _output_error;
+                        length += (int)addl;
+                        if ((op + length) < op) goto _output_error; /* overflow */
+                        if ((ip + length) < ip) goto _output_error; /* overflow */
+
+                        if (op + length > oend - 32 || ip + length > iend - 32)
+                            goto safe_literal_copy;
+
+                        WildCopy32(op, ip, op + length);
+                        ip += length; op += length;
+                    }
+                    else if (ip <= iend - 17)
+                    {
+                        /* Short literal (0..14): copy 16 bytes inline */
+#if NET7_0_OR_GREATER
+                        if (AdvInstructionSet.IsAcceleratedVector128)
+                        {
+                            Vector128.Load(ip).Store(op);
+                        }
+                        else
+#endif
+                        {
+                            *((ulong*)op) = *(ulong*)ip;
+                            *((ulong*)(op + 8)) = *(ulong*)(ip + 8);
+                        }
+                        ip += length; op += length;
+                    }
+                    else
+                    {
+                        goto safe_literal_copy;
+                    }
+
+                    /* --- get offset --- */
+                    offset = *((ushort*)ip); ip += 2;
+                    match = op - offset;
+
+                    if ((checkOffset) && (match + dictSize < lowPrefix))
+                        goto _output_error;
+
+                    /* --- external dictionary match (fast loop) --- */
+                    if ((typeof(TDictionaryType) == typeof(UsingExtDict)) && (match < lowPrefix))
+                    {
+                        /* get matchlength */
+                        length = token & ML_MASK;
+                        if (length == ML_MASK)
+                        {
+                            long addl = read_variable_length(&ip, iend - LASTLITERALS + 1);
+                            if (addl < 0) goto _output_error;
+                            length += (int)addl;
+                        }
+                        length += MINMATCH;
+
+                        if (op + length > oend - LASTLITERALS)
+                            goto _output_error;
+
+                        if (length <= (int)(lowPrefix - match))
+                        {
+                            match = dictEnd - (lowPrefix - match);
+                            Memory.Move(op, match, length);
+                            op += length;
+                        }
+                        else
+                        {
+                            int copySize = (int)(lowPrefix - match);
+                            Memory.Copy(op, dictEnd - copySize, (uint)copySize);
+                            op += copySize;
+
+                            copySize = length - copySize;
+                            if (copySize > (int)(op - lowPrefix))
+                            {
+                                byte* endOfMatch = op + copySize;
+                                byte* copyFrom = lowPrefix;
+                                while (op < endOfMatch)
+                                    *op++ = *copyFrom++;
+                            }
+                            else
+                            {
+                                Memory.Copy(op, lowPrefix, (uint)copySize);
+                                op += copySize;
+                            }
+                        }
+                        continue;
+                    }
+
+                    /* --- get matchlength --- */
+                    length = token & ML_MASK;
+
+                    if (length == ML_MASK)
+                    {
+                        long addl = read_variable_length(&ip, iend - LASTLITERALS + 1);
+                        if (addl < 0) goto _output_error;
+                        length += (int)addl;
+                        length += MINMATCH;
+                        if ((op + length) < op) goto _output_error; /* overflow */
+                        if (op + length >= oend - FASTLOOP_SAFE_DISTANCE)
+                            goto safe_match_copy;
+                    }
+                    else
+                    {
+                        length += MINMATCH;
+                        if (op + length >= oend - FASTLOOP_SAFE_DISTANCE)
+                            goto safe_match_copy;
+
+                        /* Fastpath check: short match with large offset */
+                        if ((typeof(TDictionaryType) == typeof(NoDict) || typeof(TDictionaryType) == typeof(WithPrefix64K)) &&
+                            match >= lowPrefix)
+                        {
+                            if (offset >= 8)
+                            {
+                                /* Copy match (up to 18 bytes: 8 + 8 + 2) */
+                                *((ulong*)op) = *(ulong*)match;
+                                *((ulong*)(op + 8)) = *(ulong*)(match + 8);
+                                *((ushort*)(op + 16)) = *(ushort*)(match + 16);
+                                op += length;
+                                continue;
+                            }
+                        }
+                    }
+
+                    /* --- copy match within block (fast loop) --- */
+                    cpy = op + length;
+
+                    if (offset < 8)
+                    {
+                        CopySmallOffset(op, match, cpy, offset);
+                    }
+                    else
+                    {
+                        WildCopy32(op, match, cpy);
+                    }
+                    op = cpy;
+                    continue;
+                }
+
+                /* ============================================================
+                 * SAFE LOOP: decode remaining sequences near end of buffers.
+                 * Uses WildCopy8 (max 7-byte overshoot) instead of WildCopy32.
+                 * ============================================================ */
+                token = *ip++;
                 length = token >> ML_BITS;
 
-                // v1.8.2: Two-stage shortcut for the most common case
-                // Fast path for literals 0..14 and matches 4..18 (most common in small data)
+                // Two-stage shortcut for the most common case
                 if (typeof(TEndCondition) == typeof(EndOnInputSize) &&
                     typeof(TDictionaryType) != typeof(UsingExtDict) &&
                     length != RUN_MASK &&
                     ip < shortiend &&
                     op <= shortoend)
                 {
-                    // Stage 1: Copy literals (up to 16 bytes, even if length is less)
-                    *((ulong*)op) = *(ulong*)ip;
-                    *((ulong*)(op + 8)) = *(ulong*)(ip + 8);
+                    // Stage 1: Copy literals (up to 16 bytes)
+#if NET7_0_OR_GREATER
+                    if (AdvInstructionSet.IsAcceleratedVector128)
+                    {
+                        Vector128.Load(ip).Store(op);
+                    }
+                    else
+#endif
+                    {
+                        *((ulong*)op) = *(ulong*)ip;
+                        *((ulong*)(op + 8)) = *(ulong*)(ip + 8);
+                    }
                     op += length;
                     ip += length;
 
                     // Stage 2: Prepare match info
                     int matchLength = token & ML_MASK;
-                    int offset = *((ushort*)ip);
+                    offset = *((ushort*)ip);
                     ip += 2;
                     match = op - offset;
 
-                    // Fast path: match length < 15 (no extended bytes) and offset >= 8 (no overlap)
                     if (matchLength != ML_MASK && offset >= 8 && match >= lowPrefix)
                     {
-                        // Copy match (up to 18 bytes: 8 + 8 + 2)
                         *((ulong*)op) = *(ulong*)match;
                         *((ulong*)(op + 8)) = *(ulong*)(match + 8);
                         *((ushort*)(op + 16)) = *(ushort*)(match + 16);
@@ -678,8 +908,6 @@ namespace Sparrow.Compression
                         continue;
                     }
 
-                    // Stage 2 failed, but we have offset and partial match info
-                    // Fall through to match length parsing
                     length = matchLength;
                     goto _copy_match;
                 }
@@ -694,45 +922,50 @@ namespace Sparrow.Compression
                     }
                     while (((typeof(TEndCondition) == typeof(EndOnInputSize)) ? ip < iend - RUN_MASK : true) && (s == 255));
 
-                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op) goto _output_error;   /* overflow detection */
-                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length) < ip) goto _output_error;   /* overflow detection */
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op) goto _output_error;
+                    if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length) < ip) goto _output_error;
                 }
 
+            safe_literal_copy:
                 // copy literals
-                byte* cpy = op + length;
+                cpy = op + length;
                 if (((typeof(TEndCondition) == typeof(EndOnInputSize)) && ((cpy > (typeof(TEarlyEnd) == typeof(Partial) ? oexit : oend - MFLIMIT)) || (ip + length > iend - (2 + 1 + LASTLITERALS))))
                     || ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (cpy > oend - COPYLENGTH)))
                 {
                     if (typeof(TEarlyEnd) == typeof(Partial))
                     {
                         if (cpy > oend)
-                            goto _output_error;                           /* Error : write attempt beyond end of output buffer */
+                            goto _output_error;
 
                         if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (ip + length > iend))
-                            goto _output_error;   /* Error : read attempt beyond end of input buffer */
+                            goto _output_error;
                     }
                     else
                     {
                         if ((typeof(TEndCondition) == typeof(EndOnOutputSize)) && (cpy != oend))
-                            goto _output_error;       /* Error : block decoding must stop exactly there */
+                            goto _output_error;
 
                         if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && ((ip + length != iend) || (cpy > oend)))
-                            goto _output_error;   /* Error : input must be consumed */
+                            goto _output_error;
                     }
 
                     Memory.Copy(op, ip, (uint)length);
                     ip += length;
                     op += length;
-                    break;     /* Necessarily EOF, due to parsing restrictions */
+                    if (typeof(TEarlyEnd) != typeof(Partial) || (cpy == oend) || (ip >= (iend - 2)))
+                        break;
+                }
+                else
+                {
+                    WildCopy8(op, ip, cpy);   /* max 7 bytes overshoot */
+                    ip += length; op = cpy;
                 }
 
-                WildCopy(op, ip, cpy);
-                ip += length; op = cpy;
-
                 /* get offset */
-                match = cpy - *((ushort*)ip); ip += sizeof(ushort);
+                offset = *((ushort*)ip); ip += sizeof(ushort);
+                match = op - offset;
                 if ((checkOffset) && (match < lowLimit))
-                    goto _output_error;   /* Error : offset outside destination buffer */
+                    goto _output_error;
 
                 /* get matchlength */
                 length = token & ML_MASK;
@@ -752,33 +985,35 @@ namespace Sparrow.Compression
                     while (s == 255);
 
                     if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (op + length) < op)
-                        goto _output_error;   /* overflow detection */
+                        goto _output_error;
                 }
 
                 length += MINMATCH;
 
+            safe_match_copy:
                 /* check external dictionary */
+                if ((checkOffset) && (match + dictSize < lowPrefix))
+                    goto _output_error;
+
                 if ((typeof(TDictionaryType) == typeof(UsingExtDict)) && (match < lowPrefix))
                 {
                     if (op + length > oend - LASTLITERALS)
-                        goto _output_error;   /* doesn't respect parsing restriction */
+                        goto _output_error;
 
                     if (length <= (int)(lowPrefix - match))
                     {
-                        /* match can be copied as a single segment from external dictionary */
-                        match = dictEnd - (lowPrefix - match);                        
-                        Memory.Move(op, match, length); 
+                        match = dictEnd - (lowPrefix - match);
+                        Memory.Move(op, match, length);
                         op += length;
                     }
                     else
                     {
-                        /* match encompass external dictionary and current segment */
                         int copySize = (int)(lowPrefix - match);
                         Memory.Copy(op, dictEnd - copySize, (uint)copySize);
                         op += copySize;
 
                         copySize = length - copySize;
-                        if (copySize > (int)(op - lowPrefix))   /* overlap within current segment */
+                        if (copySize > (int)(op - lowPrefix))
                         {
                             byte* endOfMatch = op + copySize;
                             byte* copyFrom = lowPrefix;
@@ -787,7 +1022,7 @@ namespace Sparrow.Compression
                         }
                         else
                         {
-                            Memory.Copy(op, lowPrefix, (uint)copySize);                            
+                            Memory.Copy(op, lowPrefix, (uint)copySize);
                             op += copySize;
                         }
                     }
@@ -796,36 +1031,63 @@ namespace Sparrow.Compression
 
                 /* copy repeated sequence */
                 cpy = op + length;
-                if ((op - match) < 8)
-                {
-                    int dec64 = dec64table[op - match];
-                    op[0] = match[0];
-                    op[1] = match[1];
-                    op[2] = match[2];
-                    op[3] = match[3];
+                int matchOffset = (int)(op - match);
 
-                    match += dec32table[op - match];
-                    *((uint*)(op + 4)) = *(uint*)match;
-                    op += 8;
-                    match -= dec64;
-                }
-                else
+                // Partial decoding near end
+                if (typeof(TEarlyEnd) == typeof(Partial) && (cpy > oend - MATCH_SAFEGUARD_DISTANCE))
                 {
-                    *((ulong*)op) = *(ulong*)match;
-                    op += sizeof(ulong);
-                    match += sizeof(ulong);
+                    int mlen = length < (int)(oend - op) ? length : (int)(oend - op);
+                    byte* matchEnd = match + mlen;
+                    byte* copyEnd = op + mlen;
+                    if (matchEnd > op)
+                    {
+                        while (op < copyEnd)
+                            *op++ = *match++;
+                    }
+                    else
+                    {
+                        Memory.Copy(op, match, (uint)mlen);
+                        op = copyEnd;
+                    }
+                    if (op == oend) break;
+                    continue;
                 }
 
-                if (cpy > oend - 12)
+                if (matchOffset < 8)
+                {
+                    // Small offsets need special handling
+                    if (cpy > oend - 12)
+                    {
+                        if (cpy > oend - LASTLITERALS)
+                            goto _output_error;
+
+                        while (op < cpy)
+                            *op++ = *match++;
+                    }
+                    else
+                    {
+                        CopySmallOffset(op, match, cpy, matchOffset);
+                        op = cpy;
+                    }
+                    continue;
+                }
+
+                // Normal offset (>= 8): no overlap concerns
+                *((ulong*)op) = *(ulong*)match;
+                op += sizeof(ulong);
+                match += sizeof(ulong);
+
+                if (cpy > oend - MATCH_SAFEGUARD_DISTANCE)
                 {
                     if (cpy > oend - LASTLITERALS)
-                        goto _output_error;    /* Error : last LASTLITERALS bytes must be literals */
+                        goto _output_error;
 
-                    if (op < oend - 8)
+                    byte* oCopyLimit = oend - (COPYLENGTH - 1);
+                    if (op < oCopyLimit)
                     {
-                        WildCopy(op, match, (oend - 8));
-                        match += (oend - 8) - op;
-                        op = oend - 8;
+                        WildCopy8(op, match, oCopyLimit);
+                        match += oCopyLimit - op;
+                        op = oCopyLimit;
                     }
 
                     while (op < cpy)
@@ -833,53 +1095,144 @@ namespace Sparrow.Compression
                 }
                 else
                 {
-                    // v1.7.3: Optimize for short matches (most common case)
-                    // Copy 8 bytes first, then only call WildCopy if length > 16
                     *((ulong*)op) = *(ulong*)match;
                     if (length > 16)
-                        WildCopy(op + 8, match + 8, cpy);
+                        WildCopy8(op + 8, match + 8, cpy);
                 }
 
-                op = cpy;   /* correction */
+                op = cpy;
             }
 
             /* end of decoding */
             if (typeof(TEndCondition) == typeof(EndOnInputSize))
-                return (int)(op - dest);     /* Nb of output bytes decoded */
+                return (int)(op - dest);
             else
-                return (int)(ip - source);   /* Nb of input bytes read */
+                return (int)(ip - source);
 
             /* Overflow error detected */
             _output_error:
             return (int)(-(ip - source)) - 1;
         }
 
+        /// <summary>
+        /// Reads a variable-length integer from the stream (used for extended literal/match lengths).
+        /// Returns the accumulated value, or -1 on error (read past limit).
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WildCopy(byte* dest, byte* src, byte* destEnd)
-        {                  
+        private static long read_variable_length(byte** ip, byte* ilimit)
+        {
+            long length = 0;
+            byte s;
+            if (*ip >= ilimit) return -1;
             do
             {
-                ((ulong*)dest)[0] = ((ulong*)src)[0];
-                if (dest + 1 * sizeof(ulong) >= destEnd)
-                    goto Return;
+                s = *(*ip);
+                (*ip)++;
+                length += s;
+                if (*ip > ilimit) return -1;
+            }
+            while (s == 255);
+            return length;
+        }
 
-                ((ulong*)dest)[1] = ((ulong*)src)[1];
-                if (dest + 2 * sizeof(ulong) >= destEnd)
-                    goto Return;
-
-                ((ulong*)dest)[2] = ((ulong*)src)[2];
-                if (dest + 3 * sizeof(ulong) >= destEnd)
-                    goto Return;
-
-                ((ulong*)dest)[3] = ((ulong*)src)[3];
-
-                dest += 4 * sizeof(ulong);
-                src +=  4 * sizeof(ulong);
+        /// <summary>
+        /// WildCopy8 - Copy 8 bytes per iteration. Max overshoot: 7 bytes.
+        /// Used in safe-path decompression and compression literal copies.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void WildCopy8(byte* dest, byte* src, byte* destEnd)
+        {
+            do
+            {
+                *((ulong*)dest) = *(ulong*)src;
+                dest += 8;
+                src += 8;
             }
             while (dest < destEnd);
+        }
 
-            Return:
-            return;
+        /// <summary>
+        /// WildCopy32 - Copy 32 bytes per iteration. Max overshoot: 31 bytes.
+        /// Used only in the fast decompression loop where FASTLOOP_SAFE_DISTANCE guarantees slack.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void WildCopy32(byte* dest, byte* src, byte* destEnd)
+        {
+            do
+            {
+#if NET7_0_OR_GREATER
+                if (AdvInstructionSet.IsAcceleratedVector128)
+                {
+                    Vector128.Load(src).Store(dest);
+                    Vector128.Load(src + 16).Store(dest + 16);
+                }
+                else
+#endif
+                {
+                    *((ulong*)dest) = *(ulong*)src;
+                    *((ulong*)(dest + 8)) = *(ulong*)(src + 8);
+                    *((ulong*)(dest + 16)) = *(ulong*)(src + 16);
+                    *((ulong*)(dest + 24)) = *(ulong*)(src + 24);
+                }
+                dest += 32;
+                src += 32;
+            }
+            while (dest < destEnd);
+        }
+
+        /// <summary>
+        /// v1.9.0: Optimized copy for small offsets (1, 2, 4).
+        /// For these offsets, we build an 8-byte pattern and use pattern repetition
+        /// instead of overlapped byte-by-byte copies. This avoids load-blocked-by-store
+        /// hazards that occur when reading from recently written memory locations.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void CopySmallOffset(byte* op, byte* match, byte* cpy, int offset)
+        {
+            ulong pattern;
+            switch (offset)
+            {
+                case 1:
+                    // RLE - single byte repeated
+                    pattern = (ulong)(*match) * 0x0101010101010101UL;
+                    break;
+                case 2:
+                    // Two-byte pattern repeated
+                    ulong s = *(ushort*)match;
+                    pattern = s | (s << 16) | (s << 32) | (s << 48);
+                    break;
+                case 4:
+                    // Four-byte pattern repeated
+                    ulong u = *(uint*)match;
+                    pattern = u | (u << 32);
+                    break;
+                default:
+                    // For offsets 3, 5, 6, 7: use generic table-based copy
+                    // This path handles irregular patterns that don't tile evenly
+                    int dec64 = dec64table[offset];
+                    op[0] = match[0];
+                    op[1] = match[1];
+                    op[2] = match[2];
+                    op[3] = match[3];
+                    match += dec32table[offset];
+                    *((uint*)(op + 4)) = *(uint*)match;
+                    op += 8;
+                    match -= dec64;
+                    // Continue with WildCopy8 for remaining bytes
+                    if (op < cpy)
+                    {
+                        WildCopy8(op, match, cpy);
+                    }
+                    return;
+            }
+
+            // Pattern repetition loop for offsets 1, 2, 4
+            do
+            {
+                *((ulong*)op) = pattern;
+                op += 8;
+            }
+            while (op < cpy);
         }
     }
 }

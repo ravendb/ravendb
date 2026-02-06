@@ -392,6 +392,236 @@ namespace FastTests.Sparrow
             }
         }
 
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Intrinsics)]
+        public void SequentialSmallCompressions_TableReuse()
+        {
+            // Compress 10 small buffers (< 4KB each) sequentially on the same thread.
+            // Each must roundtrip correctly. Tests the DictSmall + table reuse path.
+            var rng = new Random(123);
+
+            for (int iter = 0; iter < 10; iter++)
+            {
+                int size = 200 + iter * 300; // 200..2900 bytes, all < 4KB
+                var input = new byte[size];
+                rng.NextBytes(input);
+
+                var maxCompressedSize = LZ4.MaximumOutputLength(size);
+
+                byte* compBase, decompBase;
+                byte[] compFront, compBack, decompFront, decompBack;
+                var guardRng = new Random(42 + iter);
+
+                var compressedPtr = AllocGuarded(maxCompressedSize, guardRng, out compBase, out compFront, out compBack);
+                var decompressedPtr = AllocGuarded(size, guardRng, out decompBase, out decompFront, out decompBack);
+                try
+                {
+                    fixed (byte* inputPtr = input)
+                    {
+                        int compressedSize = LZ4.Encode64(inputPtr, compressedPtr, size, maxCompressedSize);
+                        Assert.True(compressedSize > 0, $"Compression failed for iter={iter}, size={size}");
+
+                        VerifyGuards(compressedPtr, maxCompressedSize, compFront, compBack, $"compressed buf iter={iter}");
+
+                        int decompressedSize = LZ4.Decode64(compressedPtr, compressedSize, decompressedPtr, size, true);
+                        Assert.Equal(size, decompressedSize);
+
+                        VerifyGuards(decompressedPtr, size, decompFront, decompBack, $"decompressed buf iter={iter}");
+
+                        for (int i = 0; i < size; i++)
+                        {
+                            Assert.True(input[i] == decompressedPtr[i],
+                                $"Data mismatch at position {i} for iter={iter}, size={size}. Expected {input[i]}, got {decompressedPtr[i]}");
+                        }
+                    }
+                }
+                finally
+                {
+                    FreeGuarded(compBase);
+                    FreeGuarded(decompBase);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Intrinsics)]
+        public void SmallLargeAlternation_TableClearAndReuse()
+        {
+            // Sequence: 500B -> 100KB -> 500B -> 500B
+            // Verifies table clear triggers on large input, then reuse resumes for subsequent small inputs.
+            var sizes = new[] { 500, 100_000, 500, 500 };
+            var rng = new Random(456);
+
+            for (int iter = 0; iter < sizes.Length; iter++)
+            {
+                int size = sizes[iter];
+                var input = new byte[size];
+                rng.NextBytes(input);
+
+                var maxCompressedSize = LZ4.MaximumOutputLength(size);
+                var guardRng = new Random(42 + iter);
+
+                byte* compBase, decompBase;
+                byte[] compFront, compBack, decompFront, decompBack;
+
+                var compressedPtr = AllocGuarded(maxCompressedSize, guardRng, out compBase, out compFront, out compBack);
+                var decompressedPtr = AllocGuarded(size, guardRng, out decompBase, out decompFront, out decompBack);
+                try
+                {
+                    fixed (byte* inputPtr = input)
+                    {
+                        int compressedSize = LZ4.Encode64(inputPtr, compressedPtr, size, maxCompressedSize);
+                        Assert.True(compressedSize > 0, $"Compression failed for iter={iter}, size={size}");
+
+                        VerifyGuards(compressedPtr, maxCompressedSize, compFront, compBack, $"compressed buf iter={iter}");
+
+                        int decompressedSize = LZ4.Decode64(compressedPtr, compressedSize, decompressedPtr, size, true);
+                        Assert.Equal(size, decompressedSize);
+
+                        VerifyGuards(decompressedPtr, size, decompFront, decompBack, $"decompressed buf iter={iter}");
+
+                        for (int i = 0; i < size; i++)
+                        {
+                            Assert.True(input[i] == decompressedPtr[i],
+                                $"Data mismatch at position {i} for iter={iter}, size={size}. Expected {input[i]}, got {decompressedPtr[i]}");
+                        }
+                    }
+                }
+                finally
+                {
+                    FreeGuarded(compBase);
+                    FreeGuarded(decompBase);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Intrinsics)]
+        public void ByU16OverflowBoundary_ForcesTableClear()
+        {
+            // Compress enough small buffers that currentOffset + inputSize >= 0xFFFF,
+            // forcing a table clear mid-sequence. Each buffer is ~3000 bytes (byU16 path,
+            // < 4KB so table reuse is attempted). After ~22 iterations the offset overflows.
+            const int bufSize = 3000;
+            int iterations = (0xFFFF / bufSize) + 5; // enough to trigger overflow
+            var rng = new Random(789);
+
+            for (int iter = 0; iter < iterations; iter++)
+            {
+                var input = new byte[bufSize];
+                rng.NextBytes(input);
+
+                var maxCompressedSize = LZ4.MaximumOutputLength(bufSize);
+                var guardRng = new Random(42 + iter);
+
+                byte* compBase, decompBase;
+                byte[] compFront, compBack, decompFront, decompBack;
+
+                var compressedPtr = AllocGuarded(maxCompressedSize, guardRng, out compBase, out compFront, out compBack);
+                var decompressedPtr = AllocGuarded(bufSize, guardRng, out decompBase, out decompFront, out decompBack);
+                try
+                {
+                    fixed (byte* inputPtr = input)
+                    {
+                        int compressedSize = LZ4.Encode64(inputPtr, compressedPtr, bufSize, maxCompressedSize);
+                        Assert.True(compressedSize > 0, $"Compression failed for iter={iter}");
+
+                        VerifyGuards(compressedPtr, maxCompressedSize, compFront, compBack, $"compressed buf iter={iter}");
+
+                        int decompressedSize = LZ4.Decode64(compressedPtr, compressedSize, decompressedPtr, bufSize, true);
+                        Assert.Equal(bufSize, decompressedSize);
+
+                        VerifyGuards(decompressedPtr, bufSize, decompFront, decompBack, $"decompressed buf iter={iter}");
+
+                        for (int i = 0; i < bufSize; i++)
+                        {
+                            Assert.True(input[i] == decompressedPtr[i],
+                                $"Data mismatch at position {i} for iter={iter}. Expected {input[i]}, got {decompressedPtr[i]}");
+                        }
+                    }
+                }
+                finally
+                {
+                    FreeGuarded(compBase);
+                    FreeGuarded(decompBase);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Core | RavenTestCategory.Intrinsics)]
+        [InlineData(8)]
+        [InlineData(9)]
+        [InlineData(10)]
+        [InlineData(11)]
+        [InlineData(12)]
+        [InlineData(13)]
+        [InlineData(14)]
+        [InlineData(15)]
+        public void MatchCopy_MidRangeOffsets_InFastLoop(int offset)
+        {
+            // Crafts data that forces match copies with a specific offset (8-15) and
+            // long match lengths (> 18 bytes) so the fast loop's CopySmallOffset path
+            // is exercised rather than the short-match fastpath.
+            // This catches bugs where the offset < N threshold doesn't match the
+            // lookup table sizes (dec32table/dec64table are only 8 entries).
+            const int size = 4096;
+            var input = new byte[size];
+            var rng = new Random(42 + offset);
+
+            // Fill first `offset` bytes with random data, then repeat that block
+            // throughout the buffer. This creates matches at exactly `offset` distance.
+            for (int i = 0; i < offset; i++)
+                input[i] = (byte)rng.Next(256);
+            for (int i = offset; i < size; i++)
+                input[i] = input[i - offset];
+
+            var maxCompressedSize = LZ4.MaximumOutputLength(size);
+            var guardRng = new Random(42 + offset);
+
+            byte* compBase, decompBase;
+            byte[] compFront, compBack, decompFront, decompBack;
+
+            var compressedPtr = AllocGuarded(maxCompressedSize, guardRng, out compBase, out compFront, out compBack);
+            var decompressedPtr = AllocGuarded(size, guardRng, out decompBase, out decompFront, out decompBack);
+            try
+            {
+                fixed (byte* inputPtr = input)
+                {
+                    // Compress with reference, decompress with optimized
+                    int compressedSize = LZ4Reference.Encode64(inputPtr, compressedPtr, size, maxCompressedSize);
+                    Assert.True(compressedSize > 0, $"Reference compression failed for offset={offset}");
+
+                    VerifyGuards(compressedPtr, maxCompressedSize, compFront, compBack, $"compressed buf offset={offset}");
+
+                    int decompressedSize = LZ4.Decode64(compressedPtr, compressedSize, decompressedPtr, size, true);
+                    Assert.Equal(size, decompressedSize);
+
+                    VerifyGuards(decompressedPtr, size, decompFront, decompBack, $"decompressed buf offset={offset}");
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        Assert.True(input[i] == decompressedPtr[i],
+                            $"Data mismatch at position {i} for offset={offset}. Expected {input[i]}, got {decompressedPtr[i]}");
+                    }
+
+                    // Also test optimized compress -> optimized decompress
+                    int optCompressedSize = LZ4.Encode64(inputPtr, compressedPtr, size, maxCompressedSize);
+                    Assert.True(optCompressedSize > 0, $"Optimized compression failed for offset={offset}");
+
+                    decompressedSize = LZ4.Decode64(compressedPtr, optCompressedSize, decompressedPtr, size, true);
+                    Assert.Equal(size, decompressedSize);
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        Assert.True(input[i] == decompressedPtr[i],
+                            $"Opt roundtrip mismatch at position {i} for offset={offset}. Expected {input[i]}, got {decompressedPtr[i]}");
+                    }
+                }
+            }
+            finally
+            {
+                FreeGuarded(compBase);
+                FreeGuarded(decompBase);
+            }
+        }
+
         private byte[] GenerateTestData(int size, string pattern)
         {
             var data = new byte[size];
