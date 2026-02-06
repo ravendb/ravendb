@@ -556,21 +556,46 @@ namespace FastTests.Sparrow
         [InlineData(15)]
         public void MatchCopy_MidRangeOffsets_InFastLoop(int offset)
         {
-            // Crafts data that forces match copies with a specific offset (8-15) and
-            // long match lengths (> 18 bytes) so the fast loop's CopySmallOffset path
-            // is exercised rather than the short-match fastpath.
-            // This catches bugs where the offset < N threshold doesn't match the
-            // lookup table sizes (dec32table/dec64table are only 8 entries).
-            const int size = 4096;
+            // Creates data with MANY moderate-length matches at the target offset,
+            // interspersed with random segments that break the pattern. This ensures
+            // individual matches are short enough to stay in the fast loop (which requires
+            // oend - op >= FASTLOOP_SAFE_DISTANCE=64), exercising the WildCopy32/CopyWithOverlap
+            // code path rather than falling through to safe_match_copy.
+            //
+            // The match lengths must be >= 19 (MINMATCH + ML_MASK) to bypass the 18-byte
+            // shortcut and reach the general copy path where the offset < 16 threshold matters.
+            const int size = 32 * 1024; // 32KB - large enough for many fast-loop iterations
             var input = new byte[size];
             var rng = new Random(42 + offset);
 
-            // Fill first `offset` bytes with random data, then repeat that block
-            // throughout the buffer. This creates matches at exactly `offset` distance.
-            for (int i = 0; i < offset; i++)
-                input[i] = (byte)rng.Next(256);
-            for (int i = offset; i < size; i++)
-                input[i] = input[i - offset];
+            int pos = 0;
+            while (pos < size)
+            {
+                // Random segment (8-32 bytes) breaks the match chain, forcing a new literal
+                int randomLen = Math.Min(8 + rng.Next(25), size - pos);
+                for (int i = 0; i < randomLen; i++)
+                    input[pos++] = (byte)rng.Next(256);
+
+                if (pos >= size) break;
+
+                // Repeating segment at target offset (20-60 bytes) creates a match
+                // that's long enough for the general copy path (>= 19) but short enough
+                // to stay in the fast loop (remaining output > 64)
+                int repeatLen = Math.Min(20 + rng.Next(41), size - pos);
+                if (repeatLen > offset && pos >= offset)
+                {
+                    // Copy from `offset` bytes back to create a match at the target distance
+                    for (int i = 0; i < repeatLen; i++)
+                        input[pos + i] = input[pos + i - offset];
+                    pos += repeatLen;
+                }
+                else
+                {
+                    // Not enough room for a meaningful repeat; fill with random
+                    for (int i = 0; i < repeatLen; i++)
+                        input[pos++] = (byte)rng.Next(256);
+                }
+            }
 
             var maxCompressedSize = LZ4.MaximumOutputLength(size);
             var guardRng = new Random(42 + offset);
