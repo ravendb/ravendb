@@ -497,6 +497,10 @@ namespace Sparrow.Compression
         }
 
 
+        /// <summary>
+        /// Count matching bytes between two memory locations.
+        /// v1.10.0: Added early exit on first comparison for common short-match case.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int LZ4_count(byte* pInPtr, byte* pMatchPtr, byte* pInLimitPtr)
         {
@@ -509,7 +513,19 @@ namespace Sparrow.Compression
 
             byte* pStart = pIn;
 
-            while (pIn < pInLimit - (sizeof(ulong) - 1))
+            // v1.10.0: Early exit on first comparison (most common case: short match)
+            // This avoids loop setup overhead for the frequent case where matches are short.
+            if (pIn < pInLimit - 7)
+            {
+                ulong diff = *((ulong*)pMatch) ^ *((ulong*)pIn);
+                if (diff != 0)
+                    return Bits.TrailingZeroesInBytes(diff);
+                pIn += sizeof(ulong);
+                pMatch += sizeof(ulong);
+            }
+
+            // Continue with loop for longer matches
+            while (pIn < pInLimit - 7)
             {
                 ulong diff = *((ulong*)pMatch) ^ *((ulong*)pIn);
                 if (diff == 0)
@@ -523,6 +539,7 @@ namespace Sparrow.Compression
                 return (int)(pIn - pStart);
             }
 
+            // Handle remaining bytes (less than 8)
             if ((pIn < (pInLimit - 3)) && (*((uint*)pMatch) == *((uint*)(pIn)))) { pIn += sizeof(uint); pMatch += sizeof(uint); }
             if ((pIn < (pInLimit - 1)) && (*((ushort*)pMatch) == *((ushort*)pIn))) { pIn += sizeof(ushort); pMatch += sizeof(ushort); }
             if ((pIn < pInLimit) && (*pMatch == *pIn)) pIn++;
