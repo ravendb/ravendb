@@ -167,9 +167,9 @@ public partial class IndexWriter
             }
         }
 
-        ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value, InserterMode inserterMode)
+        ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value, InserterMode inserterMode, bool forceExactInsert = false)
         {
-            Debug.Assert(field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
+            Debug.Assert(forceExactInsert || field.FieldIndexingMode != FieldIndexingMode.No, "field.FieldIndexingMode != FieldIndexingMode.No");
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_parent._entriesAllocator, value, out var slice);
 
@@ -284,6 +284,12 @@ public partial class IndexWriter
         }
 
         public void Write(int fieldId, ReadOnlySpan<byte> value) => Write(fieldId, null, value);
+        
+        public void WriteCompound(int fieldId, ReadOnlySpan<byte> value)
+        {
+            var field = GetField(fieldId, null);
+            ExactInsert(field, value, InserterMode.ExactInsert, forceExactInsert: true);
+        }
 
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
         {
