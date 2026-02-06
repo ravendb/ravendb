@@ -146,6 +146,10 @@ public partial class IndexWriter
                 var word = new Span<byte>(_parent._analyzersContext.EncodingBufferHandler, token.Offset, (int)token.Length);
                 ExactInsert(field, word, InserterMode.ExactInsert);
             }
+            
+            //Analyze pipeline removed all content from our input. It means we've an empty string now.
+            if (tokens.Length == 0)
+                ExactInsert(field, Constants.EmptyStringSlice, InserterMode.ExactInsert);
         }
 
         private void AnalyzeTerm(IndexedField field, ReadOnlySpan<byte> value, Analyzer analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens)
