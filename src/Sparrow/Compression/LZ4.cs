@@ -624,6 +624,12 @@ namespace Sparrow.Compression
 
             bool checkOffset = ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (dictSize < 64 * Constants.Size.Kilobyte));
 
+            // v1.8.2: Two-stage shortcut boundaries for fast path
+            // shortiend: safe input end (14 bytes max literal + 2 bytes offset)
+            // shortoend: safe output end (14 bytes max literal + 18 bytes max match)
+            byte* shortiend = iend - (typeof(TEndCondition) == typeof(EndOnInputSize) ? 14 : 8) - 2;
+            byte* shortoend = oend - (typeof(TEndCondition) == typeof(EndOnInputSize) ? 14 : 8) - 18;
+
             // Special Cases
             if ((typeof(TEarlyEnd) == typeof(Partial)) && (oexit > oend - MFLIMIT)) oexit = oend - MFLIMIT;                          // targetOutputSize too high => decode everything
             if ((typeof(TEndCondition) == typeof(EndOnInputSize)) && (outputSize == 0))
@@ -635,10 +641,50 @@ namespace Sparrow.Compression
             while (true)
             {
                 int length;
+                byte* match;
 
                 /* get literal length */
                 byte token = *ip++;
-                if ((length = (token >> ML_BITS)) == RUN_MASK)
+                length = token >> ML_BITS;
+
+                // v1.8.2: Two-stage shortcut for the most common case
+                // Fast path for literals 0..14 and matches 4..18 (most common in small data)
+                if (typeof(TEndCondition) == typeof(EndOnInputSize) &&
+                    typeof(TDictionaryType) != typeof(UsingExtDict) &&
+                    length != RUN_MASK &&
+                    ip < shortiend &&
+                    op <= shortoend)
+                {
+                    // Stage 1: Copy literals (up to 16 bytes, even if length is less)
+                    *((ulong*)op) = *(ulong*)ip;
+                    *((ulong*)(op + 8)) = *(ulong*)(ip + 8);
+                    op += length;
+                    ip += length;
+
+                    // Stage 2: Prepare match info
+                    int matchLength = token & ML_MASK;
+                    int offset = *((ushort*)ip);
+                    ip += 2;
+                    match = op - offset;
+
+                    // Fast path: match length < 15 (no extended bytes) and offset >= 8 (no overlap)
+                    if (matchLength != ML_MASK && offset >= 8 && match >= lowPrefix)
+                    {
+                        // Copy match (up to 18 bytes: 8 + 8 + 2)
+                        *((ulong*)op) = *(ulong*)match;
+                        *((ulong*)(op + 8)) = *(ulong*)(match + 8);
+                        *((ushort*)(op + 16)) = *(ushort*)(match + 16);
+                        op += matchLength + MINMATCH;
+                        continue;
+                    }
+
+                    // Stage 2 failed, but we have offset and partial match info
+                    // Fall through to match length parsing
+                    length = matchLength;
+                    goto _copy_match;
+                }
+
+                if (length == RUN_MASK)
                 {
                     byte s;
                     do
@@ -684,12 +730,15 @@ namespace Sparrow.Compression
                 ip += length; op = cpy;
 
                 /* get offset */
-                byte* match = cpy - *((ushort*)ip); ip += sizeof(ushort);
+                match = cpy - *((ushort*)ip); ip += sizeof(ushort);
                 if ((checkOffset) && (match < lowLimit))
                     goto _output_error;   /* Error : offset outside destination buffer */
 
                 /* get matchlength */
-                if ((length = (token & ML_MASK)) == ML_MASK)
+                length = token & ML_MASK;
+
+            _copy_match:
+                if (length == ML_MASK)
                 {
                     byte s;
                     do
