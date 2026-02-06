@@ -44,7 +44,6 @@ namespace Raven.Server.Commercial
     {
         public bool RegisterClientCert { get; set; }
         public DateTime? ClientCertNotAfter { get; set; }
-        public License License { get; set; }
         public string Email { get; set; }
         public string Domain { get; set; }
         public string RootDomain { get; set; }
@@ -54,7 +53,6 @@ namespace Raven.Server.Commercial
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(License)] = License.ToJson();
             json[nameof(Email)] = Email;
             json[nameof(Domain)] = Domain;
             json[nameof(RootDomain)] = RootDomain;
@@ -162,6 +160,7 @@ namespace Raven.Server.Commercial
         public override void ValidateInfo(CreateSetupPackageParameters parameters)
         {
             List<Exception> exceptions = new ();
+            
             if (NodeSetupInfos is null || NodeSetupInfos.Any() == false)
             {
                 exceptions.Add(new InvalidOperationException($"{nameof(NodeSetupInfos)} must be set"));

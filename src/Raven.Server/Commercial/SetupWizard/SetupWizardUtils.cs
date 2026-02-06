@@ -170,23 +170,23 @@ public static class SetupWizardUtils
 
         try
         {
-                if (parameters.OnBeforeAddingNodesToCluster != null && zipOnly == false )
-                    await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
+            if (parameters.OnBeforeAddingNodesToCluster != null && zipOnly == false )
+                await parameters.OnBeforeAddingNodesToCluster(nodeInfo.PublicServerUrl, localNodeTag);
                 
-                if (zipOnly == false)
+            if (zipOnly == false)
+            {
+                foreach (var node in nodeSetupInfos)
                 {
-                    foreach (var node in nodeSetupInfos)
-                    {
-                        if (node.Key == localNodeTag)
-                            continue;
+                    if (node.Key == localNodeTag)
+                        continue;
 
-                        parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
+                    parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
                         
-                        if (parameters.AddNodeToCluster != null)
-                            await parameters.AddNodeToCluster(node.Key);
-                    }
+                    if (parameters.AddNodeToCluster != null)
+                        await parameters.AddNodeToCluster(node.Key);
                 }
+            }
         }
         catch (Exception e)
         {
