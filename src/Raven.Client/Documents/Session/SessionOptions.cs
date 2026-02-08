@@ -81,7 +81,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <remarks>For more details visit: <inheritdoc cref="Session.TrackingMode"/></remarks>
         public TrackingMode TrackingMode { get; set; }
-
+        // TODO: egor   public TrackingMode TrackingMode { get; set => this.TransactionMode == TransactionMode.ClusterWide ? throw new InvalidOperationException("TrackingMode cannot be set when TransactionMode is ClusterWide.") : value; }
+     
         /// <summary>
         /// Disable caching of HTTP responses for the session<br/>
         /// </summary>

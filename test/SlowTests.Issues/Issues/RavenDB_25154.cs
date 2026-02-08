@@ -111,7 +111,7 @@ namespace SlowTests.Issues
 
             session.Delete(egor);
         }
-        ////TODO: doesn twork
+        ////TODO: egor doesn't twork
         //internal static void ModifyEgorWithDeleteAndStore(IDocumentSession session)
         //{
         //    session.Delete("employees/2-A");
@@ -125,7 +125,7 @@ namespace SlowTests.Issues
         //    }, "employees/2-A");
         //}
 
-        ////TODO: doesn twork
+        ////TODO: egor doesn't twork
         //internal static void ModifyEgorWithLoadDeleteAndStore(IDocumentSession session)
         //{
         //    var egor = session.Load<Employee>("employees/2-A");
@@ -228,9 +228,9 @@ namespace SlowTests.Issues
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities,
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
 
@@ -266,9 +266,9 @@ namespace SlowTests.Issues
                 }
 
                 using (var session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
 
@@ -281,7 +281,86 @@ namespace SlowTests.Issues
             }
         }
 
-        //TODO: egor what happends when I load the document but its null, then I try to SaveChanges but thsi document was added meanwhile but another session
+        // TODO: egor 322
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldThrowConcurrencyException_WhenNoCommandsInSessionButTrackedEntityWasChangedInBackgroundSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    ModifyEgorInSession(session);
+
+                    var expected = session.Advanced.GetChangeVectorFor(jerry);
+                    Assert.NotEmpty(expected);
+                    Assert.NotNull(expected);
+
+                    session.SaveChanges();
+
+                    var actual = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address()
+                        {
+                            City = "Hadera"
+                        };
+                        s.SaveChanges();
+
+                        actual = s.Advanced.GetChangeVectorFor(j);
+                    }
+
+                    Assert.NotEmpty(actual);
+                    Assert.NotNull(actual);
+
+                    // this should throw concurrency exception for jerry
+                    var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Equal("employees/1-A", e.Id);
+                    Assert.Equal(actual, e.ActualChangeVector);
+                    Assert.Equal(expected, e.ExpectedChangeVector);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Hadera", j.Address.City);
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldThrowConcurrencyException_WhenTrackedEntityIsNullButThenWasAddedInBackgroundSession()
         {
@@ -302,9 +381,9 @@ namespace SlowTests.Issues
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities,
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
                     Assert.Null(jerry);
@@ -341,9 +420,9 @@ namespace SlowTests.Issues
                 }
 
                 using (var session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
 
@@ -356,7 +435,6 @@ namespace SlowTests.Issues
             }
         }
 
-        //TODO: egor what happends when I delete the document , then I try to SaveChanges but thsi document was added meanwhile but another session
         [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldThrowConcurrencyException_WhenTrackedEntityDeletedByEntityButThenWasEditedInBackgroundSession()
         {
@@ -381,9 +459,9 @@ namespace SlowTests.Issues
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities,
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
                     session.Delete<Employee>(jerry);
@@ -419,9 +497,9 @@ namespace SlowTests.Issues
                 }
 
                 using (var session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
 
@@ -564,7 +642,6 @@ namespace SlowTests.Issues
                         }
                     }, "employees/2-A");
                     session.SaveChanges();
-
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
@@ -598,7 +675,7 @@ namespace SlowTests.Issues
 
                     Assert.Contains("Document change vector mismatch", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
-                             Assert.Equal(actual, e.ActualChangeVector);
+                    Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
                 }
 
@@ -654,9 +731,9 @@ namespace SlowTests.Issues
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities,
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
 
@@ -696,9 +773,9 @@ namespace SlowTests.Issues
                 }
 
                 using (var session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities
-                       }))
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
 
@@ -883,6 +960,92 @@ namespace SlowTests.Issues
 
                     var j = session.Load<Address>(addressId);
                     Assert.NotNull(j);
+                    Assert.Equal("Hadera", j.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldThrowConcurrencyException_WhenEntityIncludedByIdInSessionButThenWasEditedInBackgroundSession()
+        {
+            throw new NotImplementedException("TODO: egor This test is for the case when we include by id and not by lambda, but currently we only support include by lambda");
+            using (var store = GetDocumentStore())
+            {
+                string addressId;
+                using (var session = store.OpenSession())
+                {
+                    var address = new Address()
+                    {
+                        City = "Harish",
+                        Street = "Erets Rd"
+                    };
+                    session.Store(address);
+                    addressId = session.Advanced.GetDocumentId(address);
+                    Assert.NotNull(addressId);
+                    address.Id = addressId;
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = address
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
+                    ModifyEgorInSession(session);
+                    //var expected = session.Advanced.GetChangeVectorFor(address);
+                    //Assert.NotEmpty(expected);
+                    //Assert.NotNull(expected);
+
+                    var actual = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var a = s.Load<Address>(addressId);
+                        a.City = "Hadera";
+                        s.SaveChanges();
+
+                        actual = s.Advanced.GetChangeVectorFor(a);
+                    }
+
+                    Assert.NotEmpty(actual);
+                    Assert.NotNull(actual);
+
+                    //TODO: egor fix this
+
+                    // this should throw concurrency exception for jerry
+                    var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Equal(addressId, e.Id);
+                    Assert.Equal(actual, e.ActualChangeVector);
+                    // Assert.Equal(expected, e.ExpectedChangeVector);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                    var j = session.Load<Address>(addressId);
                     Assert.Equal("Hadera", j.City);
                 }
             }

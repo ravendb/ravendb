@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Session.Operations
                     _session.DisableAtomicDocumentWritesInClusterWideTransaction);
             }
 
-            return new SingleNodeBatchWithTrackingCommand(_session.Conventions, result.SessionCommands, result.TrackChangesCommandData, result.Options);
+            return new SingleNodeBatchCommand(_session.Conventions, result.SessionCommands, result.Options);
 
         }
 
@@ -475,6 +475,7 @@ namespace Raven.Client.Documents.Session.Operations
             using (documentInfo)
             {
                 _session.DocumentsById.Remove(id);
+                _session.TrackedEntities.TryRemove(id);
 
                 if (documentInfo.Entity != null)
                 {
@@ -555,9 +556,11 @@ namespace Raven.Client.Documents.Session.Operations
 
                 documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
             }
-
+            //TODO: egor check if we can use docInfo in _trackedEntities so the obj is tracked
             documentInfo.Id = id;
             documentInfo.ChangeVector = changeVector;
+       
+            _session.TrackedEntities.TryUpdate(id, changeVector);
 
             ApplyMetadataModifications(id, documentInfo);
         }

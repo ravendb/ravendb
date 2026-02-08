@@ -21,20 +21,16 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
         {
             foreach (Document document in _database.DocumentsStorage.GetDocuments(context, _trackedEntities.Keys, start: 0, take: int.MaxValue, DocumentFields.Id | DocumentFields.ChangeVector))
             {
-                //TODO: egor use CVs
-                ChangeVector docCv = context.GetChangeVector(document.ChangeVector);
+                ChangeVector current = context.GetChangeVector(document.ChangeVector);
+                var expected = _trackedEntities[document.Id];
 
-                var expectedCv = _trackedEntities[document.Id];
-
-                docCv.IsEqual(context.GetChangeVector(expectedCv));
-
-                if (expectedCv != document.ChangeVector)
+                if (current.IsEqual(context.GetChangeVector(expected)) == false)
                 {
                     throw new ConcurrencyException("Document change vector mismatch")
                     {
                         Id = document.Id,
                         ActualChangeVector = document.ChangeVector,
-                        ExpectedChangeVector = expectedCv
+                        ExpectedChangeVector = expected
                     };
                 }
             }

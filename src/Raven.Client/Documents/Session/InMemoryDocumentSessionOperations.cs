@@ -132,6 +132,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         internal readonly DeletedEntitiesHolder DeletedEntities = new DeletedEntitiesHolder();
 
+        internal readonly TrackedEntitiesHolder TrackedEntities ;
+
+
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
         /// </summary>
@@ -242,6 +245,7 @@ namespace Raven.Client.Documents.Session
             //TODO: egor drop this NoTracking
             NoTracking = options.TrackingMode == TrackingMode.NoTracking;
             TrackingMode = options.TrackingMode;
+            TrackedEntities = new TrackedEntitiesHolder(options.TrackingMode);
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(DatabaseName, entity));
@@ -508,6 +512,7 @@ more responsive application.
             DocumentsByEntity.Add(info.Entity, info);
             DocumentsById.Add(info);
             IncludedDocumentsById.Remove(info.Id);
+            TrackedEntities.TryAdd(info.Id, info.ChangeVector);
         }
 
         /// <summary>
@@ -539,6 +544,7 @@ more responsive application.
                 {
                     IncludedDocumentsById.Remove(id);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
+                    TrackedEntities[id] = docInfo.ChangeVector;
                 }
                 OnAfterConversionToEntityInvoke(id, docInfo.Document, docInfo.Entity);
 
@@ -555,6 +561,8 @@ more responsive application.
                     IncludedDocumentsById.Remove(id);
                     DocumentsById.Add(docInfo);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
+                    TrackedEntities[id] = docInfo.ChangeVector;
+
                 }
                 OnAfterConversionToEntityInvoke(id, docInfo.Document, docInfo.Entity);
 
@@ -579,6 +587,8 @@ more responsive application.
 
                 DocumentsById.Add(newDocumentInfo);
                 DocumentsByEntity[entity] = newDocumentInfo;
+                TrackedEntities[id] = newDocumentInfo.ChangeVector;
+
             }
             OnAfterConversionToEntityInvoke(id, document, entity);
 
@@ -613,7 +623,7 @@ more responsive application.
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
             _countersByDocId?.Remove(value.Id);
-            _knownMissingIds.Add(value.Id);
+            _knownMissingIds.Add(value.Id); // TODO: egor this should handle the case I remove item that was modified in another session 
         }
 
         /// <summary>
@@ -657,17 +667,14 @@ more responsive application.
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
 
-            if (TrackingMode == TrackingMode.TrackAllEntities)
+            if (string.IsNullOrEmpty(documentInfo.ChangeVector) == false) // this is tracked in session
             {
-                if (string.IsNullOrEmpty(documentInfo.ChangeVector) == false) // this is tracked in session
-                {
-                    _trackedEntities.Add(id, documentInfo.ChangeVector);
-                }
-                else
-                {
-                    // we are not checking it since this entity is not in session
-                    _trackedEntities.Add(id, null);
-                }
+                TrackedEntities.TryAdd(id, documentInfo.ChangeVector);
+            }
+            else
+            {
+                // we are not checking it since this entity is not in session
+                TrackedEntities.TryAdd(id, null);
             }
 
             _countersByDocId?.Remove(id);
@@ -840,6 +847,7 @@ more responsive application.
             DocumentsByEntity.Add(entity, documentInfo);
             if (id != null)
                 DocumentsById.Add(documentInfo);
+            TrackedEntities.TryAdd(id, changeVector);
         }
 
         protected void AssertNoNonUniqueInstance(object entity, string id)
@@ -878,10 +886,7 @@ more responsive application.
             foreach (var deferredCommand in result.DeferredCommands)
                 deferredCommand.OnBeforeSaveChanges(this);
 
-            if (TrackingMode == TrackingMode.TrackAllEntities)
-            {
-                PrepareForEntitiesTrack(result);
-            }
+            PrepareForEntitiesTrack(result);
 
             return result;
         }
@@ -1052,8 +1057,6 @@ more responsive application.
                 result.OnSuccess.ClearDeletedEntities();
         }
 
-        private readonly Dictionary<string, string> _trackedEntities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
             using (DocumentsByEntity.PrepareEntitiesPuts())
@@ -1068,11 +1071,6 @@ more responsive application.
                     {
                         if (shouldIgnoreEntityChanges(this, entity.Value.Entity, entity.Value.Id))
                             continue;
-                    }
-
-                    if (TrackingMode == TrackingMode.TrackAllEntities)
-                    {
-                        _trackedEntities.Add(entity.Value.Id, entity.Value.ChangeVector);
                     }
 
                     if (IsDeleted(entity.Value.Id))
@@ -1160,27 +1158,33 @@ more responsive application.
 
         private void PrepareForEntitiesTrack(SaveChangesData result)
         {
-            if (result.SessionCommands.Count > 0 || result.DeferredCommands.Count > 0)
+            if (TrackingMode.TrackAllEntities == TrackingMode)
             {
-                if (_trackedEntities.Any() || _knownMissingIds.Any())
-                {
-                    var batchTrackingEntities = new Dictionary<string, string>(_trackedEntities, StringComparer.OrdinalIgnoreCase);
-
-                    foreach (var id in _knownMissingIds)
+                // TODO: egor 322 I have removed this check because we need to track changes even if there are no session commands,
+                
+                //if (result.SessionCommands.Count > 0 || result.DeferredCommands.Count > 0)
+                //{
+                if (TrackedEntities.Any() || _knownMissingIds.Any())
                     {
-                        if (batchTrackingEntities.TryGetValue(id, out var cv) == false)
-                        {
-                            batchTrackingEntities.Add(id, string.Empty);
-                        }
-                        else if (cv == null)
-                        {
-                            // this is when we delete by id a document that is not tracked in session
-                            batchTrackingEntities.Remove(id);
-                        }
-                    }
+                        var batchTrackingEntities = new Dictionary<string, string>(TrackedEntities.ToDictionary(), StringComparer.OrdinalIgnoreCase);
 
-                    result.TrackChangesCommandData = new BatchTrackChangesCommandData(batchTrackingEntities);
-                }
+                        foreach (var id in _knownMissingIds)
+                        {
+                            if (batchTrackingEntities.TryGetValue(id, out var cv) == false)
+                            {
+                                batchTrackingEntities.Add(id, string.Empty);
+                            }
+                            else if (cv == null)
+                            {
+                                // this is when we delete by id a document that is not tracked in session
+                                batchTrackingEntities.Remove(id);
+                            }
+                        }
+
+                        result.TrackChangesCommandData = new BatchTrackChangesCommandData(batchTrackingEntities);
+                        result.SessionCommands.Insert(0, result.TrackChangesCommandData);
+                    }
+                //}
             }
         }
 
@@ -1385,6 +1389,7 @@ more responsive application.
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
                 _timeSeriesByDocId?.Remove(documentInfo.Id);
+                TrackedEntities.TryRemove(documentInfo.Id);
 
                 documentInfo.Dispose();
             }
@@ -1409,6 +1414,7 @@ more responsive application.
             ClearClusterSession();
             PendingLazyOperations.Clear();
             JsonConverter.Clear();
+            TrackedEntities.Clear();
         }
 
         /// <summary>
@@ -2404,6 +2410,8 @@ more responsive application.
             if (DocumentsById.TryGetValue(documentInfo.Id, out DocumentInfo documentInfoById))
                 documentInfoById.Entity = entity;
 
+            TrackedEntities.TryUpdate(documentInfo.Id, documentInfo.ChangeVector);
+
             OnAfterConversionToEntityInvoke(documentInfo.Id, documentInfo.Document, documentInfo.Entity);
         }
 
@@ -2525,7 +2533,6 @@ more responsive application.
 
         protected void UpdateSessionAfterSaveChanges(BatchCommandResult result)
         {
-            _trackedEntities.Clear();
              var returnedTransactionIndex = result.TransactionIndex;
             _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
             _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
@@ -2927,4 +2934,86 @@ more responsive application.
             public bool ExecuteOnBeforeDelete { get; set; }
         }
     }
+
+    internal sealed class TrackedEntitiesHolder
+    {
+        private readonly Dictionary<string, string> _trackedEntities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly TrackingMode TrackingMode;
+
+        private bool ShouldTrack => TrackingMode == TrackingMode.TrackAllEntities;
+
+        public TrackedEntitiesHolder(TrackingMode trackingMode)
+        {
+            TrackingMode = trackingMode;
+        }
+
+        public Dictionary<string, string> ToDictionary()
+        {
+            return _trackedEntities;
+        }
+
+        public bool Any()
+        {
+            if (ShouldTrack)
+                return _trackedEntities.Any();
+
+            return false;
+        }
+
+        public void TryRemove(string id)
+        {
+            if (ShouldTrack)
+                _trackedEntities.Remove(id);
+        }
+
+        public void TryAdd(string entity, string cv)
+        {
+            if (ShouldTrack && _trackedEntities.ContainsKey(entity) == false)
+            {
+                _trackedEntities[entity] = cv;
+            }
+        }
+
+        public void Clear()
+        {
+            if (ShouldTrack)
+                _trackedEntities.Clear();
+        }
+
+        public bool TryGetValue(string id, out string cv)
+        {
+            cv = null;
+
+            if (ShouldTrack == false)
+                return false;
+
+            if (_trackedEntities.TryGetValue(id, out cv))
+                return true;
+
+            return false;
+        }
+
+
+        public bool TryUpdate(string id, string cv)
+        {
+            if (TryGetValue(id, out _) == false)
+                return false;
+
+            _trackedEntities[id] = cv;
+            return true;
+
+        }
+
+        public string this[string id]
+        {
+            set
+            {
+                if (ShouldTrack)
+                    _trackedEntities[id] = value;
+
+            }
+        }
+    }
+
 }
