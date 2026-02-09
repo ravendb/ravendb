@@ -72,7 +72,7 @@ namespace FastTests.Corax.Pipeline
             }
 
             tokens = tokenArray.AsSpan();
-            ScalarTokenizers.TokenizeWhitespace(input, ref tokens);
+            ScalarTokenizers.TokenizeWhitespace(bytes, ref tokens);
             Assert.Equal(expectedTokens, tokens.Length);
         }
 
@@ -108,11 +108,12 @@ namespace FastTests.Corax.Pipeline
         {
             var bytes = Encoding.UTF8.GetBytes(input);
             var lowercaseBytes = Encoding.UTF8.GetBytes(input.ToLowerInvariant()).AsSpan();
-            var lowercaseChars = input.ToLowerInvariant().AsSpan();
 
             var dest = new byte[bytes.Length];
-            var tokenArray = new Token[bytes.Length];
+            var tokenArray = new Token[1];
 
+            tokenArray[0] = new (){Length = (uint)bytes.Length, Offset = 0, Type = TokenType.Word};
+            
             var tokens = tokenArray.AsSpan();
             var destBytes = dest.AsSpan();
 
@@ -128,12 +129,6 @@ namespace FastTests.Corax.Pipeline
 
             destBytes = dest.AsSpan();
             destBytes.Fill(0);
-            
-            tokens = tokenArray.AsSpan();
-            destBytes = dest.AsSpan();
-            Span<char> destChars = new char[bytes.Length];
-            ScalarTransformers.ToLowercase(input.AsSpan(), tokens, ref destChars, ref tokens);
-            Assert.True(lowercaseChars.SequenceEqual(destChars));
         }
     }
 }
