@@ -10,17 +10,14 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
-using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
-using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -432,7 +429,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             memoryStream.Position = 0;
 
             if (TrafficWatchManager.HasRegisteredClients)
-                RavenServerStartup.LogTrafficWatch(multiGetHandler.HttpContext, 0, database.Name);
+                RavenServerStartup.LogTrafficWatch(multiGetHandler.HttpContext, elapsedMilliseconds: 0, database.Name);
 
             using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
             if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
