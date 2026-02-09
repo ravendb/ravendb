@@ -1705,6 +1705,10 @@ namespace Voron.Data.Fixed
             {
                 System.Diagnostics.Debug.Assert(page.IsBranch);
                 page.LastSearchPosition++;
+
+                if (page.LastSearchPosition == page.NumberOfEntries)
+                    continue;
+
                 var depth = _cursor.Count + 1;
                 long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref state);
                 count += recursivePageCount;
