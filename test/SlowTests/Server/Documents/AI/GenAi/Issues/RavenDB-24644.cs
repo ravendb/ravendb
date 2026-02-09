@@ -218,7 +218,7 @@ ai.genContext({}).withPdf(pdf);
                 if (withNullAttachments)
                     Assert.NotEqual(hash1, newHash1);
                 else
-                    Assert.Equal(hash1, newHash1);
+                    Assert.Null(newHash1); // doc1 produces no context objects now - metadata hashes gets cleared
             });
         }
 

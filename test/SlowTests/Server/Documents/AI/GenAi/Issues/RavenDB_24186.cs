@@ -18,7 +18,7 @@ public class RavenDB_24186(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task ShouldReflectContextDeletionsInGenAiMetadataHashes(Options options, GenAiConfiguration config)
+    public async Task GenAi_ShouldReflectContextDeletionsInMetadataHashes(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
