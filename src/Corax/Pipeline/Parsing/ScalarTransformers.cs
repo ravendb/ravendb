@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -87,6 +88,50 @@ namespace Corax.Pipeline.Parsing
 
         public static int ToLowercase(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
+            return tokens.Length == 1 
+                ? ToLowercaseSingleToken(source, tokens, ref dest, ref destTokens) 
+                : ToLowercaseMultipleTokens(source, tokens, ref dest, ref destTokens);
+        }
+
+        private static int ToLowercaseMultipleTokens(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        {
+            int destPos = 0;
+            int tokenIdx;
+
+            for (tokenIdx = 0; tokenIdx < tokens.Length; tokenIdx++)
+            {
+                Token token = tokens[tokenIdx];
+                int destStart = destPos;
+                int destUsed = 0;
+                ReadOnlySpan<byte> sourceSpan = source.Slice(token.Offset, (int)token.Length);
+                while (sourceSpan.IsEmpty == false)
+                {
+                    var opStatus = Rune.DecodeFromUtf8(sourceSpan, out var rune, out int bytesSourceConsumed);
+                    if (opStatus != OperationStatus.Done)
+                        throw new InvalidDataException($"Invalid UTF8 stream received. Operation Status: {opStatus}");
+                    
+                    sourceSpan = sourceSpan.Slice(bytesSourceConsumed);
+                    
+                    rune = Rune.ToLowerInvariant(rune);
+                    if (rune.TryEncodeToUtf8(dest.Slice(destPos + destUsed), out int bytesWritten) == false)
+                        throw new InvalidDataException($"Destination buffer is too small. Buffer Size: {dest.Length}, Write Position: {destPos + destUsed}");
+                    
+                    destUsed += bytesWritten;
+                }
+                
+
+                destTokens[tokenIdx] = token with { Offset = destStart, Length = (uint)destUsed };
+                destPos += destUsed;
+            }
+            
+            dest = dest.Slice(0, destPos);
+            destTokens = destTokens.Slice(0, tokenIdx);
+            return source.Length;
+        }
+
+        private static int ToLowercaseSingleToken(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        {
+            Debug.Assert(tokens.Length == 1);
             nint sourcePos = 0;
             nint destPos = 0;
             nint len = source.Length;
@@ -168,22 +213,11 @@ namespace Corax.Pipeline.Parsing
                 tokens.CopyTo(destTokens);
 
             // We need to shrink the tokens and bytes output. 
-            destTokens = destTokens.Slice(0, tokens.Length);
+            destTokens = destTokens.Slice(0, 1);
+            destTokens[0].Length = (uint)destPos;
+            
+            
             dest = dest.Slice(0, (int)destPos);
-
-            return source.Length;
-        }
-
-        public static int ToLowercase(ReadOnlySpan<char> source, ReadOnlySpan<Token> tokens, ref Span<char> dest, ref Span<Token> destTokens)
-        {
-            int consumed = source.ToLowerInvariant(dest);
-
-            if (tokens != destTokens)
-                tokens.CopyTo(destTokens);
-
-            // We need to shrink the tokens and bytes output. 
-            destTokens = destTokens.Slice(0, tokens.Length);
-            dest = dest.Slice(0, consumed);
 
             return source.Length;
         }

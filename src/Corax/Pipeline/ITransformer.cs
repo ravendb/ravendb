@@ -4,7 +4,7 @@ namespace Corax.Pipeline
 {
     public interface ITransformer
     {
-        bool SupportUtf8 => false;
+        bool SupportUtf8 => true;
         bool RequiresTokenSpace => false;
         bool RequiresBufferSpace => false;
 
@@ -19,7 +19,5 @@ namespace Corax.Pipeline
         float BufferSpaceMultiplier => 1;
 
         int Transform(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens);
-
-        int Transform(ReadOnlySpan<char> source, ReadOnlySpan<Token> tokens, ref Span<char> dest, ref Span<Token> destTokens);
     }
 }
