@@ -1760,11 +1760,6 @@ namespace Voron.Data.Fixed
 
         private (long Count, int ReachedDepth) EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int currentDepth, int maxDepth, ref RemainingNumberOfEntriesState state)
         {
-            if (page.NumberOfEntries == page.LastSearchPosition)
-            {
-                return (0, currentDepth);
-            }
-
             var lastEntry = page.GetEntry(page.NumberOfEntries - 1);
             var lastPage = GetReadOnlyPage(lastEntry->PageNumber);
 
@@ -1776,7 +1771,7 @@ namespace Voron.Data.Fixed
                 state.NonEstimatedAmount += lastPage.NumberOfEntries;
                 var reachedDepth = currentDepth;
 
-                if (page.NumberOfEntries - page.LastSearchPosition <= 1)
+                if (page.LastSearchPosition >= page.NumberOfEntries - 1)
                     return (totalEstimate, currentDepth);
 
                 var firstEntry = page.GetEntry(page.LastSearchPosition);
@@ -1832,7 +1827,20 @@ namespace Voron.Data.Fixed
                 // for all preceding branches, significantly improving performance.
                 if (estimate.ReachedDepth == maxDepth - 1)
                 {
+                    // move to the left neighbor to use as sample
                     index--;
+
+                    if (index >= page.LastSearchPosition)
+                    {
+                        var steadyEntry = page.GetEntry(index);
+                        var steadyBranchPage = GetReadOnlyPage(steadyEntry->PageNumber);
+
+                        var steadyBranchEstimate = EstimateRemainingEntriesFor(steadyBranchPage, currentDepth + 1, maxDepth, ref state);
+
+                        // apply this estimate to itself and all previous branches
+                        long remainingEntries = index - page.LastSearchPosition + 1;
+                        totalEstimate += steadyBranchEstimate.Count * remainingEntries;
+                    }
                     break;
                 }
 
@@ -1841,17 +1849,6 @@ namespace Voron.Data.Fixed
                     var nextEntry = page.GetEntry(index - 1);
                     currentPage = GetReadOnlyPage(nextEntry->PageNumber);
                 }
-            }
-
-            if (index >= page.LastSearchPosition)
-            {
-                var steadyEntry = page.GetEntry(page.LastSearchPosition);
-                var steadyBranchPage = GetReadOnlyPage(steadyEntry->PageNumber);
-
-                var steadyBranchEstimate = EstimateRemainingEntriesFor(steadyBranchPage, currentDepth + 1, maxDepth, ref state);
-
-                // apply this estimate to all previous branches
-                totalEstimate += steadyBranchEstimate.Count * (page.NumberOfEntries - page.LastSearchPosition - 1);
             }
 
             return (totalEstimate, currentDepth);
