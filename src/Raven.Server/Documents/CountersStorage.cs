@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -1947,25 +1948,42 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<CounterTombstoneDetailWithCollection> GetCounterWithCollectionTombstonesFrom(DocumentsOperationContext context, string collectionName, long etag)
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+            var indexDef = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out _, overallDuration);
+        }
 
-            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag)
+        {
+            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+            long count = 0;
+
+            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], afterEtag, 0))
             {
-                var tombstoneDetail = TableValueToCounterTombstoneDetail(context, ref result.Reader);
-                var documentOrTombstone = _documentsStorage.GetDocumentOrTombstone(context, tombstoneDetail.DocumentId);
+                ExtractDocIdFromCounterTombstoneKey(context, ref result.Reader, out var documentId);
 
-                if (documentOrTombstone.Missing)
-                    continue;
+                using (documentId)
+                {
+                    var documentOrTombstone = _documentsStorage.GetDocumentOrTombstone(context, documentId, fields: DocumentFields.Data);
+                    if (documentOrTombstone.Missing)
+                        continue;
 
-                string collection = documentOrTombstone.Document != null ?
-                    _documentDatabase.DocumentsStorage.ExtractCollectionName(context, documentOrTombstone.Document.Data).Name :
-                    documentOrTombstone.Tombstone.Collection;
+                    using (documentOrTombstone.Document)
+                    using (documentOrTombstone.Tombstone)
+                    {
+                        string collection = documentOrTombstone.Document != null ?
+                            _documentDatabase.DocumentsStorage.ExtractCollectionName(context, documentOrTombstone.Document.Data).Name :
+                            documentOrTombstone.Tombstone.Collection;
 
-                if (collection.Equals(collectionName))
-                    yield return new CounterTombstoneDetailWithCollection(tombstoneDetail, collection);
+                        if (collection.Equals(collectionName))
+                            count++;
+                    }
+                }
             }
+
+            return count;
         }
 
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
@@ -2182,7 +2200,7 @@ namespace Raven.Server.Documents
             return context.AllocateStringValue(null, p, sizeOfDocId);
         }
 
-        public static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
+        private static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
         {
             var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
             int sizeOfDocId = 0;
@@ -2198,6 +2216,21 @@ namespace Raven.Server.Documents
 
             Debug.Assert(docId != null);
             Debug.Assert(counterName != null);
+        }
+
+        private static void ExtractDocIdFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId)
+        {
+            var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
+            int sizeOfDocId = 0;
+
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            docId = context.AllocateStringValue(null, p, sizeOfDocId);
+            Debug.Assert(docId != null);
         }
 
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document document, string docId,

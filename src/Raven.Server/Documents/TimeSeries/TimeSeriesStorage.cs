@@ -2470,6 +2470,27 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            TableSchema.FixedSizeKeyIndexDef indexDef = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out _, overallDuration);
+        }
+
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return 0;
+
+            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+            if (table == null)
+                return 0;
+
+            TableSchema.FixedSizeKeyIndexDef indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out _, overallDuration);
+        }
+
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
