@@ -371,6 +371,8 @@ namespace Raven.Server.Documents
             internal void AddPerSubscriptionInfoExtended(ITombstoneAware subscription, Dictionary<string, LastTombstoneInfo> lastTombstoneInfo, ITombstoneAware.TombstoneType type,
                 DocumentDatabase documentDatabase)
             {
+                var duration = Stopwatch.StartNew();
+
                 foreach (var tombstoneInfo in lastTombstoneInfo)
                 {
                     var collection = tombstoneInfo.Value.Collection;
@@ -382,7 +384,7 @@ namespace Raven.Server.Documents
                         collection = string.Empty;
                     }
 
-                    long numberOfTombstonesLeft = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection);
+                    long numberOfTombstonesLeft = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection, duration);
 
                     var key = $"{subscription.TombstoneCleanerIdentifier}/{tombstoneInfo.Value.Name}/{collection}";
 
@@ -399,7 +401,7 @@ namespace Raven.Server.Documents
             }
 
             private long CalculateRemainingTombstones(LastTombstoneInfo tombstoneInfo, ITombstoneAware.TombstoneType type, DocumentDatabase documentDatabase,
-                string collection)
+                string collection, Stopwatch stopwatch)
             {
                 if (tombstoneInfo.Type == ITombstoneAware.TombstoneDeletionBlockerType.Index && type != ITombstoneAware.TombstoneType.Documents)
                     return 0;
@@ -410,15 +412,14 @@ namespace Raven.Server.Documents
                     return type switch
                     {
                         ITombstoneAware.TombstoneType.Documents => collection.IsNullOrEmpty()
-                            ? documentDatabase.DocumentsStorage.GetTombstonesFrom(context, tombstoneInfo.Etag + 1, 0, long.MaxValue).Count()
-                            : documentDatabase.DocumentsStorage.GetTombstonesFrom(context, collection, tombstoneInfo.Etag + 1, 0, long.MaxValue).Count(),
+                            ? documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, out _, stopwatch)
+                            : documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, out _, stopwatch),
                         ITombstoneAware.TombstoneType.Counters => collection.IsNullOrEmpty()
-                            ? documentDatabase.DocumentsStorage.CountersStorage.GetCounterTombstonesFrom(context, tombstoneInfo.Etag + 1).Count()
-                            : documentDatabase.DocumentsStorage.CountersStorage.GetCounterWithCollectionTombstonesFrom(context, collection, tombstoneInfo.Etag + 1)
-                                .Count(),
+                            ? documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch)
+                            : documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1),
                         ITombstoneAware.TombstoneType.TimeSeries => collection.IsNullOrEmpty()
-                            ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, tombstoneInfo.Etag + 1).Count()
-                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, collection, tombstoneInfo.Etag + 1).Count(), 
+                            ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch)
+                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch), 
                         _ => throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}"),
                     };
                 }
