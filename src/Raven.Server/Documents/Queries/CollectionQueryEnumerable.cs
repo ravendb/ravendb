@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Queries
                     if (_filterScriptRun == null)
                     {
                         totalResultsCalculated = true;
-                        _totalResults.Value = _documents.GetCollection(_collection, _context).Count;
+                        _totalResults.Value = _documents.GetNumberOfDocumentsFor(_collection, _context);
                     }
                 }
 
