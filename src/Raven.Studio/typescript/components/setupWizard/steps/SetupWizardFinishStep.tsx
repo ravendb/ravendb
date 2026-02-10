@@ -583,7 +583,7 @@ function CompletedSummary() {
                             When the Setup Wizard is done and the new node restarts, the cluster will automatically
                             detect it.
                             <br />
-                            There is no need to add it manually from Sudio.
+                            There is no need to add it manually from Studio.
                             <br />
                             Simply access the &apos;Cluster&apos; view and observe the topology update.
                         </RichAlert>
