@@ -230,12 +230,11 @@ namespace Raven.Server.Documents
             if (isAllDocs)
             {
                 var allDocsCount = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, CollectionName.HiLoCollection, 0, out long hiloDocsCount, Stopwatch.StartNew());
+                var hiloDocsCount = Database.DocumentsStorage.GetNumberOfDocumentsFor(CollectionName.HiLoCollection, context);
                 return allDocsCount - hiloDocsCount;
             }
 
-            Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out long totalCount, Stopwatch.StartNew());
-            return totalCount;
+            return Database.DocumentsStorage.GetNumberOfDocumentsFor(collectionName, context);
         }
 
         protected long GetLastEtagForCollection(DocumentsOperationContext context, string collection, bool isAllDocs)
