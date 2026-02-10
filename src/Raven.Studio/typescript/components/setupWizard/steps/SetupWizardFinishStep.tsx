@@ -464,7 +464,8 @@ function CompletedSummary() {
                             When you enter the Setup Wizard on a new node, choose &apos;
                             <b>Use Setup Package</b>&apos;.
                             <br />
-                            Do not start a new setup process on this node again; it is not supported.
+                            Do not start a setup process on a node that has already been configured; this is not
+                            supported.
                         </NumberedListItem>
                         <NumberedListItem stepKey={3}>
                             You will be asked to upload the zip file that was just downloaded.
@@ -570,7 +571,8 @@ function CompletedSummary() {
                                 When you enter the Setup Wizard on a new node, choose &apos;
                                 <b>Use Setup Package</b>&apos;.
                                 <br />
-                                Do not start a new setup process on this new node again; it is not supported.
+                                Do not start a setup process on a node that has already been configured; this is not
+                                supported.
                             </NumberedListItem>
                             <NumberedListItem stepKey={3}>
                                 You will be asked to upload the zip file that was just downloaded.
