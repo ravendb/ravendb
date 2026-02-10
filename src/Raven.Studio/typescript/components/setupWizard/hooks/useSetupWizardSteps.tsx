@@ -82,7 +82,7 @@ export function useSetupWizardSteps({
         },
         {
             title: "Security",
-            description: "Choose security option that fits your needs",
+            description: "Choose a security option",
             component: <SetupWizardSecurityStep />,
             footer: <SetupWizardSecurityStepFooter />,
             isCurrent: currentStep === "Security",
@@ -91,7 +91,7 @@ export function useSetupWizardSteps({
         },
         {
             title: "Self-signed certificate",
-            description: "Generate a self-signed certificate",
+            description: "Use a self-signed certificate",
             component: <SetupWizardSelfSignedCertificateStep />,
             footer: <SetupWizardSelfSignedCertificateStepFooter />,
             isCurrent: currentStep === "Self-signed certificate",
@@ -130,7 +130,7 @@ export function useSetupWizardSteps({
         },
         {
             title: "Summary",
-            description: "Check if everything’s correct",
+            description: "Check that everything is correct",
             component: <SetupWizardSummaryStep />,
             footer: <SetupWizardSummaryStepFooter />,
             isCurrent: currentStep === "Summary",

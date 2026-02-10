@@ -37,7 +37,7 @@ export function SetupWizardAdditionalSettingsStep() {
                     <div className="mb-4">
                         <h2 className="mb-1">Additional settings</h2>
                         <p className="mb-4 text-muted">
-                            At this optional step you may control some of optional settings regarding your setup.
+                            At this step, you can configure optional settings for your setup.
                         </p>
                     </div>
                     <div>
@@ -52,7 +52,7 @@ export function SetupWizardAdditionalSettingsStep() {
                 <h2 className="mb-1">Configure advanced options</h2>
                 <FormSwitch size="lg" name="additionalSettingsStep.isAdvancedSettingsVisible" control={control} />
             </div>
-            <p className="text-muted">Settings you may want to consider as an experienced user</p>
+            <p className="text-muted">Settings you may want to configure if you&#39;re an experienced user.</p>
             <AdvancedSettingsContent control={control} isVisible={additionalSettingsStep.isAdvancedSettingsVisible} />
         </div>
     );
@@ -170,8 +170,8 @@ function ServerEnvironmentSection({
                                     className="mb-2 w-100"
                                 />
                                 <span>
-                                    Studio environment allows you to add a visual identifier to the UI, making it easier
-                                    to distinguish between multiple environments when working simultaneously.
+                                    The Studio environment allows you to add a visual identifier to the UI, making it
+                                    easier to distinguish between multiple environments when working simultaneously.
                                 </span>
                             </>
                         }
@@ -208,8 +208,8 @@ function CertificateExpirationSection({ control }: { control: Control<SetupWizar
                 <PopoverWithHoverWrapper
                     message={
                         <>
-                            This allows you to define how long the admin client certificate should be valid. By default,
-                            this value is set to 60 months.
+                            This defines how long the admin client certificate will be valid. By default, this value is
+                            set to 60 months.
                         </>
                     }
                     placement="right"
@@ -242,7 +242,8 @@ function ExperimentalFeaturesSection({ control, licenseInfo }: ExperimentalFeatu
         <div>
             <h4 className="mb-0">Experimental features</h4>
             <p className="text-muted">
-                Some features, like ones recently released, are considered experimental and are disabled by default.
+                Some newly released features are considered experimental and are disabled by default. Toggle on to
+                enable.
             </p>
             <PostgreSqlIntegrationToggle control={control} />
         </div>
@@ -260,7 +261,7 @@ function PostgreSqlIntegrationToggle({ control }: { control: Control<SetupWizard
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Enabling this feature allows you to use RavenDB as a PostgreSQL server. You will also need a license that contains PostgreSQL Protocol."
+                                    description="Enabling this feature allows RavenDB to function as a PostgreSQL server. Requires a license that includes the PostgreSQL Protocol."
                                     docsLink="https://docs.ravendb.net/integrations/postgresql-protocol/overview/"
                                 />
                             }
@@ -270,7 +271,8 @@ function PostgreSqlIntegrationToggle({ control }: { control: Control<SetupWizard
                         </PopoverWithHoverWrapper>
                     </strong>
                     <small className="postgresql-integration__description">
-                        RavenDB supports the PostgreSQL protocol, enabling tools like Power BI to access its database.
+                        RavenDB supports the PostgreSQL protocol, enabling external tools such as Power BI to access the
+                        database.
                     </small>
                 </div>
                 <Icon className="postgresql-integration__icon" size="lg" icon="integrations" />
@@ -375,8 +377,8 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                 />
                 {isVisible && isAbsolutePath(dataDirectory) && (
                     <RichAlert variant="warning" className="mt-2">
-                        This path will be used on all nodes. Please ensure this directory exists on each node, as setup
-                        will fail otherwise.
+                        This path will be used on all nodes. Make sure this directory exists on each node; otherwise,
+                        the setup will fail.
                     </RichAlert>
                 )}
             </FormGroup>
@@ -401,8 +403,8 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             </ConditionalPopover>
                         </div>
                         <small className="text-muted">
-                            This specifies the location where the server certificate will be stored after the server is
-                            created
+                            Specifies the location where the server certificate will be stored after the server is
+                            created.
                         </small>
                     </FormLabel>
                     <FormPathSelector
@@ -416,8 +418,8 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                     />
                     {isVisible && !!setupCertificatePath && (
                         <RichAlert variant="warning" className="mt-2">
-                            This path must exist; the certificate will be saved here. After setup, ensure it is present
-                            at the same path on every node; otherwise, cluster setup may fail.
+                            This path must exist as the certificate will be saved here. After setup, ensure the
+                            certificate is available at the same path on every node; otherwise, cluster setup may fail.
                         </RichAlert>
                     )}
                 </FormGroup>

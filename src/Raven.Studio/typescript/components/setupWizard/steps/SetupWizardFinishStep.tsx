@@ -364,8 +364,8 @@ function TopInfo({ status }: { status: OperationStatus }) {
     if (status === "InProgress") {
         return (
             <>
-                <h2 className="mb-1">Configuration in process</h2>
-                <p className="mb-4 text-muted">Please, wait a moment. Your RavenDB will be ready in no time.</p>
+                <h2 className="mb-1">Configuration in progress</h2>
+                <p className="mb-4 text-muted">Please wait a moment. Your RavenDB will be ready shortly.</p>
             </>
         );
     }
@@ -375,8 +375,7 @@ function TopInfo({ status }: { status: OperationStatus }) {
             <>
                 <h2 className="mb-1">Setup failed</h2>
                 <p className="mb-4 text-muted">
-                    It seems like something went wrong. Read the error message to find out what might&apos;ve been an
-                    issue.
+                    It seems something went wrong. Refer to the error message for more details.
                 </p>
             </>
         );
@@ -395,7 +394,7 @@ function TopInfo({ status }: { status: OperationStatus }) {
             <>
                 <h2 className="mb-1">All set!</h2>
                 <p className="mb-4 text-muted">
-                    You&apos;re almost ready to go. Follow the instructions to successfully complete the process.
+                    You&apos;re almost ready to go. Follow the instructions to complete the process.
                 </p>
             </>
         );
@@ -443,7 +442,7 @@ function CompletedSummary() {
                                 <Icon icon="folder" addon="attachment" color="primary" size="lg" />
                             </div>
                             <span>
-                                Your cluster settings configuration and the certificate are contained in the downloaded
+                                Your cluster settings configuration and the certificate are included in the downloaded
                                 zip file.
                             </span>
                         </Col>
@@ -456,28 +455,31 @@ function CompletedSummary() {
                         </Col>
                     </Row>
                     <hr />
-                    <h5>How to setup the cluster nodes?</h5>
+                    <h5>How to set up the cluster nodes?</h5>
                     <NumberedList>
                         <NumberedListItem stepKey={1}>
                             The next step is to download a new RavenDB server for each of the cluster nodes.
                         </NumberedListItem>
                         <NumberedListItem stepKey={2}>
-                            When you enter the Setup Wizard on a new node, please choose &apos;
+                            When you enter the Setup Wizard on a new node, choose &apos;
                             <b>Use Setup Package</b>&apos;.
                             <br />
-                            Do not try to start a new setup process again in this new node, it is not supported.
+                            Do not start a new setup process on this node again; it is not supported.
                         </NumberedListItem>
                         <NumberedListItem stepKey={3}>
-                            You will be asked to upload the zip file which was just downloaded.
+                            You will be asked to upload the zip file that was just downloaded.
                         </NumberedListItem>
                         <NumberedListItem stepKey={4}>
-                            The new server node will join the already existing cluster.
+                            The new server node will join the existing cluster.
                         </NumberedListItem>
                     </NumberedList>
                     <RichAlert variant="info" className="mt-3">
-                        When the Setup Wizard is done and the new node was restarted, the cluster will automatically
-                        detect it. There is no need to manually add it again from the studio. Simply access the
-                        &apos;Cluster&apos; view and observe the topology being updated.
+                        When the Setup Wizard is done and the new node restarts, the cluster will automatically detect
+                        it.
+                        <br />
+                        There is no need to add it manually from Studio.
+                        <br />
+                        Simply access the &apos;Cluster&apos; view and observe the topology update.
                     </RichAlert>
                 </div>
             </div>
@@ -559,30 +561,31 @@ function CompletedSummary() {
                             </Col>
                         </Row>
                         <hr />
-                        <h5>How to setup the other nodes?</h5>
+                        <h5>How to set up the other nodes?</h5>
                         <NumberedList>
                             <NumberedListItem stepKey={1}>
-                                The next step is to download a new RavenDB server for each of the other nodes.
+                                The next step is to download a new RavenDB server for each of the cluster nodes.
                             </NumberedListItem>
                             <NumberedListItem stepKey={2}>
-                                When you enter the Setup Wizard on a new node, please choose &apos;
+                                When you enter the Setup Wizard on a new node, choose &apos;
                                 <b>Use Setup Package</b>&apos;.
                                 <br />
-                                Do not try to start a new setup process again in this new node, it is not supported.
+                                Do not start a new setup process on this new node again; it is not supported.
                             </NumberedListItem>
                             <NumberedListItem stepKey={3}>
-                                You will be asked to upload the zip file which was just downloaded.
+                                You will be asked to upload the zip file that was just downloaded.
                             </NumberedListItem>
                             <NumberedListItem stepKey={4}>
-                                The new server node will join the already existing cluster.
+                                The new server node will join the existing cluster.
                             </NumberedListItem>
                         </NumberedList>
                         <RichAlert variant="info" className="mt-2">
-                            When the Setup Wizard is done and the new node was restarted, the cluster will automatically
+                            When the Setup Wizard is done and the new node restarts, the cluster will automatically
                             detect it.
                             <br />
-                            There is no need to manually add it again from the studio. Simply access the
-                            &apos;Cluster&apos; view and observe the topology being updated.
+                            There is no need to add it manually from Sudio.
+                            <br />
+                            Simply access the &apos;Cluster&apos; view and observe the topology update.
                         </RichAlert>
                     </Tab.Pane>
                 </Tab.Content>
