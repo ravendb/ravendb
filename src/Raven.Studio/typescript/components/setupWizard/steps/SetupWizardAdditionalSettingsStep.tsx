@@ -243,7 +243,7 @@ function ExperimentalFeaturesSection({ control, licenseInfo }: ExperimentalFeatu
             <h4 className="mb-0">Experimental features</h4>
             <p className="text-muted">
                 Some newly released features are considered experimental and are disabled by default. Toggle on to
-                enable.
+                enable them.
             </p>
             <PostgreSqlIntegrationToggle control={control} />
         </div>

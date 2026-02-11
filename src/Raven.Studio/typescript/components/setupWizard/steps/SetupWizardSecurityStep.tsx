@@ -141,12 +141,9 @@ export function SetupWizardSecurityStep() {
                                     corporate security policies or integrate with an internal certificate authority.
                                 </li>
                                 <li className="mt-1">
-                                    Recommended for environments where certificates are created and renewed manually or
-                                    by external infrastructure.
-                                </li>
-                                <li className="mt-1">
-                                    Ideal for <b>production environments</b> that require full control over certificate
-                                    management and trust configuration.
+                                    Recommended for <b>production environments</b> where certificates are managed
+                                    manually or by external infrastructure, and full control over certificate management
+                                    and trust configuration is required.
                                 </li>
                             </ul>
                         }
@@ -173,16 +170,13 @@ export function SetupWizardSecurityStep() {
                         <ul className="mb-0 ps-3">
                             <li>
                                 Use only in <b>trusted, isolated environments</b> such as local development, internal
-                                testing, or networks not exposed to the public internet.
+                                testing, or secure private networks where encryption is intentionally not required
+                                (e.g., for performance or testing purposes).
                             </li>
                             <li className="mt-1">
                                 <b>Not recommended for production</b>, as all traffic will be transmitted without
                                 encryption or authentication, making it vulnerable to eavesdropping or man-in-the-middle
                                 attacks.
-                            </li>
-                            <li className="mt-1">
-                                Suitable when all nodes run in a secure private network and you intentionally do not
-                                require encryption due to performance or testing needs.
                             </li>
                         </ul>
                     }

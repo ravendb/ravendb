@@ -365,7 +365,7 @@ function TopInfo({ status }: { status: OperationStatus }) {
         return (
             <>
                 <h2 className="mb-1">Configuration in progress</h2>
-                <p className="mb-4 text-muted">Please wait a moment. Your RavenDB will be ready shortly.</p>
+                <p className="mb-4 text-muted">Please wait a moment. Your RavenDB server will be ready shortly.</p>
             </>
         );
     }
