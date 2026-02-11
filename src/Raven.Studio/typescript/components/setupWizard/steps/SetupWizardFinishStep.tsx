@@ -493,13 +493,13 @@ function CompletedSummary() {
                 <Nav className="mb-2">
                     <Nav.Item className="flex-grow">
                         <Nav.Link eventKey="connectToServer" className="connect-to-server-tab">
-                            Connect to the server
+                            Access the server
                         </Nav.Link>
                     </Nav.Item>
                     {isSettingCluster && (
                         <Nav.Item className="flex-grow">
                             <Nav.Link eventKey="cluster" className="cluster-tab">
-                                Setting up a cluster
+                                Complete cluster setup
                             </Nav.Link>
                         </Nav.Item>
                     )}
