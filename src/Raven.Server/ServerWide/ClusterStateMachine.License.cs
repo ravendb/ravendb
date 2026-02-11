@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
@@ -24,6 +25,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Raven.Server.ServerWide;
 
@@ -59,7 +61,8 @@ public sealed partial class ClusterStateMachine
         nameof(AddElasticSearchEtlCommand),
         nameof(AddQueueSinkCommand),
         nameof(UpdateQueueSinkCommand),
-        nameof(EditDataArchivalCommand)
+        nameof(EditDataArchivalCommand),
+        nameof(ToggleTaskStateCommand)
     };
 
     private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
@@ -168,6 +171,9 @@ public sealed partial class ClusterStateMachine
             case nameof(PutClientConfigurationCommand):
                 if (AssertClientConfiguration(serverStore.LicenseManager.LicenseStatus, context) == false)
                     throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding the client configuration.");
+                break;
+            case nameof(ToggleTaskStateCommand):
+                AssertToggleTaskStateLicenseLimits(databaseRecord, serverStore.LicenseManager.LicenseStatus, context, updateDatabaseCommand);
                 break;
         }
     }
@@ -1118,6 +1124,53 @@ public sealed partial class ClusterStateMachine
         if (licenseStatus.HasSnmpMonitoring == false)
             throw new LicenseLimitException(LimitType.Snmp, message);
     }
+
+    private void AssertToggleTaskStateLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+
+        if (updateDatabaseCommand != null && updateDatabaseCommand is ToggleTaskStateCommand ttsc)
+        {
+            switch (ttsc.TaskType)
+            {
+                case OngoingTaskType.Replication:
+                    AssertExternalReplicationLicenseLimits(databaseRecord, licenseStatus, context, updateDatabaseCommand);
+                    break;
+                case OngoingTaskType.RavenEtl:
+                    AssertRavenEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.SqlEtl:
+                    AssertSqlEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.OlapEtl:
+                    AssertOlapEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.ElasticSearchEtl:
+                    AssertElasticSearchEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.QueueEtl:
+                    AssertQueueEtlLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.Backup:
+                    AssertPeriodicBackupLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.PullReplicationAsHub:
+                    AssertPullReplicationAsHubLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.PullReplicationAsSink:
+                    AssertPullReplicationAsSinkLicenseLimits(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.QueueSink:
+                    AssertQueueSink(databaseRecord, licenseStatus, context);
+                    break;
+                default:
+                    return;
+            }
+        }
+    }
+
+
 
     private enum DatabaseRecordElementType
     {
