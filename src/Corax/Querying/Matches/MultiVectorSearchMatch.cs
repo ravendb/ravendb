@@ -266,13 +266,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
         var mvsInspect =  new QueryInspectionNode(nameof(MultiVectorSearchMatch),
             parameters: new Dictionary<string, string>()
             {
-<<<<<<< HEAD
                 { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },                
                 { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers.FirstOrDefault().SimilarityMethod?.ToString() ?? "Query not initialized." },
-=======
-                { Constants.QueryInspectionNode.FieldName, _metadata.FieldName.ToString() },
-                { nameof(Hnsw.SimilarityMethod), _vectorsRetrievers[0].SimilarityMethod.ToString() },
->>>>>>> 872a432aa79 (RavenDB-23453: Refactor Corax vector search and query building)
                 { "IsExact", _isExact.ToString() },
                 { "IsScanning", _scanningQuery.ToString() },
                 { "Minimum match", _minimumMatch.ToString(CultureInfo.InvariantCulture) },

@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Server.Collections;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Data.Graphs;
 using Voron.Data.Lookups;
 using Voron.Util;
@@ -24,7 +25,6 @@ public partial class IndexSearcher
         public static bool ShouldScan(IndexSearcher indexSearcher, long filterMatchesCount, bool isExact, IQueryMatch filterQuery, int scanningThreshold, int numberOfCandidates)
         {
             var shouldScan = filterQuery != null && (filterMatchesCount < scanningThreshold || isExact || filterMatchesCount * 0.5 < numberOfCandidates);
-
             if (indexSearcher._testingConfiguration is {DisableVectorSearchScanning: true})
                 return false;
              
