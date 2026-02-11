@@ -278,4 +278,19 @@ public unsafe struct GrowableBitArray : IDisposable
             _memoryScope = null;
         }
     }
+
+    public static IEnumerable<long> Probe(GrowableBitArray filterResults, Random shared)
+    {
+        var it = filterResults.GetIterator(0);
+        HashSet<long> seen = new();
+        do
+        {
+            var current = shared.NextInt64(0, filterResults._capacity);
+            if (seen.Add(current) == false)
+                continue;
+            if (filterResults.Contains(current) == false)
+                continue;
+            yield return current;
+        } while (seen.Count < filterResults.Count);
+    }
 }

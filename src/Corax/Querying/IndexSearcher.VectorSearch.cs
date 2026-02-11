@@ -24,7 +24,6 @@ public partial class IndexSearcher
         public static bool ShouldScan(IndexSearcher indexSearcher, long filterMatchesCount, bool isExact, IQueryMatch filterQuery, int scanningThreshold, int numberOfCandidates)
         {
             var shouldScan = filterQuery != null && (filterMatchesCount < scanningThreshold || isExact || filterMatchesCount * 0.5 < numberOfCandidates);
-
             return shouldScan;
         }
 
@@ -44,6 +43,34 @@ public partial class IndexSearcher
 
             filter.Count = totalCount;
             return filter;
+        }
+
+        public static IEnumerable<long> GetDocumentsIntoNodesRandomly(IndexSearcher indexSearcher, FieldMetadata metadata, GrowableBitArray filterResults)
+        {
+            var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
+            var vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
+            var nodesByVectorId = searchState.NodeIdsByVectorId;
+            if (indexSearcher.TryGetRootPageByFieldName(metadata.FieldName, out var vectorRootPage) is false)
+            {
+                yield break;
+            }
+            
+            Page p = default;
+            using CompactKey key = new();
+            
+            foreach (var currentDocument in GrowableBitArray.Probe(filterResults, Random.Shared))
+            {
+                var entryTermsReader = indexSearcher.GetEntryTermsReader(currentDocument, ref p, key);
+                while (entryTermsReader.FindNextStored(vectorRootPage))
+                {
+                    var vectorHash = entryTermsReader.StoredField.Value;
+                    if (vectorsByHash.TryGetValue(vectorHash, out var vectorId))
+                    {
+                        if (nodesByVectorId.TryGetValue(vectorId, out var nodeId))
+                            yield return nodeId;
+                    }
+                }
+            }
         }
 
         public static bool TryConvertDocumentsIdsToNodesIds(IndexSearcher indexSearcher, in FieldMetadata metadata, GrowableBitArray filterResults, out ContextBoundNativeList<long> nodesIdsToScan)

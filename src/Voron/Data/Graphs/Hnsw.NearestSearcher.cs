@@ -13,7 +13,6 @@ public partial class Hnsw
         private class NearestSearcher : IHnswSearcher
         {
             private readonly SearchState _searchState;
-            private readonly int _startingPointIndex;
             private readonly Memory<byte> _vector;
             private readonly int _level;
 
@@ -28,19 +27,19 @@ public partial class Hnsw
             private NativeList<long> _nodeIds;
             private readonly HashSet<int> _alreadyReturnedEdges;
             private long _vectorReadCounter = 0;
+            private readonly int _startingPointIndex;
+            private ContextBoundNativeList<int> _startingPointIndexes;
             
             public long CandidatesProcessed { get => _vectorReadCounter; }
-            
             public int NumberOfCandidates { get; init; }
 
-            public NearestSearcher(SearchState searchState, int startingPointIndex, Memory<byte> vector,
+            private NearestSearcher(SearchState searchState, Memory<byte> vector,
                 int level, int numberOfCandidates,
                 ContextBoundNativeList<int> candidates,
                 NearestEdgesFlags flags,
                 bool hasFilterMatch)
             {
                 _searchState = searchState;
-                _startingPointIndex = startingPointIndex;
                 _vector = vector;
                 _level = level;
                 NumberOfCandidates = numberOfCandidates;
@@ -58,10 +57,64 @@ public partial class Hnsw
                     _alreadyReturnedEdges = new();
                 }
             }
-
-            public IEnumerable<bool> Search()
+            
+            
+            public NearestSearcher(SearchState searchState, ContextBoundNativeList<int> startingPointsIndexes, Memory<byte> vector, int level, int numberOfCandidates, ContextBoundNativeList<int> candidates, NearestEdgesFlags flags) : this(searchState, vector, level, numberOfCandidates, candidates, flags, true)
             {
-                Start:
+                _startingPointIndexes = startingPointsIndexes;
+                _startingPointIndex = -1;
+            }
+
+            public NearestSearcher(SearchState searchState, int startingPointIndex, Memory<byte> vector,
+                int level, int numberOfCandidates,
+                ContextBoundNativeList<int> candidates,
+                NearestEdgesFlags flags,
+                bool hasFilterMatch) : this(searchState, vector, level, numberOfCandidates, candidates, flags, hasFilterMatch)
+            {
+                _startingPointIndex = startingPointIndex;
+            }
+
+            private void InitState(out float lowerBound, out int visitedCounter)
+            {
+                if (_startingPointIndex != -1)
+                {
+                    Deepest(out lowerBound, out visitedCounter);
+                }
+                else
+                {
+                    Multi(out lowerBound, out visitedCounter);
+                }
+            }
+
+            private void Multi(out float lowerBound, out int visitedCounter)
+            {
+                var candidatesQ = _searchState._candidatesQ;
+                var nearestEdgesQ = _searchState._nearestEdgesQ;
+
+                Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
+                Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
+
+                lowerBound = float.MaxValue;
+                visitedCounter = ++_searchState._visitsCounter;
+
+                foreach (var nodeIdx in _startingPointIndexes)
+                {
+                    ref var startingPoint = ref _searchState.GetNodeByIndex(nodeIdx);
+                    startingPoint.Visited = visitedCounter;
+                    var currentDistance = -_searchState.QueryDistance(_vector.Span, nodeIdx, ref _vectorReadCounter);
+                    lowerBound = Math.Min(lowerBound, currentDistance);
+                    candidatesQ.Enqueue(nodeIdx, -currentDistance);
+                    if (_flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) &&
+                        ((startingPoint.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) != Constants.Graphs.VectorId.Tombstone
+                         || _flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
+                    {
+                        nearestEdgesQ.Enqueue(nodeIdx, currentDistance);
+                    }
+                }
+            }
+
+            private void Deepest(out float lowerBound, out int visitedCounter)
+            {
                 var candidatesQ = _searchState._candidatesQ;
                 var nearestEdgesQ = _searchState._nearestEdgesQ;
                 var allocator = _searchState.Llt.Allocator;
@@ -69,8 +122,8 @@ public partial class Hnsw
                 Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
                 Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
 
-                float lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
-                var visitedCounter = ++_searchState._visitsCounter;
+                lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
+                visitedCounter = ++_searchState._visitsCounter;
                 {
                     ref var startingPoint = ref _searchState.GetNodeByIndex(_startingPointIndex);
                     startingPoint.Visited = visitedCounter;
@@ -87,6 +140,18 @@ public partial class Hnsw
                         nearestEdgesQ.Enqueue(_startingPointIndex, lowerBound);
                     }
                 }
+            }
+
+            public IEnumerable<bool> Search()
+            {
+                Start:
+                var candidatesQ = _searchState._candidatesQ;
+                var nearestEdgesQ = _searchState._nearestEdgesQ;
+                var allocator = _searchState.Llt.Allocator;
+
+                Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
+                Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
+                InitState(out float lowerBound, out int visitedCounter);
 
                 while (candidatesQ.TryDequeue(out var cur, out var curDistance))
                 {
@@ -220,6 +285,8 @@ public partial class Hnsw
 
             public void Dispose()
             {
+                if (_startingPointIndex == -1)
+                    _startingPointIndexes.Dispose();
                 _candidates.Dispose();
                 _nodeIds.Dispose(_searchState.Llt.Allocator);
                 _indexes.Dispose(_searchState.Llt.Allocator);

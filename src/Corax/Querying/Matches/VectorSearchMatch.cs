@@ -123,7 +123,8 @@ public struct VectorSearchMatch : IQueryMatch
         {
             _ when _scanningQuery => Hnsw.ExactNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, hasFilterMatch: false, nodesIdsToScan),
             true => Hnsw.ExactNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
-            false => Hnsw.ApproximateNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
+            false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, IndexSearcher.VectorSearchUtils.GetDocumentsIntoNodesRandomly(_indexSearcher, _metadata, _filterResults)), 
+                _ => Hnsw.ApproximateNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
         };
         
 

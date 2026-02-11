@@ -154,8 +154,7 @@ table, th, td {
 
 </style><body>");
 
-            var path = new NativeList<int>();
-            path.EnsureCapacityFor(llt.Allocator, searchState.Options.MaxLevel +1);
+            var path = new ContextBoundNativeList<int>(llt.Allocator, searchState.Options.MaxLevel + 1);
             var edges = new ContextBoundNativeList<int>(llt.Allocator, 16);
             searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel,  ref path);
             using var search = searchState.NearestSearch(path[0], new Memory<byte>(vector.ToArray()), 0, 8, edges, SearchState.NearestEdgesFlags.StartingPointAsEdge, false);
