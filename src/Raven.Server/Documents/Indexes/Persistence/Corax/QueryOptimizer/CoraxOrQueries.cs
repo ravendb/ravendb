@@ -30,10 +30,10 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
             if (right is CoraxOrQueries { HasBoosting: false } rightOr)
                 return (CoraxOrQueries)rightOr.Add(left);
         }
-        
+
         return CreateNew(parameters, left, right);
     }
-    
+
     private static CoraxOrQueries CreateNew(CoraxQueryBuilder.Parameters parameters, IQueryMatch left, IQueryMatch right)
     {
         var orClause = new CoraxOrQueries(parameters);
@@ -41,7 +41,7 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
         orClause.Add(right);
         return orClause;
     }
-    
+
     private static CoraxOrQueries MergeOrCreateTwoOrQueries(CoraxQueryBuilder.Parameters parameters, CoraxOrQueries left, CoraxOrQueries right)
     {
         if (left.EqualsScoreFunctions(right))
@@ -90,11 +90,11 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
         {
             if (VectorStack == null)
                 VectorStack = other.VectorStack;
-            else 
+            else
                 VectorStack.AddRange(other.VectorStack);
         }
     }
-    
+
     protected override void AddCoraxBooleanItem(CoraxBooleanItem itemToAdd)
     {
         if (itemToAdd.Boosting.HasValue == false && itemToAdd.Operation is not UnaryMatchOperation.Equals)
@@ -148,12 +148,12 @@ public sealed class CoraxOrQueries : CoraxBooleanQueryBase
         foreach (var complex in ComplexMatches ?? Enumerable.Empty<IQueryMatch>())
             AddToQueryTree(complex);
         ComplexMatches = null;
-        
+
         foreach (var vector in VectorStack ?? Enumerable.Empty<CoraxVectorItem>())
         {
             AddToQueryTree(vector.Materialize(null));
         }
-        
+
         VectorStack = null;
 
         if (Boosting.HasValue)

@@ -329,6 +329,18 @@ public static partial class CoraxQueryBuilder
                                 return TranslateBetweenQuery(builderParameters, bq, exact);
                         }
 
+                        // true AND X → X; skip NegatedExpression to preserve the NOT path below
+                        if (@where.Left is TrueExpression && @where.Right is not NegatedExpression)
+                        {
+                            builderParameters.BuildSteps?.Add($"BinaryExpression: {where.Type} - true AND optimization ({@where.Right})");
+                            return ToCoraxQuery(builderParameters, @where.Right, ref leftOnlyOptimization, exact);
+                        }
+                        if (@where.Right is TrueExpression && @where.Left is not NegatedExpression)
+                        {
+                            builderParameters.BuildSteps?.Add($"BinaryExpression: {where.Type} - AND true optimization ({@where.Left})");
+                            return ToCoraxQuery(builderParameters, @where.Left, ref leftOnlyOptimization, exact);
+                        }
+
                         leftOnlyOptimization.BinaryMatchTraversed();
                         switch (@where.Left, @where.Right)
                         {
@@ -342,6 +354,12 @@ public static partial class CoraxQueryBuilder
                             default:
                                 left = ToCoraxQuery(builderParameters, @where.Left, ref leftOnlyOptimization, exact);
                                 right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
+
+                                if (IsAllEntries(left))
+                                    return right;
+                                if (IsAllEntries(right))
+                                    return left;
+
                                 // in case of AND we can materialize only TermMatches, we push streamingOptimization there only for changing order for MultiTermMatch;
                             if (left is CoraxBooleanItem cbi && leftOnlyOptimization.TrySetAsStreamingField(builderParameters, cbi, right))
                                     left = cbi.Materialize(ref leftOnlyOptimization);
@@ -361,9 +379,20 @@ public static partial class CoraxQueryBuilder
                     }
                 case OperatorType.Or:
                     {
+                        // true OR X → AllEntries
+                        if (@where.Left is TrueExpression || @where.Right is TrueExpression)
+                        {
+                            builderParameters.BuildSteps?.Add($"BinaryExpression: {where.Type} - true OR optimization (AllEntries)");
+                            return builderParameters.AllEntries.Replay();
+                        }
+
                         leftOnlyOptimization.BinaryMatchTraversed();
                         var left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
                         var right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
+
+                        // Cascading: a sub-expression may have already resolved to AllEntries
+                        if (IsAllEntries(left) || IsAllEntries(right))
+                            return builderParameters.AllEntries.Replay();
 
                         builderParameters.BuildSteps?.Add(
                             $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assembly location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlbly: {right.GetType().Assembly.FullName} assembly location: {right.GetType().Assembly.Location}");
@@ -701,12 +730,26 @@ public static partial class CoraxQueryBuilder
         return null;
     }
 
+    internal static bool IsAllEntries(IQueryMatch match)
+    {
+        if (match is AllEntriesMatch)
+            return true;
+
+        if (match is MemoizationMatch memoizationMatch)
+        {
+            memoizationMatch.InnerRetriever(out IQueryMatch inner);
+            return inner is AllEntriesMatch;
+        }
+
+        return false;
+    }
+
     private static void Materialize(Parameters builderParameters, ref IQueryMatch lhs, ref IQueryMatch rhs, ref StreamingOptimization streamingOptimization)
     {
         lhs = MaterializeWhenNeeded(builderParameters, lhs, ref streamingOptimization);
         rhs = MaterializeWhenNeeded(builderParameters, rhs, ref streamingOptimization);
     }
-    
+
     private static bool TryAndMergeOrMaterialize(Parameters parameters, ref IQueryMatch lhs, ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, ref StreamingOptimization streamingOptimization, bool requiredMaterialization = false)
     {
         merged = null;
