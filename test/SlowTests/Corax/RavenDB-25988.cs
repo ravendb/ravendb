@@ -28,6 +28,30 @@ public class RavenDB_25988(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal("London", results[1].Subnames[0].Name);
         Assert.Equal("London", results[2].Subnames[0].Name);
         Assert.Equal("Paris", results[3].Subnames[0].Name);
+
+
+        var emptySearch = session.Query<Dto, Index>().Search(x => x.Name, " ").ToList();
+        Assert.Empty(emptySearch);
+        
+        var dashSearch = session.Query<Dto, Index>().Search(x => x.Name, "-").ToList();
+        Assert.Empty(dashSearch);
+        
+        var emptySearch2 = session.Query<Dto, Index>().Search(x => x.Name, "").ToList();
+        Assert.Empty(emptySearch2);
+
+        var emptyEquals = session.Advanced.DocumentQuery<Dto, Index>().WhereEquals(x => x.Name, "").ToList();
+        Assert.Empty(emptyEquals);
+        
+        var dashEquals = session.Advanced.DocumentQuery<Dto, Index>().WhereEquals(x => x.Name, "-").ToList();
+        Assert.Empty(dashEquals);
+        
+        var emptyEquals2 = session.Advanced.DocumentQuery<Dto, Index>().WhereEquals(x => x.Name, " ").ToList();
+        Assert.Empty(emptyEquals2);
+        
+        var nonExisting = session.Advanced.DocumentQuery<Dto, Index>().Not.WhereExists(x => x.Name).ToList();
+        Assert.Single(nonExisting);
+        
+        WaitForUserToContinueTheTest(store);
     }
     
     [RavenTheory(RavenTestCategory.Querying)]

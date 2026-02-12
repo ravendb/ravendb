@@ -147,9 +147,9 @@ public partial class IndexWriter
                 ExactInsert(field, word, InserterMode.ExactInsert);
             }
             
-            //Analyze pipeline removed all content from our input. It means we've an empty string now.
+            //Analyze pipeline removed all content from our input. It means the value actually does not exist.
             if (tokens.Length == 0)
-                ExactInsert(field, Constants.EmptyStringSlice, InserterMode.ExactInsert);
+                ExactInsert(field, Constants.NonExistingValueSlice, InserterMode.ExactInsert);
         }
 
         private void AnalyzeTerm(IndexedField field, ReadOnlySpan<byte> value, Analyzer analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens)
