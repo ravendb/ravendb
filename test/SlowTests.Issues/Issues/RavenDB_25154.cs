@@ -4,13 +4,14 @@ using System.IO;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_25154 : RavenTestBase
+    public partial class RavenDB_25154 : RavenTestBase
     {
         public RavenDB_25154(ITestOutputHelper output) : base(output)
         {
@@ -92,13 +93,6 @@ namespace SlowTests.Issues
             }, "employees/2-A");
         }
 
-        // TODO: egor this is not tracked in sessions, so we don't care!
-        internal static void ModifyEgorWithDelete(IDocumentSession session)
-        {
-            session.Delete("employees/2-A");
-
-        }
-
         internal static void ModifyEgorWithLoadAndDeleteById(IDocumentSession session)
         {
             var egor = session.Load<Employee>("employees/2-A");
@@ -111,34 +105,6 @@ namespace SlowTests.Issues
 
             session.Delete(egor);
         }
-        ////TODO: egor doesn't twork
-        //internal static void ModifyEgorWithDeleteAndStore(IDocumentSession session)
-        //{
-        //    session.Delete("employees/2-A");
-        //    session.Store(new Employee
-        //    {
-        //        FirstName = "Egor",
-        //        Address = new Address()
-        //        {
-        //            Street = "Mul HaHof Village"
-        //        }
-        //    }, "employees/2-A");
-        //}
-
-        ////TODO: egor doesn't twork
-        //internal static void ModifyEgorWithLoadDeleteAndStore(IDocumentSession session)
-        //{
-        //    var egor = session.Load<Employee>("employees/2-A");
-        //    session.Delete(egor);
-        //    session.Store(new Employee
-        //    {
-        //        FirstName = "Egor",
-        //        Address = new Address()
-        //        {
-        //            Street = "Mul HaHof Village"
-        //        }
-        //    }, "employees/2-A");
-        //}
 
         internal static void ModifyEgorWithMultiplePatches(IDocumentSession session)
         {
@@ -281,7 +247,6 @@ namespace SlowTests.Issues
             }
         }
 
-        // TODO: egor 322
         [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldThrowConcurrencyException_WhenNoCommandsInSessionButTrackedEntityWasChangedInBackgroundSession()
         {
@@ -968,7 +933,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldThrowConcurrencyException_WhenEntityIncludedByIdInSessionButThenWasEditedInBackgroundSession()
         {
-            throw new NotImplementedException("TODO: egor This test is for the case when we include by id and not by lambda, but currently we only support include by lambda");
             using (var store = GetDocumentStore())
             {
                 string addressId;
@@ -997,7 +961,6 @@ namespace SlowTests.Issues
                         }
                     }, "employees/2-A");
                     session.SaveChanges();
-
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
@@ -1007,9 +970,13 @@ namespace SlowTests.Issues
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
                     ModifyEgorInSession(session);
-                    //var expected = session.Advanced.GetChangeVectorFor(address);
-                    //Assert.NotEmpty(expected);
-                    //Assert.NotNull(expected);
+
+                    var inMemSes = ((InMemoryDocumentSessionOperations)session);
+                    inMemSes.IncludedDocumentsById.TryGetValue(addressId, out var included);
+                    Assert.NotNull(included);
+                    var expected = included.ChangeVector;
+                    Assert.NotEmpty(expected);
+                    Assert.NotNull(expected);
 
                     var actual = string.Empty;
                     using (var s = store.OpenSession())
@@ -1024,15 +991,13 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(actual);
                     Assert.NotNull(actual);
 
-                    //TODO: egor fix this
-
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
                     Assert.Contains("Document change vector mismatch", e.Message);
                     Assert.Equal(addressId, e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
-                    // Assert.Equal(expected, e.ExpectedChangeVector);
+                    Assert.Equal(expected, e.ExpectedChangeVector);
                 }
 
                 using (var session = store.OpenSession(new SessionOptions()
@@ -1047,6 +1012,1213 @@ namespace SlowTests.Issues
 
                     var j = session.Load<Address>(addressId);
                     Assert.Equal("Hadera", j.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityEvictedFromSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var expected = session.Advanced.GetChangeVectorFor(jerry);
+
+                    ModifyEgorInSession(session);
+
+                    // Evict Jerry from the session - this should stop tracking him
+                    session.Advanced.Evict(jerry);
+
+                    var actual = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address()
+                        {
+                            City = "Hadera"
+                        };
+                        s.SaveChanges();
+
+                        actual = s.Advanced.GetChangeVectorFor(j);
+                    }
+
+                    Assert.NotEmpty(actual);
+                    Assert.NotNull(actual);
+                    Assert.NotEqual(expected, actual);
+
+                    // Should NOT throw concurrency exception because Jerry was evicted
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Hadera", j.Address.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotThrowConcurrencyException_WhenIncludedDocumentEvictedFromSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string addressId;
+                using (var session = store.OpenSession())
+                {
+                    var address = new Address()
+                    {
+                        City = "Harish",
+                        Street = "Erets Rd"
+                    };
+                    session.Store(address);
+                    addressId = session.Advanced.GetDocumentId(address);
+                    Assert.NotNull(addressId);
+                    address.Id = addressId;
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = address
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
+
+                    var numOfRequests = session.Advanced.NumberOfRequests;
+                    var address = session.Load<Address>(jerry.Address.Id);
+                    Assert.NotNull(address);
+                    Assert.Equal(numOfRequests, session.Advanced.NumberOfRequests);
+
+                    var expected = session.Advanced.GetChangeVectorFor(address);
+
+                    // Evict the included address from tracking
+                    session.Advanced.Evict(address);
+
+                    ModifyEgorInSession(session);
+
+                    var actual = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var a = s.Load<Address>(addressId);
+                        a.City = "Hadera";
+                        s.SaveChanges();
+
+                        actual = s.Advanced.GetChangeVectorFor(a);
+                    }
+
+                    Assert.NotEmpty(actual);
+                    Assert.NotNull(actual);
+                    Assert.NotEqual(expected, actual);
+
+                    // Should NOT throw concurrency exception because address was evicted
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Address>(addressId);
+                    Assert.Equal("Hadera", j.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotThrowConcurrencyException_WhenEntityModifiedInBackgroundSessionButThenRefreshed()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = new Address()
+                        {
+                            City = "Hadera"
+                        }
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egorFromSession = session.Load<Employee>("employees/2-A");
+
+                    // Modify Jerry in background session
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address()
+                        {
+                            City = "Tel Aviv"
+                        };
+                        s.SaveChanges();
+                    }
+
+                    // Refresh Jerry to get the latest version
+                    session.Advanced.Refresh(jerry);
+
+                    // Verify Jerry has updated data
+                    Assert.Equal("Tel Aviv", jerry.Address.City);
+
+                    ModifyEgorInSession(session);
+
+                    //should work since we refreshed jerry after modification in background session
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Jerry", j.FirstName);
+                    Assert.Equal("Tel Aviv", j.Address.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldThrowConcurrencyException_WhenRefreshedEntityModifiedInBackgroundSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = new Address()
+                        {
+                            City = "Hadera"
+                        }
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egorFromSession = session.Load<Employee>("employees/2-A");
+
+                    // Modify Jerry in background session
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address()
+                        {
+                            City = "Tel Aviv"
+                        };
+                        s.SaveChanges();
+                    }
+
+                    // Refresh Jerry to get the latest version
+                    session.Advanced.Refresh(jerry);
+
+                    // Verify Jerry has updated data
+                    Assert.Equal("Tel Aviv", jerry.Address.City);
+
+                    var expectedJerryCv = session.Advanced.GetChangeVectorFor(jerry);
+
+                    ModifyEgorInSession(session);
+
+                    // Now modify Jerry again in background session
+                    var actualJerryCv = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.FirstName = "Jeremy";
+                        s.SaveChanges();
+
+                        actualJerryCv = s.Advanced.GetChangeVectorFor(j);
+                    }
+
+                    Assert.NotEmpty(actualJerryCv);
+                    Assert.NotNull(actualJerryCv);
+                    Assert.NotEqual(expectedJerryCv, actualJerryCv);
+
+                    // Should throw concurrency exception for Jerry (refreshed entity was modified)
+                    var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Equal("employees/1-A", e.Id);
+                    Assert.Equal(actualJerryCv, e.ActualChangeVector);
+                    Assert.Equal(expectedJerryCv, e.ExpectedChangeVector);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Jeremy", j.FirstName);
+                    Assert.Equal("Tel Aviv", j.Address.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldUpdateChangeVector_WhenRefreshingMultipleEntities()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.Store(new Employee { FirstName = "Alice" }, "employees/3-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egor = session.Load<Employee>("employees/2-A");
+                    var alice = session.Load<Employee>("employees/3-A");
+
+                    var originalJerryCv = session.Advanced.GetChangeVectorFor(jerry);
+                    var originalEgorCv = session.Advanced.GetChangeVectorFor(egor);
+                    var originalAliceCv = session.Advanced.GetChangeVectorFor(alice);
+
+                    // Modify entities in background session
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.FirstName = "Jeremy";
+
+                        var e = s.Load<Employee>("employees/2-A");
+                        e.FirstName = "Greg";
+
+                        s.SaveChanges();
+                    }
+
+                    // Refresh multiple entities at once
+                    session.Advanced.Refresh<Employee>(new List<Employee>() { jerry, egor, alice });
+
+                    // Verify change vectors updated for modified entities
+                    var newJerryCv = session.Advanced.GetChangeVectorFor(jerry);
+                    var newEgorCv = session.Advanced.GetChangeVectorFor(egor);
+                    var newAliceCv = session.Advanced.GetChangeVectorFor(alice);
+
+                    Assert.NotEqual(originalJerryCv, newJerryCv);
+                    Assert.NotEqual(originalEgorCv, newEgorCv);
+                    Assert.Equal(originalAliceCv, newAliceCv); // Alice wasn't modified
+
+                    // Verify data was refreshed
+                    Assert.Equal("Jeremy", jerry.FirstName);
+                    Assert.Equal("Greg", egor.FirstName);
+                    Assert.Equal("Alice", alice.FirstName);
+
+                    session.SaveChanges(); // Should not throw
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldThrowException_WhenEvictingEntityDuringOnBeforeStore()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    session.Advanced.OnBeforeStore += (sender, args) =>
+                    {
+                        // This should throw because we can't evict during OnBeforeStore
+                        Assert.Throws<InvalidOperationException>(() => session.Advanced.Evict(args.Entity));
+                    };
+
+                    jerry.FirstName = "Jeremy";
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldHandleEvictAndReload_WithTrackingEnabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = new Address { City = "Hadera" }
+                    }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var originalCv = session.Advanced.GetChangeVectorFor(jerry);
+
+                    // Modify in background
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address.City = "Tel Aviv";
+                        s.SaveChanges();
+                    }
+
+                    // Evict the entity
+                    session.Advanced.Evict(jerry);
+
+                    // Reload - should get fresh data from server
+                    var jerryReloaded = session.Load<Employee>("employees/1-A");
+                    var newCv = session.Advanced.GetChangeVectorFor(jerryReloaded);
+
+                    Assert.NotSame(jerry, jerryReloaded); // Different instances
+                    Assert.NotEqual(originalCv, newCv);
+                    Assert.Equal("Tel Aviv", jerryReloaded.Address.City);
+
+                    // Make another background change
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.FirstName = "Jeremy";
+                        s.SaveChanges();
+                    }
+
+
+                    // The entity tracking should have the new change vector
+                    var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Equal("employees/1-A", e.Id);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldHandleEvictAndReload_WithTrackingEnabled2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = new Address { City = "Hadera" }
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var originalCv = session.Advanced.GetChangeVectorFor(jerry);
+                    ModifyEgorInSession(session);
+
+                    // Modify in background
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address.City = "Tel Aviv";
+                        s.SaveChanges();
+                    }
+
+                    // Evict the entity
+                    session.Advanced.Evict(jerry);
+
+                    // Should not throw because entities were evicted
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Jerry", j.FirstName);
+                    Assert.Equal("Tel Aviv", j.Address.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldHandleEvictAndReload_WithTrackingEnabled3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = new Address { City = "Hadera" }
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var originalCv = session.Advanced.GetChangeVectorFor(jerry);
+                    ModifyEgorInSession(session);
+
+                    // Evict the entity
+                    session.Advanced.Evict(jerry);
+
+                    // Modify in background
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address.City = "Tel Aviv";
+                        s.SaveChanges();
+                    }
+
+                    // Should not throw because entities were evicted
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Jerry", j.FirstName);
+                    Assert.Equal("Tel Aviv", j.Address.City);
+                }
+            }
+        }
+
+
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotTrack_AfterEvictingAllLoadedEntities()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal(2, ((InMemoryDocumentSessionOperations)session).NumberOfEntitiesInUnitOfWork);
+
+                    // Evict both entities
+                    session.Advanced.Evict(jerry);
+                    session.Advanced.Evict(egor);
+
+                    Assert.Equal(0, ((InMemoryDocumentSessionOperations)session).NumberOfEntitiesInUnitOfWork);
+
+                    // Modify both in background
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.FirstName = "Jeremy";
+
+                        var e = s.Load<Employee>("employees/2-A");
+                        e.FirstName = "Greg";
+
+                        s.SaveChanges();
+                    }
+
+                    // Should not throw because entities were evicted
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Jeremy", jerry.FirstName);
+                    Assert.Equal("Greg", egor.FirstName);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldRefreshAndMaintainTracking_WhenEntityModifiedLocally()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = new Address { City = "Hadera" }
+                    }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    // Modify locally
+                    jerry.Address.Street = "Local Street";
+
+                    // Refresh should discard local changes and get server data
+                    session.Advanced.Refresh(jerry);
+
+                    // Local changes should be lost
+                    Assert.Null(jerry.Address.Street);
+                    Assert.Equal("Hadera", jerry.Address.City);
+
+                    // Entity should still be tracked
+                    Assert.True(session.Advanced.IsLoaded("employees/1-A"));
+
+                    // Make a change and save
+                    jerry.FirstName = "Jeremy";
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Jeremy", jerry.FirstName);
+                }
+            }
+        }
+
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldTrackExternalEntity_WhenAddedViaTrackEntityMethod()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // Load Jerry to get his change vector
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var jerryChangeVector = session.Advanced.GetChangeVectorFor(jerry);
+
+                    // Create an external entity (from another session or source)
+                    Employee externalEmployee;
+                    string externalChangeVector;
+                    using (var externalSession = store.OpenSession())
+                    {
+                        externalEmployee = externalSession.Load<Employee>("employees/2-A");
+                        externalChangeVector = externalSession.Advanced.GetChangeVectorFor(externalEmployee);
+                    }
+
+                    // Register the external entity using TrackEntity
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+                    var documentInfo = new DocumentInfo
+                    {
+                        Id = "employees/2-A",
+                        Entity = externalEmployee,
+                        ChangeVector = externalChangeVector,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = externalChangeVector
+                        }, "employees/2-A")
+                    };
+
+                    inMemSession.RegisterExternalLoadedIntoTheSession(documentInfo);
+
+                    // Verify tracking
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue("employees/2-A", out var trackedCv));
+                    Assert.Equal(externalChangeVector, trackedCv);
+
+                    // Modify Egor in background (the externally tracked entity)
+                    var actualEgorCv = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var e = s.Load<Employee>("employees/2-A");
+                        e.Address = new Address() { Street = "Mul HaHof Village" };
+                        s.SaveChanges();
+                        actualEgorCv = s.Advanced.GetChangeVectorFor(e);
+                    }
+
+                    // This should throw concurrency exception for Egor (the externally tracked entity)
+                    var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Equal("employees/2-A", ex.Id);
+                    Assert.Equal(actualEgorCv, ex.ActualChangeVector);
+                    Assert.Equal(externalChangeVector, ex.ExpectedChangeVector);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotThrowConcurrencyException_WhenExternallyTrackedEntityNotModified()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // Load Jerry normally
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    // Create an external entity (from another session)
+                    Employee externalEmployee;
+                    string externalChangeVector;
+                    using (var externalSession = store.OpenSession())
+                    {
+                        externalEmployee = externalSession.Load<Employee>("employees/2-A");
+                        externalChangeVector = externalSession.Advanced.GetChangeVectorFor(externalEmployee);
+                    }
+
+                    // Register the external entity using TrackEntity
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+                    var documentInfo = new DocumentInfo
+                    {
+                        Id = "employees/2-A",
+                        Entity = externalEmployee,
+                        ChangeVector = externalChangeVector,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = externalChangeVector
+                        }, "employees/2-A")
+                    };
+
+                    using var newInstance = inMemSession.JsonConverter.ToBlittable(externalEmployee, null);
+
+                    documentInfo.Document = newInstance;
+                    inMemSession.TrackEntity<Employee>(documentInfo);
+
+                    // Modify only Jerry in background
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address() { City = "Hadera" };
+                        s.SaveChanges();
+                    }
+
+                    // Should throw concurrency exception only for Jerry, not Egor
+                    var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Equal("employees/1-A", ex.Id);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Hadera", jerry.Address.City);
+                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldThrowException_WhenRegisteringExternalEntityWithDifferentInstanceForSameId()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // Load Jerry normally
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var jerryChangeVector = session.Advanced.GetChangeVectorFor(jerry);
+
+                    // Try to register a different instance for the same ID
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+                    var documentInfo = new DocumentInfo
+                    {
+                        Id = "employees/1-A",
+                        Entity = new Employee { FirstName = "Different Jerry" },
+                        ChangeVector = jerryChangeVector,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = jerryChangeVector
+                        }, "employees/1-A")
+                    };
+
+                    // Should throw because we already have a different instance tracked for this ID
+                    var ex = Assert.Throws<InvalidOperationException>(() =>
+                        inMemSession.RegisterExternalLoadedIntoTheSession(documentInfo));
+
+                    Assert.Contains("is already in the session with a different entity instance", ex.Message);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldAllowReregisteringSameEntityInstance()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // Load Jerry normally
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var jerryChangeVector = session.Advanced.GetChangeVectorFor(jerry);
+
+                    // Try to re-register the same instance
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+                    var documentInfo = new DocumentInfo
+                    {
+                        Id = "employees/1-A",
+                        Entity = jerry,
+                        ChangeVector = jerryChangeVector,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = jerryChangeVector
+                        }, "employees/1-A")
+                    };
+
+                    // Should not throw - same instance is ok
+                    inMemSession.RegisterExternalLoadedIntoTheSession(documentInfo);
+
+                    // Verify it's still tracked
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue("employees/1-A", out var trackedCv));
+                    Assert.Equal(jerryChangeVector, trackedCv);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldTrackMultipleExternalEntities_AndDetectConcurrencyViolations()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.Store(new Employee { FirstName = "Alice" }, "employees/3-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // Load Jerry normally
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    // Register Egor and Alice as external entities
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+
+                    // Register Egor
+                    Employee egor;
+                    string egorCv;
+                    using (var externalSession = store.OpenSession())
+                    {
+                        egor = externalSession.Load<Employee>("employees/2-A");
+                        egorCv = externalSession.Advanced.GetChangeVectorFor(egor);
+                    }
+
+                    var egorDocInfo = new DocumentInfo
+                    {
+                        Id = "employees/2-A",
+                        Entity = egor,
+                        ChangeVector = egorCv,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = egorCv
+                        }, "employees/2-A")
+                    };
+                    inMemSession.RegisterExternalLoadedIntoTheSession(egorDocInfo);
+
+                    // Register Alice
+                    Employee alice;
+                    string aliceCv;
+                    using (var externalSession = store.OpenSession())
+                    {
+                        alice = externalSession.Load<Employee>("employees/3-A");
+                        aliceCv = externalSession.Advanced.GetChangeVectorFor(alice);
+                    }
+
+                    var aliceDocInfo = new DocumentInfo
+                    {
+                        Id = "employees/3-A",
+                        Entity = alice,
+                        ChangeVector = aliceCv,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = aliceCv
+                        }, "employees/3-A")
+                    };
+                    inMemSession.RegisterExternalLoadedIntoTheSession(aliceDocInfo);
+
+                    // Verify all are tracked
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue("employees/1-A", out _));
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue("employees/2-A", out _));
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue("employees/3-A", out _));
+
+                    // Modify Alice in background
+                    var actualAliceCv = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var a = s.Load<Employee>("employees/3-A");
+                        a.FirstName = "Alicia";
+                        s.SaveChanges();
+                        actualAliceCv = s.Advanced.GetChangeVectorFor(a);
+                    }
+
+                    // Should throw concurrency exception for Alice
+                    var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Equal("employees/3-A", ex.Id);
+                    Assert.Equal(actualAliceCv, ex.ActualChangeVector);
+                    Assert.Equal(aliceCv, ex.ExpectedChangeVector);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotTrackExternalEntity_WhenNoTrackingModeEnabled()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.NoTracking,
+                }))
+                {
+                    // Try to register an external entity in NoTracking session
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+
+                    Employee egor;
+                    string egorCv;
+                    using (var externalSession = store.OpenSession())
+                    {
+                        egor = externalSession.Load<Employee>("employees/2-A");
+                        egorCv = externalSession.Advanced.GetChangeVectorFor(egor);
+                    }
+
+                    var documentInfo = new DocumentInfo
+                    {
+                        Id = "employees/2-A",
+                        Entity = egor,
+                        ChangeVector = egorCv,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Employees",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = egorCv
+                        }, "employees/2-A")
+                    };
+
+                    // Should not track in NoTracking mode
+                    inMemSession.RegisterExternalLoadedIntoTheSession(documentInfo);
+
+                    // Verify it's not tracked
+                    Assert.False(inMemSession.TrackedEntities.TryGetValue("employees/2-A", out _));
+
+                    // Modify in background - should NOT throw concurrency exception
+                    using (var s = store.OpenSession())
+                    {
+                        var e = s.Load<Employee>("employees/2-A");
+                        e.FirstName = "Greg";
+                        s.SaveChanges();
+                    }
+
+                    session.SaveChanges(); // Should not throw
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldRemoveFromIncluded_WhenRegisteringExternalEntityThatWasIncluded()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string addressId;
+                using (var session = store.OpenSession())
+                {
+                    var address = new Address { City = "Harish", Street = "Erets Rd" };
+                    session.Store(address);
+                    addressId = session.Advanced.GetDocumentId(address);
+                    address.Id = addressId;
+
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = address
+                    }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // Load with include
+                    var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
+
+                    var inMemSession = (InMemoryDocumentSessionOperations)session;
+
+                    // Verify address is in included documents
+                    Assert.True(inMemSession.IncludedDocumentsById.ContainsKey(addressId));
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue(addressId, out _));
+
+                    // Now register the same address as external entity
+                    Address externalAddress;
+                    string addressCv;
+                    using (var externalSession = store.OpenSession())
+                    {
+                        externalAddress = externalSession.Load<Address>(addressId);
+                        addressCv = externalSession.Advanced.GetChangeVectorFor(externalAddress);
+                    }
+
+                    var documentInfo = new DocumentInfo
+                    {
+                        Id = addressId,
+                        Entity = externalAddress,
+                        ChangeVector = addressCv,
+                        Document = null,
+                        Metadata = inMemSession.Context.ReadObject(new DynamicJsonValue
+                        {
+                            [Raven.Client.Constants.Documents.Metadata.Collection] = "Addresses",
+                            [Raven.Client.Constants.Documents.Metadata.ChangeVector] = addressCv
+                        }, addressId)
+                    };
+
+                    inMemSession.RegisterExternalLoadedIntoTheSession(documentInfo);
+
+                    // Verify it's no longer in included documents but is tracked
+                    Assert.False(inMemSession.IncludedDocumentsById.ContainsKey(addressId));
+                    Assert.True(inMemSession.TrackedEntities.TryGetValue(addressId, out var trackedCv));
+                    Assert.Equal(addressCv, trackedCv);
+
+                    // Modify address in background
+                    var actualAddressCv = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var a = s.Load<Address>(addressId);
+                        a.City = "Hadera";
+                        s.SaveChanges();
+                        actualAddressCv = s.Advanced.GetChangeVectorFor(a);
+                    }
+
+                    // Should throw concurrency exception for the address
+                    var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Equal(addressId, ex.Id);
+                    Assert.Equal(actualAddressCv, ex.ActualChangeVector);
+                    Assert.Equal(addressCv, ex.ExpectedChangeVector);
                 }
             }
         }

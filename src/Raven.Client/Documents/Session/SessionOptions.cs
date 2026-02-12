@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Session
         /// Disable tracking for all entities in the session<br/>
         /// </summary>
         /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.NoTracking"/></remarks>
-      //  [Obsolete("This bool is obsolete! Will be removed in next major version of the product! please use `TrackingMode` instead", true)]
+        // [Obsolete("InMemoryDocumentSessionOperations.NoTracking is not supported anymore. Will be removed in next major version of the product. Please use `InMemoryDocumentSessionOperations.TrackingMode` instead")]
         public bool NoTracking { get => TrackingMode == TrackingMode.NoTracking; set => TrackingMode = TrackingMode.NoTracking; }
 
         /// <summary>
