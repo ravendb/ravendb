@@ -295,6 +295,12 @@ rvn_pager_get_next_sparse_region(void* handle,
         }
         
         struct fiemap_extent *extent = &fiemap->fm_extents[0];
+        if (extent->fe_length == 0)
+        {
+            // found zero length range, let's skip that and keep searching...
+            current_pos = rvn_max(current_pos + 1, extent->fe_logical + 1);
+            continue;
+        }
         int64_t extent_start = extent->fe_logical;
         int64_t extent_end = extent_start + extent->fe_length;
         
