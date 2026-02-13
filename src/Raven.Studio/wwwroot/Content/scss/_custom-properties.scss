@@ -89,7 +89,8 @@ $prefix: "bs-";
 .wizard-content,
 .wizard-sidebar,
 .ai-agents-config,
-.ai-agents {
+.ai-agents,
+.split-view-panel {
     color: #{$base-text-color};
 
     .input-group-text {

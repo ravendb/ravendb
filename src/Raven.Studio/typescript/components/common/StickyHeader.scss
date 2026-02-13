@@ -6,6 +6,6 @@
     padding: bs5variables.$gutter-sm bs5variables.$gutter bs5variables.$gutter-xs bs5variables.$gutter-sm;
     margin: -#{bs5variables.$gutter-xs} -#{bs5variables.$gutter-sm};
     background-color: rgba(bs5variables.$body-bg-rgb-var, 0.9);
-    z-index: 1000;
+    z-index: bs5variables.$zindex-sticky-header;
     backdrop-filter: blur(2px);
 }

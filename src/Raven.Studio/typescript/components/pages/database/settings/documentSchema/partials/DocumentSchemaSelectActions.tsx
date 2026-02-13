@@ -23,15 +23,9 @@ import DocumentSchemaOperationConfirm, {
 import { useServices } from "hooks/useServices";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
-import useConfirm from "components/common/ConfirmDialog";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { useAppUrls } from "hooks/useAppUrls";
 import { useViewSheet } from "components/common/splitView/ViewSheet";
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 import classNames from "classnames";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
-import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 
 export interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
@@ -40,17 +34,10 @@ export interface OperationConfirm {
 }
 
 export default function DocumentSchemaSelectActions() {
-    const { forCurrentDatabase: urls } = useAppUrls();
     const dispatch = useDispatch();
     const { reportEvent } = useEventsCollector();
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
     const { value: isTogglingStatus, setTrue: setTogglingStatus, setFalse: unsetTogglingStatus } = useBoolean(false);
-    const {
-        value: isTogglingGlobalStatus,
-        setTrue: setIsTogglingGlobalStatusTrue,
-        setFalse: setIsTogglingGlobalStatusFalse,
-    } = useBoolean(false);
-    const confirm = useConfirm();
     const { open } = useViewSheet();
     const [operationConfirm, setOperationConfirm] = useState<OperationConfirm>(null);
 
@@ -61,7 +48,6 @@ export default function DocumentSchemaSelectActions() {
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
     const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
     const selectionState = genUtils.getSelectionState(allCollectionNames, selectedCollectionNames);
-    const hasSchemaValidation = useAppSelector(licenseSelectors.statusValue("HasSchemaValidation"));
 
     const handleOpenSheet = () => {
         const validators = allValidators.filter((v) => selectedCollectionNames.includes(v.Name));
@@ -115,50 +101,6 @@ export default function DocumentSchemaSelectActions() {
             onConfirm: () => handleBulkStatusToggle(type === "disable"),
             validators: selectedValidators,
         });
-    };
-
-    const handleGlobalStatusOperation = async (disabled: boolean) => {
-        const isConfirmed = await confirm({
-            title: disabled
-                ? "Do you want to disable schema validation globally?"
-                : "Do you want to enable schema validation globally?",
-            message: disabled ? (
-                <p>
-                    This will disable schema validation for all collections in the database. Documents will no longer be
-                    validated against their schemas.
-                </p>
-            ) : (
-                <p>
-                    This will <b>enable schema validation globally</b> for all collections in the database. Documents
-                    will be validated against their defined schemas. If a schema has validation{" "}
-                    <b>disabled individually</b>, you’ll need to <b>enable it manually</b>. The global setting does not
-                    override per-schema configurations.
-                </p>
-            ),
-            icon: disabled ? "stop" : "play",
-            confirmText: disabled ? "Disable" : "Enable",
-            actionColor: disabled ? "danger" : "success",
-        });
-
-        if (!isConfirmed) {
-            return;
-        }
-
-        try {
-            setIsTogglingGlobalStatusTrue();
-            reportEvent("document-schema", disabled ? "global-disable" : "global-enable");
-
-            dispatch(documentSchemaActions.isGlobalDisabledToggled(disabled));
-
-            await databasesService.saveSchemaValidation(
-                databaseName,
-                documentSchemaUtils.mapToSchemaValidationConfigurationDto(allValidators, disabled)
-            );
-
-            dispatch(documentSchemaActions.validatorsSaved());
-        } finally {
-            setIsTogglingGlobalStatusFalse();
-        }
     };
 
     return (
@@ -237,43 +179,6 @@ export default function DocumentSchemaSelectActions() {
                         </SelectionActions>
                     </div>
                 )}
-                <div className="d-flex gap-2 align-items-center">
-                    <ConditionalPopover
-                        conditions={{
-                            isActive: !hasSchemaValidation,
-                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                        }}
-                    >
-                        <a
-                            className={classNames("btn btn-secondary rounded-pill", {
-                                disabled: !hasSchemaValidation,
-                            })}
-                            href={urls.documentSchemaPlayground()}
-                        >
-                            <Icon icon="rocket" />
-                            Schema Playground
-                        </a>
-                    </ConditionalPopover>
-                    {allCollectionNames.length !== 0 && (
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: !hasSchemaValidation,
-                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                            }}
-                        >
-                            <ButtonWithSpinner
-                                variant={isGlobalDisabled ? "success" : "secondary"}
-                                onClick={() => handleGlobalStatusOperation(!isGlobalDisabled)}
-                                isSpinning={isTogglingGlobalStatus}
-                                disabled={!hasSchemaValidation}
-                                className="rounded-pill"
-                            >
-                                <Icon icon={isGlobalDisabled ? "play" : "stop"} />
-                                {isGlobalDisabled ? "Enable" : "Disable"} Schema Validation
-                            </ButtonWithSpinner>
-                        </ConditionalPopover>
-                    )}
-                </div>
             </div>
             {isDeleteModalOpen && (
                 <DocumentSchemaDeleteModal

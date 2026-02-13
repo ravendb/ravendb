@@ -37,6 +37,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
+import classNames from "classnames";
 
 export default function RemoteAttachments() {
     const { reportEvent } = useEventsCollector();
@@ -135,8 +136,8 @@ export default function RemoteAttachments() {
                             </ConditionalPopover>
                             <div className={hasRemoteAttachments ? "" : "item-disabled pe-none"}>
                                 <RemoteAttachmentsSettingsCard />
-                                <DestinationsList />
                             </div>
+                            <DestinationsList />
                         </Col>
                         <Col sm={12} lg={4}>
                             <RemoteAttachmentsInfoHub />
@@ -154,6 +155,7 @@ function DestinationsList() {
     const destinations = useAppSelector(remoteAttachmentsSelectors.destinations);
     const destinationsTotal = useAppSelector(remoteAttachmentsSelectors.destinationsTotal);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasRemoteAttachments = useAppSelector(licenseSelectors.statusValue("HasRemoteAttachments"));
 
     const deleteDestination = async (id: string) => {
         const confirmed = await confirm({
@@ -193,24 +195,26 @@ function DestinationsList() {
         <div className="mb-4">
             <HrHeader
                 right={
-                    <ConditionalPopover
-                        conditions={{
-                            isActive: !hasDatabaseAdminAccess,
-                            message: getDatabaseAccessRequiredMessage("DatabaseAdmin"),
-                        }}
-                    >
-                        <Button
-                            size="sm"
-                            onClick={() => handleOpenSheet()}
-                            variant="info"
-                            className="rounded-pill"
-                            title="Click to define a new destination"
-                            disabled={!hasDatabaseAdminAccess}
+                    hasDatabaseAdminAccess && (
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasRemoteAttachments,
+                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            }}
                         >
-                            <Icon icon="plus" size="sm" />
-                            Add new
-                        </Button>
-                    </ConditionalPopover>
+                            <Button
+                                size="sm"
+                                onClick={() => handleOpenSheet()}
+                                variant="info"
+                                className="rounded-pill"
+                                title="Click to define a new destination"
+                                disabled={!hasRemoteAttachments}
+                            >
+                                <Icon icon="plus" size="sm" />
+                                Add new
+                            </Button>
+                        </ConditionalPopover>
+                    )
                 }
                 count={destinationsTotal}
             >
@@ -218,15 +222,17 @@ function DestinationsList() {
                 Destinations
             </HrHeader>
             {destinations.length === 0 && <EmptySet>No destinations have been defined.</EmptySet>}
-            {destinations.map((field, index) => (
-                <DestinationPanel
-                    {...field}
-                    key={index}
-                    onEdit={editDestination}
-                    onDelete={deleteDestination}
-                    onToggle={toggleDestination}
-                />
-            ))}
+            <div className={classNames(!hasRemoteAttachments && "item-disabled pe-none")}>
+                {destinations.map((field, index) => (
+                    <DestinationPanel
+                        {...field}
+                        key={index}
+                        onEdit={editDestination}
+                        onDelete={deleteDestination}
+                        onToggle={toggleDestination}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

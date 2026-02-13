@@ -104,20 +104,17 @@ function DocumentSchemaPlaygroundBody() {
             <AboutViewHeading
                 marginBottom={4}
                 title="Document Schema Playground"
-                icon="rocket"
+                isNested
+                backUrl={appUrl.forDocumentSchema(databaseName)}
                 licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
             />
             <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
                 <span>
-                    Quickly create and test schemas against your documents without affecting your saved data. The Schema
-                    Playground is a temporary workspace designed for safe experimentation.
+                    Quickly create and test schemas against your documents without affecting your saved data.
+                    <br /> The Schema Playground is a temporary workspace designed for safe experimentation.
                 </span>
 
-                <div className="mt-5 d-flex align-items-center justify-content-between">
-                    <a href={appUrl.forDocumentSchema(databaseName)} className="btn btn-secondary">
-                        <Icon icon="close" />
-                        Cancel
-                    </a>
+                <div className="mt-4 d-flex align-items-center">
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasSchemaValidation,
@@ -143,7 +140,7 @@ function DocumentSchemaPlaygroundBody() {
                             >
                                 <Button
                                     onClick={handleAppendTestField}
-                                    size="xs"
+                                    size="sm"
                                     variant="info"
                                     className="rounded-pill"
                                     disabled={!hasSchemaValidation}
