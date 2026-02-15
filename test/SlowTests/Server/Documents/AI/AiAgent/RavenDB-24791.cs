@@ -83,7 +83,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "Chats/",
                 new AiConversationCreationOptions().AddParameter("authors", new string[] { "Aviv" }));
 
-            chat.SetUserPrompt("Can you answer the questions?");
+            chat.SetUserPrompt("answer the questions using the tool I provided you");
             var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
             Assert.True(more.Status == AiConversationResult.Done);
 
@@ -141,7 +141,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "Chats/",
                 new AiConversationCreationOptions().AddParameter("priority", priority));
 
-            chat.SetUserPrompt("Can you answer the questions?");
+            chat.SetUserPrompt("answer the questions using the tool I provided you");
             var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
             Assert.True(more.Status == AiConversationResult.Done);
 
@@ -199,7 +199,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "Chats/",
                 new AiConversationCreationOptions().AddParameter("priority", priority));
 
-            chat.SetUserPrompt("Can you answer the questions?");
+            chat.SetUserPrompt("answer the questions using the tool I provided you");
             var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
             Assert.True(more.Status == AiConversationResult.Done);
 
@@ -256,7 +256,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "Chats/",
                 new AiConversationCreationOptions().AddParameter("shouldAnswer", true));
 
-            chat.SetUserPrompt("Can you answer the questions?");
+            chat.SetUserPrompt("answer the questions using the tool I provided you");
             var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
             Assert.True(more.Status == AiConversationResult.Done);
 
