@@ -1,0 +1,24 @@
+@font-face {
+{{fontFamily}}
+  font-display: block;
+}
+
+{{baseSelector}} {
+    line-height: 1;
+}
+
+{{baseSelector}}:before {
+    font-family: {{fontname}} !important;
+    font-style: normal;
+    font-weight: normal !important;
+    vertical-align: top;
+}
+
+{% for key, value in infoData %}
+.{{value.className}}:before {
+    content: "{{value.encodedCode}}";
+}
+.{{prefix}}-addon-{{key}}:after {
+    content: "{{value.encodedCode}}";
+}
+{% endfor %}

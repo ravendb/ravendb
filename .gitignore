@@ -98,6 +98,7 @@ src/Raven.Studio/junit.xml
 
 /src/Raven.Studio/wwwroot/Content/**/*.css.map
 /src/Raven.Studio/wwwroot/Content/**/*.css
+/src/Raven.Studio/wwwroot/Content/css/fonts/icomoon-svgtofont
 /src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
 /src/Raven.Studio/coverage/
