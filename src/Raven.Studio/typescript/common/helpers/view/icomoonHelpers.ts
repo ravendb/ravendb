@@ -1,13 +1,11 @@
-﻿﻿
-import fixedCodepoints = require("./icomoonFixedCodepoints.json");
+﻿import fixedCodepoints = require("./icomoonFixedCodepoints.json");
 
 class icomoonHelpers {
-
     /**
      * Fixed codepoints shared with font generation (see `icomoonFixedCodepoints.json`).
      */
     static fixedCodepoints = fixedCodepoints;
-    
+
     static getCodePointForCanvas(iconName: keyof typeof icomoonHelpers.fixedCodepoints): string {
         const codePointHex = icomoonHelpers.fixedCodepoints[iconName];
         if (!codePointHex) {
@@ -20,7 +18,7 @@ class icomoonHelpers {
             console.log("Invalid code point for: " + iconName + ", value: " + codePointHex);
             return icomoonHelpers.getCodePointForCanvas("placeholder");
         }
-        
+
         return "&#x" + codePoint.toString(16) + ";";
     }
 }
