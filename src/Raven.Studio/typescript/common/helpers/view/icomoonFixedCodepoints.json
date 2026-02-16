@@ -9,6 +9,7 @@
     "backup2": "f108",
     "ravendb-etl": "f109",
     "external-replication": "f10A",
+    "snowflake-etl": "f152",
     "sql-etl": "f10B",
     "olap-etl": "f10C",
     "elastic-search-etl": "f10D",
@@ -45,6 +46,8 @@
     "rabbitmq-sink": "f132",
     "preview": "f133",
     "azure-queue-storage-etl": "f134",
+    "amazon-sqs-etl": "f135",
+    "ai-etl": "f139",
     "corax-include-null-match": "f140",
     "corax-fallback": "f141",
     "corax-all-entries-match": "f142",
@@ -63,5 +66,6 @@
     "corax-backward": "f14F",
     "corax-sort-az": "f150",
     "corax-sort-za": "f151",
+    "vector-search": "f154",
     "close": "f162"
 }
