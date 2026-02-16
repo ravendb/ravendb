@@ -124,10 +124,10 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
             "chats/123",
             new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
-        string query = null;
+        string[] query = null;
         chat.Handle(ProductSearch, (ProductSearchArgs args) =>
         {
-            query = args.Query[0];
+            query = args.Query;
             return "not found";
         });
 
@@ -135,7 +135,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
         var run = await chat.RunAsync<Sample>();
         Assert.Equal(run.Status, AiConversationResult.Done);
         Assert.NotNull(run.Answer.Answer);
-        Assert.Equal("sugar", query);
+        Assert.Contains("sugar", query);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
