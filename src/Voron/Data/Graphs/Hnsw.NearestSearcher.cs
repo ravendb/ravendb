@@ -273,8 +273,14 @@ public partial class Hnsw
                 if (_hasFilterMatch == false)
                     return false;
 
-                var nodeVisitLimit = Math.Min(filterDocsCount / 2, _searchState.Options.CountOfVectors / 5);
-                return _vectorReadCounter < nodeVisitLimit;
+                var max = filterDocsCount switch
+                {
+                    < 1024 => 2 * filterDocsCount, // Todo: it's hard to determine right number here. For smaller graphs it may be an issue.
+                                                        // However, for small filter set (for 1K we will force exact search anyway, therefore this probably will be used only for testing purposes.
+                    _ => Math.Min(filterDocsCount / 2, _searchState.Options.CountOfVectors / 5)
+                };
+                
+                return _vectorReadCounter < max;
             }
 
             private static int GetPrefetchExtendSize(int numberOfCandidates) => numberOfCandidates switch

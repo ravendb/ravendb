@@ -29,6 +29,7 @@ public struct VectorSearchMatch : IQueryMatch
     
     // Number of documents to be directly scanned instead of ANN / Exact on HNSW.
     private readonly int _scanningThreshold;
+    private readonly Random _random;
     private bool _scanningQuery;
 
     
@@ -68,7 +69,8 @@ public struct VectorSearchMatch : IQueryMatch
         in bool isExact, 
         in bool singleVectorSearchDoNotSort, 
         IQueryMatch filterQuery,
-        int scanningThreshold = ScanningThreshold)
+        int scanningThreshold = ScanningThreshold,
+        Random random = null)
     {
         _singleVectorSearchDoNotSort = singleVectorSearchDoNotSort;
         _filterQuery = filterQuery;
@@ -82,6 +84,7 @@ public struct VectorSearchMatch : IQueryMatch
         _vectorToSearch = vectorToSearch;
         _filterQueryLoaded = filterQuery is null;
         _scanningThreshold = scanningThreshold;
+        _random = random;
         _isEmpty = false;
     }
 
@@ -123,7 +126,7 @@ public struct VectorSearchMatch : IQueryMatch
         {
             _ when _scanningQuery => Hnsw.ExactNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, hasFilterMatch: false, nodesIdsToScan),
             true => Hnsw.ExactNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
-            false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, IndexSearcher.VectorSearchUtils.GetDocumentsIntoNodesRandomly(_indexSearcher, _metadata, _filterResults)), 
+            false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, IndexSearcher.VectorSearchUtils.GetDocumentsIntoNodesRandomly(_indexSearcher, _metadata, _filterResults, _random)), 
                 _ => Hnsw.ApproximateNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
         };
         

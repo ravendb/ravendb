@@ -10,6 +10,7 @@ using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
+using Org.BouncyCastle.Security;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow;
 using Tests.Infrastructure;
@@ -55,7 +56,9 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
-    [InlineData(1980969695)]
+    [InlineData(1980969695)]       
+    [InlineData(720473198)]       
+
     public void CanFilterVectorsNearestSearch(int seed)
     {
         // NearestSearch must have a more relaxed assertion since the graph structure depends on the seed. We may get all but we can get partial results, However we should (since it's not a big graph), get at least one result.  
@@ -93,7 +96,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
             {
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), 15L, 18L);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 400, isExact, false);
+                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 400, isExact, false, random: random);
                 IQueryMatch query = indexSearcher.And(vecSearch, betweenQuery);
                 query = indexSearcher.OrderBy(query, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultQueryContainsAllDb = EvaluateQuery(indexSearcher, ref query);
@@ -101,14 +104,14 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
             {
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0);
+                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0, random: random);
                 var query = indexSearcher.OrderBy(vecSearch, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultsFromFilteredQuery = EvaluateQuery(indexSearcher, ref query);
             }
 
             {
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 16, isExact, false);
+                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 16, isExact, false, random: random);
                 var query = indexSearcher.OrderBy(vecSearch, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultsWithoutFilterQuery = EvaluateQuery(indexSearcher, ref query);
             }
@@ -181,7 +184,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
                 var vec2 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[180].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 400, isExact, false);
+                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 400, isExact, false, random: random);
                 IQueryMatch query = indexSearcher.And(vecSearch, betweenQuery);
                 query = indexSearcher.OrderBy(query, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultQueryContainsAllDb = EvaluateQuery(indexSearcher, ref query);
@@ -190,7 +193,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
                 var vec2 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[180].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0);
+                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0, random: random);
                 var query = indexSearcher.OrderBy(vecSearch, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultsFromFilteredQuery = EvaluateQuery(indexSearcher, ref query);
             }
@@ -198,7 +201,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
             {
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
                 var vec2 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[180].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false);
+                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, random: random);
                 var query = indexSearcher.OrderBy(vecSearch, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultsWithoutFilterQuery = EvaluateQuery(indexSearcher, ref query);
             }
@@ -208,16 +211,16 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false, Skip = "Too small set")]
-    public void FilterQueryAndWithMethodVectorSearch(bool shouldScan, bool isExact)
+    [InlineDataWithRandomSeed(true, false)]
+    [InlineDataWithRandomSeed(false, true)]
+    [InlineDataWithRandomSeed(true, true)]
+    [InlineDataWithRandomSeed(false, false, Skip = "Too small set")]
+    public void FilterQueryAndWithMethodVectorSearch(bool shouldScan, bool isExact, int seed)
     {
         using var mapping = GetMapping();
         var docs = GetDocs(360).ToList();
-
-        IndexDocuments(Env, mapping, docs);
+        var random = new Random(seed);
+        IndexDocuments(Env, mapping, docs, random);
 
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
@@ -228,7 +231,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
             {
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 400, isExact, false, betweenQuery, shouldScan ? 1024 : 0);
+                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 400, isExact, false, betweenQuery, shouldScan ? 1024 : 0, random: random);
                 var query = indexSearcher.OrderBy(vecSearch, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultsFromFilteredQuery = EvaluateQuery(indexSearcher, ref query);
             }
@@ -236,7 +239,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
             {
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 400, isExact, false, betweenQuery, shouldScan ? 1024 : 0);
+                var vecSearch = indexSearcher.VectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), vec1, 0.75f, 400, isExact, false, betweenQuery, shouldScan ? 1024 : 0, random);
                 var allEntries = indexSearcher.AllEntries();
                 List<long> matched = new();
                 Span<long> ids = new long[16];
@@ -266,16 +269,17 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    [InlineData(false, false, Skip = "Too small set")]
-    public void FilterQueryAndWithMethodMultiVectorSearch(bool shouldScan, bool isExact)
+    [InlineDataWithRandomSeed(true, false)]
+    [InlineDataWithRandomSeed(false, true)]
+    [InlineDataWithRandomSeed(true, true)]
+    [InlineDataWithRandomSeed(false, false, Skip = "Too small set")]
+    public void FilterQueryAndWithMethodMultiVectorSearch(bool shouldScan, bool isExact, int seed)
     {
         using var mapping = GetMapping();
         var docs = GetDocs(360).ToList();
 
-        IndexDocuments(Env, mapping, docs);
+        Random random = new (seed);
+        IndexDocuments(Env, mapping, docs, random);
 
         using (var indexSearcher = new IndexSearcher(Env, mapping))
         {
@@ -286,7 +290,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
                 var vec2 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[180].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0);
+                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0, random: random);
                 var query = indexSearcher.OrderBy(vecSearch, [new OrderMetadata(true, MatchCompareFieldType.Score)]);
                 resultsFromFilteredQuery = EvaluateQuery(indexSearcher, ref query);
             }
@@ -295,7 +299,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
                 var betweenQuery = indexSearcher.BetweenQuery(mapping.GetByFieldId(2).Metadata.ChangeScoringMode(true), FilterMin, FilterMax);
                 var vec1 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[0].Vector), VectorOptions.Default);
                 var vec2 = GenerateEmbeddings.FromArray(indexSearcher.Transaction.Allocator, MemoryMarshal.Cast<float, byte>(docs[180].Vector), VectorOptions.Default);
-                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0);
+                var vecSearch = indexSearcher.MultiVectorSearch(mapping.GetByFieldId(3).Metadata.ChangeScoringMode(true), [vec1, vec2], 0.75f, 16, isExact, false, betweenQuery, shouldScan ? 1024 : 0, random: random);
                 var allEntries = indexSearcher.AllEntries();
                 List<long> matched = new();
                 Span<long> ids = new long[16];
@@ -323,13 +327,16 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public void ExposedNearestSearchNumberOfCandidatesIsRespected()
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed]
+    public void ExposedNearestSearchNumberOfCandidatesIsRespected(int seed)
     {
         using var mapping = GetMapping();
+        
         var docs = GetDocs(360).ToList();
 
-        IndexDocuments(Env, mapping, docs);
+        Random random = new(seed);
+        IndexDocuments(Env, mapping, docs, random);
 
         using (var rTx = Env.ReadTransaction())
         {
@@ -430,23 +437,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
 
         indexWriter.Commit();
     }
-
-    private static void IndexDocuments(StorageEnvironment env, IndexFieldsMapping mapping, IEnumerable<Doc> docs)
-    {
-        using var indexWriter = new IndexWriter(env, mapping, SupportedFeatures.All);
-        foreach (var doc in docs)
-        {
-            using var builder = indexWriter.Index(doc.Id);
-            builder.Write(0, Encodings.Utf8.GetBytes(doc.Id));
-            builder.Write(1, Encodings.Utf8.GetBytes(doc.Text));
-            builder.Write(2, Encodings.Utf8.GetBytes(doc.Numerical.ToString()), doc.Numerical, doc.Numerical);
-            builder.WriteVector(3, null, MemoryMarshal.Cast<float, byte>(doc.Vector));
-            builder.EndWriting();
-        }
-
-        indexWriter.Commit();
-    }
-
+    
     private record VectorSearchResult(string Id, float Distance, float[] Vector);
 
     private record Doc(string Id, string Text, int Numerical, float[] Vector);

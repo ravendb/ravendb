@@ -27,6 +27,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     // Number of documents to be directly scanned instead of ANN / Exact on HNSW.
     private readonly int _scanningThreshold;
+    private readonly Random _random;
     private bool _scanningQuery;
 
 
@@ -56,7 +57,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
 
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
-        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold)
+        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
     {
         _indexSearcher = searcher;
         _metadata = metadata;
@@ -66,6 +67,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _isExact = isExact;
         _filterQuery = filterQuery;
         _scanningThreshold = scanningThreshold;
+        _random = random;
         IsBoosting = true;
         _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
         _isEmpty = false;
@@ -108,7 +110,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             {
                 _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, nodesIdsToScan),
                 true => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
-                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, IndexSearcher.VectorSearchUtils.GetDocumentsIntoNodesRandomly(_indexSearcher, _metadata, _filterResults)), 
+                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, IndexSearcher.VectorSearchUtils.GetDocumentsIntoNodesRandomly(_indexSearcher, _metadata, _filterResults, _random)), 
                 false => Hnsw.ApproximateNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
             };
 

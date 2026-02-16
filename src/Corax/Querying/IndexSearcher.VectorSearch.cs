@@ -45,7 +45,7 @@ public partial class IndexSearcher
             return filter;
         }
 
-        public static IEnumerable<long> GetDocumentsIntoNodesRandomly(IndexSearcher indexSearcher, FieldMetadata metadata, GrowableBitArray filterResults)
+        public static IEnumerable<long> GetDocumentsIntoNodesRandomly(IndexSearcher indexSearcher, FieldMetadata metadata, GrowableBitArray filterResults, Random random = null)
         {
             var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
             var vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
@@ -58,7 +58,7 @@ public partial class IndexSearcher
             Page p = default;
             using CompactKey key = new();
             
-            foreach (var currentDocument in GrowableBitArray.Probe(filterResults, Random.Shared))
+            foreach (var currentDocument in GrowableBitArray.Probe(filterResults, random ?? Random.Shared))
             {
                 var entryTermsReader = indexSearcher.GetEntryTermsReader(currentDocument, ref p, key);
                 while (entryTermsReader.FindNextStored(vectorRootPage))
@@ -115,9 +115,9 @@ public partial class IndexSearcher
     }
 
 
-    public VectorSearchMatch VectorSearch(in FieldMetadata metadata, in VectorValue vectorValue, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024)
+    public VectorSearchMatch VectorSearch(in FieldMetadata metadata, in VectorValue vectorValue, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024, Random random = null)
     {
-        return new VectorSearchMatch(this, metadata, vectorValue, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold);
+        return new VectorSearchMatch(this, metadata, vectorValue, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold, random);
     }
 
     public IQueryMatch VectorSearch(in FieldMetadata metadata, in string documentId, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024)
@@ -163,6 +163,6 @@ public partial class IndexSearcher
         return new MultiVectorSearchMatch(this, metadata, vectors.ToArray(), minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold);
     }
 
-    public MultiVectorSearchMatch MultiVectorSearch(in FieldMetadata metadata, in VectorValue[] vectorValues, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024)
-        => new(this, metadata, vectorValues, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold);
+    public MultiVectorSearchMatch MultiVectorSearch(in FieldMetadata metadata, in VectorValue[] vectorValues, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024, Random random = null)
+        => new(this, metadata, vectorValues, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold, random);
 }
