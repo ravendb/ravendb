@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Lucene:
                         return HandleLucene(query, me, metadata, parameters, analyzer, exact);
                     case MethodType.Exists:
-                        return HandleExists(query, parameters, me, metadata);
+                        return HandleExists(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories);
                     case MethodType.Exact:
                         return HandleExact(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, queryTime);
                     case MethodType.Spatial_Within:
@@ -692,7 +692,46 @@ namespace Raven.Server.Documents.Queries
             return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
         }
 
-        private static Lucene.Net.Search.Query HandleExists(Query query, BlittableJsonReaderObject parameters, MethodExpression expression, QueryMetadata metadata)
+        private static Lucene.Net.Search.Query HandleExists(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
+            MethodExpression expression, QueryMetadata metadata, Index index,
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
+            List<string> buildSteps = null)
+        {
+            if (expression.Arguments.Count == 1)
+                return HandleExistsField(serverContext, documentsContext, query, expression, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
+
+            return HandleConditionalExists(serverContext, documentsContext, query, expression, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
+        }
+
+        private static Lucene.Net.Search.Query HandleConditionalExists(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query, MethodExpression expression, QueryMetadata metadata, Index index,
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
+            List<string> buildSteps = null)
+        {
+            PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 3, $"Conditional exists requires exactly 3 arguments, but got {expression.Arguments.Count}");
+            
+            PortableExceptions.ThrowIfNot<ArgumentException>(expression.Arguments[0] is ValueExpression {Value: ValueTokenType.Parameter}, $"First argument to conditional exists must be a parameter, but got '{expression.Arguments[0].ToString()}'");
+
+            ValueExpression field = (ValueExpression)expression.Arguments[0];
+            var parameterName = field.Token.Value;
+            var parameterExists = parameters.Contains(parameterName);
+
+            if (parameterExists)
+            {
+                return ToLuceneQuery(serverContext, documentsContext, query, expression.Arguments[1], metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
+            }
+
+            bool includeAll = false;
+            PortableExceptions.ThrowIfNot<ArgumentException>(expression.Arguments[2] is ValueExpression thirdArgument && bool.TryParse(thirdArgument.Token.Value, out includeAll), $"Third argument must be boolean. It must be 'true' or 'false'.");
+
+            return includeAll 
+                ? new MatchAllDocsQuery() 
+                : new BooleanQuery();
+        }
+        
+        private static Lucene.Net.Search.Query HandleExistsField(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
+            MethodExpression expression, QueryMetadata metadata, Index index,
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
+            List<string> buildSteps = null)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
 

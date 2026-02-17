@@ -2372,6 +2372,12 @@ function execute(doc, args){
                         break;
 
                     case MethodType.Exists:
+                        if (arguments.Count != 1)
+                        {
+                            Visit(arguments[1], parameters);
+                            break;
+                        }
+                        
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
                         _metadata.AddExistField(fieldName, parameters);
                         break;

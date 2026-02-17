@@ -508,7 +508,7 @@ public static partial class CoraxQueryBuilder
                 case MethodType.EndsWith:
                     return HandleEndsWith(builderParameters, me, exact, ref leftOnlyOptimization);
                 case MethodType.Exists:
-                    return HandleExists(builderParameters, me, ref leftOnlyOptimization);
+                    return HandleExists(builderParameters, me, ref leftOnlyOptimization, exact, proximity);
                 case MethodType.Exact:
                     return HandleExact(builderParameters, me, ref leftOnlyOptimization, proximity);
                 case MethodType.Spatial_Within:
@@ -765,7 +765,39 @@ public static partial class CoraxQueryBuilder
         }
     }
 
-    private static IQueryMatch HandleExists(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization)
+    private static IQueryMatch HandleExists(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization, bool exact, int? proximity)
+    {
+        if (expression.Arguments.Count == 1)
+            return HandleExistsField(builderParameters, expression, ref streamingOptimization);
+        
+        return HandleConditionalExists(builderParameters, expression, ref streamingOptimization, exact, proximity);
+    }
+
+
+    private static IQueryMatch HandleConditionalExists(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization, bool exact, int? proximity)
+    {
+        PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 3, $"Conditional exists requires exactly 3 arguments, but got {expression.Arguments.Count}");
+            
+        PortableExceptions.ThrowIfNot<ArgumentException>(expression.Arguments[0] is ValueExpression {Value: ValueTokenType.Parameter}, $"First argument to conditional exists must be a parameter, but got '{expression.Arguments[0].ToString()}'");
+
+        ValueExpression field = (ValueExpression)expression.Arguments[0];
+        var parameterName = field.Token.Value;
+        var parameterExists = builderParameters.QueryParameters.Contains(parameterName);
+
+        if (parameterExists)
+        {
+            return ToCoraxQuery(builderParameters, expression.Arguments[1], ref streamingOptimization, exact, proximity);
+        }
+
+        bool includeAll = false;
+        PortableExceptions.ThrowIfNot<ArgumentException>(expression.Arguments[2] is ValueExpression thirdArgument && bool.TryParse(thirdArgument.Token.Value, out includeAll), $"Third argument must be boolean. It must be 'true' or 'false'.");
+
+        return includeAll 
+            ? builderParameters.AllEntries.Replay() 
+            : builderParameters.IndexSearcher.EmptyMatch();
+    }
+    
+    private static IQueryMatch HandleExistsField(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
