@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Voron.Global;
 using Voron.Util;
 
 namespace Voron.Data.Graphs;
@@ -18,7 +19,8 @@ public partial class Hnsw
             private ContextBoundNativeList<int> _candidates;
             private readonly ContextBoundNativeList<long>? _nodesToScan;
             private PriorityQueue<long, float> _pq;
-
+            private long _vectorReadCounter = 0;
+            
             public ExactSearcher(SearchState searchState, Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
             {
                 _searchState = searchState;
@@ -49,22 +51,18 @@ public partial class Hnsw
                 foreach (long nodeId in toScan)
                 {
                     CandidatesProcessed++;
-                    unsafe
-                    {
-                        _searchState.ReadNode(nodeId, out var reader);
-                        if (reader.PostingListId is 0)
-                            continue; // no entries, can skip
+                    var nodeIndex = _searchState.GetNodeIndexById(nodeId);
+                    if ((_searchState.GetNodeByIndex(nodeIndex).PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone)
+                        continue; // no entries, can skip
 
-                        var curVect = reader.ReadVector(in _searchState);
-                        var distance = _searchState.SimilarityCalc(vector, curVect);
-                        if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
-                        {
-                            _pq.Enqueue(nodeId, -distance);
-                        }
-                        else
-                        {
-                            _pq.EnqueueDequeue(nodeId, -distance);
-                        }
+                    var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref _vectorReadCounter);
+                    if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
+                    {
+                        _pq.Enqueue(nodeId, -distance);
+                    }
+                    else
+                    {
+                        _pq.EnqueueDequeue(nodeId, -distance);
                     }
                 }
 
