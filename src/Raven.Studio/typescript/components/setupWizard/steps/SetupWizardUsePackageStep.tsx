@@ -136,7 +136,7 @@ export function SetupWizardUsePackageStep() {
         <div>
             <h2 className="mb-1">Use setup package</h2>
             <p className="mb-4 text-muted">
-                Here you can use an existing package to set up selected nodes in your cluster.
+                Use an existing setup package to configure selected nodes in your cluster.
             </p>
             <FormGroup>
                 <Controller
@@ -161,7 +161,8 @@ export function SetupWizardUsePackageStep() {
                             <PopoverWithHoverWrapper
                                 message={
                                     <SetupWizardInfoPopover
-                                        description="Select which node of the predefined cluster would you like to set up now."
+                                        description="Select which node from the predefined cluster you would like to set up now.
+                                            Do not choose one that is already configured."
                                         docsLink="https://docs.ravendb.net/glossary/node-tag"
                                     />
                                 }

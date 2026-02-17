@@ -800,16 +800,6 @@ for(const comment of this.Comments)
 
         Assert.NotEmpty(stats2);
 
-        var resend = stats2.FirstOrDefault(s =>
-        {
-            var load = s.Details.Operations[^1];
-            var op = load.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel)
-                as GenAiPerformanceOperation;
-            return op is { TotalSentToModel: 1, NumberOfContextObjects: 1, TotalCachedContexts: 0 };
-        });
-
-        Assert.True(resend != null, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
-
         using (var session = store.OpenAsyncSession())
         {
             var doc = await session.LoadAsync<BlittableJsonReaderObject>(docId);
@@ -821,6 +811,17 @@ for(const comment of this.Comments)
             var newHash = hashesArray.Last().ToString();
             Assert.NotEqual(originalHash, newHash);
         }
+
+        var resend = stats2.FirstOrDefault(s =>
+        {
+            var load = s.Details.Operations[^1];
+            var op = load.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel)
+                as GenAiPerformanceOperation;
+            return op is { TotalSentToModel: 1, NumberOfContextObjects: 1, TotalCachedContexts: 0 };
+        });
+
+        Assert.True(resend != null, $"baselineUtc: {baselineUtc}, etag: {etag} " + Environment.NewLine + await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

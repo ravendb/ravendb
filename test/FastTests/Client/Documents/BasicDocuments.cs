@@ -140,5 +140,34 @@ namespace FastTests.Client.Documents
                 }
             }
         }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanCalculateDocumentsByEntity_Count(Options options)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal(2, ((InMemoryDocumentSessionOperations)session).NumberOfEntitiesInUnitOfWork);
+
+                    // Evict both entities
+                    session.Advanced.Evict(jerry);
+                    session.Advanced.Evict(egor);
+
+                    Assert.Equal(0, ((InMemoryDocumentSessionOperations)session).NumberOfEntitiesInUnitOfWork);
+                }
+            }
+        }
     }
 }

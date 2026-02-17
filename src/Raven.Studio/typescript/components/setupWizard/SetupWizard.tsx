@@ -197,8 +197,7 @@ export default function SetupWizard() {
                                     <div className="vstack gap-1">
                                         <h4 className="mb-0">Having trouble?</h4>
                                         <p className="text-muted mb-0" style={{ lineHeight: 1.3 }}>
-                                            Our documentation will guide you through the configuration process step by
-                                            step
+                                            Follow our documentation for step-by-step instructions.
                                         </p>
                                     </div>
                                     <a

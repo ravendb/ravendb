@@ -40,7 +40,7 @@ export function SetupWizardSecurityStep() {
     return (
         <div>
             <h2 className="mb-1">Security</h2>
-            <p className="mb-4 text-muted">Select the security option that best addresses your needs</p>
+            <p className="mb-4 text-muted">Choose how to secure your RavenDB server.</p>
             <div className="mt-4">
                 <h5 className="mb-1 d-flex align-items-center">
                     <Icon icon="lock" color="success" />
@@ -80,7 +80,7 @@ export function SetupWizardSecurityStep() {
                         className="w-100"
                         icon="lets-encrypt"
                         title="Generate Let's Encrypt certificate"
-                        description="Secure and hassle-free communication with automatic certificate management"
+                        description="Automatically issue and renew a trusted HTTPS certificate using your domain"
                         isSelected={securityOption === "letsEncrypt"}
                         onClick={() => {
                             setValue("securityStep.securityOption", "letsEncrypt", {
@@ -92,12 +92,16 @@ export function SetupWizardSecurityStep() {
                         popoverMessage={
                             <ul className="mb-0 ps-3">
                                 <li>
-                                    Default setting for most users. RavenDB will automatically generate and manage
-                                    SSL/TLS certificates for encrypting communications between nodes and clients.
+                                    Default choice for most users. Recommended if you don&#39;t need a custom
+                                    certificate and prefer RavenDB to manage encryption without any manual setup.
                                 </li>
-                                <li>
-                                    Ideal when you don&#39;t have a specific custom certificate or prefer RavenDB to
-                                    handle encryption automatically.
+                                <li className="mt-1">
+                                    RavenDB will automatically issue and renew a trusted HTTPS certificate for your
+                                    domain (chosen in the next step).
+                                </li>
+                                <li className="mt-1">
+                                    Ideal for standard deployments where a public domain is available and you want a
+                                    simple, secure default option.
                                 </li>
                             </ul>
                         }
@@ -133,16 +137,13 @@ export function SetupWizardSecurityStep() {
                         popoverMessage={
                             <ul className="mb-0 ps-3">
                                 <li>
-                                    You need to use a custom SSL/TLS certificate, often for integration with a specific
-                                    internal certificate authority or to comply with corporate security policies.
+                                    Use this when you need to provide a custom SSL/TLS certificate, often to comply with
+                                    corporate security policies or integrate with an internal certificate authority.
                                 </li>
-                                <li>
-                                    Useful if you need to integrate RavenDB with an existing private infrastructure that
-                                    requires specific certificates.
-                                </li>
-                                <li>
-                                    Ideal for <b>production environments</b> where you want more control over
-                                    certificate management and trust settings.
+                                <li className="mt-1">
+                                    Recommended for <b>production environments</b> where certificates are managed
+                                    manually or by external infrastructure, and full control over certificate management
+                                    and trust configuration is required.
                                 </li>
                             </ul>
                         }
@@ -157,7 +158,7 @@ export function SetupWizardSecurityStep() {
                 <SetupWizardClickableCard
                     icon="empty-set"
                     title="Don't use certificate"
-                    description="Best for quick local development with no security requirements"
+                    description="Suitable only for quick local development with no security requirements"
                     isSelected={securityOption === "none"}
                     onClick={() => {
                         setValue("securityStep.securityOption", "none", {
@@ -168,16 +169,14 @@ export function SetupWizardSecurityStep() {
                     popoverMessage={
                         <ul className="mb-0 ps-3">
                             <li>
-                                Only in <b>trusted, isolated environments</b> (e.g., internal testing, local
-                                development, or a network that is isolated from the public internet).
+                                Use only in <b>trusted, isolated environments</b> such as local development, internal
+                                testing, or secure private networks where encryption is intentionally not required
+                                (e.g., for performance or testing purposes).
                             </li>
-                            <li>
-                                <b>Not recommended for production</b> environments as data will be transmitted
-                                unencrypted, leaving it vulnerable to eavesdropping or man-in-the-middle attacks.
-                            </li>
-                            <li>
-                                If you are aware that all nodes are within a secure, private network and you don&#39;t
-                                need encryption for performance or resource constraints.
+                            <li className="mt-1">
+                                <b>Not recommended for production</b>, as all traffic will be transmitted without
+                                encryption or authentication, making it vulnerable to eavesdropping or man-in-the-middle
+                                attacks.
                             </li>
                         </ul>
                     }

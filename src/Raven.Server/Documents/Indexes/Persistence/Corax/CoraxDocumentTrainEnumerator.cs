@@ -94,6 +94,11 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             ProcessSelectedStream(field.Analyzer ?? _lowercaseAnalyzer, value.Slice(startLocation, maxSize));
         }
 
+        public void WriteCompound(int fieldId, ReadOnlySpan<byte> value)
+        {
+            // nothing to do here
+        }
+
         public void Write(int fieldId, string path, ReadOnlySpan<byte> value)
         {
            Write(fieldId, value);

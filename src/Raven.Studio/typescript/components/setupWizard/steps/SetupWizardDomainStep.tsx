@@ -81,8 +81,9 @@ export function SetupWizardDomainStep() {
         <div>
             <h2 className="mb-1">Domain</h2>
             <p className="mb-4 text-muted">
-                Enter your own domain to be linked with our default hosting zone, where your database will be hosted and
-                protected with a security certificate.
+                Enter a name for your cluster&#39;s domain. It will be available under <code>.development.run</code>.
+                <br />
+                This domain will point to your cluster (where your databases are hosted) and will be secured with HTTPS.
             </p>
             <FormGroup marginClass="mb-2">
                 <FormLabel className="hstack">
@@ -90,13 +91,21 @@ export function SetupWizardDomainStep() {
                     <PopoverWithHoverWrapper
                         message={
                             <>
-                                <p className="mb-0">
-                                    The inserted domain is the domain name of your RavenDB instance. Let’s Encrypt will
-                                    use this domain to create an SSL certificate for secure connections. Make sure the
-                                    domain is accessible for certificate generation.
-                                </p>
+                                <ul className="mb-0 ps-3">
+                                    <li>
+                                        The name you enter will be used to create your cluster’s domain under
+                                        <code>.development.run</code>.<br />
+                                        RavenDB will use this domain to generate an HTTPS certificate for secure
+                                        connections.
+                                    </li>
+                                    <li className="mt-1">
+                                        The domain must be reachable from the public internet to complete certificate
+                                        generation.
+                                    </li>
+                                </ul>
                                 <RichAlert icon="info" variant="info" className="mt-2">
-                                    Domain name can only contain A-Z, a-z, 0-9, ‘-’ characters.
+                                    Domain name can contain only the characters: <code>A-Z</code>, <code>a-z</code>,{" "}
+                                    <code>0-9</code>, and <code>-</code>.
                                 </RichAlert>
                             </>
                         }
@@ -139,8 +148,7 @@ export function SetupWizardDomainStep() {
             </FormGroup>
             {hasDnsRecords && (
                 <RichAlert icon="info" variant="info">
-                    There are some DNS records already set for the selected domain. You will be able to overwrite these
-                    settings in the next step.
+                    This domain already has DNS records configured. You can review and overwrite them in the next step.
                 </RichAlert>
             )}
             <FormGroup className="mt-3">

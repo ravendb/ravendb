@@ -54,12 +54,15 @@ namespace SlowTests.Issues
             })
             {
                 var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
 
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                string tag1;
+                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                {
+                    tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                }
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
                 
@@ -70,8 +73,10 @@ namespace SlowTests.Issues
                 string tag2 = "";
                 await WaitForValueAsync(async () =>
                 {
-                    database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                    {
+                        tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    }
                     return tag1.Equals(tag2);
                 }, false);
 
@@ -110,11 +115,15 @@ namespace SlowTests.Issues
             })
             {
                 var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                string tag1;
+                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                {
+                    tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                }
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
@@ -125,8 +134,10 @@ namespace SlowTests.Issues
                 //Wait for new responsible node
                 await WaitForValueAsync(async () =>
                 {
-                    database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                    {
+                        tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    }
                     return tag1.Equals(tag2);
                 }, false);
                 Assert.NotEqual(tag1, tag2);
