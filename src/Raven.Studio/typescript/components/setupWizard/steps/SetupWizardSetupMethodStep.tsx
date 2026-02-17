@@ -26,17 +26,19 @@ export function SetupWizardSetupMethodStep() {
 
     return (
         <div>
-            <h2 className="mb-1">Choose your setup method</h2>
             <p className="mb-4 text-muted">
-                This wizard will assist you with setting up your RavenDB server. You can set up a new cluster, create an
-                external configuration package, or continue with an existing setup package.
+                This wizard will guide you through setting up your RavenDB server.
+                <br />
+                You can set up a new cluster, create a configuration package for external setup, or continue with an
+                existing setup package.
             </p>
+            <h2 className="mb-1">Choose your setup method</h2>
             <div className="mt-4">
-                <h5 className="mb-1">I&apos;m just starting</h5>
+                <h5 className="mb-1">I&apos;m starting a new cluster setup:</h5>
                 <SetupWizardClickableCard
                     icon="server"
                     title="Set up new cluster"
-                    description="Create a completely new cluster with fresh configurations"
+                    description="Create a new cluster with a new configuration"
                     isSelected={selectedMethod === "newCluster"}
                     onClick={() => {
                         setValue("setupMethodStep.method", "newCluster");
@@ -44,9 +46,9 @@ export function SetupWizardSetupMethodStep() {
                     }}
                     popoverMessage={
                         <ul className="mb-0 ps-3">
-                            <li>Deploying RavenDB for the first time</li>
-                            <li>Setting up a new single-node or multi-node cluster</li>
-                            <li>Creating a fresh cluster with a new configuration</li>
+                            <li>Deploying RavenDB for the first time.</li>
+                            <li>Setting up a new single-node or multi-node cluster.</li>
+                            <li>Creating a cluster from scratch with custom configuration.</li>
                         </ul>
                     }
                 />
@@ -54,7 +56,7 @@ export function SetupWizardSetupMethodStep() {
                     className="mt-2"
                     icon="default"
                     title="Create package for external setup"
-                    description="Generate an external setup package during configuration for customized deployment"
+                    description="Generate a setup package for deploying RavenDB in external environments"
                     isSelected={selectedMethod === "createPackage"}
                     onClick={() => {
                         setValue("setupMethodStep.method", "createPackage");
@@ -63,22 +65,22 @@ export function SetupWizardSetupMethodStep() {
                     popoverMessage={
                         <ul className="mb-0 ps-3">
                             <li>
-                                You want to create a Package for an external environment i.e. cloud instance,
-                                containers, or similar
+                                Deploying RavenDB in an external environment
+                                <br /> (e.g. cloud instance, container, or remote server).
                             </li>
-                            <li>Creating pre-configured package without setting up a server</li>
-                            <li>Useful with offline or remote setup</li>
+                            <li>Generating a pre-configured setup package without running the server locally.</li>
+                            <li>Useful for offline, automated, or remote installations.</li>
                         </ul>
                     }
                 />
             </div>
             <div className="my-4">
-                <h5 className="mb-1">I have something to work with</h5>
+                <h5 className="mb-1">I already have a setup package:</h5>
                 <SetupWizardClickableCard
                     icon="default"
                     addon="arrow-up"
                     title="Use setup package"
-                    description="Deploy the cluster using a predefined setup package with default or minimal configurations"
+                    description="Set up the server using a previously created setup package"
                     isSelected={selectedMethod === "usePackage"}
                     onClick={() => {
                         setValue("setupMethodStep.method", "usePackage");
@@ -87,12 +89,14 @@ export function SetupWizardSetupMethodStep() {
                     popoverMessage={
                         <>
                             <ul className="ps-3">
-                                <li>Setting up another node in an existing cluster</li>
-                                <li>Setting up a new cluster from external package</li>
+                                <li>Setting up an additional node in an existing cluster.</li>
+                                <li>Setting up a new cluster from a pre-configured package.</li>
                             </ul>
                             <p className="mb-0">
-                                To obtain a setup package you need to setup a new multi-node cluster or create package
-                                for external setup.
+                                Note:
+                                <br /> Setup packages are generated when creating a multi-node cluster in{" "}
+                                <strong>Set up new cluster</strong> or using{" "}
+                                <strong>Create package for external setup</strong>.
                             </p>
                         </>
                     }

@@ -21,6 +21,7 @@ using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -426,6 +427,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         {
             await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
             memoryStream.Position = 0;
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                RavenServerStartup.LogTrafficWatch(multiGetHandler.HttpContext, elapsedMilliseconds: 0, database.Name);
+
             using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
             if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
                 throw new InvalidOperationException("Missing Results from multi-get reply");

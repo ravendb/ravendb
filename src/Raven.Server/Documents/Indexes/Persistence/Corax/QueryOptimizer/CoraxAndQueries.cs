@@ -87,13 +87,45 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
         stack.Sort(PrioritizeSort);
         //stack.Reverse(); // we want to have BIGGEST at the very beginning to avoid filling big match multiple times
 
+        // Collect negated items (NotEquals) to apply them at the end using AndNot optimization
+        // This transforms And(X, AndNot(AllEntries, term)) into AndNot(X, term) which is much more efficient
+        // because it avoids iterating through AllEntries
+        List<CoraxBooleanItem> negatedItems = null;
+
         foreach (ref var query in stack)
         {
+            // RavenDB-22603: Defer NotEquals items to apply with AndNot at the end
+            if (query.IsNegated)
+            {
+                negatedItems ??= new List<CoraxBooleanItem>();
+                negatedItems.Add(query);
+                continue;
+            }
+
             var materializedQuery = query.Materialize(ref noStreaming);
 
             match = match is null
                 ? materializedQuery
                 : IndexSearcher.And(materializedQuery, match);
+        }
+
+        // Apply negated items using AndNot optimization
+        // Instead of And(match, AndNot(AllEntries, term)), we do AndNot(match, term)
+        if (negatedItems != null)
+        {
+            foreach (var negatedItem in negatedItems)
+            {
+                var termMatch = negatedItem.MaterializeNegatedTermMatch();
+                if (match is null)
+                {
+                    // If there are only negated items, we need AllEntries as the base
+                    match = IndexSearcher.AndNot(IndexSearcher.AllEntries(), termMatch);
+                }
+                else
+                {
+                    match = IndexSearcher.AndNot(match, termMatch);
+                }
+            }
         }
 
 
@@ -102,11 +134,17 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
             pos = -1;
             if (IsBoosting)
                 return false;
-            
+
             var minimumCount = long.MaxValue;
             for (int idX = 0; idX < queries.Length; ++idX)
             {
                 ref var query = ref queries[idX];
+
+                // RavenDB-22603: NotEquals IS supported by MultiUnaryMatch via UnaryMode.All.
+                // Skip it when looking for the Equals anchor, but include it in the scan.
+                if (query.Operation is UnaryMatchOperation.NotEquals)
+                    continue;
+
                 if (query.Operation is UnaryMatchOperation.Equals && query.Count < minimumCount)
                 {
                     pos = idX;

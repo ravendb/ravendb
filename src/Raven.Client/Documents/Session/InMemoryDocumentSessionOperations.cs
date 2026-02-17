@@ -2665,7 +2665,7 @@ more responsive application.
 
         private bool _prepareEntitiesPuts;
 
-        public int Count => _documentsByEntity.Count + _onBeforeStoreDocumentsByEntity?.Count ?? 0;
+        public int Count => _documentsByEntity.Count + (_onBeforeStoreDocumentsByEntity?.Count ?? 0);
 
         public void Remove(object entity)
         {

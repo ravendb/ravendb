@@ -15,10 +15,11 @@ namespace Voron.Debugging
         public long Id;
         public TransactionFlags Flags;
         public bool AsyncCommit;
+        public string CallerName;
 
         public override string ToString()
         {
-            return $"{nameof(Id)}: {Id}: {Flags} ({nameof(AsyncCommit)}: {AsyncCommit})";
+            return $"{nameof(Id)}: {Id}: {Flags} ({nameof(AsyncCommit)}: {AsyncCommit}, Caller : {CallerName})";
         }
     }
 }

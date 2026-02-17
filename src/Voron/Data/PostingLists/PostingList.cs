@@ -449,10 +449,15 @@ namespace Voron.Data.PostingLists
                         continue;
 
                     var sibling = new PostingListLeafPage(siblingPage);
-                    if (sibling.SpaceUsed + leafPage.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
+                    
+                    const int page75PercentFullSize = Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4 ;
+                    bool anyPageFree = sibling is { SpaceUsed: 0 } || leafPage is { SpaceUsed: 0 };
+                    if (sibling.SpaceUsed + leafPage.SpaceUsed > page75PercentFullSize && anyPageFree == false)
                     {
-                        // if the two pages together will be bigger than 75%, can skip merging
-                        // we do that to prevent "jumping" around between adding a page & removing that
+                        // If the two pages together are larger than 75%, we can skip merging.
+                        // We do this to prevent "jumping" around between adding a page and removing it.
+                        // However, if one side is empty, we want to free that empty space,
+                        // so we will force TryMerge in such a case.
                         continue;
                     }
 

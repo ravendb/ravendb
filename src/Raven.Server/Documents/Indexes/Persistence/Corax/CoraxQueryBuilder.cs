@@ -174,7 +174,7 @@ public static partial class CoraxQueryBuilder
             return SkipOrderByClause;
         }
 
-        public bool TrySetAsStreamingField(Parameters builderParameters, in CoraxBooleanItem cbi)
+        public bool TrySetAsStreamingField(Parameters builderParameters, in CoraxBooleanItem cbi, IQueryMatch right)
         {
             if (OptimizationIsPossible == false)
                 return false;
@@ -187,7 +187,9 @@ public static partial class CoraxQueryBuilder
 
             if (cbi.Field.Equals(SortField.Field) == false)
             {
-                if (builderParameters.Index.HasCompoundField(cbi.Field.FieldName, SortField.Field.FieldName, out var bindingId))
+                // Currently, CompoundField does not support two WHERE condition. Do not mark it as a compound field to avoid optimization that could
+                // be degradated to a worse query plan.
+                if (builderParameters.Index.HasCompoundField(cbi.Field.FieldName, SortField.Field.FieldName, out var bindingId) && right is null)
                 {
                     var indexFieldBinding = builderParameters.IndexFieldsMapping.GetByFieldId(bindingId);
                     CompoundField = FieldMetadata.Build(indexFieldBinding.FieldName, indexFieldBinding.FieldTermTotalSumField,
@@ -239,7 +241,7 @@ public static partial class CoraxQueryBuilder
                 source = cbq.Materialize();
                 break;
             case CoraxBooleanItem cbi:
-                streamingConfiguration.TrySetAsStreamingField(builderParameters, cbi);
+                streamingConfiguration.TrySetAsStreamingField(builderParameters, cbi, null);
                 if (streamingConfiguration.MatchedByCompoundField)
                     return cbi.OptimizeCompoundField(ref streamingConfiguration);
 
@@ -452,7 +454,7 @@ public static partial class CoraxQueryBuilder
                                 left = ToCoraxQuery(builderParameters, @where.Left, ref leftOnlyOptimization, exact);
                                 right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
                                 // in case of AND we can materialize only TermMatches, we push streamingOptimization there only for changing order for MultiTermMatch;
-                                if (left is CoraxBooleanItem cbi && leftOnlyOptimization.TrySetAsStreamingField(builderParameters, cbi))
+                            if (left is CoraxBooleanItem cbi && leftOnlyOptimization.TrySetAsStreamingField(builderParameters, cbi, right))
                                     left = cbi.Materialize(ref leftOnlyOptimization);
 
                                 if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters, ref left, ref right, out merged, ref builderParameters.StreamingDisabled))
