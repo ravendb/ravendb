@@ -843,6 +843,7 @@ namespace Raven.Server.Documents.Patch
 
                 var obj = new JsObject(ScriptEngine);
                 obj.SetClfFunc("remote", (thisObj, values) => RemoteAttachments(thisObj.Get("doc"), thisObj.Get("name"), values));
+                obj.SetClfFunc("delete", (thisObj, values) => DeleteAttachment(thisObj.Get("doc"), thisObj.Get("name")));
                 obj.FastSetDataProperty("doc", args[0]);
                 obj.FastSetDataProperty("name", args[1]);
 
@@ -879,6 +880,27 @@ namespace Raven.Server.Documents.Patch
                         ["Identifier"] = identifier,
                         ["At"] = at,
                     });
+                }
+
+                return JsValue.Undefined;
+            }
+
+            private JsValue DeleteAttachment(JsValue document, JsValue name)
+            {
+                const string signature = "attachments(doc, name).delete";
+                AssertValidDatabaseContext(signature);
+
+                var (id, doc) = GetIdAndDocFromArg(document, signature);
+                var attachmentName = GetStringArg(name, signature, "name");
+
+                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(_docsCtx, id, attachmentName, null, out _, updateDocument: false);
+
+                DocumentAttachmentsToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                DocumentAttachmentsToUpdate.Add(id);
+
+                if (DebugMode)
+                {
+                    DebugActions.DeleteAttachment.Add(attachmentName);
                 }
 
                 return JsValue.Undefined;
