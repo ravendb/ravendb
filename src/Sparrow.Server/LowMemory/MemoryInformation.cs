@@ -13,11 +13,10 @@ using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
-using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Sparrow.Server.LowMemory
 {
-    public static class MemoryInformation
+    public static partial class MemoryInformation
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Server");
 
@@ -126,9 +125,9 @@ namespace Sparrow.Server.LowMemory
                 EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
                 return;
 
-            var memInfo = GetMemoryInfo();
+            var memInfo = GetEarlyOutOfMemoryInfo();
             if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
-                ThrowInsufficientMemory(memInfo);
+                ThrowInsufficientMemory(GetMemoryInfo());
         }
 
         internal static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
@@ -140,10 +139,15 @@ namespace Sparrow.Server.LowMemory
                 return false;
             }
 
-            return IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
+            return IsEarlyOutOfMemoryInternal(new LightWeightMemoryInfoResult
+            {
+                AvailableMemory = memInfo.AvailableMemory,
+                CurrentCommitCharge = memInfo.CurrentCommitCharge,
+                TotalCommittableMemory = memInfo.TotalCommittableMemory
+            }, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
         }
 
-        private static bool IsEarlyOutOfMemoryInternal(MemoryInfoResult memInfo, bool earlyOutOfMemoryWarning, out Size commitChargeThreshold)
+        private static bool IsEarlyOutOfMemoryInternal(LightWeightMemoryInfoResult memInfo, bool earlyOutOfMemoryWarning, out Size commitChargeThreshold)
         {
             // if we are about to create a new thread, might not always be a good idea:
             // https://ayende.com/blog/181537-B/production-test-run-overburdened-and-under-provisioned
@@ -156,12 +160,12 @@ namespace Sparrow.Server.LowMemory
                 // sometimes this kind of stat is shared, see:
                 // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
 
-                commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalPhysicalMemory);
+                commitChargeThreshold = GetMinCommittedToKeep(TotalPhysicalMemory);
                 overage =
                     commitChargeThreshold +                                    //extra to keep free
-                    (memInfo.TotalPhysicalMemory - memInfo.AvailableMemory);   //actually in use now
+                    (TotalPhysicalMemory - memInfo.AvailableMemory);   //actually in use now
 
-                return overage >= memInfo.TotalPhysicalMemory;
+                return overage >= TotalPhysicalMemory;
             }
 
             commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalCommittableMemory);
