@@ -1153,15 +1153,14 @@ namespace Raven.Server.Commercial
                     }
 
                     if (unsecuredSetupInfo.LocalNodeTag != null)
+                    {
                         await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
+                        
+                        if (unsecuredSetupInfo.License != null)
+                            await serverStore.LicenseManager.ActivateAsync(unsecuredSetupInfo.License, RaftIdGenerator.DontCareId);
+                    }
 
                     await DeleteAllExistingCertificates(serverStore);
-
-                    if (unsecuredSetupInfo.License != null)
-                    {
-                        await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                        await serverStore.LicenseManager.ActivateAsync(unsecuredSetupInfo.License, RaftIdGenerator.DontCareId);
-                    }
                     
                     serverStore.HasFixedPort = unsecuredSetupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                 },
