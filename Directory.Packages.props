@@ -4,9 +4,9 @@
     <CentralPackageTransitivePinningEnabled>True</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.3.8" />
-    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.3.2" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.17.1" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.3.14" />
+    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.3.6" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.18.6" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
@@ -38,7 +38,7 @@
     <PackageVersion Include="Lucene.Net" Version="3.0.60015" />
     <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60015" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.23" />
+    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.24" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
@@ -79,8 +79,8 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
-    <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.0" />
-    <PackageVersion Include="Parquet.Net" Version="5.3.0" />
+    <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.100" />
+    <PackageVersion Include="Parquet.Net" Version="5.5.0" />
     <PackageVersion Include="Polly" Version="8.6.5" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.1.2" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.13" />
