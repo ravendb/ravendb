@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/documents/scan-corrupted-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ScanCorruptedIds()
         {
-            var startEtag = GetIntValueQueryString("startEtag", required: false) ?? 0;
+            var startEtag = GetLongQueryString("startEtag", required: false) ?? 0;
             var resultCount = GetIntValueQueryString("resultCount", required: false) ?? 1024;
             var maxBatchTimeInSec = GetIntValueQueryString("maxBatchTimeInSec", required: false) ?? 60;
 
@@ -86,19 +86,26 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
+                bool hasMore = true;
+                
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, Stream.Null))
                 {
                     var timeout = Stopwatch.StartNew();
-                    while (resultCount > 0)
+                    while (resultCount > 0 && hasMore)
                     {
                         timeout.Restart();
                         using (context.OpenReadTransaction())
+                        using (var enumerator = IterateDocumentsAndRevisionsByEtag(context, lastEtag).GetEnumerator())
                         {
-                            foreach (var doc in IterateDocumentsAndRevisionsByEtag(context, lastEtag))
+                            while (true)
                             {
                                 HttpContext.RequestAborted.ThrowIfCancellationRequested();
-
-                                ++scannedDocuments;
+                                
+                                hasMore = enumerator.MoveNext();
+                                if (hasMore == false)
+                                    break;
+                                    
+                                var doc = enumerator.Current;
                                 using (doc)
                                 {
                                     unsafe
@@ -120,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         AddToResult(wrongEscapedPositionsIds, doc);
                                         resultCount--;
                                     }
-
+                                    scannedDocuments++;
                                     if (resultCount <= 0 || timeout.Elapsed > maxBatchTime)
                                     {
                                         lastEtag = doc.Etag;
@@ -128,8 +135,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     }
                                 }
                             }
-
-                            break;
                         }
                     }
                 }
@@ -141,7 +146,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteComma();
                     writer.WriteArray("UnescapedControlCharacterIds", unescapedControlCharacterIds);
                     writer.WriteComma();
-                    if (lastEtag > 0)
+                    if (hasMore)
                     {
                         writer.WritePropertyName("LastEtag");
                         writer.WriteInteger(lastEtag);

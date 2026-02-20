@@ -151,6 +151,7 @@ class serverSetup {
             DataDirectory: null, 
             SetupCertificatePath: null,
             LogsPath: null, 
+            License: null,
             StaticIndexingEngineType: null,
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             LocalNodeTag: !this.startNodeAsPassive() ? this.localNodeTag() : null,
