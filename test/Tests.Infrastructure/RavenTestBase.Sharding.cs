@@ -24,6 +24,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Sdk;
 
 namespace FastTests;
 
@@ -162,6 +163,40 @@ public partial class RavenTestBase
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database ?? store.Database));
             return record.Sharding;
+        }
+
+        public async Task<ShardingConfiguration> AssertAllShardsHaveMembers(DocumentStore store, int timeout = 15_000, int interval = 100)
+        {
+            ShardingConfiguration lastSuccessfulSharding = null;
+            var shardingDebugInfo = string.Empty;
+            try
+            {
+                await WaitAndAssertForValueAsync(act: AllHaveMember, true, timeout, interval);
+            }
+            catch (EqualException)
+            {
+                Assert.Fail(shardingDebugInfo);
+            }
+            return lastSuccessfulSharding;
+
+            async Task<bool> AllHaveMember()
+            {
+                var sharding = await GetShardingConfigurationAsync(store);
+
+                foreach (var kvp in sharding.Shards)
+                {
+                    if (kvp.Value.Members.Count == 0)
+                    {
+                        shardingDebugInfo = $"Shard: {kvp.Key} has no members." +
+                                            Environment.NewLine +
+                                            string.Join("," + Environment.NewLine, sharding.Shards.Select(kvp1 => "Shard " + kvp1.Key + ": " + kvp1.Value));
+                        return false;
+                    }
+                }
+
+                lastSuccessfulSharding = sharding;
+                return true;
+            }
         }
 
         public string GetRandomIdForShard(ShardingConfiguration config, int shardNumber)

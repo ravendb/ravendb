@@ -1150,7 +1150,12 @@ namespace Raven.Server.Commercial
                     }
 
                     if (unsecuredSetupInfo.LocalNodeTag != null)
+                    {
                         await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
+
+                        if (unsecuredSetupInfo.License != null)
+                            await serverStore.LicenseManager.ActivateAsync(unsecuredSetupInfo.License, RaftIdGenerator.DontCareId);
+                    }
 
                     await DeleteAllExistingCertificates(serverStore);
 
@@ -1215,11 +1220,8 @@ namespace Raven.Server.Commercial
 
                             await DeleteAllExistingCertificates(serverStore);
 
-                            if (setupMode == SetupMode.LetsEncrypt)
-                            {
-                                await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                                await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
-                            }
+                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                    await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
 
                             serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                         },
