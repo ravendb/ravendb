@@ -68,7 +68,7 @@ public partial class RevisionsStorage
                         if (result.Deleted == result.RevisionsCount)
                         {
                             // remove the HasRevisions flag
-                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, id, DocumentFields.Data);
+                            using var doc = context.DocumentDatabase.DocumentsStorage.Get(context, id, DocumentFields.Data);
                             if (doc != null)
                                 context.DocumentDatabase.DocumentsStorage.Put(context, id, expectedChangeVector: null, document: doc.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
                         }
