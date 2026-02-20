@@ -83,8 +83,12 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
     {
         if (env == null)
             return;
-        
-        using (var tx = context.OpenReadTransaction())
+
+        // this is using a write tx because we need to read the usage details of the scratch files
+        // which are generally not assumed to be thread safe (using dictionaries, etc), so we use the write transaction
+        // to ensure that we have exclusive access to the environment while we read those details.
+        // see: https://issues.hibernatingrhinos.com/issue/RavenDB-21088
+        using (var tx = context.OpenWriteTransaction())
         {
             var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed, flat);
             writer.WriteStartObject();
