@@ -55,6 +55,13 @@ namespace Raven.Server.Documents.Queries
                 var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories,
                     queryTime: queryTime, buildSteps: buildSteps);
 
+                    // If the query evaluates to LuceneWhenQuery,
+                    // it means all conditions were removed; therefore, the query has no WHERE clause.
+                    if (luceneQuery is LuceneWhenQuery)
+                    {
+                        return new MatchAllDocsQuery();
+                    }
+                
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
                 return luceneQuery ?? new BooleanQuery();
@@ -249,6 +256,12 @@ namespace Raven.Server.Documents.Queries
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: true, queryTime: queryTime, buildSteps: buildSteps);
 
+                            if (left is LuceneWhenQuery)
+                                return right;
+                            
+                            if (right is LuceneWhenQuery)
+                                return left;
+                            
                             if (left is RavenBooleanQuery rbq)
                             {
                                 if (rbq.TryAnd(right, buildSteps) == false)
@@ -272,6 +285,12 @@ namespace Raven.Server.Documents.Queries
                             buildSteps?.Add(
                                 $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
+                            if (left is LuceneWhenQuery)
+                                return right;
+                            
+                            if (right is LuceneWhenQuery)
+                                return left;
+                            
                             if (left is RavenBooleanQuery rbq)
                             {
                                 if (rbq.TryOr(right, buildSteps) == false)
@@ -313,6 +332,10 @@ namespace Raven.Server.Documents.Queries
 
                 var inner = ToLuceneQuery(serverContext, documentsContext, query, ne.Expression,
                     metadata, index, parameters, analyzer, factories, exact, secondary: secondary, queryTime: queryTime, buildSteps: buildSteps);
+
+                if (inner is LuceneWhenQuery)
+                    return inner;
+                
                 return new BooleanQuery { { inner, Occur.MUST_NOT }, { new MatchAllDocsQuery(), Occur.SHOULD } };
             }
 
@@ -403,7 +426,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Lucene:
                         return HandleLucene(query, me, metadata, parameters, analyzer, exact);
                     case MethodType.Exists:
-                        return HandleExists(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories);
+                        return HandleExists(query, me, metadata, parameters);
+                    case MethodType.When:
+                        return HandleWhen(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
                     case MethodType.Exact:
                         return HandleExact(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, queryTime);
                     case MethodType.Spatial_Within:
@@ -691,50 +716,27 @@ namespace Raven.Server.Documents.Queries
         {
             return metadata.GetIndexFieldName(new QueryFieldName(field.Token.Value, field.Value == ValueTokenType.String), parameters);
         }
-
-        private static Lucene.Net.Search.Query HandleExists(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
-            MethodExpression expression, QueryMetadata metadata, Index index,
+        
+        private static Lucene.Net.Search.Query HandleWhen(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query, MethodExpression expression, QueryMetadata metadata, Index index,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
             List<string> buildSteps = null)
         {
-            if (expression.Arguments.Count == 1)
-                return HandleExistsField(serverContext, documentsContext, query, expression, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
+            PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Conditional exists requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
-            return HandleConditionalExists(serverContext, documentsContext, query, expression, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
-        }
-
-        private static Lucene.Net.Search.Query HandleConditionalExists(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query, MethodExpression expression, QueryMetadata metadata, Index index,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
-            List<string> buildSteps = null)
-        {
-            PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 3, $"Conditional exists requires exactly 3 arguments, but got {expression.Arguments.Count}");
+            var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery((BinaryExpression)expression.Arguments[0], parameters);
+            if (constantExpressionResult == false)
+                return new LuceneWhenQuery();
             
-            PortableExceptions.ThrowIfNot<ArgumentException>(expression.Arguments[0] is ValueExpression {Value: ValueTokenType.Parameter}, $"First argument to conditional exists must be a parameter, but got '{expression.Arguments[0].ToString()}'");
-
-            ValueExpression field = (ValueExpression)expression.Arguments[0];
-            var parameterName = field.Token.Value;
-            var parameterExists = parameters.Contains(parameterName);
-
-            if (parameterExists)
-            {
-                return ToLuceneQuery(serverContext, documentsContext, query, expression.Arguments[1], metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
-            }
-
-            bool includeAll = false;
-            PortableExceptions.ThrowIfNot<ArgumentException>(expression.Arguments[2] is ValueExpression thirdArgument && bool.TryParse(thirdArgument.Token.Value, out includeAll), $"Third argument must be boolean. It must be 'true' or 'false'.");
-
-            return includeAll 
-                ? new MatchAllDocsQuery() 
-                : new BooleanQuery();
+            return ToLuceneQuery(serverContext, documentsContext, query, expression.Arguments[1], metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
         }
         
-        private static Lucene.Net.Search.Query HandleExistsField(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
-            MethodExpression expression, QueryMetadata metadata, Index index,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
+        private static Lucene.Net.Search.Query HandleExists(Query query,
+            MethodExpression expression, QueryMetadata metadata,
+            BlittableJsonReaderObject parameters,
             List<string> buildSteps = null)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
-
+            buildSteps?.Add($"Exists({fieldName})");
             return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard);
         }
 

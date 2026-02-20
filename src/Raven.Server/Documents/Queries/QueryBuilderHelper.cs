@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -859,5 +860,165 @@ public static class QueryBuilderHelper
         }
 
         return GenerateEmbeddings.FromArray(allocator, scope, memory, options, bytesRequired);
+    }
+    
+    public static bool EvaluateConstantExpressionForWhenQuery(BinaryExpression constantExpression, BlittableJsonReaderObject parameters)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+        if (constantExpression.Operator is OperatorType.And or OperatorType.Or)
+        {
+            PortableExceptions.ThrowIfNot<ArgumentException>(constantExpression.Left is BinaryExpression, $"Expected binary expression, but got: '{constantExpression.Left.ToString()}' of type '{constantExpression.Left.Type}'.");
+            PortableExceptions.ThrowIfNot<ArgumentException>(constantExpression.Right is BinaryExpression, $"Expected binary expression, but got: '{constantExpression.Right.ToString()}' of type '{constantExpression.Right.Type}'.");
+            
+            var leftResult = EvaluateConstantExpressionForWhenQuery((BinaryExpression)constantExpression.Left, parameters);
+            var rightResult = EvaluateConstantExpressionForWhenQuery((BinaryExpression)constantExpression.Right, parameters);
+            return (constantExpression.Operator) switch
+            {
+                OperatorType.And => leftResult && rightResult,
+                OperatorType.Or => leftResult || rightResult,
+                _ => throw new InvalidOperationException("Should not happen!")
+            };
+        }
+        
+        if (constantExpression.Left is not FieldExpression leftField)
+            throw new InvalidOperationException($"Expected field expression, but got: {constantExpression.Left}");
+        
+        bool paramIsMissing = false;
+        Debug.Assert(leftField.FieldValue.StartsWith('$'));
+        if (parameters.TryGet(new StringSegment(leftField.FieldValue, 1, leftField.FieldValue.Length - 1), out object paramValue) == false)
+        {
+            paramValue = null;
+            paramIsMissing = true;
+        }
+
+        var rightExpression = (ValueExpression)constantExpression.Right;
+        if ((paramIsMissing || paramValue is null) && rightExpression.Value is not ValueTokenType.Null)
+        {
+            return constantExpression.Operator switch
+            {
+                OperatorType.NotEqual => true,
+                _ => false
+            };
+        }
+
+        switch (rightExpression.Value)
+        {
+            case ValueTokenType.Null:
+            {
+                return (ParamIsMissing: paramIsMissing, ParamValue: paramValue) switch
+                {
+                    (ParamIsMissing: true, _) when constantExpression.Operator is OperatorType.Equal => true,
+                    (ParamIsMissing: _, null) when constantExpression.Operator is OperatorType.Equal => true,
+                    _ => false
+                };
+            }
+            case ValueTokenType.True:
+            case ValueTokenType.False:
+            {
+                if (paramValue is not bool paramValueAsBool)
+                    throw new InvalidOperationException($"Expected boolean value, but got: '{paramValue}' of type '{paramValue?.GetType()}'.");
+            
+                var leftSideAsBool = rightExpression.Value == ValueTokenType.True;
+
+                return constantExpression.Operator switch
+                {
+                    OperatorType.Equal => paramValueAsBool == leftSideAsBool,
+                    OperatorType.NotEqual => paramValueAsBool != leftSideAsBool,
+                    _ => throw new InvalidOperationException($"Cannot execute {constantExpression.Operator} on boolean values.")
+                };
+            }
+            case ValueTokenType.Long:
+            {
+                long leftSideValue = paramValue switch
+                {
+                    byte b => b,
+                    sbyte sb => sb,
+                    ushort us => us,
+                    short s => s,
+                    uint ui => ui,
+                    int i => i,
+                    ulong ul => checked((long)ul),
+                    long l => l,
+                    double d => checked((long)d),   
+                    float f => checked((long)f),
+                    decimal dc => checked((long)dc),
+                    LazyStringValue lsv => lsv.ToInt64(CultureInfo.InvariantCulture),
+                    LazyNumberValue lnv => lnv.ToInt64(CultureInfo.InvariantCulture),
+                    _ => throw new InvalidOperationException($"Cannot convert {paramValue!.GetType()} to long")
+                };
+            
+                if (long.TryParse(rightExpression.Token.Value, out var rightSideValue) == false)
+                    throw new InvalidOperationException($"Cannot convert {rightExpression.Token.Value} to long");
+            
+                return constantExpression.Operator switch
+                {
+                    OperatorType.Equal => leftSideValue == rightSideValue,
+                    OperatorType.NotEqual => leftSideValue != rightSideValue,
+                    OperatorType.GreaterThan => leftSideValue > rightSideValue,
+                    OperatorType.GreaterThanEqual => leftSideValue >= rightSideValue,
+                    OperatorType.LessThan => leftSideValue < rightSideValue,
+                    OperatorType.LessThanEqual => leftSideValue <= rightSideValue,
+                    _ => false
+                };
+            }
+            case ValueTokenType.Double:
+            {
+                double leftSideValue = paramValue switch
+                {
+                    byte b => b,
+                    sbyte sb => sb,
+                    ushort us => us,
+                    short s => s,
+                    uint ui => ui,
+                    int i => i,
+                    ulong ul => checked((long)ul),
+                    long l => l,
+                    double d => d,
+                    float f => f,
+                    decimal dc => checked((double)dc),
+                    LazyStringValue lsv => lsv.ToDouble(CultureInfo.InvariantCulture),
+                    LazyNumberValue lnv => lnv.ToDouble(CultureInfo.InvariantCulture),
+                    _ => throw new InvalidOperationException($"Cannot convert {paramValue!.GetType()} to long")
+                };
+            
+                if (double.TryParse(rightExpression.Token.Value, out var rightSideValue) == false)
+                    throw new InvalidOperationException($"Cannot convert {rightExpression.Token.Value} to double");
+            
+                return constantExpression.Operator switch
+                {
+                    OperatorType.Equal => leftSideValue.AlmostEquals(rightSideValue),
+                    OperatorType.NotEqual => leftSideValue.AlmostEquals(rightSideValue) == false,
+                    OperatorType.GreaterThan => leftSideValue > rightSideValue,
+                    OperatorType.GreaterThanEqual => leftSideValue >= rightSideValue,
+                    OperatorType.LessThan => leftSideValue < rightSideValue,
+                    OperatorType.LessThanEqual => leftSideValue <= rightSideValue,
+                    _ => false
+                };
+            }
+            case ValueTokenType.String:
+            {
+                var paramIsString = paramValue is string or StringSegment or LazyStringValue or LazyCompressedStringValue;
+                if (paramIsString == false)
+                    throw new InvalidOperationException($"Cannot compare string with non-string value. Parameter type is: {paramValue!.GetType().FullName}");
+                
+                var leftValueAsString = GetValueAsString(paramValue);
+                var rightValueAsString = rightExpression.Token.Value;
+
+                var comparisonResult = string.Compare(leftValueAsString, rightValueAsString, StringComparison.InvariantCulture);
+
+                return constantExpression.Operator switch
+                {
+                    OperatorType.Equal => comparisonResult == 0,
+                    OperatorType.NotEqual => comparisonResult != 0,
+                    OperatorType.GreaterThan => comparisonResult > 0,
+                    OperatorType.GreaterThanEqual => comparisonResult >= 0,
+                    OperatorType.LessThan => comparisonResult < 0,
+                    OperatorType.LessThanEqual => comparisonResult <= 0,
+                    _ => false
+                };
+            }
+            default:
+                return false;
+        }
     }
 }

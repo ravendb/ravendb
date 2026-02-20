@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         private bool _insideTimeSeriesBody;
+        private bool _insideWhenMethod;
         private string _fromAlias;
         public const string TimeSeries = "timeseries";
 
@@ -1286,8 +1287,11 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
 
         private bool Method(FieldExpression field, out MethodExpression op)
         {
+            
+            _insideWhenMethod = field.FieldValue.Equals("when", StringComparison.OrdinalIgnoreCase);
             var args = ReadMethodArguments();
-
+            _insideWhenMethod = false;
+            
             op = new MethodExpression(field.FieldValue, args);
             return true;
         }
@@ -1328,6 +1332,10 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
 
                     if (Scanner.TryScan(',') == false)
                         ThrowParseException("parsing method expression, expected ','");
+                    
+                    // When we're in the `when` method scope, parameter names are valid only in the first argument;
+                    // after the first comma, we prohibit using a parameter as a field identifier.
+                    _insideWhenMethod = false;
                 }
 
                 var maybeExpression = false;
@@ -1480,7 +1488,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             bool quoted = false;
             while (true)
             {
-                if (Scanner.Identifier(beginning: part++ == 0) == false)
+                if (Scanner.Identifier(beginning: part++ == 0, insideWhenMethod: _insideWhenMethod) == false)
                 {
                     if (Scanner.String(out var str, fieldPath: part > 1))
                     {

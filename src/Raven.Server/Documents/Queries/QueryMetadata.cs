@@ -2371,6 +2371,16 @@ function execute(doc, args){
                             _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName.Value);
                         break;
 
+                    case MethodType.When:
+                        if (arguments.Count != 2)
+                        {
+                            throw new InvalidQueryException($"Method `when` requires two arguments, but got {arguments.Count}.");
+
+                        }
+
+                        Visit(arguments[1], parameters);
+                        break;
+                    
                     case MethodType.Exists:
                         if (arguments.Count != 1)
                         {
