@@ -150,6 +150,9 @@ class query extends viewModelBase {
     
     autoOpenGraph = false;
 
+    totalSkippedResults = 0;
+    itemsSoFar = 0;
+
     saveQueryFocus = ko.observable<boolean>(false);
 
     clientVersion = viewModelBase.clientVersion;
@@ -1018,9 +1021,9 @@ class query extends viewModelBase {
                 projectionBehavior
             });
 
-            // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
-            let totalSkippedResults = 0;
-            let itemsSoFar = 0;
+            // if any result returns skippedResults <> 0 we enter infinite scroll mode 
+            this.totalSkippedResults = 0;
+            this.itemsSoFar = 0;
             
             try {
                 this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl("GET"));
@@ -1038,7 +1041,7 @@ class query extends viewModelBase {
 
                 const command = new queryCommand({
                     db: database,
-                    skip: skip + totalSkippedResults,
+                    skip: skip + this.totalSkippedResults,
                     take: take + 1,
                     criteria: criteriaForFetcher,
                     disableCache,
@@ -1076,11 +1079,11 @@ class query extends viewModelBase {
                         const totalFromQuery = queryResults.totalResultCount || 0;
                         const filterByQuery = !!queryResults.additionalResultInfo.ScannedResults;
                         
-                        itemsSoFar += queryResults.items.length;
+                        this.itemsSoFar += queryResults.items.length;
                         
                         if (totalFromQuery !== -1) {
-                            if (itemsSoFar > totalFromQuery) {
-                                itemsSoFar = totalFromQuery;
+                            if (this.itemsSoFar > totalFromQuery) {
+                                this.itemsSoFar = totalFromQuery;
                             }
                         }
                         
@@ -1091,19 +1094,19 @@ class query extends viewModelBase {
                             if (queryResults.items.length === take + 1) {
                                 // returned all or have more
                                 const returnedLimit = queryResults.additionalResultInfo.CappedMaxResults || Number.MAX_SAFE_INTEGER;
-                                this.hasMoreUnboundedResults(returnedLimit > itemsSoFar);
+                                this.hasMoreUnboundedResults(returnedLimit > this.itemsSoFar);
                                 queryResults.totalResultCount = Math.min(skip + take + 30, returnedLimit - 1 /* subtract one since we fetch n+1 records */);
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
                             }
                             
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
-                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? this.itemsSoFar - 1 : this.itemsSoFar);
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults || filterByQuery) {
                             // apply skipped results (if any)
-                            totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
+                            this.totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
                             
                             // find if query contains positive offset or limit, if so warn about paging.
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1113,7 +1116,7 @@ class query extends viewModelBase {
                             }
                         }
                         
-                        if (totalSkippedResults || filterByQuery) {
+                        if (this.totalSkippedResults || filterByQuery) {
                             queryResults.totalResultCount = skip + queryResults.items.length;
                             if (queryResults.items.length === take + 1) {
                                 queryResults.totalResultCount += 30;
@@ -1123,13 +1126,13 @@ class query extends viewModelBase {
                                 }
                                 
                                 if (totalFromQuery != -1) {
-                                    this.hasMoreUnboundedResults(itemsSoFar < totalFromQuery);
+                                    this.hasMoreUnboundedResults(this.itemsSoFar < totalFromQuery);
                                 } else {
                                     this.hasMoreUnboundedResults(true); 
                                 }
                             }
                             
-                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? this.itemsSoFar - 1 : this.itemsSoFar);
                         }
                         
                         const endQueryTime = new Date().getTime();
@@ -1599,6 +1602,9 @@ class query extends viewModelBase {
         this.clearIncludesRevisionsCache();
         this.clearExplanationsCache();
         
+        this.totalSkippedResults = 0;
+        this.itemsSoFar = 0;
+
         this.columnsSelector.reset();
         this.refresh();
     }
