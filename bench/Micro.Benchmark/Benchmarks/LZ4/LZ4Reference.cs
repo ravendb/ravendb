@@ -1,10 +1,11 @@
 using System;
+using Sparrow;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using System.Runtime.CompilerServices;
 
-namespace Sparrow.Compression
+namespace Micro.Benchmark.Benchmarks.LZ4
 {
     /// <summary>
     /// Reference LZ4 implementation preserved for backward compatibility verification.
