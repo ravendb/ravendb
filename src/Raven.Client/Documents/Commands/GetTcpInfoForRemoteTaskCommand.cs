@@ -27,10 +27,8 @@ namespace Raven.Client.Documents.Commands
         {
             url = $"{node.Url}/info/remote-task/tcp?" +
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
-                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}";
-
-            if (_changeVector != null)
-                url += $"&change-vector={Uri.EscapeDataString(_changeVector)}";
+                  $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
+                  $"&tag=wakeup"; // for backward compatibility only
 
             if (_verifyDatabase)
                 url += "&verify-database=true";
@@ -40,6 +38,10 @@ namespace Raven.Client.Documents.Commands
             {
                 Method = HttpMethod.Get
             };
+
+            if (_changeVector != null)
+                request.Headers.Add("change-vector", _changeVector);
+
             return request;
         }
 

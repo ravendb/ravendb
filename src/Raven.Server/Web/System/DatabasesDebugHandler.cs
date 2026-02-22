@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
                     Name = databaseKvp.Key.ToString()
                 };
 
-                statistics.CanCleanup = ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
+                statistics.CanCleanup = ServerStore.DatabasesLandlord.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
 
                 results.Add(statistics.ToJson());
             }

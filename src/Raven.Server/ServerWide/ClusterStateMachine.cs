@@ -1680,13 +1680,13 @@ namespace Raven.Server.ServerWide
                     }
 
                     // shardNumber can be idle when we are deleting it
-                    serverStore?.IdleDatabases.TryRemove(shard, out _);
+                    serverStore?.DatabaseIdleManager.RemoveFromIdleDatabases(shard);
                 }
             }
             else
             {
                 // db can be idle when we are deleting it
-                serverStore?.IdleDatabases.TryRemove(record.DatabaseName, out _);
+                serverStore?.DatabaseIdleManager.RemoveFromIdleDatabases(record.DatabaseName);
             }
 
             var databaseLowered = $"{record.DatabaseName.ToLowerInvariant()}/";
@@ -1703,7 +1703,7 @@ namespace Raven.Server.ServerWide
             }
 
             // db can be idle when we are deleting it
-            serverStore?.IdleDatabases.TryRemove(record.DatabaseName, out _);
+            serverStore?.DatabaseIdleManager.RemoveFromIdleDatabases(record.DatabaseName);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)

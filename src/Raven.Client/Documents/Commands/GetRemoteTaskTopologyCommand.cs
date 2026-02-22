@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Commands
             _databaseGroupId = databaseGroupId ?? throw new ArgumentNullException(nameof(databaseGroupId));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
             _changeVector = changeVector;
+
             Timeout = TimeSpan.FromSeconds(15);
         }
 
@@ -26,16 +27,18 @@ namespace Raven.Client.Documents.Commands
             url = $"{node.Url}/info/remote-task/topology?" +
                   $"database={Uri.EscapeDataString(_remoteDatabase)}" +
                   $"&remote-task={Uri.EscapeDataString(_remoteTask)}" +
-                  $"&groupId={Uri.EscapeDataString(_databaseGroupId)}";
-
-            if (_changeVector != null)
-                url += $"&change-vector={Uri.EscapeDataString(_changeVector)}";
+                  $"&groupId={Uri.EscapeDataString(_databaseGroupId)}" +
+                  $"&tag=wakeup"; // for backward compatibility only
 
             RequestedNode = node;
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get
             };
+
+            if (_changeVector != null)
+                request.Headers.Add("change-vector", _changeVector);
+
             return request;
         }
 

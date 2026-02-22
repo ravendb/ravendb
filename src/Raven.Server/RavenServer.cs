@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +14,6 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -26,13 +25,9 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
@@ -83,7 +78,6 @@ using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
 using Constants = Sparrow.Global.Constants;
 using TelemetryConstants = Raven.Server.Monitoring.OpenTelemetry.Constants;
-using ClientConstants = Raven.Client.Constants;
 
 namespace Raven.Server
 {
@@ -2810,9 +2804,20 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header,
+        private async Task DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header,
             JsonOperationContext.MemoryBuffer bufferToCopy, X509Certificate2 cert)
         {
+            if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication)
+            {
+                var databaseActivityState = ServerStore.DatabaseIdleManager.GetActivityState(header.DatabaseName);
+                if (databaseActivityState is DatabaseIdleManager.DatabaseActivityState.Idle)
+                {
+                    tcp.Dispose();
+                    tcp = null;
+                    return;
+                }
+            }
+
             var result = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(header.DatabaseName);
             switch (result.DatabaseStatus)
             {
@@ -2831,7 +2836,7 @@ namespace Raven.Server
                     if (databaseLoadingTask == null)
                     {
                         DatabaseDoesNotExistException.Throw(header.DatabaseName);
-                        return true;
+                        break;
                     }
 
                     var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
@@ -2857,7 +2862,7 @@ namespace Raven.Server
                     break;
                 case DatabasesLandlord.DatabaseSearchResult.Status.Missing:
                     DatabaseDoesNotExistException.Throw(header.DatabaseName);
-                    return true;
+                    break;
                 default:
                     throw new InvalidOperationException("Unexpected " + nameof(DatabasesLandlord.DatabaseSearchResult));
             }
@@ -2891,7 +2896,6 @@ namespace Raven.Server
             // This way the responders are responsible to dispose the connection and the context.
             // ReSharper disable once RedundantAssignment
             tcp = null;
-            return false;
         }
 
         private static void CreateSubscriptionConnection(ServerStore server, DatabasesLandlord.DatabaseSearchResult databaseResult,

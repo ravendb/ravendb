@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -12,6 +14,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -25,148 +28,289 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
-        public async Task HubToSink_SinkShouldStayAwake_HubShouldGoIdle_AndWakeUpOnChanges()
+        [NightlyBuildFact]
+        public async Task HubToSink_LocalCvEmpty_OnConnect_HubStaysIdle_AndWakesUpOnlyOnLocalChanges()
         {
             using var context = new PullReplicationTestContext(this);
             await context.Initialize(PullReplicationMode.HubToSink);
 
-            // 1. Verify Sink behavior (Initiator) -> Should NOT sleep
-            var sinkWakeupEvent = new ManualResetEventSlim(initialState: false);
-            context.SinkServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle = sinkWakeupEvent;
-
-            // Wait > MaxIdleTime (3s) to see if it tries to sleep or flip states.
-            var isSinkWokeUp = sinkWakeupEvent.Wait(TimeSpan.FromSeconds(5));
-            Assert.False(isSinkWokeUp, "Sink database triggered 'AfterDatabaseRemovedFromIdle', meaning it went to idle and woke up. It should have stayed awake.");
-            Assert.False(context.SinkServer.ServerStore.IdleDatabases.ContainsKey(context.SinkDbName), "Sink DB is found in IdleDatabases. It should be awake.");
-
-            // 2. Verify Hub behavior (Target) -> CAN sleep
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.HubServer, context.HubDbName);
-
-            // 3. Trigger change on Hub
-            using (var s = context.HubStore.OpenSession())
+            // 1. Initial State:
+            // Sink (Initiator) -> Must stay awake to poll.
+            // Hub (Passive) -> Can sleep if no changes.
+            await using (var monitor = PullReplicationTestContext.Monitor())
             {
-                s.Store(new User { Name = "HubAwake" }, "users/1");
-                s.SaveChanges();
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
             }
 
-            // 4. Verify Hub wakes up and replicates
-            PullReplicationTestContext.WaitAndAssertDatabaseIsWakeUp(context.HubServer, context.HubDbName);
+            // 2. Action: Write to Hub
+            // Expectation: Hub wakes up to serve the request. Sink continues polling and gets the doc.
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.HubServer, context.HubDbName);
 
-            Assert.True(WaitForDocument(context.SinkStore, "users/1", timeout: (int)TimeSpan.FromSeconds(10).TotalMilliseconds),
+                // Sink is already awake, but we assert it remains stable (no flickering/sleeping)
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+
+                using (var session = context.HubStore.OpenSession())
+                {
+                    session.Store(new User { Name = "HubAwake" }, "users/1");
+                    session.SaveChanges();
+                }
+            }
+
+            Assert.True(WaitForDocument(context.SinkStore, "users/1", timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds),
                 "Document failed to replicate from Hub to Sink after Hub wakeup.");
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
-        public async Task SinkToHub_BothShouldGoIdle_AndWakeUpOnSinkChanges()
+        [NightlyBuildFact]
+        public async Task HubToSink_LocalCvPopulated_OnConnectWithSinkAhead_HubCapsVector_AndStaysIdle()
         {
+            // Validates "Capping" logic:
+            // In HubToSink mode, if Sink reports having [Hub:100] but Hub only has [Hub:10],
+            // Hub must CAP the Sink's vector to [Hub:10] before comparison.
+            // Result: "AlreadyMerged" (Idle).
+            // Without capping, logic sees Sink > Hub (Conflict/Update) -> WakeUp.
+
             using var context = new PullReplicationTestContext(this);
-            await context.Initialize(PullReplicationMode.SinkToHub);
+            await context.Initialize(PullReplicationMode.HubToSink);
 
-            // 1. Verify Sink behavior (Initiator, but Push mode) -> CAN sleep
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.SinkServer, context.SinkDbName);
+            // 1. Establish initial state with some data (Hub:1)
+            using (var s = context.HubStore.OpenSession())
+            {
+                s.Store(new User(), "marker");
+                s.SaveChanges();
+            }
+            Assert.True(WaitForDocument(context.SinkStore, "marker"));
 
-            // 2. Verify Hub behavior (Target) -> CAN sleep
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.HubServer, context.HubDbName);
+            // 2. Wait for Hub to become Idle
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
 
-            // 3. Trigger change on Sink
-            // This starts the chain reaction: Sink Wakes -> Establishes Connection -> Hub Wakes
+            // 3. Artificially advance Sink's vector (Simulating split-brain or Hub restore)
+            // Sink now has [Hub:1, Sink:1]. Hub has [Hub:1].
+            // Strict comparison says Sink > Hub.
+            // Correct HubToSink logic says: "I don't care what extra data you have, I have nothing NEW for you."
             using (var s = context.SinkStore.OpenSession())
             {
-                s.Store(new User { Name = "SinkAwake" }, "users/1");
+                s.Store(new User(), "sink-only-doc");
                 s.SaveChanges();
             }
 
-            // 4. Verify Sink wakes up
-            PullReplicationTestContext.WaitAndAssertDatabaseIsWakeUp(context.SinkServer, context.SinkDbName);
-
-            // 5. Verify Hub wakes up (triggered by incoming replication batch)
-            PullReplicationTestContext.WaitAndAssertDatabaseIsWakeUp(context.HubServer, context.HubDbName);
-
-            Assert.True(WaitForDocument(context.HubStore, "users/1", timeout: (int)TimeSpan.FromSeconds(10).TotalMilliseconds),
-                "Document failed to replicate from Sink to Hub after waking up.");
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                // Hub should remain IDLE.
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+            }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
-        public async Task HubToSink_WhenSinkRestarts_AndHubHasChanges_HubWakesUp()
+        [NightlyBuildFact]
+        public async Task HubToSink_LocalCvPopulated_OnSinkRestart_HubWakesUp_ToSendNewLocalChanges()
         {
             using var context = new PullReplicationTestContext(this);
             await context.Initialize(PullReplicationMode.HubToSink);
 
             // 1. Initial State: Hub is Idle
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.HubServer, context.HubDbName);
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
 
             // 2. Kill the Sink
             var serverDisposeResult = await DisposeServerAndWaitForFinishOfDisposalAsync(context.SinkServer);
 
             // 3. Generate changes on Hub while Sink is offline
-            // This will wake the Hub, but it should go back to sleep because no one is pulling.
-            using (var s = context.HubStore.OpenSession())
+            // We expect Hub to wake up for write, but then go back to IDLE because Sink is dead (no one is pulling).
+            await using (var monitor = PullReplicationTestContext.Monitor())
             {
-                s.Store(new User { Name = "PendingChange" }, "users/waiting");
-                s.SaveChanges();
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+
+                using (var session = context.HubStore.OpenSession())
+                {
+                    session.Store(new User { Name = "PendingChange" }, "users/waiting");
+                    session.SaveChanges();
+                }
             }
 
-            // 4. Wait for Hub to go Idle again (it has changes, but no active replication connection)
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.HubServer, context.HubDbName);
-
-            // 5. Resurrect Sink
+            // 4. Resurrect Sink
+            // Expectation: As soon as Sink comes online, it connects to Hub. Hub must wake up.
             using (var resurrectedSink = ResurrectServer(serverDisposeResult, context.Certificates))
             using (var newSinkStore = OpenStoreForResurrectedServer(resurrectedSink, context.SinkDbName, context.Certificates))
             {
-                // 6. Verify Hub Wakes Up
-                // Now that Sink is back, it detects pending changes on Hub (or connects), forcing Hub to wake up.
-                PullReplicationTestContext.WaitAndAssertDatabaseIsWakeUp(context.HubServer, context.HubDbName);
+                await using (var monitor = PullReplicationTestContext.Monitor())
+                {
+                    monitor.ExpectWakeup(context.HubServer, context.HubDbName);
 
-                // 7. Verify Data Arrived
+                    // Just ensure Sink is up and running, triggering the connection
+                    WaitForDocument(newSinkStore, "users/waiting", timeout: 5_000);
+                }
+
+                // 5. Final Verification
                 Assert.True(WaitForDocument(newSinkStore, "users/waiting", timeout: 30_000),
                     "Replication did not resume or Hub did not serve the pending document after Sink resurrection.");
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication)]
-        public async Task TwoWay_SinkShouldStayAwake_HubShouldGoIdle_AndWakeUpOnChanges()
+        [NightlyBuildFact]
+        public async Task SinkToHub_LocalCvEmpty_OnConnect_BothStayIdle_AndWakeUpOnlyOnSinkChanges()
+        {
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.SinkToHub);
+
+            // 1. Initial State:
+            // Sink (Push) -> Can sleep (wakes up on local write).
+            // Hub (Passive) -> Can sleep.
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectIdle(context.SinkServer, context.SinkDbName);
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+            }
+
+            // 2. Action: Write to Sink
+            // Expectation: Sink wakes up (local write). Hub wakes up (incoming replication).
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+                monitor.ExpectWakeup(context.HubServer, context.HubDbName);
+
+                using (var session = context.SinkStore.OpenSession())
+                {
+                    session.Store(new User { Name = "SinkAwake" }, "users/1");
+                    session.SaveChanges();
+                }
+            }
+
+            Assert.True(WaitForDocument(context.HubStore, "users/1", timeout: 15_000),
+                "Document failed to replicate from Sink to Hub after waking up.");
+        }
+
+        [NightlyBuildFact]
+        public async Task TwoWay_LocalCvEmpty_OnConnect_HubStaysIdle_WhileSinkStaysAwake_AndHubWakesUpOnlyOnSinkChanges()
         {
             using var context = new PullReplicationTestContext(this);
             // Initialize with TwoWay mode (HubToSink | SinkToHub)
             await context.Initialize(PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub);
 
-            // 1. Verify Sink behavior (Acts as Initiator) -> Should NOT sleep
-            // Even though it pushes changes (SinkToHub), it also pulls (HubToSink), so it must maintain the connection/state.
-            var sinkWakeupEvent = new ManualResetEventSlim(initialState: false);
-            context.SinkServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle = sinkWakeupEvent;
-
-            // Wait > MaxIdleTime (3s)
-            var isSinkWokeUp = sinkWakeupEvent.Wait(TimeSpan.FromSeconds(5));
-            Assert.False(isSinkWokeUp, "Sink database triggered 'AfterDatabaseRemovedFromIdle' in TwoWay mode. It should have stayed awake.");
-            Assert.False(context.SinkServer.ServerStore.IdleDatabases.ContainsKey(context.SinkDbName), "Sink DB found in IdleDatabases in TwoWay mode.");
-
-            // 2. Verify Hub behavior (Target) -> CAN sleep
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.HubServer, context.HubDbName);
-
-            // 3. Scenario A: Write to Hub (HubToSink flow) -> Hub should wake up
-            using (var s = context.HubStore.OpenSession())
+            // 1. Initial State:
+            // Sink (Active Pull) -> Must stay awake.
+            // Hub (Passive) -> Can sleep.
+            await using (var monitor = PullReplicationTestContext.Monitor())
             {
-                s.Store(new User { Name = "HubChange" }, "users/1");
-                s.SaveChanges();
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
             }
 
-            PullReplicationTestContext.WaitAndAssertDatabaseIsWakeUp(context.HubServer, context.HubDbName);
+            // 2. Scenario A: Write to Hub (HubToSink flow) -> Hub should wake up
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+                monitor.ExpectWakeup(context.HubServer, context.HubDbName);
+
+                using (var s = context.HubStore.OpenSession())
+                {
+                    s.Store(new User { Name = "HubChange" }, "users/1");
+                    s.SaveChanges();
+                }
+            }
+
             Assert.True(WaitForDocument(context.SinkStore, "users/1", timeout: 15_000), "HubToSink replication failed in TwoWay mode.");
 
-            // 4. Wait for Hub to go back to sleep (to verify independence of operations)
-            PullReplicationTestContext.WaitAndAssertDatabaseIsIdle(context.HubServer, context.HubDbName);
+            // 3. Wait for Hub to go back to sleep (to verify independence of operations)
+            // We need Hub to be Idle to properly test the next wake-up trigger
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
 
-            // 5. Scenario B: Write to Sink (SinkToHub flow) -> Hub should wake up to receive data
-            using (var s = context.SinkStore.OpenSession())
+            // 4. Scenario B: Write to Sink (SinkToHub flow) -> Hub should wake up to receive data
+            await using (var monitor = PullReplicationTestContext.Monitor())
             {
-                s.Store(new User { Name = "SinkChange" }, "users/2");
+                monitor.ExpectWakeup(context.HubServer, context.HubDbName);
+
+                using (var s = context.SinkStore.OpenSession())
+                {
+                    s.Store(new User { Name = "SinkChange" }, "users/2");
+                    s.SaveChanges();
+                }
+            }
+
+            Assert.True(WaitForDocument(context.HubStore, "users/2", timeout: 15_000), "SinkToHub replication failed in TwoWay mode.");
+        }
+
+        [NightlyBuildFact]
+        public async Task TwoWay_LocalCvPopulated_AfterHubWritesNewData_HubGoesIdleAgain_WithoutFlickering()
+        {
+            // After Hub writes and Sink receives the data, Sink's CV contains Hub's entries.
+            // Hub must stay idle when Sink re-polls — Sink's Hub-origin entries must not trigger a wakeup.
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub);
+
+            // 1. Write to Hub and wait for Sink to receive it
+            using (var s = context.HubStore.OpenSession())
+            {
+                s.Store(new User { Name = "HubChange" }, "users/hub/1");
                 s.SaveChanges();
             }
 
-            // Hub wakes up to process incoming replication from Sink
-            PullReplicationTestContext.WaitAndAssertDatabaseIsWakeUp(context.HubServer, context.HubDbName);
-            Assert.True(WaitForDocument(context.HubStore, "users/2", timeout: 15_000), "SinkToHub replication failed in TwoWay mode.");
+            Assert.True(WaitForDocument(context.SinkStore, "users/hub/1", timeout: 15_000),
+                "Document failed to replicate from Hub to Sink.");
+
+            // 2. Hub must go idle and STAY idle — Sink's CV now contains [HubID:1] which must not cause a wakeup
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+        }
+
+        [NightlyBuildFact]
+        public async Task TwoWay_LocalCvPopulated_AfterSinkSendsNewData_HubGoesIdleAgain_WithoutFlickering()
+        {
+            // After Hub receives Sink's data and goes idle, Sink re-polls with the same CV.
+            // Hub must stay idle — the already-replicated entry must be excluded from the SinkToHub check.
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub);
+
+            // 1. Write to Sink and wait for Hub to receive it
+            using (var s = context.SinkStore.OpenSession())
+            {
+                s.Store(new User { Name = "SinkChange" }, "users/sink/1");
+                s.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument(context.HubStore, "users/sink/1", timeout: 15_000),
+                "Document failed to replicate from Sink to Hub.");
+
+            // 2. Hub must go idle and STAY idle — Sink's CV [SinkID:1] is now in Hub's ReplicationInfo
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+        }
+
+        [NightlyBuildFact]
+        public async Task TwoWay_LocalCvEmpty_OnConnect_HubConstructsFallbackIdentity_StaysIdle_AndWakesUpOnlyOnSinkChanges()
+        {
+            // Validates "Identity Crisis" fix:
+            // 1. Hub identifies itself via Topology ID (ignoring echoes).
+            // 2. But verifies it NOT blind to actual new data from Sink.
+
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub);
+
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                // 1. Verify Silence first (Identity Crisis Handled)
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+            }
+
+            // 2. Action: Write to SINK (generating strictly new remote data)
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                // Hub MUST wake up now because Sink has [Sink:1], which is NOT filtered out by ID check
+                monitor.ExpectWakeup(context.HubServer, context.HubDbName);
+
+                using (var s = context.SinkStore.OpenSession())
+                {
+                    s.Store(new User { Name = "SinkChange" }, "users/sink/1");
+                    s.SaveChanges();
+                }
+            }
+
+            Assert.True(WaitForDocument(context.HubStore, "users/sink/1", timeout: 15_000),
+                "Hub failed to replicate document from Sink after correctly handling identity crisis.");
         }
 
         #region Helpers
@@ -174,6 +318,8 @@ namespace SlowTests.Server.Replication
         private class PullReplicationTestContext : IDisposable
         {
             private readonly PullReplicationIdleTests _testBase;
+            private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(10);
+
             public RavenServer HubServer { get; private set; }
             public RavenServer SinkServer { get; private set; }
             public DocumentStore HubStore { get; private set; }
@@ -191,7 +337,7 @@ namespace SlowTests.Server.Replication
             public async Task Initialize(PullReplicationMode pullReplicationMode, Dictionary<string, string> customSettings = null, [CallerMemberName] string caller = null)
             {
                 var settings = customSettings ?? new Dictionary<string, string>();
-                settings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "3";
+                settings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = MaxIdleTime.TotalSeconds.ToString(CultureInfo.InvariantCulture);
                 settings[RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "1";
                 settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
 
@@ -203,6 +349,8 @@ namespace SlowTests.Server.Replication
                     RegisterForDisposal = false,
                     NodeTag = "Hub"
                 });
+
+
 
                 _testBase.Certificates.RegisterClientCertificate(
                     Certificates.ServerCertificate.Value,
@@ -237,7 +385,7 @@ namespace SlowTests.Server.Replication
                 SinkStore = _testBase.GetDocumentStore(new Options
                 {
                     Server = SinkServer,
-                    CreateDatabase =  true,
+                    CreateDatabase = true,
                     ModifyDatabaseName = s => $"SinkDB_{s}",
                     ClientCertificate = Certificates.ServerCertificate.Value,
                     AdminCertificate = Certificates.ClientCertificate1.Value,
@@ -284,31 +432,106 @@ namespace SlowTests.Server.Replication
                 }));
             }
 
-            public static void WaitAndAssertDatabaseIsIdle(RavenServer server, string dbName)
+            /// <summary>
+            /// Creates a monitor to assert database states in parallel.
+            /// Usage: await using (var monitor = context.Monitor()) { monitor.Expect...; Action(); }
+            /// </summary>
+            public static ReplicationActivityMonitor Monitor() => new();
+
+            public class ReplicationActivityMonitor : IAsyncDisposable
             {
-                var value = WaitForValue(() => server.ServerStore.IdleDatabases.ContainsKey(dbName),
-                    expectedVal: true,
-                    timeout: (int)TimeSpan.FromSeconds(60).TotalMilliseconds,
-                    interval: (int)TimeSpan.FromMilliseconds(330).TotalMilliseconds);
+                private readonly List<Func<Task>> _verifications = [];
+                private readonly List<Action> _cleanups = [];
 
-                Assert.True(value, $"Database '{dbName}' should be idle, but was not found in IdleDatabases.");
-            }
+                public void ExpectWakeup(RavenServer server, string dbName)
+                {
+                    var wakeupEvent = new ManualResetEventSlim(false);
 
-            public static async Task AssertDatabaseIsNotIdle(RavenServer server, string dbName)
-            {
-                // Wait > MaxIdleTime (3s)
-                await Task.Delay(5000);
-                Assert.False(server.ServerStore.IdleDatabases.ContainsKey(dbName), $"Database '{dbName}' is found in IdleDatabases collection.");
-            }
+                    // Subscribe to the global action, but filter specifically for our database
+                    Action<string> onWakeup = name =>
+                    {
+                        if (string.Equals(name, dbName, StringComparison.OrdinalIgnoreCase))
+                            wakeupEvent.Set();
+                    };
 
-            public static void WaitAndAssertDatabaseIsWakeUp(RavenServer server, string dbName)
-            {
-                var value = WaitForValue(() => server.ServerStore.IdleDatabases.ContainsKey(dbName),
-                    expectedVal: false,
-                    timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds,
-                    interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds);
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle += onWakeup;
+                    _cleanups.Add(() => server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle -= onWakeup);
 
-                Assert.False(value, $"Database '{dbName}' should be wake-up, but still was found in IdleDatabases");
+                    _verifications.Add(async () =>
+                    {
+                        // 1. Ensure it reaches Active state
+                        var state = WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(dbName),
+                            expectedVal: DatabaseIdleManager.DatabaseActivityState.Active,
+                            timeout: (int)TimeSpan.FromSeconds(30).TotalMilliseconds,
+                            interval: 500);
+
+                        Assert.True(state == DatabaseIdleManager.DatabaseActivityState.Active,
+                            $"Database `{dbName}` is expected to be 'Active' but was '{state}' after timeout.");
+
+                        // 1.5 Workaround test framework race: Wait for the AfterDatabaseRemovedFromIdle
+                        // event to be fired by the task continuation if it just became Active
+                        await Task.Delay(2000);
+
+                        // 2. Anti-Flicker check: Ensure it STAYS active (doesn't trigger wakeup again)
+                        // If AfterDatabaseRemovedFromIdle fires again, it means it went to sleep and woke up.
+                        wakeupEvent.Reset();
+
+                        // We wait slightly longer than MaxIdleTime to prove stability
+                        var waitTime = MaxIdleTime.Add(TimeSpan.FromSeconds(3));
+                        var wasFlickered = wakeupEvent.Wait(waitTime);
+
+                        Assert.False(wasFlickered,
+                            $"Database `{dbName}` flickered! It went back to sleep and woke up again immediately.");
+                    });
+                }
+
+                public void ExpectIdle(RavenServer server, string dbName)
+                {
+                    var wakeupEvent = new ManualResetEventSlim(false);
+                    Action<string> onWakeup = name =>
+                    {
+                        if (string.Equals(name, dbName, StringComparison.OrdinalIgnoreCase))
+                            wakeupEvent.Set();
+                    };
+
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle += onWakeup;
+                    _cleanups.Add(() => server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle -= onWakeup);
+
+                    _verifications.Add(() => Task.Run(() =>
+                    {
+                        // 1. Ensure it reaches Idle state
+                        var state = WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(dbName),
+                            expectedVal: DatabaseIdleManager.DatabaseActivityState.Idle,
+                            timeout: (int)TimeSpan.FromSeconds(60).TotalMilliseconds,
+                            interval: 500);
+
+                        Assert.True(state == DatabaseIdleManager.DatabaseActivityState.Idle,
+                             $"Database `{dbName}` is expected to be 'Idle' but was '{state}' after timeout.");
+
+                        // 2. Ensure it STAYS idle (doesn't trigger wakeup)
+                        wakeupEvent.Reset();
+
+                        var waitTime = MaxIdleTime.Add(TimeSpan.FromSeconds(3));
+                        var wasWokenUp = wakeupEvent.Wait(waitTime);
+
+                        Assert.False(wasWokenUp,
+                            $"Database `{dbName}` woke up unexpectedly immediately after going idle.");
+                    }));
+                }
+
+                public async ValueTask DisposeAsync()
+                {
+                    try
+                    {
+                        // Execute all verifications in parallel
+                        await Task.WhenAll(_verifications.Select(func => func()));
+                    }
+                    finally
+                    {
+                        foreach (var cleanup in _cleanups)
+                            cleanup();
+                    }
+                }
             }
 
             public void Dispose()
@@ -327,7 +550,7 @@ namespace SlowTests.Server.Replication
         private static void EnableIdleForTesting(RavenServer server)
         {
             server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
-            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+            server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
         }
 
         private RavenServer ResurrectServer((string DataDirectory, string Url, string NodeTag) serverDisposeResult, TestCertificatesHolder certs)

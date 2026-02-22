@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using StressTests.Issues;
 using Tests.Infrastructure;
@@ -56,7 +57,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(new RavenTestBase.Options { Server = server, RunInMemory = false }))
             using (var excludedStore = GetDocumentStore(new RavenTestBase.Options { Server = server, RunInMemory = false }))
             {
-                await AssertWaitForGreaterAsync(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000);
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Idle, WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database), DatabaseIdleManager.DatabaseActivityState.Idle, timeout: 60000, interval: 1000));
 
                 var fullFreq = "0 2 1 1 *";
                 var incFreq = "0 2 * * 0";
@@ -75,7 +76,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
 
                 await BackupNow(store, serverWideConfiguration.Name);
 
-                await AssertWaitForGreaterAsync(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000);
+                Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Idle, WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database), DatabaseIdleManager.DatabaseActivityState.Idle, timeout: 60000, interval: 1000));
 
                 // update the backup configuration
                 putConfiguration.Name = serverWideConfiguration.Name;
@@ -110,7 +111,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 {
                     await BackupNow(createdAfter, serverWideConfiguration.Name);
 
-                    await AssertWaitForGreaterAsync(() => server.ServerStore.IdleDatabases.Count, 2, timeout: 60000, interval: 1000);
+                    Assert.True(WaitForValue(() => server.ServerStore.DatabaseIdleManager.GetActivityState(store.Database) is DatabaseIdleManager.DatabaseActivityState.Idle &&
+                                                   server.ServerStore.DatabaseIdleManager.GetActivityState(createdAfter.Database) is DatabaseIdleManager.DatabaseActivityState.Idle, true, timeout: 60000, interval: 1000));
 
                     putConfiguration.TaskId = result.RaftCommandIndex;
                     putConfiguration.RetentionPolicy = new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromDays(10) };

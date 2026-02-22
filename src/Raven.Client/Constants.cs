@@ -1,4 +1,4 @@
-namespace Raven.Client
+﻿namespace Raven.Client
 {
     public static class Constants
     {

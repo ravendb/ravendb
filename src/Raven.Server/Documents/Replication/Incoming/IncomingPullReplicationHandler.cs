@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                if (_pullReplicationParams.Mode.HasFlag(PullReplicationMode.SinkToHub))
                     return false;
 
                 return base.TryUpdateChangeVector(context);

@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,7 +41,7 @@ namespace StressTests.Issues
             {
                 foreach (var server in nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
                 }
 
                 using (var store = GetDocumentStore(new Options
@@ -59,16 +60,15 @@ namespace StressTests.Issues
                         server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().HoldDocumentDatabaseCreation = 3000;
                     }
 
-                    var count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), clusterSize, () => GetIdleCount(nodes));
+                    var count = RavenDB_13987.WaitForCount(TimeSpan.FromSeconds(300), clusterSize, () => GetIdleCount(nodes, databaseName));
                     Assert.Equal(clusterSize, count);
 
                     foreach (var server in nodes)
                     {
-                        Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                        Assert.True(server.ServerStore.IdleDatabases.TryGetValue(databaseName, out var dictionary));
+                        Assert.True(server.ServerStore.DatabaseIdleManager.TryGetIdleInfo(store.Database, out var idleDatabaseInfo));
 
                         // new incoming replications not saved in IdleDatabases
-                        Assert.Equal(0, dictionary.Count);
+                        Assert.Equal(0, idleDatabaseInfo.ReplicationInfo.Count);
                     }
 
                     using (var store2 = new DocumentStore { Urls = new[] { nodes[index].WebUrl }, Conventions = { DisableTopologyUpdates = true }, Database = databaseName }.Initialize())
@@ -78,7 +78,7 @@ namespace StressTests.Issues
                         Assert.True(await WaitForValueAsync(() => nodes.Any(x => x.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventedRehabOfIdleDatabase), true),
                             "await WaitForValueAsync(() => _nodes.Any(x => x.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().PreventedRehabOfIdleDatabase), true)");
 
-                        Assert.Equal(2, GetIdleCount(nodes));
+                        Assert.Equal(2, GetIdleCount(nodes, databaseName));
                     }
                 }
             }
@@ -86,14 +86,12 @@ namespace StressTests.Issues
             {
                 foreach (var server in nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+                    server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
                 }
             }
         }
 
-        private static int GetIdleCount(IEnumerable<RavenServer> nodes)
-        {
-            return nodes.Sum(server => server.ServerStore.IdleDatabases.Count);
-        }
+        private static int GetIdleCount(IEnumerable<RavenServer> nodes, string databaseName) =>
+            nodes.Count(server => server.ServerStore.DatabaseIdleManager.GetActivityState(databaseName) is DatabaseIdleManager.DatabaseActivityState.Idle);
     }
 }

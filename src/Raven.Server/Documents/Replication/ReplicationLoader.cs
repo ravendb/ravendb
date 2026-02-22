@@ -1522,7 +1522,7 @@ namespace Raven.Server.Documents.Replication
         private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsSink pullReplicationAsSink, X509Certificate2 certificate, string database)
         {
             var remoteTask = pullReplicationAsSink.HubName;
-            var (_, currentChangeVector) = Database.ReadLastEtagAndChangeVector();
+            (_, string currentChangeVector) = Database.ReadLastEtagAndChangeVector();
 
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
@@ -1577,7 +1577,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static readonly string ExternalReplicationTag = "external-replication";
+        private const string ExternalReplicationTag = "external-replication";
 
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
@@ -2051,7 +2051,7 @@ namespace Raven.Server.Documents.Replication
                     continue;
                 if (dest is not PullReplicationAsSink sink)
                     continue;
-                if (sink.Mode == PullReplicationMode.HubToSink)
+                if ((sink.Mode & PullReplicationMode.HubToSink) != 0)
                     c++;
             }
 
@@ -2066,7 +2066,7 @@ namespace Raven.Server.Documents.Replication
                     continue;
                 }
 
-                if (hub.Mode == (PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub))
+                if ((hub.Mode & PullReplicationMode.HubToSink) != 0)
                     c++;
             }
 

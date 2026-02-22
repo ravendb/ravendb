@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             using var dispose = new DisposableAction(() =>
             {
                 foreach (var node in nodes)
-                    node.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+                    node.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
             });
 
             var firstServer = nodes[0]; // leader
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
 
             foreach (var node in nodes)
             {
-                node.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+                node.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
             }
 
             return nodes;

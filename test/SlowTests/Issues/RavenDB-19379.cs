@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -55,10 +56,11 @@ namespace SlowTests.Issues
                         dbIdEtagDictionary[kvp.Key] = kvp.Value;
                 }
 
-                Assert.True(server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)),
-                    $"didn't unload on node {server.ServerStore.NodeTag}");
-                server.ServerStore.IdleDatabases[database.Name] = dbIdEtagDictionary;
+                var nextIdleActivity = database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name);
+                var idleDatabaseInfo = new IdleDatabaseInfo(dbIdEtagDictionary, ChangeVector: null);
 
+                Assert.True(server.ServerStore.DatabaseIdleManager.TryEnterIdleState(database.Name, idleDatabaseInfo, nextIdleActivity),
+                    $"Could not mark database '{database.Name}' as idle on node '{server.ServerStore.NodeTag}'");
             }
 
             var cs = new Dictionary<string, string>(DefaultClusterSettings);

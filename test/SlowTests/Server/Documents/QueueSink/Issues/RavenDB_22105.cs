@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
+using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +58,7 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 
         // Try to idle a database
 
-        landlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
+        Server.ServerStore.DatabaseIdleManager.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
         var database = await GetDatabase(store.Database);
         database.ResetIdleTime();
@@ -69,9 +70,9 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 
         database.LastAccessTime = DateTime.MinValue;
 
-        Server.ServerStore.IdleOperations(null);
+        Server.ServerStore.DatabaseIdleManager.IdleOperations(null);
 
-        Assert.Equal(0, Server.ServerStore.IdleDatabases.Count); // active queue sink process must prevent from unloading a database
+        Assert.Equal(DatabaseIdleManager.DatabaseActivityState.Active, Server.ServerStore.DatabaseIdleManager.GetActivityState(database.Name)); // active queue sink process must prevent from unloading a database
         
         Assert.False(producer.IsClosed);
 
