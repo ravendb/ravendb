@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using JetBrains.Annotations;
@@ -36,6 +37,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public TimeSpan? Expires;
 
     public int RemainingToolIterations;
+
+    public HashSet<string> SubConversationIds = new (StringComparer.OrdinalIgnoreCase);
 
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, bool resetRemainingToolIterations, int maxModelIterationsPerCall)
     {
@@ -227,7 +230,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(CreatedAt)] = CreatedAt,
             [nameof(Expires)] = Expires,
             [nameof(CurrentUsage)] = CurrentUsage,
-            [nameof(RemainingToolIterations)] = RemainingToolIterations
+            [nameof(RemainingToolIterations)] = RemainingToolIterations,
+            [nameof(SubConversationIds)] = new DynamicJsonArray(SubConversationIds)
         };
     }
 
@@ -293,6 +297,11 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             conversation.CurrentUsage = JsonDeserializationClient.AiUsage(currentUsageBlittable);
         }
 
+        if (document.TryGet(nameof(SubConversationIds), out BlittableJsonReaderArray subConversationIds))
+        {
+            conversation.SubConversationIds = subConversationIds.Items.Select(m => ((LazyStringValue)m).ToString(CultureInfo.InvariantCulture)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
         return conversation;
     }
 
@@ -331,7 +340,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                     continue;
                 }
 
-                if (parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration))
+                if (parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration) == false)
                 {
                     // the parent doesn't have this parameter BUT it's allowed to be generated -> we add it to the tool schema
                     parameters[parameter.Name] = parameter.Description;
@@ -339,8 +348,9 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 }
 
                 throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing from the parent scope." + 
-                                                           " To allow the root agent to generate this value dynamically, " + 
-                                                           "set the 'AllowedModelGeneration' flag to true in the sub-agent parameter policy.");
+                                                           " To allow the root agent to generate this value dynamically, " +
+                                                           $"unset the '{nameof(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration)}' " +
+                                                           "flag in the sub-agent parameter policy.");
             }
 
             var argsSampleObject = DynamicJsonValue.Convert(parameters);

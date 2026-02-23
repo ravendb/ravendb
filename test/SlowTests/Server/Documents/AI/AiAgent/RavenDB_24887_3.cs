@@ -581,8 +581,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        agent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with",
-            AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        agent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var identifier1 = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent1, MoviesSampleObject.Instance)).Identifier;
 
         var agent0 = new AiAgentConfiguration("movies-agent-0",
@@ -607,8 +606,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        agent0.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with", 
-            AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        agent0.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var identifier0 = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent0, MoviesSampleObject.Instance)).Identifier;
 
         var db = await GetDatabase(store.Database);

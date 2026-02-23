@@ -544,7 +544,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 if (_document.OpenActionCalls.TryGetValue(rootToolId, out var action) == false)
                     throw new InvalidOperationException($"{rootToolId} is an unknown action ID for conversation '{_conversationId}'");
 
-                if (action.SubConversation == null)
+                if (action.SubConversationId == null)
                 {
                     _document.OpenActionCalls.Remove(rootToolId);
                     _document.AddMessage(context, context.ReadObject(
@@ -629,6 +629,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         List<Task<SubConversationResult>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
         {
+            _document.SubConversationIds.Add(conversationId);
             tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs));
         }
 
@@ -664,6 +665,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     foreach (var (key, value) in r.ChildUserCalls)
                     {
                         AddChildrenUserCall(_childUserCalls, key, value);
+                        _document.Messages.Add(context.ReadObject(
+                            new DynamicJsonValue
+                            {
+                                ["role"] = ChatCompletionClient.Constants.RequestFields.RoleInternalValue,
+                                ["type"] = "sub-agent-action-call",
+                                ["content"] = $"[sub-agent called action-tool '{value.Name}']",
+                                ["toolName"] = value.Name,
+                                ["subConversationId"] = value.SubConversationId,
+                            }, "tool-call/sub-agent-action-tool"));
                     }
                 }
             }
@@ -719,7 +729,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                                         ["tool_call_id"] = currentCall.Id,
                                         ["role"] = "tool",
                                         ["content"] = "Error has been occurred during the tool call execution: " + e.Message,
-                                        ["subConversation"] = conversationId,
+                                        ["subConversationId"] = conversationId,
                                     }, "tool-call/response"));
                             result.OpenToolCallsToRemove.Add(currentCall.Id);
                         }

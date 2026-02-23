@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Name = call.Name,
                 Type = AiAgentActionRequestType.SubAgent,
                 Arguments = call.Arguments,
-                SubConversation = conversationId
+                SubConversationId = conversationId
             });
         }
 
@@ -131,14 +131,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         private static SubAgentActionResponse GetOrAddSubAgentsActionResponses(Dictionary<string, SubAgentActionResponse> subAgentsActions, AiAgentActionRequest parent, string parentToolId)
         {
-            if (subAgentsActions.TryGetValue(parent.SubConversation, out var subAgent))
+            if (subAgentsActions.TryGetValue(parent.SubConversationId, out var subAgent))
             {
                 Debug.Assert(subAgent.ParentId == parentToolId, $"subAgent.ParentId != rootToolId. subAgent.ParentId is '{subAgent.ParentId}',  rootToolId is '{parentToolId}'");
                 Debug.Assert(subAgent.Agent == parent.Name, $"subAgent.Agent != action.Name. subAgent.Agent is '{subAgent.Agent}', action.Name is '{parent.Name}'");
             }
             else
             {
-                subAgent = subAgentsActions[parent.SubConversation] = new SubAgentActionResponse()
+                subAgent = subAgentsActions[parent.SubConversationId] = new SubAgentActionResponse()
                 {
                     ParentId = parentToolId,
                     Agent = parent.Name,
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         }
 
         private bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
-    SubConversationResult result)
+            SubConversationResult result)
         {
             if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
                 throw new InvalidOperationException($"Sub-agent query output is missing the '{nameof(ConversationResult<object>.Response)}' field inside '{nameof(QueryResult.Results)}'. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
@@ -172,6 +172,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                         Name = currentCall.Name + "/" + actionRequest.Name,
                         Type = AiAgentActionRequestType.UserAction,
                         Arguments = actionRequest.Arguments,
+                        SubConversationId = conversationId
                     };
 
                     AddChildrenUserCall(result.ChildUserCalls, actionRequest.ToolId, newActionCall);
@@ -186,7 +187,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     ["tool_call_id"] = currentCall.Id,
                     ["role"] = "tool",
                     ["content"] = agentResult.ToString(),
-                    ["subConversation"] = conversationId,
+                    ["subConversationId"] = conversationId,
                 }, "tool-call/response"));
 
             result.OpenToolCallsToRemove.Add(currentCall.Id);

@@ -515,7 +515,9 @@ public class ChatCompletionClient : IDisposable
         bool useTools,
         bool streaming,
         string schema)
-    {
+     {
+         messages = messages.Where(m => m.TryGet("role", out string role) == false || role != Constants.RequestFields.RoleInternalValue).ToList();
+
         if (_settings.Model is null)
             throw new ArgumentNullException(nameof(_settings.Model));
 
@@ -1048,6 +1050,7 @@ public class ChatCompletionClient : IDisposable
             public const string RoleSystemValue = "system";
             public const string RoleUserValue = "user";
             public const string RoleAssistantValue = "assistant";
+            public const string RoleInternalValue = "internal";
 
             // HTTP headers
             public const string HeaderContentType = "Content-Type";

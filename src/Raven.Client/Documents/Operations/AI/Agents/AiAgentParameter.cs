@@ -56,7 +56,7 @@ public class AiAgentParameter : IDynamicJson
     /// <inheritdoc cref="AiAgentParameter(string, string, bool)" />
     /// <param name="policy">
     /// Policy flags for this parameter.
-    /// Use <see cref="AiAgentParameterPolicy.AllowedModelGeneration"/> to allow the parent agent to generate
+    /// Use <see cref="AiAgentParameterPolicy.ForbidModelGeneration"/> to allow the parent agent to generate
     /// a value for a sub-agent parameter with the same <paramref name="name"/>; the sub-agent will receive the parent's
     /// value as-is.
     /// </param>
@@ -71,9 +71,10 @@ public class AiAgentParameter : IDynamicJson
     /// <inheritdoc cref="AiAgentParameter(string, string)" />
     /// <param name="policy">
     /// Policy flags for this parameter.
-    /// Use <see cref="AiAgentParameterPolicy.AllowedModelGeneration"/> to allow the parent agent to generate
-    /// a value for a sub-agent parameter with the same <paramref name="name"/>; the sub-agent will receive the parent's
-    /// value as-is.
+    /// When <see cref="AiAgentParameterPolicy.ForbidModelGeneration"/> is set for a sub-agent parameter
+    /// the parent isn't allowed to generate a new value for the sub-agent;
+    /// the only option is if the parent's has a parameter with the same name and the parent's value will be sent 
+    /// to the sub-agent as-is.
     /// </param>
     public AiAgentParameter(string name, string description, AiAgentParameterPolicy policy) : this(name, description)
     {
@@ -101,8 +102,9 @@ public class AiAgentParameter : IDynamicJson
     /// with the same <see cref="Name"/>.
     /// </summary>
     /// <remarks>
-    /// When <see cref="AiAgentParameterPolicy.AllowedModelGeneration"/> is unset and a sub-agent defines a parameter
-    /// with the same name, the parent does not generate a new value for the sub-agent; the parent's value is passed
+    /// When <see cref="AiAgentParameterPolicy.ForbidModelGeneration"/> is set for a sub-agent parameter
+    /// the parent isn't allowed to generate a new value for the sub-agent;
+    /// the only option is if the parent's has a parameter with the same name and the parent's value will be sent 
     /// to the sub-agent as-is.
     /// </remarks>
     public AiAgentParameterPolicy Policy { get; set; } = AiAgentParameterPolicy.Default;
@@ -122,6 +124,6 @@ public class AiAgentParameter : IDynamicJson
     public enum AiAgentParameterPolicy
     {
         Default = 0,
-        AllowedModelGeneration = 1
+        ForbidModelGeneration = 1
     }
 }

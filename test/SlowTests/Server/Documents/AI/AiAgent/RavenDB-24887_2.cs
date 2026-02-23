@@ -334,8 +334,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 },
             }
         };
-        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with", 
-            AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent3Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent3, MoviesSampleObject.Instance)).Identifier;
 
 
@@ -353,7 +352,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        userAgent2.Parameters.Add(new AiAgentParameter("theUserId", "the id of the current user that you talk with", AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        userAgent2.Parameters.Add(new AiAgentParameter("theUserId", "the id of the current user that you talk with"));
         var userAgent2Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent2, MoviesSampleObject.Instance)).Identifier;
 
 
@@ -417,8 +416,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 },
             }
         };
-        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the requested user, not his hold Name (equals to 'currentUserId')",
-            policy: AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the requested user, not his hold Name (equals to 'currentUserId')"));
         var userAgent3Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent3, MoviesSampleObject.Instance)).Identifier;
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
@@ -507,7 +505,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 },
             }
         };
-        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with", AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        userAgent3.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent3Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent3, MoviesSampleObject.Instance)).Identifier;
 
 
@@ -525,8 +523,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        userAgent2.Parameters.Add(new AiAgentParameter("theUserId", "the id of the current user that you talk with", 
-            AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        userAgent2.Parameters.Add(new AiAgentParameter("theUserId", "the id of the current user that you talk with"));
         var userAgent2Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent2, MoviesSampleObject.Instance)).Identifier;
 
 
@@ -544,8 +541,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 }
             ]
         };
-        userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with", 
-            AiAgentParameter.AiAgentParameterPolicy.AllowedModelGeneration));
+        userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
 
         var chat = store.AI.Conversation(userAgent1Id, "chats/1",

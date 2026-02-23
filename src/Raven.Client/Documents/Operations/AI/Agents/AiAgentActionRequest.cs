@@ -13,7 +13,7 @@ public class AiAgentActionRequest : IDynamicJson
     internal AiAgentActionRequestType Type;
 
     [ForceJsonSerialization]
-    internal string SubConversation;
+    internal string SubConversationId;
 
     internal bool IsEqual(AiAgentActionRequest other)
     {
@@ -25,7 +25,7 @@ public class AiAgentActionRequest : IDynamicJson
             Name == other.Name &&
             Arguments == other.Arguments &&
             Type == other.Type &&
-            SubConversation == other.SubConversation;
+            SubConversationId == other.SubConversationId;
     }
 
     public override string ToString()
@@ -42,7 +42,7 @@ public class AiAgentActionRequest : IDynamicJson
             [nameof(ToolId)] = ToolId,
             [nameof(Arguments)] = Arguments,
             [nameof(Type)] = Type,
-            [nameof(SubConversation)] = SubConversation
+            [nameof(SubConversationId)] = SubConversationId
         };
     }
 }
