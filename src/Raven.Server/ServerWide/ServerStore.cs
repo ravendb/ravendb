@@ -2299,6 +2299,8 @@ namespace Raven.Server.ServerWide
                             genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
 
+                        genAi.HashVersion = GenAiConfiguration.GenAiHashVersion.WithSampleObject;
+
                         command = new AddGenAiCommand(genAi, databaseName, changeVector, raftRequestId);
                     }
                         break;
@@ -2309,6 +2311,40 @@ namespace Raven.Server.ServerWide
             }
 
             return await SendToLeaderAsync(command);
+        }
+
+        private void ApplyHashVersionBackwardCompatibility(DatabaseRecord record, GenAiConfiguration configuration)
+        {
+            var existing = record.GenAis?.FirstOrDefault(x => x.Name == configuration.Name);
+
+            // Fallback for updates where the task somehow doesn't exist
+            if (existing == null)
+                return;
+
+            // Existing version
+            var existingVersion = existing.HashVersion;
+
+            if (existingVersion == GenAiConfiguration.GenAiHashVersion.None)
+            {
+                //did Sample object changed?
+                if (string.Equals(existing.SampleObject, configuration.SampleObject, StringComparison.Ordinal) == false)
+                {
+                    configuration.HashVersion = GenAiConfiguration.GenAiHashVersion.WithSampleObject;
+                }
+                else
+                {
+                    // If the SampleObject is IDENTICAL, and existing version is None we MUST force None.
+                    configuration.HashVersion = GenAiConfiguration.GenAiHashVersion.None;
+                }
+
+                return;
+            }
+
+            // Preserving WithSampleObject
+            if (configuration.HashVersion == GenAiConfiguration.GenAiHashVersion.None)
+            {
+                configuration.HashVersion = existingVersion;
+            }
         }
 
         public async Task<(long, object)> AddQueueSink(TransactionOperationContext context,
@@ -2535,6 +2571,8 @@ namespace Raven.Server.ServerWide
                             genAiErr.Add($"Could not find AI connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
 
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
+
+                        ApplyHashVersionBackwardCompatibility(rawRecord, genAi);
 
                         command = new UpdateGenAiCommand(id, genAi, databaseName, changeVector, raftRequestId);
                         break;

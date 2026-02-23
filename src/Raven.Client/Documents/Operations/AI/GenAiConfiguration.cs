@@ -119,6 +119,14 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
         return errors.Count == 0;
     }
+    public enum GenAiHashVersion
+    {
+        None = 0, // old: no SampleObject
+        WithSampleObject = 1  // new: includes SampleObject
+    }
+
+    
+    public GenAiHashVersion HashVersion { get; internal set; }
 
     public override DynamicJsonValue ToJson()
     {
@@ -136,6 +144,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
         json[nameof(EnableTracing)] = EnableTracing;
         json[nameof(ExpirationInSec)] = ExpirationInSec;
+        json[nameof(HashVersion)] = HashVersion;
 
         return json;
     }
@@ -152,7 +161,8 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             SampleObject != other.SampleObject ||
             MaxConcurrency != other.MaxConcurrency ||
             ExpirationInSec != other.ExpirationInSec ||
-            EnableTracing != other.EnableTracing)
+            EnableTracing != other.EnableTracing ||
+            HashVersion != other.HashVersion)
             differences |= EtlConfigurationCompareDifferences.Other;
 
         return differences;
