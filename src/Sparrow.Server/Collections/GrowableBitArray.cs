@@ -279,13 +279,13 @@ public unsafe struct GrowableBitArray : IDisposable
         }
     }
 
-    public static IEnumerable<long> Probe(GrowableBitArray filterResults, Random shared)
+    public static IEnumerable<long> Probe(GrowableBitArray filterResults, Random random)
     {
         var it = filterResults.GetIterator(0);
         HashSet<long> seen = new();
         do
         {
-            var current = shared.NextInt64(0, filterResults._capacity);
+            var current = random.NextInt64(0, filterResults._capacity);
             if (seen.Add(current) == false)
                 continue;
             if (filterResults.Contains(current) == false)

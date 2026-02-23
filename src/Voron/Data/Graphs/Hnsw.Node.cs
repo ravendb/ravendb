@@ -13,6 +13,7 @@ public partial class Hnsw
 {
     public unsafe struct Node
     {
+        internal const long VectorIdMask = ~0xFFF;
         public long PostingListId;
         public long VectorId;
         public long NodeId;
@@ -29,7 +30,7 @@ public partial class Hnsw
             if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
                 return VectorId;
 
-            return VectorId & ~0xFFF;
+            return VectorId & VectorIdMask;
         }
 
         public static NodeReader Decode(LowLevelTransaction llt, long id)

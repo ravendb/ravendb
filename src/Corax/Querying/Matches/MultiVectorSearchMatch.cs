@@ -82,6 +82,13 @@ public struct MultiVectorSearchMatch : IQueryMatch
         {
             _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery);
             _filterMatchesCount = _filterResults.Count;
+            
+            // Shortcut for empty filter
+            if (_filterMatchesCount == 0)
+            {
+                _isEmpty = true;
+                return;
+            }
         }
 
         _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold, _numberOfCandidates);

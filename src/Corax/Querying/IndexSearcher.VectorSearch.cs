@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches;
@@ -64,11 +65,11 @@ public partial class IndexSearcher
                 while (entryTermsReader.FindNextStored(vectorRootPage))
                 {
                     var vectorHash = entryTermsReader.StoredField.Value;
-                    if (vectorsByHash.TryGetValue(vectorHash, out var vectorId))
-                    {
-                        if (nodesByVectorId.TryGetValue(vectorId, out var nodeId))
-                            yield return nodeId;
-                    }
+                    var vectorExists = vectorsByHash.TryGetValue(vectorHash, out var vectorId);
+                    Debug.Assert(vectorExists, "Vector hash not found in vectors by hash tree");
+                    var nodeIdExists = nodesByVectorId.TryGetValue(vectorId, out var nodeId);
+                    Debug.Assert(nodeIdExists, "Node ID not found in nodes by vector ID tree");
+                    yield return nodeId;
                 }
             }
         }

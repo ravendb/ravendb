@@ -241,7 +241,7 @@ public unsafe partial class Hnsw
         /// <summary>
         /// This accepts a list of node ids (mutable, we do destructive updates to it) and translate
         /// that to a list of the indexes in the nodes array. If needed, it will load the nodes
-        /// from the disk in a batch oriented manner. 
+        /// from the disk in a batch oriented manner.
         /// </summary>
         private void LoadNodeIndexes(ref NativeList<long> nodeIds, ref NativeList<int> indexes)
         {
@@ -314,7 +314,7 @@ public unsafe partial class Hnsw
             if (vector.IsEmpty)
             {
                 ref var from = ref GetNodeByIndex(fromIdx);
-                vector = from.GetVector(this); // note we've to make a copy here since we cannot pass this as ref into ref value
+                vector = from.GetVector(this); // Note: we have to make a copy here since we cannot pass this as ref into a ref value
             }
 
             ref var to = ref GetNodeByIndex(toIdx);
@@ -327,7 +327,7 @@ public unsafe partial class Hnsw
             return distance;
         }
 
-        //Allows storing cached distance to the queried vector. Should be used only in querying part!
+        // Allows storing cached distance to the queried vector. Should be used only in the querying part!
         public float QueryDistance(ReadOnlySpan<byte> vector, int toIdx, ref long vectorReadCounter)
         {
             ref var to = ref GetNodeByIndex(toIdx);
@@ -376,7 +376,6 @@ public unsafe partial class Hnsw
             ContextBoundNativeList<int> candidates,
             NearestEdgesFlags flags)
         {
-            // in case of filtered match we want to over-fetch. 
             return new NearestSearcher(this, startingPointsIndexes, vector, level , numberOfCandidates, candidates, flags);
         }
         
@@ -386,7 +385,6 @@ public unsafe partial class Hnsw
             NearestEdgesFlags flags,
             bool hasFilterMatch)
         {
-            // in case of filtered match we want to over-fetch. 
             return new NearestSearcher(this, startingPointIndex, vector, level , numberOfCandidates, candidates, flags, hasFilterMatch);
         }
 
@@ -394,47 +392,54 @@ public unsafe partial class Hnsw
         
         public IHnswSearcher ExactSearch(Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan) => new ExactSearcher(this, vector, hasFilterMatch, numberOfCandidates, nodesToScan);
 
-        public void SearchFilteredNearest<TNodes>(ReadOnlySpan<byte> vector, int dstIdx, int maxLevel, ref ContextBoundNativeList<int> nearestIndexes, TNodes nodesToProbe, int maxBest, int maxMisses)
-        where TNodes : IEnumerator<long>
+
+        public void SearchFilteredNearest<TNodes>(ref ContextBoundNativeList<int> nearestIndexes, TNodes nodesFromFilter, int candidatesRequested, int maximumNumberOfNodesVisitedWithoutFindingBetterCandidate)
+            where TNodes : IEnumerator<long>
         {
-            var missed = 0;
-            PriorityQueue<int, int> nodes = new();
+            var numberOfNodesVisitedFromLastNewCandidate = 0;
+            PriorityQueue<int, int> nearestCandidates = new();
             
-            // Ordered ascending
-            var negatedMinLevel = int.MinValue;
-            var limit = 512;
-            while (nodesToProbe.MoveNext() && missed < maxMisses && limit-- > 0)
+            // Retrieving nodes from the filter is costly (in terms of I/O). Therefore, we limit the number of random nodes we will visit.
+            var maximumAmountOfNodesToVisit = 512;
+            
+            while (nodesFromFilter.MoveNext() 
+                   && numberOfNodesVisitedFromLastNewCandidate < maximumNumberOfNodesVisitedWithoutFindingBetterCandidate 
+                   && maximumAmountOfNodesToVisit-- > 0)
             {
-                var currentNodeIndex = nodesToProbe.Current;
+                var currentNodeIndex = nodesFromFilter.Current;
                 var nodeId = GetNodeIndexById(currentNodeIndex);
                 ref var entry = ref GetNodeByIndex(nodeId);
-                var maxNodeLevel = entry.EdgesPerLevel.Count;
+                var currentNodeMaximumLevel = entry.EdgesPerLevel.Count;
 
-                if (nodes.Count < maxBest)
+                if (nearestCandidates.Count < candidatesRequested)
                 {
-                    // MinPriorityQueue. First to remove is a node from lower layers
-                    nodes.Enqueue(nodeId, -maxNodeLevel);
-                    missed = 0;
-                    negatedMinLevel = Math.Max(-maxNodeLevel, negatedMinLevel);
+                    // The queue is still empty. We will add anything that comes from the filter.
+                    // Since we prioritize nodes that exist on higher levels,
+                    // we will negate the current node's maximum level.
+                    // This will move nodes that exist only at the bottom level to the front of the queue.
+                    nearestCandidates.Enqueue(nodeId, currentNodeMaximumLevel);
+                    numberOfNodesVisitedFromLastNewCandidate = 0;
                     continue;
                 }
-
-
-                if (maxNodeLevel > -negatedMinLevel)
+                
+                // Our queue is full, which means we will only update the queue if the currently visited node is better (based on level existence)
+                // than our worst found candidate.
+                nearestCandidates.TryPeek(out _, out var worstCandidateMaximumLevel);
+                if (currentNodeMaximumLevel > worstCandidateMaximumLevel)
                 {
-                    nodes.EnqueueDequeue(nodeId, -maxNodeLevel);
-                    negatedMinLevel = Math.Max(-maxNodeLevel, negatedMinLevel);
-                    missed = 0;
+                    nearestCandidates.EnqueueDequeue(nodeId, currentNodeMaximumLevel);
+                    numberOfNodesVisitedFromLastNewCandidate = 0;
                 }
                 else
                 {
-                    missed++;
+                    numberOfNodesVisitedFromLastNewCandidate++;
                 }
             }
             
-            nearestIndexes.EnsureCapacityFor((int)nodes.Count);
-            while (nodes.TryDequeue(out var currentNodeIndex, out var _))
+            nearestIndexes.EnsureCapacityFor((int)nearestCandidates.Count);
+            while (nearestCandidates.TryDequeue(out var currentNodeIndex, out var _))
                 nearestIndexes.AddUnsafe(currentNodeIndex);
+            nearestIndexes.Inner.Reverse(); // we want to prioritize the nodes from the higher levels
         }
         
         public void SearchNearestAcrossLevels(ReadOnlySpan<byte> vector, int dstIdx, int maxLevel, ref ContextBoundNativeList<int> nearestIndexes)
@@ -1082,7 +1087,7 @@ public unsafe partial class Hnsw
             return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
         
         using var enumerator = nodesToProbe.GetEnumerator();
-        searchState.SearchFilteredNearest(vector.Span, -1, searchState.Options.MaxLevel, ref startingPointsIndexes, enumerator, 16, 16);
+        searchState.SearchFilteredNearest(ref startingPointsIndexes, enumerator, numberOfCandidates, 16);
         candidates.Clear();
         var nearestEdgesSearch = searchState.NearestSearch(startingPointsIndexes, vector, 0, numberOfCandidates, candidates,
             SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);

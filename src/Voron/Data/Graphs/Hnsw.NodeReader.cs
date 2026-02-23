@@ -69,7 +69,7 @@ public partial class Hnsw
             }
 
             var count = (byte)(vectorId >> 1);
-            var containerId = vectorId & ~0xFFF;
+            var containerId = vectorId & Node.VectorIdMask;
             Container.Get(state.Llt, new ContainerEntryId(containerId), out var container);
             var offset = count * state.Options.VectorSizeBytes;
             Debug.Assert(offset >= 0 && offset + state.Options.VectorSizeBytes <= container.Length, "offset >= 0 && offset + state.Options.VectorSizeBytes <= container.Length");
