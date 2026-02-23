@@ -40,7 +40,7 @@ public sealed class DatabaseBatchCommandsReader : AbstractBatchCommandsReader<Me
 
     protected override void CreateBatchTrackChangesCommand(BatchRequestParser.CommandData commandData)
     {
-        commandData.BatchTrackChangesCommand = new BatchTrackChangesCommand(commandData.TrackedEntities, _database);
+        commandData.BatchTrackChangesCommand = new BatchTrackChangesCommand(commandData.TrackedEntities);
     }
 
     public override async ValueTask<MergedBatchCommand> GetCommandAsync(DocumentsOperationContext context)

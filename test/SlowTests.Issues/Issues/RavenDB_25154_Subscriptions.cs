@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                     Assert.True(await processedBatch.WaitAsync(_reasonableWaitTime));
                     Assert.True(await concurrencyExceptionThrown.WaitAsync(_reasonableWaitTime));
                     Assert.NotNull(caughtException);
-                    Assert.Contains("Document change vector mismatch", caughtException.Message);
+                    Assert.Contains("Document 'users/1-A' has been modified", caughtException.Message);
                     Assert.Equal("users/1-A", ((Raven.Client.Exceptions.ConcurrencyException)caughtException).Id);
                 }
             }
@@ -210,7 +210,7 @@ namespace SlowTests.Issues
                     Assert.True(await processedBatch.WaitAsync(_reasonableWaitTime));
                     Assert.True(await concurrencyExceptionThrown.WaitAsync(_reasonableWaitTime));
                     Assert.NotNull(caughtException);
-                    Assert.Contains("Document change vector mismatch", caughtException.Message);
+                    Assert.Contains($"Document '{addressId}' has been modified", caughtException.Message);
                     Assert.Equal(addressId, ((Raven.Client.Exceptions.ConcurrencyException)caughtException).Id);
                 }
             }
@@ -452,7 +452,7 @@ namespace SlowTests.Issues
                     Assert.True(await processedBatch.WaitAsync(_reasonableWaitTime));
                     Assert.True(await concurrencyExceptionThrown.WaitAsync(_reasonableWaitTime));
                     Assert.NotNull(caughtException);
-                    Assert.Contains("Document change vector mismatch", caughtException.Message);
+                    Assert.Contains("Document 'users/1-A' has been modified", caughtException.Message);
                     Assert.Equal("users/1-A", ((Raven.Client.Exceptions.ConcurrencyException)caughtException).Id);
                 }
             }
@@ -579,7 +579,7 @@ namespace SlowTests.Issues
                     Assert.True(await processedBatch.WaitAsync(_reasonableWaitTime));
                     Assert.True(await concurrencyExceptionThrown.WaitAsync(_reasonableWaitTime));
                     Assert.NotNull(caughtException);
-                    Assert.Contains("Document change vector mismatch", caughtException.Message);
+                    Assert.Contains($"Document 'users/missing-A' has been modified", caughtException.Message);
                     Assert.Equal("users/missing-A", ((Raven.Client.Exceptions.ConcurrencyException)caughtException).Id);
                 }
             }

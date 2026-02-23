@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
@@ -30,7 +31,6 @@ namespace SlowTests.Issues
             yield return [(Action<IDocumentSession>)ModifyEgorInPatchNoLoad];
             yield return [(Action<IDocumentSession>)ModifyEgorWithStoreOverwriteAfterLoadAndEvict];
             yield return [(Action<IDocumentSession>)ModifyEgorWithStoreOverwriteWithoutLoad];
-            //yield return [(Action<IDocumentSession>)ModifyEgorWithDelete];
             yield return [(Action<IDocumentSession>)ModifyEgorWithLoadAndDeleteById];
 
 
@@ -70,8 +70,11 @@ namespace SlowTests.Issues
         internal static void ModifyEgorWithStoreOverwriteAfterLoadAndEvict(IDocumentSession session)
         {
             var egor = session.Load<Employee>("employees/2-A");
+
+            // tracked entity is evicted from the session, so its not in the trackedEntities list anymore
             session.Advanced.Evict(egor);
-            session.Store(new Employee
+            // store after evict is treated as _new_ document, so it will be added to the trackedEntities list again with null change vector, and this should not cause concurrency exception because the original entity is evicted !
+            session.Store(new Employee 
             {
                 FirstName = "Egor",
                 Address = new Address()
@@ -175,49 +178,55 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                ShouldThrowConcurrencyException_WhenTrackedEntityWasChangedInBackgroundSessionInternal(sessionAction, store);
+            }
+        }
+
+        private static void ShouldThrowConcurrencyException_WhenTrackedEntityWasChangedInBackgroundSessionInternal(Action<IDocumentSession> sessionAction, DocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee
                 {
-                    session.Store(new Employee
-                    {
-                        FirstName = "Jerry"
-                    }, "employees/1-A");
-                    session.Store(new Employee
-                    {
-                        FirstName = "Egor",
-                        Address = new Address()
-                        {
-                            Street = "Ahad Ha'am"
-                        }
-                    }, "employees/2-A");
-                    session.SaveChanges();
-
-                }
-
-                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                    FirstName = "Jerry"
+                }, "employees/1-A");
+                session.Store(new Employee
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                }))
-                {
-                    var jerry = session.Load<Employee>("employees/1-A");
-
-                    sessionAction.Invoke(session);
-
-                    var expected = session.Advanced.GetChangeVectorFor(jerry);
-                    Assert.NotEmpty(expected);
-                    Assert.NotNull(expected);
-
-                    var actual = string.Empty;
-                    using (var s = store.OpenSession())
+                    FirstName = "Egor",
+                    Address = new Address()
                     {
-                        var j = s.Load<Employee>("employees/1-A");
-                        j.Address = new Address()
-                        {
-                            City = "Hadera"
-                        };
-                        s.SaveChanges();
-
-                        actual = s.Advanced.GetChangeVectorFor(j);
+                        Street = "Ahad Ha'am"
                     }
+                }, "employees/2-A");
+                session.SaveChanges();
+
+            }
+
+            using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                   {
+                       TrackingMode = TrackingMode.TrackAllEntities,
+                   }))
+            {
+                var jerry = session.Load<Employee>("employees/1-A");
+
+                sessionAction.Invoke(session);
+
+                var expected = session.Advanced.GetChangeVectorFor(jerry);
+                Assert.NotEmpty(expected);
+                Assert.NotNull(expected);
+
+                var actual = string.Empty;
+                using (var s = store.OpenSession())
+                {
+                    var j = s.Load<Employee>("employees/1-A");
+                    j.Address = new Address()
+                    {
+                        City = "Hadera"
+                    };
+                    s.SaveChanges();
+
+                    actual = s.Advanced.GetChangeVectorFor(j);
+                }
 
                     Assert.NotEmpty(actual);
                     Assert.NotNull(actual);
@@ -225,32 +234,32 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
-                    Assert.Equal(expected, e.ExpectedChangeVector);
-                }
+                Assert.Equal(expected, e.ExpectedChangeVector);
+            }
 
-                using (var session = store.OpenSession(new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.TrackAllEntities
-                }))
-                {
-                    var egor = session.Load<Employee>("employees/2-A");
+            using (var session = store.OpenSession(new SessionOptions()
+                   {
+                       TrackingMode = TrackingMode.TrackAllEntities
+                   }))
+            {
+                var egor = session.Load<Employee>("employees/2-A");
 
-                    Assert.Equal("Egor", egor.FirstName);
-                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+                Assert.Equal("Egor", egor.FirstName);
+                Assert.Equal("Ahad Ha'am", egor.Address.Street);
 
-                    var j = session.Load<Employee>("employees/1-A");
-                    Assert.Equal("Hadera", j.Address.City);
-                }
+                var j = session.Load<Employee>("employees/1-A");
+                Assert.Equal("Hadera", j.Address.City);
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenNoCommandsInSessionButTrackedEntityWasChangedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenNoCommandsInSessionButTrackedEntityWasChangedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -304,7 +313,7 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
@@ -326,10 +335,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenTrackedEntityIsNullButThenWasAddedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityIsNullButThenWasAddedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -378,7 +388,7 @@ namespace SlowTests.Issues
 
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(string.Empty, e.ExpectedChangeVector);
@@ -400,10 +410,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenTrackedEntityDeletedByEntityButThenWasEditedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityDeletedByEntityButThenWasEditedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -455,7 +466,7 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
@@ -477,10 +488,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityDeletedByIdWithoutChangeVectorButThenWasNotEditedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityDeletedByIdWithoutChangeVectorButThenWasNotEditedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -528,10 +540,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityDeletedByIdWithChangeVectorButThenWasNotEditedInBackgroundSession2()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityDeletedByIdWithChangeVectorButThenWasNotEditedInBackgroundSession2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -587,10 +600,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenTrackedEntityDeletedByIdButThenWasEditedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityDeletedByIdButThenWasEditedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -638,7 +652,7 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
@@ -665,6 +679,103 @@ namespace SlowTests.Issues
         public void ShouldThrowConcurrencyException_WhenTrackedEntityIncludedBySessionButThenWasEditedInBackgroundSession(Action<IDocumentSession> sessionAction)
         {
             using (var store = GetDocumentStore())
+            {
+                ShouldThrowConcurrencyException_WhenTrackedEntityIncludedBySessionButThenWasEditedInBackgroundSessionInternal(sessionAction, store);
+            }
+        }
+
+        private static void ShouldThrowConcurrencyException_WhenTrackedEntityIncludedBySessionButThenWasEditedInBackgroundSessionInternal(Action<IDocumentSession> sessionAction, DocumentStore store)
+        {
+            string addressId;
+            using (var session = store.OpenSession())
+            {
+                var address = new Address()
+                {
+                    City = "Harish",
+                    Street = "Erets Rd"
+                };
+                session.Store(address);
+                addressId = session.Advanced.GetDocumentId(address);
+                Assert.NotNull(addressId);
+                address.Id = addressId;
+                session.Store(new Employee
+                {
+                    FirstName = "Jerry",
+                    Address = address
+                }, "employees/1-A");
+                session.Store(new Employee
+                {
+                    FirstName = "Egor",
+                    Address = new Address()
+                    {
+                        Street = "Ahad Ha'am"
+                    }
+                }, "employees/2-A");
+                session.SaveChanges();
+
+            }
+
+            using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                   {
+                       TrackingMode = TrackingMode.TrackAllEntities,
+                   }))
+            {
+                var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
+
+                var numOfRequests = session.Advanced.NumberOfRequests;
+
+                var address = session.Load<Address>(jerry.Address.Id);
+
+                Assert.NotNull(address);
+                Assert.Equal(numOfRequests, session.Advanced.NumberOfRequests);
+
+                sessionAction.Invoke(session);
+
+                var expected = session.Advanced.GetChangeVectorFor(address);
+                Assert.NotEmpty(expected);
+                Assert.NotNull(expected);
+
+                var actual = string.Empty;
+                using (var s = store.OpenSession())
+                {
+                    var a = s.Load<Address>(addressId);
+                    a.City = "Hadera";
+                    s.SaveChanges();
+
+                    actual = s.Advanced.GetChangeVectorFor(a);
+                }
+
+                Assert.NotEmpty(actual);
+                Assert.NotNull(actual);
+
+                // this should throw concurrency exception for jerry
+                var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                Assert.Contains($"Document '{addressId}' has been modified", e.Message);
+                Assert.Equal(addressId, e.Id);
+                Assert.Equal(actual, e.ActualChangeVector);
+                Assert.Equal(expected, e.ExpectedChangeVector);
+            }
+
+            using (var session = store.OpenSession(new SessionOptions()
+                   {
+                       TrackingMode = TrackingMode.TrackAllEntities
+                   }))
+            {
+                var egor = session.Load<Employee>("employees/2-A");
+
+                Assert.Equal("Egor", egor.FirstName);
+                Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                var j = session.Load<Address>(addressId);
+                Assert.Equal("Hadera", j.City);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityEvictedFromTheSessionAndThenAddedBack()
+        {
+            using (var store = GetDocumentStore(Options.ForMode(RavenDatabaseMode.Single)))
             {
                 string addressId;
                 using (var session = store.OpenSession())
@@ -696,9 +807,9 @@ namespace SlowTests.Issues
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                }))
+                       {
+                           TrackingMode = TrackingMode.TrackAllEntities,
+                       }))
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
 
@@ -709,32 +820,67 @@ namespace SlowTests.Issues
                     Assert.NotNull(address);
                     Assert.Equal(numOfRequests, session.Advanced.NumberOfRequests);
 
-                    sessionAction.Invoke(session);
+                    ModifyEgorWithStoreOverwriteAfterLoadAndEvict(session);
 
                     var expected = session.Advanced.GetChangeVectorFor(address);
                     Assert.NotEmpty(expected);
                     Assert.NotNull(expected);
 
-                    var actual = string.Empty;
-                    using (var s = store.OpenSession())
+                    // this should not throw concurrency exception
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                       {
+                           TrackingMode = TrackingMode.TrackAllEntities
+                       }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Address>(addressId);
+                    Assert.Equal("Harish", j.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityReStored()
+        {
+            using (var store = GetDocumentStore(Options.ForMode(RavenDatabaseMode.Single)))
+            {
+                string addressId;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
                     {
-                        var a = s.Load<Address>(addressId);
-                        a.City = "Hadera";
-                        s.SaveChanges();
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
 
-                        actual = s.Advanced.GetChangeVectorFor(a);
-                    }
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Mul HaHof Village"
+                        }
+                    }, "employees/2-A");
 
-                    Assert.NotEmpty(actual);
-                    Assert.NotNull(actual);
-
-                    // this should throw concurrency exception for jerry
-                    var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
-
-                    Assert.Contains("Document change vector mismatch", e.Message);
-                    Assert.Equal(addressId, e.Id);
-                    Assert.Equal(actual, e.ActualChangeVector);
-                    Assert.Equal(expected, e.ExpectedChangeVector);
+                    // this should not throw concurrency exception
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession(new SessionOptions()
@@ -745,18 +891,16 @@ namespace SlowTests.Issues
                     var egor = session.Load<Employee>("employees/2-A");
 
                     Assert.Equal("Egor", egor.FirstName);
-                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
-
-                    var j = session.Load<Address>(addressId);
-                    Assert.Equal("Hadera", j.City);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenNonExistsEntityIncludedBySessionButThenWasAddedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenNonExistsEntityIncludedBySessionButThenWasAddedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string addressId = "addresses/1-A";
                 var address = new Address()
@@ -815,7 +959,7 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'addresses/1-A' has been modified", e.Message);
                     Assert.Equal(addressId, e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(string.Empty, e.ExpectedChangeVector);
@@ -839,10 +983,11 @@ namespace SlowTests.Issues
         }
 
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenNonExistsEntityIncludedBySessionButThenWasEditedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenNonExistsEntityIncludedBySessionButThenWasEditedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string addressId = "addresses/1-A";
                 var address = new Address()
@@ -907,7 +1052,7 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'addresses/1-A' has been modified", e.Message);
                     Assert.Equal(addressId, e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
@@ -930,10 +1075,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenEntityIncludedByIdInSessionButThenWasEditedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenEntityIncludedByIdInSessionButThenWasEditedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string addressId;
                 using (var session = store.OpenSession())
@@ -994,7 +1140,7 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'addresses/1-A' has been modified", e.Message);
                     Assert.Equal(addressId, e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
@@ -1016,10 +1162,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityEvictedFromSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityEvictedFromSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1087,10 +1234,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenIncludedDocumentEvictedFromSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenIncludedDocumentEvictedFromSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string addressId;
                 using (var session = store.OpenSession())
@@ -1172,10 +1320,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenEntityModifiedInBackgroundSessionButThenRefreshed()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenEntityModifiedInBackgroundSessionButThenRefreshed(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1245,10 +1394,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowConcurrencyException_WhenRefreshedEntityModifiedInBackgroundSession()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenRefreshedEntityModifiedInBackgroundSession(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1318,7 +1468,7 @@ namespace SlowTests.Issues
                     // Should throw concurrency exception for Jerry (refreshed entity was modified)
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actualJerryCv, e.ActualChangeVector);
                     Assert.Equal(expectedJerryCv, e.ExpectedChangeVector);
@@ -1340,10 +1490,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldUpdateChangeVector_WhenRefreshingMultipleEntities()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldUpdateChangeVector_WhenRefreshingMultipleEntities(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1400,10 +1551,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowException_WhenEvictingEntityDuringOnBeforeStore()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowException_WhenEvictingEntityDuringOnBeforeStore(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1430,10 +1582,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldHandleEvictAndReload_WithTrackingEnabled()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldHandleEvictAndReload_WithTrackingEnabled(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1484,16 +1637,17 @@ namespace SlowTests.Issues
                     // The entity tracking should have the new change vector
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", e.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldHandleEvictAndReload_WithTrackingEnabled2()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldHandleEvictAndReload_WithTrackingEnabled2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1552,10 +1706,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldHandleEvictAndReload_WithTrackingEnabled3()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldHandleEvictAndReload_WithTrackingEnabled3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1616,10 +1771,11 @@ namespace SlowTests.Issues
 
 
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotTrack_AfterEvictingAllLoadedEntities()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotTrack_AfterEvictingAllLoadedEntities(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1671,10 +1827,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldRefreshAndMaintainTracking_WhenEntityModifiedLocally()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldRefreshAndMaintainTracking_WhenEntityModifiedLocally(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1720,10 +1877,11 @@ namespace SlowTests.Issues
         }
 
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldTrackExternalEntity_WhenAddedViaTrackEntityMethod()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldTrackExternalEntity_WhenAddedViaTrackEntityMethod(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1794,7 +1952,7 @@ namespace SlowTests.Issues
                     // This should throw concurrency exception for Egor (the externally tracked entity)
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Contains("Document 'employees/2-A' has been modified", ex.Message);
                     Assert.Equal("employees/2-A", ex.Id);
                     Assert.Equal(actualEgorCv, ex.ActualChangeVector);
                     Assert.Equal(externalChangeVector, ex.ExpectedChangeVector);
@@ -1802,10 +1960,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenExternallyTrackedEntityNotModified()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenExternallyTrackedEntityNotModified(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1872,7 +2031,7 @@ namespace SlowTests.Issues
                     // Should throw concurrency exception only for Jerry, not Egor
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Contains("Document 'employees/1-A' has been modified", ex.Message);
                     Assert.Equal("employees/1-A", ex.Id);
                 }
 
@@ -1887,10 +2046,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldThrowException_WhenRegisteringExternalEntityWithDifferentInstanceForSameId()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowException_WhenRegisteringExternalEntityWithDifferentInstanceForSameId(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1934,10 +2094,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldAllowReregisteringSameEntityInstance()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldAllowReregisteringSameEntityInstance(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1982,10 +2143,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldTrackMultipleExternalEntities_AndDetectConcurrencyViolations()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldTrackMultipleExternalEntities_AndDetectConcurrencyViolations(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2070,7 +2232,7 @@ namespace SlowTests.Issues
                     // Should throw concurrency exception for Alice
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Contains("Document 'employees/3-A' has been modified", ex.Message);
                     Assert.Equal("employees/3-A", ex.Id);
                     Assert.Equal(actualAliceCv, ex.ActualChangeVector);
                     Assert.Equal(aliceCv, ex.ExpectedChangeVector);
@@ -2078,10 +2240,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotTrackExternalEntity_WhenNoTrackingModeEnabled()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotTrackExternalEntity_WhenNoTrackingModeEnabled(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2138,10 +2301,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldRemoveFromIncluded_WhenRegisteringExternalEntityThatWasIncluded()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldRemoveFromIncluded_WhenRegisteringExternalEntityThatWasIncluded(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string addressId;
                 using (var session = store.OpenSession())
@@ -2215,7 +2379,7 @@ namespace SlowTests.Issues
                     // Should throw concurrency exception for the address
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document change vector mismatch", ex.Message);
+                    Assert.Contains("Document 'addresses/1-A' has been modified", ex.Message);
                     Assert.Equal(addressId, ex.Id);
                     Assert.Equal(actualAddressCv, ex.ActualChangeVector);
                     Assert.Equal(addressCv, ex.ExpectedChangeVector);

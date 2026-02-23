@@ -73,16 +73,38 @@ namespace Raven.Client.Documents.Session
         /// Disable tracking for all entities in the session<br/>
         /// </summary>
         /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.NoTracking"/></remarks>
-        // [Obsolete("InMemoryDocumentSessionOperations.NoTracking is not supported anymore. Will be removed in next major version of the product. Please use `InMemoryDocumentSessionOperations.TrackingMode` instead")]
-        public bool NoTracking { get => TrackingMode == TrackingMode.NoTracking; set => TrackingMode = TrackingMode.NoTracking; }
+        [Obsolete("SessionOptions.NoTracking is obsolete and will be removed in the next major version. Please use " +
+                  nameof(SessionOptions) + "." + nameof(TrackingMode) + " instead. " +
+                  "See: https://ravendb.net/docs/article-page/latest/csharp/client-api/session/options#notracking")]
+        public bool NoTracking
+        {
+            get => TrackingMode == TrackingMode.NoTracking;
+            set
+            {
+                if (value)
+                    TrackingMode = TrackingMode.NoTracking;
+            }
+        }
 
         /// <summary>
-        /// Enable tracking for all entities in the session<br/>
+        /// Enable tracking mode in the session<br/>
         /// </summary>
         /// <remarks>For more details visit: <inheritdoc cref="Session.TrackingMode"/></remarks>
-        public TrackingMode TrackingMode { get; set; }
-        // TODO: egor   public TrackingMode TrackingMode { get; set => this.TransactionMode == TransactionMode.ClusterWide ? throw new InvalidOperationException("TrackingMode cannot be set when TransactionMode is ClusterWide.") : value; }
-     
+        public TrackingMode TrackingMode
+        {
+            get;
+            set
+            {
+                if (value == TrackingMode.TrackAllEntities)
+                {
+                    if (TransactionMode == TransactionMode.ClusterWide)
+                        throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set to {nameof(TrackingMode.TrackAllEntities)} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
+                }
+
+                field = value;
+            }
+        }
+
         /// <summary>
         /// Disable caching of HTTP responses for the session<br/>
         /// </summary>

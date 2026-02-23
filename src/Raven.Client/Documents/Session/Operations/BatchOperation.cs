@@ -76,103 +76,109 @@ namespace Raven.Client.Documents.Session.Operations
                         $"Cluster transaction was send to a node that is not supporting it. So it was executed ONLY on the requested node on {_session.RequestExecutor.Url}.");
             }
 
-            if (result.Results[0] is BlittableJsonReaderObject blittableJsonReaderObject && GetCommandType(blittableJsonReaderObject) == CommandType.BatchTrackChanges)
-            {
-                HandleBatchOperationResult(start: 1, result);
-            }
-            else
-            {
-                HandleBatchOperationResult(start: 0, result);
-            }
-
-            for (var i = _sessionCommandsCount; i < _allCommandsCount; i++)
-            {
-                var batchResult = result.Results[i] as BlittableJsonReaderObject;
-                if (batchResult == null)
-                    continue;
-
-                var type = GetCommandType(batchResult);
-
-                switch (type)
-                {
-                    case CommandType.PUT:
-                        HandlePut(i, batchResult, isDeferred: true);
-                        break;
-                    case CommandType.DELETE:
-                        HandleDelete(batchResult);
-                        break;
-                    case CommandType.PATCH:
-                        HandlePatch(batchResult);
-                        break;
-                    case CommandType.JsonPatch:
-                        HandleJsonPatch(batchResult);
-                        break;
-                    case CommandType.AttachmentPUT:
-                        HandleAttachmentPut(batchResult);
-                        break;
-                    case CommandType.AttachmentDELETE:
-                        HandleAttachmentDelete(batchResult);
-                        break;
-                    case CommandType.AttachmentMOVE:
-                        HandleAttachmentMove(batchResult);
-                        break;
-                    case CommandType.AttachmentCOPY:
-                        HandleAttachmentCopy(batchResult);
-                        break;
-                    case CommandType.CompareExchangePUT:
-                    case CommandType.CompareExchangeDELETE:
-                    case CommandType.ForceRevisionCreation:
-                        break;
-                    case CommandType.Counters:
-                        HandleCounters(batchResult);
-                        break;
-                    case CommandType.TimeSeries:
-                    case CommandType.TimeSeriesWithIncrements:
-                        //TODO: RavenDB-13474 add to time series cache
-                        break;
-                    case CommandType.TimeSeriesCopy:
-                        break;
-                    case CommandType.BatchPATCH:
-                        break;
-                    default:
-                        throw new NotSupportedException($"Command '{type}' is not supported.");
-                }
-            }
+            HandleBatchOperationResult(result, start: 0, _sessionCommandsCount, isDeferred: false);
+            HandleBatchOperationResult(result, start: _sessionCommandsCount, _allCommandsCount, isDeferred: true);
 
             FinalizeResult();
         }
 
-        private void HandleBatchOperationResult(int start, BatchCommandResult result)
+        private void HandleBatchOperationResult(BatchCommandResult result, int start, int end, bool isDeferred)
         {
-            for (var i = start; i < _sessionCommandsCount; i++)
+            int skip = 0;
+
+            for (var i = start; i < end; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
                 if (batchResult == null)
                     continue;
 
-                var type = GetCommandType(batchResult);
-
-                switch (type)
+                if (isDeferred)
                 {
-                    case CommandType.PUT:
-                        HandlePut(i - start, batchResult, isDeferred: false);
-                        break;
-                    case CommandType.ForceRevisionCreation:
-                        HandleForceRevisionCreation(batchResult);
-                        break;
-                    case CommandType.DELETE:
-                        HandleDelete(batchResult);
-                        break;
-                    case CommandType.CompareExchangePUT:
-                        HandleCompareExchangePut(batchResult);
-                        break;
-                    case CommandType.CompareExchangeDELETE:
-                        HandleCompareExchangeDelete(batchResult);
-                        break;
-       
-                    default:
-                        throw new NotSupportedException($"Command '{type}' is not supported.");
+                    HandleDeferredCommand(i, batchResult);
                 }
+                else
+                {
+                    HandleSessionCommand(i, batchResult, ref skip);
+                }
+            }
+        }
+
+        private void HandleSessionCommand(int index, BlittableJsonReaderObject batchResult, ref int skip)
+        {
+            CommandType type = GetCommandType(batchResult);
+            switch (type)
+            {
+                case CommandType.PUT:
+                    HandlePut(index - skip, batchResult, isDeferred: false);
+                    break;
+                case CommandType.ForceRevisionCreation:
+                    HandleForceRevisionCreation(batchResult);
+                    break;
+                case CommandType.DELETE:
+                    HandleDelete(batchResult);
+                    break;
+                case CommandType.CompareExchangePUT:
+                    HandleCompareExchangePut(batchResult);
+                    break;
+                case CommandType.CompareExchangeDELETE:
+                    HandleCompareExchangeDelete(batchResult);
+                    break;
+                case CommandType.BatchTrackChanges:
+                    skip++;
+                    break;
+                default:
+                    throw new NotSupportedException($"Command '{type}' is not supported.");
+            }
+        }
+
+        private void HandleDeferredCommand(int index, BlittableJsonReaderObject batchResult)
+        {
+            CommandType type = GetCommandType(batchResult);
+            switch (type)
+            {
+                case CommandType.PUT:
+                    HandlePut(index, batchResult, isDeferred: true);
+                    break;
+                case CommandType.DELETE:
+                    HandleDelete(batchResult);
+                    break;
+                case CommandType.PATCH:
+                    HandlePatch(batchResult);
+                    break;
+                case CommandType.JsonPatch:
+                    HandleJsonPatch(batchResult);
+                    break;
+                case CommandType.AttachmentPUT:
+                    HandleAttachmentPut(batchResult);
+                    break;
+                case CommandType.AttachmentDELETE:
+                    HandleAttachmentDelete(batchResult);
+                    break;
+                case CommandType.AttachmentMOVE:
+                    HandleAttachmentMove(batchResult);
+                    break;
+                case CommandType.AttachmentCOPY:
+                    HandleAttachmentCopy(batchResult);
+                    break;
+                case CommandType.CompareExchangePUT:
+                case CommandType.CompareExchangeDELETE:
+                case CommandType.ForceRevisionCreation:
+                    break;
+                case CommandType.Counters:
+                    HandleCounters(batchResult);
+                    break;
+                case CommandType.TimeSeries:
+                case CommandType.TimeSeriesWithIncrements:
+                    //TODO: RavenDB-13474 add to time series cache
+                    break;
+                case CommandType.TimeSeriesCopy:
+                    break;
+                case CommandType.BatchPATCH:
+                    break;
+                case CommandType.BatchTrackChanges:
+                    break;
+                default:
+                    throw new NotSupportedException($"Command '{type}' is not supported.");
             }
         }
 
@@ -556,7 +562,6 @@ namespace Raven.Client.Documents.Session.Operations
 
                 documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
             }
-            //TODO: egor check if we can use docInfo in _trackedEntities so the obj is tracked
             documentInfo.Id = id;
             documentInfo.ChangeVector = changeVector;
        

@@ -101,11 +101,7 @@ public sealed class ShardedBatchCommandsReader : AbstractBatchCommandsReader<Sha
 
     protected override void CreateBatchTrackChangesCommand(BatchRequestParser.CommandData commandData)
     {
-        //TODO: egor
-        // commandData.BatchTrackChangesCommand = new BatchTrackChangesCommand(commandData.TrackedEntities, _databaseContext);
-
-        throw new NotSupportedInShardingException($"BatchTrackChangesCommand is not supported in sharding.");
-
+        throw new NotSupportedInShardingException("BatchTrackChangesCommand is not supported in sharding.");
     }
 
     public override void Dispose()

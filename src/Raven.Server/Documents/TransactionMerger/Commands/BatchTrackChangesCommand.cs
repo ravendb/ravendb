@@ -9,24 +9,25 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
     public sealed class BatchTrackChangesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly Dictionary<string, string> _trackedEntities;
-        private readonly DocumentDatabase _database;
 
-        public BatchTrackChangesCommand(Dictionary<string, string> trackedEntities, DocumentDatabase database)
+        public BatchTrackChangesCommand(Dictionary<string, string> trackedEntities)
         {
             _trackedEntities = trackedEntities;
-            _database = database;
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            foreach (Document document in _database.DocumentsStorage.GetDocuments(context, _trackedEntities.Keys, start: 0, take: int.MaxValue, DocumentFields.Id | DocumentFields.ChangeVector))
+            foreach (Document document in context.DocumentDatabase.DocumentsStorage.GetDocuments(context, _trackedEntities.Keys, start: 0, take: int.MaxValue, DocumentFields.Id | DocumentFields.ChangeVector))
             {
-                ChangeVector current = context.GetChangeVector(document.ChangeVector);
                 var expected = _trackedEntities[document.Id];
+                if (expected == null)
+                    continue;
+
+                ChangeVector current = context.GetChangeVector(document.ChangeVector);
 
                 if (current.IsEqual(context.GetChangeVector(expected)) == false)
                 {
-                    throw new ConcurrencyException("Document change vector mismatch")
+                    throw new ConcurrencyException($"Document '{document.Id}' has been modified since it was loaded. The expected change vector '{expected}' does not match the current change vector '{document.ChangeVector}'.")
                     {
                         Id = document.Id,
                         ActualChangeVector = document.ChangeVector,
@@ -38,19 +39,21 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             return 1;
         }
 
-
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new BatchTrackChangesCommandDto();
+            return new BatchTrackChangesCommandDto
+            {
+                TrackedEntities = _trackedEntities
+            };
         }
 
         public sealed class BatchTrackChangesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
         {
+            public Dictionary<string, string> TrackedEntities { get; set; }
 
             public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return null;
-                // return new BatchTrackChangesCommand();
+                return new BatchTrackChangesCommand(TrackedEntities);
             }
         }
 
@@ -68,5 +71,6 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
             return dic;
         }
+
     }
 }

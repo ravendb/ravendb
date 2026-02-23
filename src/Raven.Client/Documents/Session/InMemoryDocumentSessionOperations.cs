@@ -90,6 +90,7 @@ namespace Raven.Client.Documents.Session
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
         internal readonly KnownMissingIdsHolder _knownMissingIds;
+
         private Dictionary<string, object> _externalState;
 
         public IDictionary<string, object> ExternalState => _externalState ??= new Dictionary<string, object>();
@@ -130,8 +131,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         internal readonly DeletedEntitiesHolder DeletedEntities = new DeletedEntitiesHolder();
 
-        internal readonly TrackedEntitiesHolder TrackedEntities ;
-
+        internal readonly TrackedEntitiesHolder TrackedEntities;
 
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
@@ -240,7 +240,6 @@ namespace Raven.Client.Documents.Session
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
 
-            //TODO: egor drop this NoTracking
             NoTracking = options.TrackingMode == TrackingMode.NoTracking;
             TrackingMode = options.TrackingMode;
 
@@ -2904,18 +2903,16 @@ more responsive application.
     {
         private readonly Dictionary<string, string> _trackedEntities = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly TrackingMode TrackingMode;
-
-        private bool ShouldTrack => TrackingMode == TrackingMode.TrackAllEntities;
+        private readonly bool _shouldTrack;
 
         public TrackedEntitiesHolder(TrackingMode trackingMode)
         {
-            TrackingMode = trackingMode;
+            _shouldTrack = trackingMode == TrackingMode.TrackAllEntities;
         }
 
         public bool Any()
         {
-            if (ShouldTrack)
+            if (_shouldTrack)
                 return _trackedEntities.Any();
 
             return false;
@@ -2923,13 +2920,13 @@ more responsive application.
 
         public void TryRemove(string id)
         {
-            if (ShouldTrack)
+            if (_shouldTrack)
                 _trackedEntities.Remove(id);
         }
 
         public void TryAdd(string entity, string cv)
         {
-            if (ShouldTrack && _trackedEntities.ContainsKey(entity) == false)
+            if (_shouldTrack && _trackedEntities.ContainsKey(entity) == false)
             {
                 _trackedEntities[entity] = cv;
             }
@@ -2937,7 +2934,7 @@ more responsive application.
 
         public void Clear()
         {
-            if (ShouldTrack)
+            if (_shouldTrack)
                 _trackedEntities.Clear();
         }
 
@@ -2945,7 +2942,7 @@ more responsive application.
         {
             cv = null;
 
-            if (ShouldTrack == false)
+            if (_shouldTrack == false)
                 return false;
 
             if (_trackedEntities.TryGetValue(id, out cv))
@@ -2969,7 +2966,7 @@ more responsive application.
         {
             set
             {
-                if (ShouldTrack)
+                if (_shouldTrack)
                     _trackedEntities[id] = value;
 
             }
@@ -2991,7 +2988,6 @@ more responsive application.
 
         private readonly TrackedEntitiesHolder _trackedEntities;
 
-
         public KnownMissingIdsHolder(TrackedEntitiesHolder trackedEntities)
         {
             _trackedEntities = trackedEntities;
@@ -3004,8 +3000,9 @@ more responsive application.
 
         public bool Any()
         {
-                return _knownMissingIds.Any();
+            return _knownMissingIds.Any();
         }
+
         public bool Contains(string id)
         {
             return _knownMissingIds.Contains(id);
