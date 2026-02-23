@@ -782,7 +782,7 @@ public static partial class CoraxQueryBuilder
     
     private static IQueryMatch HandleWhen(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization, bool exact, int? proximity)
     {
-        PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Conditional exists requires exactly 2 arguments, but got {expression.Arguments.Count}");
+        PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
         var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery((BinaryExpression)expression.Arguments[0], builderParameters.QueryParameters);
         if (constantExpressionResult == false)

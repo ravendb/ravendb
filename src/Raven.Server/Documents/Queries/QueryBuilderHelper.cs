@@ -881,7 +881,7 @@ public static class QueryBuilderHelper
         }
         
         if (constantExpression.Left is not FieldExpression leftField)
-            throw new InvalidOperationException($"Expected field expression, but got: {constantExpression.Left}");
+            throw new InvalidOperationException($"Expected parameter field (e.g. $p0), but got: '{constantExpression.Left}'.");
         
         bool paramIsMissing = false;
         Debug.Assert(leftField.FieldValue.StartsWith('$'));
@@ -894,6 +894,8 @@ public static class QueryBuilderHelper
         var rightExpression = (ValueExpression)constantExpression.Right;
         if ((paramIsMissing || paramValue is null) && rightExpression.Value is not ValueTokenType.Null)
         {
+            //The left side is null or does not exist in parameter JSON, the right side is a non-null value. E.g.:
+            // $p0 != 1.0 // true
             return constantExpression.Operator switch
             {
                 OperatorType.NotEqual => true,

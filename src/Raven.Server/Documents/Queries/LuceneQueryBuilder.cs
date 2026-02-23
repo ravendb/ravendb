@@ -721,7 +721,7 @@ namespace Raven.Server.Documents.Queries
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
             List<string> buildSteps = null)
         {
-            PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Conditional exists requires exactly 2 arguments, but got {expression.Arguments.Count}");
+            PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
             var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery((BinaryExpression)expression.Arguments[0], parameters);
             if (constantExpressionResult == false)
