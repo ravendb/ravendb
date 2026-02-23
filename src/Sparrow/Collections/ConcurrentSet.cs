@@ -76,7 +76,8 @@ namespace Sparrow.Collections
 
         public IEnumerator<T> GetEnumerator()
         {
-            return _inner.Keys.GetEnumerator();
+            foreach (var item in _inner)
+                yield return item.Key;
         }
 
         IEnumerator IEnumerable.GetEnumerator()

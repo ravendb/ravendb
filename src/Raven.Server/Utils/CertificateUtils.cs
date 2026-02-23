@@ -232,7 +232,7 @@ namespace Raven.Server.Utils
             return (certBytes1, certBytes2);
         }
 
-        private static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
+        internal static void RemoveOldTestCertificatesFromOsStore(string commonNameValue)
         {
             // We have the same logic in AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts when the server starts
             // and when we renew a certificate. There we delete certificates only if expired but here in the tests we delete them all and keep

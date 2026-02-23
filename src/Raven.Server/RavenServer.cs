@@ -1698,7 +1698,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, StringBuilder log = null)
         {
             var authenticationStatus = new AuthenticateConnection(TwoFactor)
             {
@@ -1725,13 +1725,14 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
-            else if (CertificateHasWellKnownIssuer(certificate, out var issuer))
+            else if (CertificateHasWellKnownIssuer(certificate, out var issuer, log))
             {
                 string authLogMessage;
 
                 if (Configuration.Security.ValidateSanForCertificateWithWellKnownIssuer)
                 {
-                    if (AreCertificateSansValid(certificate))
+                    log?.AppendLine($"Validating SAN for certificate with {certificate.GetDisplayName()} ({certificate.Thumbprint}) well known issuer '{issuer}'");
+                    if (AreCertificateSansValid(certificate, log))
                     {
                         authLogMessage =
                             $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
@@ -3044,14 +3045,18 @@ namespace Raven.Server
             return serverCertificate != null && certificate.Equals(serverCertificate);
         }
 
-        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer)
+        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer, StringBuilder log = null)
         {
             issuer = null;
             if (WellKnownIssuers == null)
+            {
+                log?.AppendLine("No well known issuers configured");
                 return false;
+            }
 
             foreach (var knownIssuer in WellKnownIssuers)
             {
+                log?.AppendLine($"Checking if {knownIssuer.GetDisplayName()} ({knownIssuer.Thumbprint}) is a well known issuer for {cert.GetDisplayName()} ({cert.Thumbprint})");
                 using var chain = new X509Chain(false);
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 chain.ChainPolicy.DisableCertificateDownloads = true;
@@ -3061,14 +3066,16 @@ namespace Raven.Server
                 if (chain.Build(cert))
                 {
                     issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
+                    log?.AppendLine($"Issuer is a well known issuer: {issuer} for {cert.GetDisplayName()} ({cert.Thumbprint})");
                     return true;
                 }
             }
 
+            log?.AppendLine($"No well known issuer found for {cert.GetDisplayName()} ({cert.Thumbprint})");
             return false;
         }
 
-        private bool AreCertificateSansValid(X509Certificate2 cert)
+        private bool AreCertificateSansValid(X509Certificate2 cert, StringBuilder log = null)
         {
             var serverDomain = new Uri(ServerStore.GetNodeHttpServerUrl()).Host;
             var sans = CertificateUtils.GetCertificateAlternativeNames(cert).ToList();
@@ -3078,12 +3085,14 @@ namespace Raven.Server
                 {
                     _authAuditLog.Info("Certificate does not contain any SAN.");
                 }
+                log?.AppendLine("Certificate does not contain any SAN.");
 
                 return false;
             }
 
             foreach (var san in sans)
             {
+                log?.AppendLine($"Checking if {san} is a valid SAN for domain {serverDomain}");
                 if (san.StartsWith("*."))
                 {
                     var array = san.Split("*.");
@@ -3093,6 +3102,7 @@ namespace Raven.Server
                         {
                             _authAuditLog.Info($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
                         }
+                        log?.AppendLine($"Certificate {cert.Thumbprint} contains invalid SAN {san}");
 
                         continue;
                     }
@@ -3101,16 +3111,21 @@ namespace Raven.Server
                         serverDomain.Length > array[1].Length &&
                         serverDomain[..(serverDomain.Length - array[1].Length - 1)].Contains('.') == false)
                     {
+                        log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) contains valid SAN {san}");
                         return true;
                     }
                 }
                 else
                 {
                     if (string.Compare(serverDomain, san, StringComparison.OrdinalIgnoreCase) == 0)
+                    {
+                        log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) contains valid SAN {san}");
                         return true;
+                    }
                 }
             }
 
+            log?.AppendLine($"Certificate {cert.GetDisplayName()} ({cert.Thumbprint}) does not contain a valid SAN for domain {serverDomain}");
             return false;
         }
 

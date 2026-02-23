@@ -18,6 +18,7 @@ namespace SlowTests.Issues
 
         public RavenDB_3620(ITestOutputHelper output) : base(output)
         {
+            _client.DefaultRequestHeaders.UserAgent.ParseAdd("RavenDB_3620-test");
         }
 
         [Fact]
