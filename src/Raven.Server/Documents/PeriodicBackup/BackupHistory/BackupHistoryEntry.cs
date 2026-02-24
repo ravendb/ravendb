@@ -1,11 +1,10 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.Backups;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 
-public class BackupHistoryEntry : IDynamicJsonValueConvertible
+public class BackupHistoryEntry : IDynamicJson
 {
     public BackupHistoryEntry() { }
 
