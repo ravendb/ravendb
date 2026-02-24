@@ -516,7 +516,6 @@ public class ChatCompletionClient : IDisposable
         bool streaming,
         string schema)
      {
-         messages = messages.Where(m => m.TryGet("role", out string role) == false || role != Constants.RequestFields.RoleInternalValue).ToList();
 
         if (_settings.Model is null)
             throw new ArgumentNullException(nameof(_settings.Model));
@@ -531,7 +530,9 @@ public class ChatCompletionClient : IDisposable
                     return;
                 }
 
-                WriteCompletionRequestPayload(writer, ctx, messages, attachments, tools, useTools, streaming, schema);
+                WriteCompletionRequestPayload(writer, ctx, 
+                    messages.Where(IsValidMessage) // IEnumerable of valid messages
+                    , attachments, tools, useTools, streaming, schema);
             }
         }, ConventionsToUse);
 
@@ -545,6 +546,9 @@ public class ChatCompletionClient : IDisposable
         };
 
         return request;
+
+        static bool IsValidMessage(BlittableJsonReaderObject msg) 
+            => msg.TryGet("role", out string role) == false || role != Constants.RequestFields.RoleInternalValue; // isn't an internal message
     }
 
     public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments, List<BlittableJsonReaderObject> tools, bool useTools, bool streaming,
