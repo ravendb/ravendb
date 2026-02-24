@@ -59,8 +59,6 @@ public class RavenDB_25419 : RavenTestBase
 
             var ex = Assert.Throws<RavenException>(() => src.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(addEtlOperationResult.TaskId, configuration)));
             Assert.Contains("Changing Name of ETL is not supported", ex.Message);
-            
-            WaitForUserToContinueTheTest(src);
         }
     }
 }
