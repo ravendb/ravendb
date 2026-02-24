@@ -62,7 +62,7 @@ function NoLicenseToGenerate() {
     return (
         <div>
             <h2 className="mb-1">Enter license key</h2>
-            <p className="mb-4 text-muted">You can either use your existing key or generate a free license.</p>
+            <p className="mb-4 text-muted">Enter your existing license key or generate a free one.</p>
 
             <FormGroup>
                 <FormLabel>Your key</FormLabel>
@@ -420,6 +420,8 @@ function SkipLicenseVerificationConfirmModal(props: { close: () => void }) {
                 applied
                 <br />
                 <Icon icon="check" color="success" /> Limited set of features
+                <br />
+                <Icon icon="check" color="success" /> Unsecure mode only (no HTTPS or certificates)
                 <br />
                 <Icon icon="check" color="success" /> Max of 1 node in cluster, 3 CPU cores, and 6 GB RAM memory usage
                 <p className="mt-3 mb-0">

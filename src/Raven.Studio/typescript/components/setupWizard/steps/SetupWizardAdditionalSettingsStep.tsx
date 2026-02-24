@@ -34,9 +34,7 @@ export function SetupWizardAdditionalSettingsStep() {
         <div className="setup-wizard-additional-settings">
             <div className="mb-4">
                 <h2 className="mb-1">Additional settings</h2>
-                <p className="mb-4 text-muted">
-                    At this optional step you may control some of optional settings regarding your setup.
-                </p>
+                <p className="mb-4 text-muted">At this step, you can configure optional settings for your setup.</p>
             </div>
             {getLicenseType(licenseInfo).isHigherThan("None") && securityOption !== "none" && (
                 <div>
@@ -50,7 +48,7 @@ export function SetupWizardAdditionalSettingsStep() {
                 <h3 className="mb-1">Configure advanced options</h3>
                 <FormSwitch size="lg" name="additionalSettingsStep.isAdvancedSettingsVisible" control={control} />
             </div>
-            <p className="text-muted">Settings you may want to consider as an experienced user</p>
+            <p className="text-muted">Settings you may want to configure if you&#39;re an experienced user.</p>
             <AdvancedSettingsContent control={control} isVisible={additionalSettingsStep.isAdvancedSettingsVisible} />
         </div>
     );
@@ -168,8 +166,8 @@ function ServerEnvironmentSection({
                                     className="mb-2 w-100"
                                 />
                                 <span>
-                                    Studio environment allows you to add a visual identifier to the UI, making it easier
-                                    to distinguish between multiple environments when working simultaneously.
+                                    The Studio environment allows you to add a visual identifier to the UI, making it
+                                    easier to distinguish between multiple environments when working simultaneously.
                                 </span>
                             </>
                         }
@@ -206,8 +204,8 @@ function CertificateExpirationSection({ control }: { control: Control<SetupWizar
                 <PopoverWithHoverWrapper
                     message={
                         <>
-                            This allows you to define how long the admin client certificate should be valid. By default,
-                            this value is set to 60 months.
+                            This defines how long the admin client certificate will be valid. By default, this value is
+                            set to 60 months.
                         </>
                     }
                     placement="right"
@@ -240,7 +238,8 @@ function ExperimentalFeaturesSection({ control, licenseInfo }: ExperimentalFeatu
         <div>
             <h4 className="mb-0">Experimental features</h4>
             <p className="text-muted">
-                Some features, like ones recently released, are considered experimental and are disabled by default.
+                Some newly released features are considered experimental and are disabled by default. Toggle on to
+                enable them.
             </p>
             <PostgreSqlIntegrationToggle control={control} />
         </div>
@@ -258,7 +257,7 @@ function PostgreSqlIntegrationToggle({ control }: { control: Control<SetupWizard
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Enabling this feature allows you to use RavenDB as a PostgreSQL server. You will also need a license that contains PostgreSQL Protocol."
+                                    description="Enabling this feature allows RavenDB to function as a PostgreSQL server. Requires a license that includes the PostgreSQL Protocol."
                                     docsLink="https://docs.ravendb.net/integrations/postgresql-protocol/overview/"
                                 />
                             }
@@ -268,7 +267,8 @@ function PostgreSqlIntegrationToggle({ control }: { control: Control<SetupWizard
                         </PopoverWithHoverWrapper>
                     </strong>
                     <small className="postgresql-integration__description">
-                        RavenDB supports the PostgreSQL protocol, enabling tools like Power BI to access its database.
+                        RavenDB supports the PostgreSQL protocol, enabling external tools such as Power BI to access the
+                        database.
                     </small>
                 </div>
                 <Icon className="postgresql-integration__icon" size="lg" icon="integrations" />
@@ -286,9 +286,9 @@ const getDefaultPath = (os: OperatingSystem, type: "certificate" | "dataDirector
     const isUnix = os === "Linux" || os === "MacOS";
 
     const paths = {
-        certificate: isUnix ? "/etc/ravendb/security/server.pfx" : "C:\\RavenDB\\Certificate\\server.pfx",
-        dataDirectory: isUnix ? "/var/lib/ravendb/data" : "C:\\RavenDB\\Data",
-        logs: isUnix ? "/logs" : "C:\\RavenDB\\Logs",
+        certificate: isUnix ? "e.g. /etc/ravendb/security/server.pfx" : "e.g. C:\\RavenDB\\Certificate\\server.pfx",
+        dataDirectory: isUnix ? "e.g. /var/lib/ravendb/data" : "e.g. C:\\RavenDB\\Data",
+        logs: isUnix ? "e.g. /logs" : "e.g. C:\\RavenDB\\Logs",
     };
 
     return paths[type];
@@ -353,8 +353,16 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             isActive: isVisible,
                             message: (
                                 <SetupWizardInfoPopover
-                                    description="Defines the path to the RavenDB data directory."
-                                    docsLink="https://docs.ravendb.net/server/storage/customizing-raven-data-files-locations"
+                                    description={
+                                        <ul>
+                                            <li>Defines the path to the RavenDB data directory2.</li>
+                                            <li>
+                                                By default, data is stored in the <code>RavenData</code> folder under
+                                                the extracted <code>Server</code> directory.
+                                            </li>
+                                        </ul>
+                                    }
+                                    docsLink="https://docs.ravendb.net/server/storage/directory-structure"
                                 />
                             ),
                         }}
@@ -373,8 +381,8 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                 />
                 {isVisible && isAbsolutePath(dataDirectory) && (
                     <RichAlert variant="warning" className="mt-2">
-                        This path will be used on all nodes. Please ensure this directory exists on each node, as setup
-                        will fail otherwise.
+                        This path will be used on all nodes. Make sure this directory exists on each node; otherwise,
+                        the setup will fail.
                     </RichAlert>
                 )}
             </FormGroup>
@@ -388,7 +396,23 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                     isActive: isVisible,
                                     message: (
                                         <SetupWizardInfoPopover
-                                            description="Indicates where the server certificate will be saved on your system. Make sure the location is accessible and has the required write permissions"
+                                            description={
+                                                <ul>
+                                                    <li>
+                                                        Specifies the <strong>full file path</strong> (including the{" "}
+                                                        <code>.pfx</code> extension) where the server certificate will
+                                                        be stored.
+                                                    </li>
+                                                    <li>
+                                                        Make sure the directory exists and has the required write
+                                                        permissions on <strong>every node</strong>.
+                                                    </li>
+                                                    <li>
+                                                        By default, RavenDB stores your server certificate directly
+                                                        under the extracted <code>Server</code> folder.
+                                                    </li>
+                                                </ul>
+                                            }
                                             docsLink="https://docs.ravendb.net/server/configuration/security-configuration#securitycertificatepath"
                                         />
                                     ),
@@ -398,10 +422,6 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                 <Icon icon="info-new" />
                             </ConditionalPopover>
                         </div>
-                        <small className="text-muted">
-                            This specifies the location where the server certificate will be stored after the server is
-                            created
-                        </small>
                     </FormLabel>
                     <FormPathSelector
                         disabled={!isVisible}
@@ -414,8 +434,8 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                     />
                     {isVisible && !!setupCertificatePath && (
                         <RichAlert variant="warning" className="mt-2">
-                            This path must exist; the certificate will be saved here. After setup, ensure it is present
-                            at the same path on every node; otherwise, cluster setup may fail.
+                            This path must exist as the certificate will be saved here. After setup, ensure the
+                            certificate is available at the same path on every node; otherwise, cluster setup may fail.
                         </RichAlert>
                     )}
                 </FormGroup>
@@ -428,7 +448,15 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             isActive: isVisible,
                             message: (
                                 <SetupWizardInfoPopover
-                                    description="Defines the path to the logs directory."
+                                    description={
+                                        <ul>
+                                            <li>Defines the path to the logs directory.</li>
+                                            <li>
+                                                By default, RavenDB stores logs in the <code>Logs</code> directory under
+                                                the extracted <code>Server</code> folder.
+                                            </li>
+                                        </ul>
+                                    }
                                     docsLink="https://docs.ravendb.net/server/troubleshooting/logging"
                                 />
                             ),
