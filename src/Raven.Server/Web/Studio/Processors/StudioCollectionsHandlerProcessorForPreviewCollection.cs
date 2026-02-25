@@ -46,7 +46,7 @@ public sealed class StudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         _totalResults = IsAllDocsCollection
             ? _database.DocumentsStorage.GetNumberOfDocuments(_context)
-            : _database.DocumentsStorage.GetCollection(Collection, _context).Count;
+            : _database.DocumentsStorage.GetNumberOfDocumentsFor(Collection, _context);
     }
 
     protected override JsonOperationContext GetContext()

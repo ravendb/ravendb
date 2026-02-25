@@ -32,24 +32,22 @@ export function SetupWizardAdditionalSettingsStep() {
 
     return (
         <div className="setup-wizard-additional-settings">
+            <div className="mb-4">
+                <h2 className="mb-1">Additional settings</h2>
+                <p className="mb-4 text-muted">
+                    At this optional step you may control some of optional settings regarding your setup.
+                </p>
+            </div>
             {getLicenseType(licenseInfo).isHigherThan("None") && securityOption !== "none" && (
-                <>
-                    <div className="mb-4">
-                        <h2 className="mb-1">Additional settings</h2>
-                        <p className="mb-4 text-muted">
-                            At this optional step you may control some of optional settings regarding your setup.
-                        </p>
-                    </div>
-                    <div>
-                        <ServerEnvironmentSection control={control} licenseInfo={licenseInfo} />
-                        <CertificateExpirationSection control={control} />
-                        <HrHeader />
-                    </div>
-                </>
+                <div>
+                    <ServerEnvironmentSection control={control} licenseInfo={licenseInfo} />
+                    <CertificateExpirationSection control={control} />
+                    <HrHeader />
+                </div>
             )}
             <ExperimentalFeaturesSection control={control} licenseInfo={licenseInfo} />
             <div className="d-flex gap-2 align-items-center">
-                <h2 className="mb-1">Configure advanced options</h2>
+                <h3 className="mb-1">Configure advanced options</h3>
                 <FormSwitch size="lg" name="additionalSettingsStep.isAdvancedSettingsVisible" control={control} />
             </div>
             <p className="text-muted">Settings you may want to consider as an experienced user</p>

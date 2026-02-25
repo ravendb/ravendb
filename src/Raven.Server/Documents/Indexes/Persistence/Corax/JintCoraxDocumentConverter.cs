@@ -272,7 +272,7 @@ public abstract class CoraxJintDocumentConverterBase : CoraxDocumentConverterBas
                 
                 var fieldId = baseLine + i;
                 
-                builder.Write( fieldId, _compoundFieldsBuffer.AsSpan()[..totalLen]);
+                builder.WriteCompound(fieldId, _compoundFieldsBuffer.AsSpan()[..totalLen]);
             }
 
             if (_compoundFieldsBuffer.Length > 64 * 1024)

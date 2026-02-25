@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.Fixed;
 using Voron.Util.Conversion;
 using Xunit;
 using Xunit.Abstractions;
@@ -521,5 +524,326 @@ namespace SlowTests.Voron
                 }
             }
         }
+
+        #region GetNumberOfEntriesAfter Tests
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(10, EstimationAccuracy.Exact)]
+        [InlineData(10, EstimationAccuracy.Estimated)]
+        [InlineData(100, EstimationAccuracy.Exact)]
+        [InlineData(100, EstimationAccuracy.Estimated)]
+        [InlineData(1000, EstimationAccuracy.Exact)]
+        [InlineData(1000, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_SmallTree_WithAndWithoutEstimate(int count, EstimationAccuracy accuracy)
+        {
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                for (int i = 0; i < count; i++)
+                {
+                    fst.Add(i, new byte[sizeof(long)]);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                for (int i = 0; i < count; i++)
+                {
+                    var actualCount = fst.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew(), accuracy);
+                    var expectedCount = CalculateExpectedEntriesAfter(fst, i, out long expectedTotalCount);
+
+                    Assert.Equal(count, expectedTotalCount);
+                    Assert.Equal(expectedTotalCount, totalCount);
+                    Assert.Equal(expectedCount, actualCount);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(10000, EstimationAccuracy.Exact)]
+        [InlineData(10000, EstimationAccuracy.Estimated)]
+        [InlineData(50000, EstimationAccuracy.Exact)]
+        [InlineData(50000, EstimationAccuracy.Estimated)]
+        [InlineData(100000, EstimationAccuracy.Exact)]
+        [InlineData(100000, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_LargeTree_WithAndWithoutEstimate(int count, EstimationAccuracy accuracy)
+        {
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                for (int i = 0; i < count; i++)
+                {
+                    fst.Add(i, new byte[sizeof(long)]);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                // Test at specific positions to reduce test time for large trees
+                int[] testPositions = { 0, count / 4, count / 2, 3 * count / 4, count - 1, count };
+
+                foreach (var position in testPositions)
+                {
+                    var actualCount = fst.GetNumberOfEntriesAfter(position, out long totalCount, Stopwatch.StartNew(), accuracy);
+                    var expectedCount = CalculateExpectedEntriesAfter(fst, position, out long expectedTotalCount);
+
+                    Assert.Equal(count, expectedTotalCount);
+                    Assert.Equal(expectedTotalCount, totalCount);
+                    Assert.Equal(expectedCount, actualCount);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(13, 2, EstimationAccuracy.Exact)]
+        [InlineData(13, 2, EstimationAccuracy.Estimated)]
+        [InlineData(5111, 2, EstimationAccuracy.Exact)]
+        [InlineData(5111, 2, EstimationAccuracy.Estimated)]
+        [InlineData(5111, 5, EstimationAccuracy.Exact)]
+        [InlineData(5111, 5, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_WithGaps_WithAndWithoutEstimate(int total, int mod, EstimationAccuracy accuracy)
+        {
+            // Insert entries with gaps (only entries where i % mod == 0)
+            DoWorkWithGaps(total, mod, modZero: true, accuracy);
+            // Insert entries with gaps (only entries where i % mod != 0)
+            DoWorkWithGaps(total, mod, modZero: false, accuracy);
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineDataWithRandomSeed]
+        public void GetNumberOfEntriesAfter_Random_WithoutEstimate(int seed)
+        {
+            var random = new Random(seed);
+            var total = random.Next(10, 10_000);
+            var mod = random.Next(2, 100);
+
+            DoWorkWithGaps(total, mod, modZero: true, EstimationAccuracy.Exact);
+            DoWorkWithGaps(total, mod, modZero: false, EstimationAccuracy.Exact);
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineDataWithRandomSeed]
+        public void GetNumberOfEntriesAfter_Random_WithEstimate(int seed)
+        {
+            var random = new Random(seed);
+            var total = random.Next(10, 10_000);
+            var mod = random.Next(2, 100);
+
+            DoWorkWithGaps(total, mod, modZero: true, EstimationAccuracy.Estimated);
+            DoWorkWithGaps(total, mod, modZero: false, EstimationAccuracy.Estimated);
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(0, EstimationAccuracy.Exact)]
+        [InlineData(0, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_EmptyTree_ReturnsZero(int count, EstimationAccuracy accuracy)
+        {
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+                // Don't add any entries
+
+                var actualCount = fst.GetNumberOfEntriesAfter(0, out long totalCount, Stopwatch.StartNew(), accuracy);
+
+                Assert.Equal(0, totalCount);
+                Assert.Equal(0, actualCount);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1, EstimationAccuracy.Exact)]
+        [InlineData(1, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_SingleEntry_WithAndWithoutEstimate(int count, EstimationAccuracy accuracy)
+        {
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+                fst.Add(100, new byte[sizeof(long)]);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                // Query before the entry
+                var beforeCount = fst.GetNumberOfEntriesAfter(50, out long totalCount1, Stopwatch.StartNew(), accuracy);
+                Assert.Equal(1, totalCount1);
+                Assert.Equal(1, beforeCount);
+
+                // Query at the entry
+                var atCount = fst.GetNumberOfEntriesAfter(100, out long totalCount2, Stopwatch.StartNew(), accuracy);
+                Assert.Equal(1, totalCount2);
+                Assert.Equal(0, atCount);
+
+                // Query after the entry
+                var afterCount = fst.GetNumberOfEntriesAfter(150, out long totalCount3, Stopwatch.StartNew(), accuracy);
+                Assert.Equal(1, totalCount3);
+                Assert.Equal(0, afterCount);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1000, EstimationAccuracy.Exact)]
+        [InlineData(1000, EstimationAccuracy.Estimated)]
+        [InlineData(10000, EstimationAccuracy.Exact)]
+        [InlineData(10000, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_QueryBeyondLastEntry_ReturnsZero(int count, EstimationAccuracy accuracy)
+        {
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                for (int i = 0; i < count; i++)
+                {
+                    fst.Add(i, new byte[sizeof(long)]);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                // Query way beyond the last entry
+                var actualCount = fst.GetNumberOfEntriesAfter(count + 1000, out long totalCount, Stopwatch.StartNew(), accuracy);
+
+                Assert.Equal(count, totalCount);
+                Assert.Equal(0, actualCount);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1000, EstimationAccuracy.Exact)]
+        [InlineData(1000, EstimationAccuracy.Estimated)]
+        [InlineData(10000, EstimationAccuracy.Exact)]
+        [InlineData(10000, EstimationAccuracy.Estimated)]
+        public void GetNumberOfEntriesAfter_QueryBeforeFirstEntry_ReturnsAll(int count, EstimationAccuracy accuracy)
+        {
+            Slice treeId;
+            Slice.From(Allocator, "test", out treeId);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                // Start entries from 100 so we can query before them
+                for (int i = 0; i < count; i++)
+                {
+                    fst.Add(i + 100, new byte[sizeof(long)]);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
+
+                // Query before all entries
+                var actualCount = fst.GetNumberOfEntriesAfter(0, out long totalCount, Stopwatch.StartNew(), accuracy);
+
+                Assert.Equal(count, totalCount);
+                Assert.Equal(count, actualCount);
+            }
+        }
+
+        private void DoWorkWithGaps(int total, int mod, bool modZero, EstimationAccuracy accuracy)
+        {
+            var inserted = 0;
+            var treeName = Guid.NewGuid().ToString("N");
+
+            using (var txw = Env.WriteTransaction())
+            {
+                Slice treeNameSlice;
+                Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
+
+                var tree = txw.GetGlobalFixedSizeTree(treeNameSlice, sizeof(long));
+
+                for (var i = 0; i < total; i++)
+                {
+                    var modResult = i % mod;
+
+                    if (modZero && modResult == 0)
+                        continue;
+
+                    if (modZero == false && modResult != 0)
+                        continue;
+
+                    tree.Add(i, new byte[sizeof(long)]);
+                    inserted++;
+                }
+
+                txw.Commit();
+            }
+
+            using (var txr = Env.ReadTransaction())
+            {
+                var tree = txr.FixedTreeFor(treeName, sizeof(long));
+
+                for (var i = 0; i < total; i++)
+                {
+                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew(), accuracy);
+                    var expectedCount = CalculateExpectedEntriesAfter(tree, i, out long expectedTotalCount);
+
+                    Assert.Equal(inserted, expectedTotalCount);
+                    Assert.Equal(expectedTotalCount, totalCount);
+                    Assert.Equal(expectedCount, count);
+                }
+            }
+        }
+
+        private static long CalculateExpectedEntriesAfter(FixedSizeTree fst, long afterValue, out long totalCount)
+        {
+            totalCount = fst.NumberOfEntries;
+            if (totalCount == 0)
+                return 0;
+
+            long count = 0;
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(afterValue) == false)
+                    return 0;
+
+                do
+                {
+                    if (it.CurrentKey == afterValue)
+                        continue;
+
+                    count++;
+                } while (it.MoveNext());
+            }
+
+            return count;
+        }
+
+        #endregion
     }
 }

@@ -11,8 +11,7 @@ class getDatabaseSettingsCommand extends commandBase {
     execute(): JQueryPromise<Raven.Server.Config.SettingsResult> {
         const url = endpoints.databases.adminConfiguration.adminConfigurationSettings;
 
-        return this.query<Raven.Server.Config.SettingsResult>(url, null, this.db)
-            .fail((response: JQueryXHR) => this.reportError("Failed to load the Database Settings", response.responseText, response.statusText));
+        return this.query<Raven.Server.Config.SettingsResult>(url, null, this.db);
     }
 }
 

@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     {
                         using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
-                            return ValueTask.FromResult(documentDatabase.DocumentsStorage.GetCollection(collection, context).Count);
+                            return ValueTask.FromResult(documentDatabase.DocumentsStorage.GetNumberOfDocumentsFor(collection, context));
                     },
                     checkIfCollectionEmpty: isIndexReset == false)
                 .AsTask()

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.21</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.24</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>RequestHandler.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -12,9 +12,6 @@
   
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet"/>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.AspNetCore.Http"/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
