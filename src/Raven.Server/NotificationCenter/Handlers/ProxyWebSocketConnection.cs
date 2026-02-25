@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents.Processors;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -32,6 +34,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         private Task _localToRemote;
         private Task _remoteToLocal;
         private HttpClient _httpClient;
+        private bool _remoteIsOlder;
 
         public ProxyWebSocketConnection(WebSocket localWebSocket, string nodeUrl, string websocketEndpoint, IMemoryContextPool contextPool, CancellationToken token)
         {
@@ -52,7 +55,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             _remoteWebSocket = new ClientWebSocket();
         }
 
-        public Task Establish(X509Certificate2 certificate)
+        public async Task Establish(X509Certificate2 certificate)
         {
             var handler = DefaultRavenHttpClientFactory.CreateHttpMessageHandler(certificate, setSslProtocols: true, DocumentConventions.DefaultForServer.UseHttpDecompression);
 
@@ -67,7 +70,58 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             _httpClient = new HttpClient(handler, disposeHandler: true).WithConventions(DocumentConventions.DefaultForServer);
 
-            return _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _httpClient, _cts.Token);
+            _remoteIsOlder = await GetRemoteVersionAndCompareAsync();
+
+            await _remoteWebSocket.ConnectAsync(_remoteWebSocketUri, _httpClient, _cts.Token);
+        }
+
+        private async Task<bool> GetRemoteVersionAndCompareAsync()
+        {
+            try
+            {
+                var operation = new GetBuildNumberOperation();
+
+                using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = operation.GetCommand(DocumentConventions.DefaultForServer, context);
+
+                    var serverNode = new ServerNode { Url = _nodeUrl };
+
+                    using (var request = command.CreateRequest(context, serverNode, out var url))
+                    {
+                        request.RequestUri = new Uri(url);
+                        using (var response = await _httpClient.SendAsync(request, _cts.Token).ConfigureAwait(false))
+                        {
+                            response.EnsureSuccessStatusCode();
+
+                            using (var stream = await response.Content.ReadAsStreamAsync(_cts.Token).ConfigureAwait(false))
+                            using (var responseJson = await context.ReadForMemoryAsync(stream, "build/version").ConfigureAwait(false))
+                            {
+                                command.SetResponse(context, responseJson, fromCache: false);
+                            }
+                        }
+                    }
+
+                    var buildInfo = command.Result;
+                    if (buildInfo == null)
+                        return true;
+
+                    var versionType = BuildVersion.Type(buildInfo.BuildVersion);
+                    if (versionType >= BuildVersionType.V72)
+                        return false;
+
+                    if (buildInfo.BuildVersion < 71028)
+                        return true;
+
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to check version for {_nodeUrl}, defaulting to older.", ex);
+                return true;
+            }
         }
 
         public async Task RelayData()
@@ -99,8 +153,15 @@ namespace Raven.Server.NotificationCenter.Handlers
                             await _localWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL_CLOSE", _cts.Token);
                             break;
                         }
-
-                        await _remoteWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
+                        if (receiveResult.MessageType == WebSocketMessageType.Text)
+                        {
+                            var commandText = System.Text.Encoding.UTF8.GetString(buffer.Span.Slice(0, receiveResult.Count));
+                            if (_remoteIsOlder && commandText.Contains("DatabasesNotifications"))
+                            {
+                                continue; // Skip this command so the old server doesn't crash
+                            }
+                            await _remoteWebSocket.SendAsync(buffer.Slice(0, receiveResult.Count), receiveResult.MessageType, receiveResult.EndOfMessage, _cts.Token);
+                        }
                     }
                 }
                 catch (OperationCanceledException)
