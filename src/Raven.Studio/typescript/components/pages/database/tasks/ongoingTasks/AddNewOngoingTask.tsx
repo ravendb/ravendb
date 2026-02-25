@@ -100,28 +100,45 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                     </Col>
                 )}
             </Row>
-            {filteredTasks.length > 0 ? (
-                filteredTasks.map((category, index) => (
-                    <div className="pb-2" key={index}>
-                        {!isAiOnly && (
-                            <HrHeader>
-                                <Icon icon={category.categoryIcon} />
-                                {category.categoryName}
-                            </HrHeader>
-                        )}
-                        <div className="d-grid gap-3 ongoing-tasks-grid">
-                            {category.tasks.map((task, idx) => (
-                                <div key={idx}>
-                                    <TaskItem {...task} />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <EmptySet>No tasks match your filter criteria</EmptySet>
-            )}
+            <OngoingTasksList filteredTasks={filteredTasks} isAiOnly={isAiOnly} />
         </div>
+    );
+}
+
+interface TaskCategory {
+    categoryName: string;
+    categoryIcon: IconName;
+    tasks: TaskItemProps[];
+}
+
+interface OngoingTasksListProps {
+    filteredTasks: TaskCategory[];
+    isAiOnly: boolean;
+}
+
+export function OngoingTasksList({ filteredTasks, isAiOnly }: OngoingTasksListProps) {
+    if (filteredTasks.length === 0) {
+        return <EmptySet>No tasks match your filter criteria</EmptySet>;
+    }
+
+    return (
+        <>
+            {filteredTasks.map((category, index) => (
+                <div className="pb-2" key={index}>
+                    {!isAiOnly && (
+                        <HrHeader>
+                            <Icon icon={category.categoryIcon} />
+                            {category.categoryName}
+                        </HrHeader>
+                    )}
+                    <div className="d-grid gap-3 ongoing-tasks-grid">
+                        {category.tasks.map((task, idx) => (
+                            <TaskItem key={idx} {...task} />
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </>
     );
 }
 
@@ -137,7 +154,7 @@ export interface TaskItemProps {
     disableReason?: ReactNode;
     licenseBadge?: LicenseBadgeText;
     showLicenseBadge?: boolean;
-
+    hasAccess: boolean;
     counterBadge?: ReactNode;
 }
 
