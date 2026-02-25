@@ -355,7 +355,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                 <SetupWizardInfoPopover
                                     description={
                                         <ul>
-                                            <li>Defines the path to the RavenDB data directory2.</li>
+                                            <li>Defines the path to the RavenDB data directory.</li>
                                             <li>
                                                 By default, data is stored in the <code>RavenData</code> folder under
                                                 the extracted <code>Server</code> directory.
