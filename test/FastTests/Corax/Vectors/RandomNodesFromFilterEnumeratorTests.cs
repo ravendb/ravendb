@@ -41,7 +41,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
     {
         var random = new Random(seed);
         using var indexMapping = InsertData();
-
         using (var indexSearcher = new IndexSearcher(Env, indexMapping))
         {
             var filterResult = new GrowableBitArray(indexSearcher.Allocator, indexSearcher.LastEntryId);
@@ -66,7 +65,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
                 }
 
                 Assert.False(it.MoveNext());
-
                 for (int i = 1; i < filterResult.Capacity; ++i)
                     Assert.False(filterResult.Contains(i));
             }
@@ -75,7 +73,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
             results.Sort();
             toInsert.Sort();
             Assert.Equal(toInsert, CollectionsMarshal.AsSpan(results));
-
             foreach (var id in toInsert)
                 Assert.True(filterResult.Contains(id));
         }
@@ -90,7 +87,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
     {
         var random = new Random(seed);
         using var indexMapping = InsertData();
-
         //First
         using (var indexSearcher = new IndexSearcher(Env, indexMapping))
         {
@@ -129,12 +125,10 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
 
             Assert.True(filterResult.Contains(indexSearcher.LastEntryId));
         }
-
         // Random
         using (var indexSearcher = new IndexSearcher(Env, indexMapping))
         {
             var filterResult = new GrowableBitArray(indexSearcher.Allocator, indexSearcher.LastEntryId + 1);
-
             var expected = random.Next(2, (int)indexSearcher.LastEntryId);
             filterResult.Add(expected);
             filterResult.Count = 1;
@@ -177,7 +171,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
 
             Assert.True(filterResult.Contains(1L));
         }
-
         using (var indexSearcher = new IndexSearcher(Env, indexMapping))
         {
             var filterResult = new GrowableBitArray(indexSearcher.Allocator, indexSearcher.LastEntryId);
@@ -197,7 +190,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
 
             Assert.True(filterResult.Contains(indexSearcher.LastEntryId));
         }
-
         using (var indexSearcher = new IndexSearcher(Env, indexMapping))
         {
             var filterResult = new GrowableBitArray(indexSearcher.Allocator, indexSearcher.LastEntryId);
@@ -219,14 +211,13 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
             Assert.True(filterResult.Contains(randomDoc));
         }
     }
-
+    
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
     [InlineDataWithRandomSeed]
     public void CanEnumerateRandomNodesFromFilterMultipleNodesPerDocument(int seed)
     {
         var random = new Random(seed);
         using var indexMapping = InsertData(true);
-
         using (var indexSearcher = new IndexSearcher(Env, indexMapping))
         {
             var filterResult = new GrowableBitArray(indexSearcher.Allocator, indexSearcher.LastEntryId);
@@ -257,7 +248,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
                 }
 
                 Assert.False(it.MoveNext());
-
                 for (int i = 1; i < filterResult.Capacity; ++i)
                     Assert.False(filterResult.Contains(i));
             }
@@ -266,7 +256,6 @@ public class RandomNodesFromFilterEnumeratorTests(ITestOutputHelper output) : St
             results.Sort();
             expectedResults.AsSpan().Sort();
             Assert.Equal(expectedResults, CollectionsMarshal.AsSpan(results));
-
             foreach (var id in toInsert)
                 Assert.True(filterResult.Contains(id));
         }
