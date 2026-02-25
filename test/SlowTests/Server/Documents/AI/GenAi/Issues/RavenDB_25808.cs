@@ -40,7 +40,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             config.Collection = "Posts";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
             config.Identifier = "posts-translation-v1-to-v2";
-            config.HashVersion = GenAiConfiguration.GenAiHashVersion.None;
+            config.Version = 0;
             config.SampleObject = sampleObjectV1;
 
 
@@ -65,7 +65,6 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
             string originalHash;
-            int originalCount;
             using (var session = store.OpenAsyncSession())
             {
                 var doc = await session.LoadAsync<Sparrow.Json.BlittableJsonReaderObject>(docId);
@@ -103,7 +102,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
             var genAiTaskInfo = taskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
             Assert.NotNull(genAiTaskInfo);
-            Assert.Equal(GenAiConfiguration.GenAiHashVersion.WithSampleObject, genAiTaskInfo.Configuration.HashVersion);
+            Assert.Equal(GenAiConfiguration.WithSampleObject, genAiTaskInfo.Configuration.Version);
 
             // ---- Touch doc without changing context (Body stays same) ----
             var baselineUtc = DateTime.UtcNow;
@@ -176,7 +175,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             config.Collection = "Posts";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
             config.Identifier = "posts-translation-v1-stays-v1";
-            config.HashVersion = GenAiConfiguration.GenAiHashVersion.None;
+            config.Version = GenAiConfiguration.None;
             config.SampleObject = sampleObjectV1;
 
             var command = new Raven.Server.ServerWide.Commands.AI.AddGenAiCommand(
@@ -200,7 +199,6 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
             string originalHash;
-            int originalCount;
             using (var session = store.OpenAsyncSession())
             {
                 var doc = await session.LoadAsync<Sparrow.Json.BlittableJsonReaderObject>(docId);
@@ -278,7 +276,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 var finalGenAiTaskInfo = finalTaskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 
                 Assert.NotNull(finalGenAiTaskInfo);
-                Assert.Equal(GenAiConfiguration.GenAiHashVersion.None, finalGenAiTaskInfo.Configuration.HashVersion);
+                Assert.Equal(GenAiConfiguration.None, finalGenAiTaskInfo.Configuration.Version);
             }
         }
     }

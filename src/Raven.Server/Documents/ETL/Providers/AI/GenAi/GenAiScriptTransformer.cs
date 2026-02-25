@@ -334,7 +334,7 @@ var ai = new AI();
             UpdateHashString(state, cfg.JsonSchema);
             UpdateHashString(state, cfg.UpdateScript);
             UpdateHashString(state, cfg.ConnectionStringName);
-            if (cfg.HashVersion.HasFlag(GenAiConfiguration.GenAiHashVersion.WithSampleObject))
+            if (cfg.Version == (GenAiConfiguration.WithSampleObject))
             {
                 UpdateHashString(state, cfg.SampleObject);
             }

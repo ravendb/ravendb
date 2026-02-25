@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -43,6 +45,8 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     private const int DefaultMaxConcurrency = 4;
 
     internal readonly string TransformationName = "GenAi-transform-script";
+    internal const int None = 0;
+    internal const int WithSampleObject = 1;
 
     [JsonDeserializationIgnore]
     [JsonIgnore]
@@ -119,14 +123,43 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
         return errors.Count == 0;
     }
-    public enum GenAiHashVersion
+
+    internal static void ApplyHashVersionBackwardCompatibility(DatabaseRecord record, GenAiConfiguration configuration)
     {
-        None = 0, // old: no SampleObject
-        WithSampleObject = 1  // new: includes SampleObject
+        var existing = record.GenAis?.FirstOrDefault(x => x.Name == configuration.Name);
+
+        // Fallback for updates where the task somehow doesn't exist
+        if (existing == null)
+            return;
+
+        // Existing version
+        var existingVersion = existing.Version;
+
+        if (existingVersion == None)
+        {
+            //did Sample object changed?
+            if (string.Equals(existing.SampleObject, configuration.SampleObject, StringComparison.Ordinal) == false)
+            {
+                configuration.Version = WithSampleObject;
+            }
+            else
+            {
+                // If the SampleObject is IDENTICAL, and existing version is None we MUST force None.
+                configuration.Version = None;
+            }
+
+            return;
+        }
+
+        // Preserving WithSampleObject
+        if (configuration.Version == None)
+        {
+            configuration.Version = existingVersion;
+        }
     }
 
-    
-    public GenAiHashVersion HashVersion { get; internal set; }
+    [ForceJsonSerialization]
+    internal int Version = None;
 
     public override DynamicJsonValue ToJson()
     {
@@ -144,7 +177,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
         json[nameof(EnableTracing)] = EnableTracing;
         json[nameof(ExpirationInSec)] = ExpirationInSec;
-        json[nameof(HashVersion)] = HashVersion;
+        json[nameof(Version)] = Version;
 
         return json;
     }
@@ -161,8 +194,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             SampleObject != other.SampleObject ||
             MaxConcurrency != other.MaxConcurrency ||
             ExpirationInSec != other.ExpirationInSec ||
-            EnableTracing != other.EnableTracing ||
-            HashVersion != other.HashVersion)
+            EnableTracing != other.EnableTracing)
             differences |= EtlConfigurationCompareDifferences.Other;
 
         return differences;
