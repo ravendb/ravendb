@@ -414,19 +414,17 @@ public unsafe partial class Hnsw
                 if (nearestCandidates.Count < candidatesRequested)
                 {
                     // The queue is still empty. We will add anything that comes from the filter.
-                    // Since we prioritize nodes that exist on higher levels,
-                    // we will negate the current node's maximum level.
-                    // This will move nodes that exist only at the bottom level to the front of the queue.
                     nearestCandidates.Enqueue(nodeId, currentNodeMaximumLevel);
                     numberOfNodesVisitedFromLastNewCandidate = 0;
                     continue;
                 }
                 
-                // Our queue is full, which means we will only update the queue if the currently visited node is better (based on level existence)
+                // Our queue is full, which means we will only update the queue if the currently visited node is better (based on existence across levels)
                 // than our worst found candidate.
                 nearestCandidates.TryPeek(out _, out var worstCandidateMaximumLevel);
                 if (currentNodeMaximumLevel > worstCandidateMaximumLevel)
                 {
+                    // Replace the current worst candidate with the newly visited node since it exists on a higher level
                     nearestCandidates.EnqueueDequeue(nodeId, currentNodeMaximumLevel);
                     numberOfNodesVisitedFromLastNewCandidate = 0;
                 }
@@ -440,6 +438,7 @@ public unsafe partial class Hnsw
             while (nearestCandidates.TryDequeue(out var currentNodeIndex, out var _))
                 nearestIndexes.AddUnsafe(currentNodeIndex);
             nearestIndexes.Inner.Reverse(); // we want to prioritize the nodes from the higher levels
+            nodesFromFilter.Dispose(); // dispose the iterator to restore the state.
         }
         
         public void SearchNearestAcrossLevels(ReadOnlySpan<byte> vector, int dstIdx, int maxLevel, ref ContextBoundNativeList<int> nearestIndexes)
@@ -1076,7 +1075,8 @@ public unsafe partial class Hnsw
         return new VectorSearchRetriever(searchState,  results, vector, minimumSimilarity);
     }
 
-    public static VectorSearchRetriever ApproximateFilteredNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, IEnumerable<long> nodesToProbe)
+    public static VectorSearchRetriever ApproximateFilteredNearest<TEnumerator>(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, TEnumerator nodesToProbe)
+     where TEnumerator : IEnumerator<long> 
     {
         var searchState = new SearchState(llt, name);
         var startingPointsIndexes = new ContextBoundNativeList<int>(llt.Allocator);
@@ -1086,8 +1086,7 @@ public unsafe partial class Hnsw
         if (searchState.Options.CountOfVectors == 0)
             return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
         
-        using var enumerator = nodesToProbe.GetEnumerator();
-        searchState.SearchFilteredNearest(ref startingPointsIndexes, enumerator, numberOfCandidates, 16);
+        searchState.SearchFilteredNearest(ref startingPointsIndexes, nodesToProbe, numberOfCandidates, 16);
         candidates.Clear();
         var nearestEdgesSearch = searchState.NearestSearch(startingPointsIndexes, vector, 0, numberOfCandidates, candidates,
             SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);

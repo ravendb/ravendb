@@ -117,7 +117,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             {
                 _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, nodesIdsToScan),
                 true => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
-                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, IndexSearcher.VectorSearchUtils.GetDocumentsIntoNodesRandomly(_indexSearcher, _metadata, _filterResults, _random)), 
+                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults, _random)), 
                 false => Hnsw.ApproximateNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
             };
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Corax.Indexing;
@@ -14,6 +15,7 @@ using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Graphs;
+using Voron.Data.Lookups;
 using Voron.Util;
 
 namespace Corax.Querying;
@@ -46,31 +48,130 @@ public partial class IndexSearcher
             return filter;
         }
 
-        public static IEnumerable<long> GetDocumentsIntoNodesRandomly(IndexSearcher indexSearcher, FieldMetadata metadata, GrowableBitArray filterResults, Random random = null)
+        /// <summary>
+        /// To save memory, this enumerator modifies the source during iteration to avoid materialization of the bitmap.
+        /// It restores the original state on disposal. However, it is designed in a way to not be evaluated to the end and rather for probing random nodes from document sets.
+        /// Otherwise, it's better to evaluate and perform Shuffle on the list.
+        /// </summary>
+        public struct RandomNodesFromFilterEnumerator : IEnumerator<long>
         {
-            var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
-            var vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
-            var nodesByVectorId = searchState.NodeIdsByVectorId;
-            if (indexSearcher.TryGetRootPageByFieldName(metadata.FieldName, out var vectorRootPage) is false)
+            private List<long> _results;
+            private long _current;
+            private readonly IndexSearcher _indexSearcher;
+            private GrowableBitArray _filterResults;
+            private readonly Random _random;
+            private bool _isDone;
+            private readonly HashSet<long> _returnedDocuments = new();
+            private Page p = default;
+            private CompactKey _key;
+            private long _start = 1;
+            private long _end = 0;
+            private readonly CompactTree _vectorsByHash;
+            private readonly Lookup<Int64LookupKey> _nodesByVectorId;
+            private readonly long _vectorRootPage;
+
+            public RandomNodesFromFilterEnumerator(IndexSearcher indexSearcher, FieldMetadata metadata, GrowableBitArray filterResults, Random random = null)
             {
-                yield break;
+                _indexSearcher = indexSearcher;
+                _filterResults = filterResults;
+                _random = random ?? Random.Shared;
+                _key = new();
+                _key.Initialize(indexSearcher._transaction.LowLevelTransaction);
+                var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
+                _vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
+                _nodesByVectorId = searchState.NodeIdsByVectorId;
+                _current = 1L;
+
+                _start = 1L;
+                _end = indexSearcher.LastEntryId;
+                
+                _isDone = 
+                    indexSearcher.TryGetRootPageByFieldName(metadata.FieldName, out _vectorRootPage) == false 
+                    || _filterResults.Count == 0;
             }
             
-            Page p = default;
-            using CompactKey key = new();
-            
-            foreach (var currentDocument in GrowableBitArray.Probe(filterResults, random ?? Random.Shared))
+            public RandomNodesFromFilterEnumerator()
             {
-                var entryTermsReader = indexSearcher.GetEntryTermsReader(currentDocument, ref p, key);
-                while (entryTermsReader.FindNextStored(vectorRootPage))
+                throw new NotSupportedException($"Default constructor is not supported for {nameof(RandomNodesFromFilterEnumerator)}");
+            }
+            
+            public void Dispose()
+            {
+                foreach (var idX in _returnedDocuments)
+                    _filterResults.Add(idX);
+                _current = -1;
+                _isDone = true;
+                _key.Dispose();
+            }
+
+            public bool MoveNext()
+            {
+                if (_isDone)
+                    return false;
+
+                if (_results is not null && _results.Count > 0)
                 {
-                    var vectorHash = entryTermsReader.StoredField.Value;
-                    var vectorExists = vectorsByHash.TryGetValue(vectorHash, out var vectorId);
-                    Debug.Assert(vectorExists, "Vector hash not found in vectors by hash tree");
-                    var nodeIdExists = nodesByVectorId.TryGetValue(vectorId, out var nodeId);
-                    Debug.Assert(nodeIdExists, "Node ID not found in nodes by vector ID tree");
-                    yield return nodeId;
+                    _current = _results[^1];
+                    _results.RemoveAt(_results.Count - 1);
+                    return true;
                 }
+
+                _current = -1L;
+                do
+                {
+                    var randomStart = _random.NextInt64(_start, _end);
+                    var it = _filterResults.GetIterator(randomStart);
+                    var anythingExists = it.MoveNext();
+                    if (anythingExists == false)
+                    {
+                        _end = randomStart;
+                        continue;
+                    }
+
+                    _returnedDocuments.Add(it.Current);
+                    _filterResults.Remove(it.Current);
+                    var entryTermsReader = _indexSearcher.GetEntryTermsReader(it.Current, ref p, _key);
+                    bool found = false;
+                    while (entryTermsReader.FindNextStored(_vectorRootPage))
+                    {
+                        var vectorHash = entryTermsReader.StoredField.Value;
+                        var vectorExists = _vectorsByHash.TryGetValue(vectorHash, out var vectorId);
+                        Debug.Assert(vectorExists, "Vector hash not found in vectors by hash tree");
+                        var nodeIdExists = _nodesByVectorId.TryGetValue(vectorId, out var nodeId);
+                        Debug.Assert(nodeIdExists, "Node ID not found in nodes by vector ID tree");
+                        found = true;
+                        if (_current == -1L)
+                        {
+                            _current = nodeId;
+                        }
+                        else
+                        {
+                            if (_results is null or { Count: 0 })
+                                _results ??= new();
+
+                            _results.Add(nodeId);
+                        }
+                    }
+
+                    if (found)
+                        return true;
+
+                } while (_start < _end && _filterResults.Count > _returnedDocuments.Count);
+
+                _isDone = true;
+                return false;
+            }
+
+            public void Reset()
+            {
+                throw new NotSupportedException($"Reset is not supported for {nameof(RandomNodesFromFilterEnumerator)}");
+            }
+
+            public long Current => _current;
+
+            object IEnumerator.Current
+            {
+                get => Current;
             }
         }
 
