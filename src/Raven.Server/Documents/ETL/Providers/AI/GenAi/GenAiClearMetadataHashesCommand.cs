@@ -92,7 +92,23 @@ internal sealed class GenAiClearMetadataHashesCommand : DocumentMergedTransactio
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
     {
-        throw new NotSupportedException($"Replay not supported for {nameof(GenAiClearMetadataHashesCommand)}");
+        return new GenAiClearMetadataHashesCommandDto
+        {
+            DocIds = _docIds,
+            TaskIdentifier = _taskIdentifier
+        };
+    }
+
+    private sealed class GenAiClearMetadataHashesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand>
+    {
+        public List<string> DocIds { get; set; }
+        public string TaskIdentifier { get; set; }
+
+
+        public DocumentMergedTransactionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            return new GenAiClearMetadataHashesCommand(DocIds, TaskIdentifier);
+        }
     }
 }
 
