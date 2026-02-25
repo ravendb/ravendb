@@ -131,7 +131,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
             return "not found";
         });
 
-        chat.SetUserPrompt("find me sugar");
+        chat.SetUserPrompt("look for 'sugar' with the tool I have provided to you");
         var run = await chat.RunAsync<Sample>();
         Assert.Equal(run.Status, AiConversationResult.Done);
         Assert.NotNull(run.Answer.Answer);

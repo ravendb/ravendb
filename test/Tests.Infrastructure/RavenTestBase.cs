@@ -242,7 +242,7 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
                             [RavenConfiguration.GetKey(x => x.Queries.RegexTimeout)] = (500).ToString(),
-                            [RavenConfiguration.GetKey(x => x.Ai.GenAiSendToModelTimeout)] = 30.ToString()
+                            [RavenConfiguration.GetKey(x => x.Ai.GenAiSendToModelTimeout)] = 60.ToString()
                         }
                     };
 
