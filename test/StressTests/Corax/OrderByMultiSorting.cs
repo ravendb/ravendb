@@ -30,7 +30,7 @@ namespace StressTests.Corax
         {
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
+        [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
         public void OrderByNoRepetitions()
         {
             PrepareData();
@@ -73,7 +73,7 @@ namespace StressTests.Corax
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
+        [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
         public void OrderByWithRepetitions()
         {
             PrepareData();
