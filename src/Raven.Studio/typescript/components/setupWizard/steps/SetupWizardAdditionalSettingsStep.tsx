@@ -286,9 +286,9 @@ const getDefaultPath = (os: OperatingSystem, type: "certificate" | "dataDirector
     const isUnix = os === "Linux" || os === "MacOS";
 
     const paths = {
-        certificate: isUnix ? "/etc/ravendb/security/server.pfx" : "C:\\RavenDB\\Certificate\\server.pfx",
-        dataDirectory: isUnix ? "/var/lib/ravendb/data" : "C:\\RavenDB\\Data",
-        logs: isUnix ? "/logs" : "C:\\RavenDB\\Logs",
+        certificate: isUnix ? "e.g. /etc/ravendb/security/server.pfx" : "e.g. C:\\RavenDB\\Certificate\\server.pfx",
+        dataDirectory: isUnix ? "e.g. /var/lib/ravendb/data" : "e.g. C:\\RavenDB\\Data",
+        logs: isUnix ? "e.g. /logs" : "e.g. C:\\RavenDB\\Logs",
     };
 
     return paths[type];
@@ -353,8 +353,16 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             isActive: isVisible,
                             message: (
                                 <SetupWizardInfoPopover
-                                    description="Defines the path to the RavenDB data directory."
-                                    docsLink="https://docs.ravendb.net/server/storage/customizing-raven-data-files-locations"
+                                    description={
+                                        <ul>
+                                            <li>Defines the path to the RavenDB data directory.</li>
+                                            <li>
+                                                By default, data is stored in the <code>RavenData</code> folder under
+                                                the extracted <code>Server</code> directory.
+                                            </li>
+                                        </ul>
+                                    }
+                                    docsLink="https://docs.ravendb.net/server/storage/directory-structure"
                                 />
                             ),
                         }}
@@ -388,7 +396,23 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                     isActive: isVisible,
                                     message: (
                                         <SetupWizardInfoPopover
-                                            description="Indicates where the server certificate will be saved on your system. Make sure the location is accessible and has the required write permissions"
+                                            description={
+                                                <ul>
+                                                    <li>
+                                                        Specifies the <strong>full file path</strong> (including the{" "}
+                                                        <code>.pfx</code> extension) where the server certificate will
+                                                        be stored.
+                                                    </li>
+                                                    <li>
+                                                        Make sure the directory exists and has the required write
+                                                        permissions on <strong>every node</strong>.
+                                                    </li>
+                                                    <li>
+                                                        By default, RavenDB stores your server certificate directly
+                                                        under the extracted <code>Server</code> folder.
+                                                    </li>
+                                                </ul>
+                                            }
                                             docsLink="https://docs.ravendb.net/server/configuration/security-configuration#securitycertificatepath"
                                         />
                                     ),
@@ -398,10 +422,6 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                 <Icon icon="info-new" />
                             </ConditionalPopover>
                         </div>
-                        <small className="text-muted">
-                            Specifies the location where the server certificate will be stored after the server is
-                            created.
-                        </small>
                     </FormLabel>
                     <FormPathSelector
                         disabled={!isVisible}
@@ -428,7 +448,15 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             isActive: isVisible,
                             message: (
                                 <SetupWizardInfoPopover
-                                    description="Defines the path to the logs directory."
+                                    description={
+                                        <ul>
+                                            <li>Defines the path to the logs directory.</li>
+                                            <li>
+                                                By default, RavenDB stores logs in the <code>Logs</code> directory under
+                                                the extracted <code>Server</code> folder.
+                                            </li>
+                                        </ul>
+                                    }
                                     docsLink="https://docs.ravendb.net/server/troubleshooting/logging"
                                 />
                             ),

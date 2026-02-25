@@ -399,8 +399,17 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
                             </Button>
                         </ConditionalPopover>
                         <Button variant="secondary" onClick={handleDiscardEdit}>
-                            <Icon icon="close" />
-                            Discard
+                            {nodeData.isNewlyAdded ? (
+                                <>
+                                    <Icon icon="trash" />
+                                    Remove
+                                </>
+                            ) : (
+                                <>
+                                    <Icon icon="close" />
+                                    Discard
+                                </>
+                            )}
                         </Button>
                     </>
                 ) : (
