@@ -450,8 +450,23 @@ namespace Raven.Server.Documents.Queries
 
         public static void AssertValidQuery<TQueryResult>(IndexQueryServerSide query, QueryResultServerSide<TQueryResult> result)
         {
-            if (result.SupportsInclude == false && query.Metadata.Includes != null && query.Metadata.Includes.Length > 0)
-                throw new NotSupportedException("Includes are not supported by this type of query.");
+            if (result.SupportsInclude == false)
+            {
+                if (query.Metadata.Includes is { Length: > 0 })
+                    throw new NotSupportedException("Document Includes are not supported by this type of query.");
+
+                if (query.Metadata.CounterIncludes != null)
+                    throw new NotSupportedException("Counter Includes are not supported by this type of query.");
+
+                if (query.Metadata.TimeSeriesIncludes != null)
+                    throw new NotSupportedException("TimeSeries Includes are not supported by this type of query.");
+
+                if (query.Metadata.RevisionIncludes != null)
+                    throw new NotSupportedException("Revision Includes are not supported by this type of query.");
+
+                if (query.Metadata.CompareExchangeValueIncludes != null && query.Metadata.CompareExchangeValueIncludes.Length > 0)
+                    throw new NotSupportedException("CompareExchangeValue Includes are not supported by this type of query.");
+            }
 
             if (result.SupportsHighlighting == false && query.Metadata.HasHighlightings)
                 throw new NotSupportedException("Highlighting is not supported by this type of query.");

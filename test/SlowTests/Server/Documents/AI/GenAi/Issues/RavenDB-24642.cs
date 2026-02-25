@@ -520,7 +520,7 @@ for(const comment of this.Comments)
         if (withNullAttachments)
             Assert.NotEqual(hash1, newHash1); // doc1 - hash of 'non-existed image.png'
         else
-            Assert.Equal(hash1, newHash1); // doc1 - hasn't changed - etl didn't process this doc
+            Assert.Null(newHash1); // doc1 produces no context objects now - metadata hashes gets cleared
         });
     }
 

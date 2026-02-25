@@ -32,7 +32,7 @@ namespace SlowTests.Issues
 
                 using (var s = store.OpenSession())
                 {
-                    var q = from doc in s.Query<Person>()
+                    var q = from doc in s.Query<Person>().Customize(x => x.WaitForNonStaleResults())
                         where doc.Filter.In(list)
                         select doc;
 

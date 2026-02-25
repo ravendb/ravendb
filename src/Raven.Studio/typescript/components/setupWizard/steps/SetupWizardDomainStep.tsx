@@ -81,7 +81,8 @@ export function SetupWizardDomainStep() {
         <div>
             <h2 className="mb-1">Domain</h2>
             <p className="mb-4 text-muted">
-                Enter a name for your cluster&#39;s domain. It will be available under <code>.development.run</code>.
+                Enter a name for your cluster&apos;s domain. It will be available under{" "}
+                <code>.{domainStep.rootDomain}</code>.
                 <br />
                 This domain will point to your cluster (where your databases are hosted) and will be secured with HTTPS.
             </p>
@@ -93,8 +94,8 @@ export function SetupWizardDomainStep() {
                             <>
                                 <ul className="mb-0 ps-3">
                                     <li>
-                                        The name you enter will be used to create your cluster’s domain under
-                                        <code>.development.run</code>.<br />
+                                        The name you enter will be used to create your cluster’s domain under{" "}
+                                        <code>.{domainStep.rootDomain}</code>.<br />
                                         RavenDB will use this domain to generate an HTTPS certificate for secure
                                         connections.
                                     </li>
