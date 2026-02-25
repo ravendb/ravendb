@@ -654,6 +654,7 @@ function useSetupWizardFinishUtils() {
             EnableExperimentalFeatures: additionalSettingsStep.postgresqlIntegration,
             LocalNodeTag: isPassive ? null : localNode.nodeTag,
             Environment: isPassive ? null : additionalSettingsStep.studioEnvironment,
+            License: licenseKeyStep.key == "" ? null : JSON.parse(licenseKeyStep.key),
             ZipOnly: setupMethodStep.method === "createPackage",
             NodeSetupInfos: getNodeSetupInfos(),
         };

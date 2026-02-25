@@ -454,7 +454,7 @@ namespace SlowTests.Sharding.Encryption
                 }
 
                 // add shard
-                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var sharding = await Sharding.AssertAllShardsHaveMembers(store);
                 var shardNodes = sharding.Shards.Select(kvp => kvp.Value.Members[0]);
                 var nodeNotInDbGroup = nodes.SingleOrDefault(n => shardNodes.Contains(n.ServerStore.NodeTag) == false);
                 Assert.NotNull(nodeNotInDbGroup);

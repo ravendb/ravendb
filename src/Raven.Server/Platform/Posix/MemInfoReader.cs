@@ -295,6 +295,9 @@ namespace Raven.Server.Platform.Posix
         [SnmpIndex(59)]
         public Size ShadowCallStack { get; set; }
 
+        [SnmpIndex(60)]
+        public Size Balloon { get; set; }
+
         public Dictionary<string, Size> Other { get; set; }
 
         public void Set(string name, long value, SizeUnit unit)

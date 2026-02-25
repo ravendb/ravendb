@@ -418,9 +418,10 @@ namespace SlowTests.Authentication
                 Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.ServerCertificate.Thumbprint);
                 var databaseName = GetDatabaseName();
 
+                var certForCommunication = CertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out _);
                 var options = Sharding.GetOptionsForCluster(leader, clusterSize, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
-                options.ClientCertificate = serverCert;
-                options.AdminCertificate = serverCert;
+                options.ClientCertificate = certForCommunication;
+                options.AdminCertificate = certForCommunication;
                 options.ModifyDatabaseName = _ => databaseName;
                 options.RunInMemory = false;
                 options.DeleteDatabaseOnDispose = false;

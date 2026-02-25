@@ -289,9 +289,9 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
         }
     };
 
-    const handleNodeUrl = () => {
+    const handleNodeUrl = (formData: NodeEditFormData) => {
         if (securityOption === "letsEncrypt") {
-            return `${nodeData.nodeTag.toLowerCase()}.${domainStep.domain.toLocaleLowerCase()}.${domainStep.rootDomain}`;
+            return `${formData.nodeTag.toLowerCase()}.${domainStep.domain.toLocaleLowerCase()}.${domainStep.rootDomain}`;
         }
 
         if (securityOption === "ownCertificate") {
@@ -300,18 +300,18 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
             if (isWildcardCertificate) {
                 // For wildcard certificates, construct domain from CN and node tag
                 if (cns.length > 0 && cns[0].includes("*")) {
-                    nodeUrl = cns[0].replace("*", nodeData.nodeTag.toLowerCase());
+                    nodeUrl = cns[0].replace("*", formData.nodeTag.toLowerCase());
                 } else {
                     // Fallback to dnsName if available
-                    nodeUrl = nodeData.dnsName || "";
+                    nodeUrl = formData.dnsName || "";
                 }
             } else {
                 // For non-wildcard certificates, use the selected dnsName
-                nodeUrl = nodeData.dnsName || "";
+                nodeUrl = formData.dnsName || "";
             }
 
-            if (nodeData.httpPort !== 443 && nodeData.httpPort != null) {
-                nodeUrl += ":" + nodeData.httpPort;
+            if (formData.httpPort !== 443 && formData.httpPort != null) {
+                nodeUrl += ":" + formData.httpPort;
             }
             return nodeUrl;
         }
@@ -322,7 +322,7 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
     const handleSaveEdit = handleSubmit(async (formData: NodeEditFormData) => {
         setValue(`nodeAddressStep.nodes.${index}`, {
             ...formData,
-            nodeUrl: handleNodeUrl(),
+            nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
             nodeTag: formData.isPassive ? undefined : formData.nodeTag,
             isEditing: false,

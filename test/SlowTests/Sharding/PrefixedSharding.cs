@@ -1839,7 +1839,7 @@ public class PrefixedSharding : ClusterTestBase
         await session.SaveChangesAsync();
 
         // add shard #2 to database
-        var sharding = await Sharding.GetShardingConfigurationAsync(store);
+        var sharding = await Sharding.AssertAllShardsHaveMembers(store);
         var shardNodes = sharding.Shards.Select(kvp => kvp.Value.Members[0]);
         var nodeNotInDbGroup = cluster.Nodes.SingleOrDefault(n => shardNodes.Contains(n.ServerStore.NodeTag) == false)?.ServerStore.NodeTag;
         Assert.NotNull(nodeNotInDbGroup);

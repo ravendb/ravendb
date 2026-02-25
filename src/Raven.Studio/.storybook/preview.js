@@ -9,7 +9,7 @@ overrideViews();
 import system from "durandal/system";
 system.debug(true);
 
-require('../wwwroot/Content/css/fonts/icomoon.font');
+require("../wwwroot/Content/css/fonts/icomoon-svgtofont/icomoon.css");
 
 const ko = require("knockout");
 require("knockout.validation");
