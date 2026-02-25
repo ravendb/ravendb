@@ -22,6 +22,20 @@ public enum RavenDatabaseMode : byte
     All = Single | Sharded
 }
 
+public class RavenDataWithRandomSeedAttribute(params object[] data) : RavenDataAttribute(data)
+{
+    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    {
+        foreach (var current in base.GetData(testMethod))
+        {
+            var parametersWithRandomSeed = new object[current.Length + 1];
+            Array.Copy(current, parametersWithRandomSeed, current.Length);
+            parametersWithRandomSeed[^1] = Random.Shared.Next();
+            yield return parametersWithRandomSeed;
+        }
+    }
+}
+
 public class RavenDataAttribute : RavenDataAttributeBase
 {
     public RavenSearchEngineMode SearchEngineMode { get; set; } = RavenSearchEngineMode.Lucene;
