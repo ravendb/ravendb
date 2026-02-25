@@ -60,20 +60,11 @@ public partial class RevisionsStorage
                         maxDeletes = maxTotalDeletes - deleted;
                     }
 
-                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
+                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, id, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
                     if (result.MoreWork == false)
                     {
                         _ids.RemoveAt(i);
-
-                        if (result.Deleted == result.RevisionsCount)
-                        {
-                            // remove the HasRevisions flag
-                            using var doc = context.DocumentDatabase.DocumentsStorage.Get(context, id, DocumentFields.Data);
-                            if (doc != null)
-                                context.DocumentDatabase.DocumentsStorage.Put(context, id, expectedChangeVector: null, document: doc.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
-                        }
                     }
-
                     moreWork |= result.MoreWork;
                     deleted += result.Deleted;
 

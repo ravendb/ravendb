@@ -49,17 +49,9 @@ public partial class RevisionsStorage
 
                 foreach (var cv in _cvs)
                 {
-                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
+                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, _id, lowerId, prefixSlice, collectionName,
                         (table, _) => GetRevision(context, table, cv));
                     deleted += result.Deleted;
-
-                    if (result.RevisionsCount == result.Deleted)
-                    {
-                        // remove the HasRevisions flag
-                        using var doc = context.DocumentDatabase.DocumentsStorage.Get(context, _id, DocumentFields.Data);
-                        if (doc != null)
-                            context.DocumentDatabase.DocumentsStorage.Put(context, _id, expectedChangeVector: null, document: doc.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
-                    }
                 }
             }
 

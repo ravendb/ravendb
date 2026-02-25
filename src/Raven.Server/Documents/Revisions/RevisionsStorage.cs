@@ -1953,21 +1953,21 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
 
-                ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, maxDeletesUponUpdate: null, shouldSkip: null, tombstoneFlags);
+                ForceDeleteAllRevisionsFor(context, id, lowerId, prefixSlice, collectionName, maxDeletesUponUpdate: null, shouldSkip: null, tombstoneFlags);
             }
         }
 
-        private (bool MoreWork, long Deleted, long RevisionsCount) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
+        private (bool MoreWork, long Deleted, long RevisionsCount) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, string id, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long? maxDeletesUponUpdate,
             Func<Document, bool> shouldSkip, DocumentFlags tombstoneFlags = DocumentFlags.None)
         {
-            return ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
+            return ForceDeleteAllRevisionsFor(context, id, lowerId, prefixSlice, collectionName,
                 (table, result) => GetAllRevisions(context, table, prefixSlice, maxDeletesUponUpdate, shouldSkip, result), tombstoneFlags);
         }
 
-        private (bool MoreWork, long Deleted, long RevisionsCount) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long maxDeletesUponUpdate,
+        private (bool MoreWork, long Deleted, long RevisionsCount) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, string id, Slice lowerId, Slice prefixSlice, CollectionName collectionName, long maxDeletesUponUpdate,
             long etagBarrier, DocumentFlags tombstoneFlags = DocumentFlags.None)
         {
-            return ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, GetRevisions, tombstoneFlags);
+            return ForceDeleteAllRevisionsFor(context, id, lowerId, prefixSlice, collectionName, GetRevisions, tombstoneFlags);
 
             IEnumerable<Document> GetRevisions(Table table, DeleteOldRevisionsResult result)
             {
@@ -2004,7 +2004,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private (bool MoreWork, long Deleted, long RevisionsCount) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, Slice lowerId, Slice prefixSlice,
+        private (bool MoreWork, long Deleted, long RevisionsCount) ForceDeleteAllRevisionsFor(DocumentsOperationContext context, string id, Slice lowerId, Slice prefixSlice,
             CollectionName collectionName,
             Func<Table, DeleteOldRevisionsResult, IEnumerable<Document>> getRevisions, DocumentFlags tombstoneFlags = DocumentFlags.None)
         {
@@ -2027,6 +2027,14 @@ namespace Raven.Server.Documents.Revisions
 
             result.Remaining = revisionsPreviousCount - deleted;
             var moreWork = result.HasMore && result.Remaining > 0;
+
+            if (result.Remaining == 0)
+            {
+                // remove the HasRevisions flag
+                using var doc = context.DocumentDatabase.DocumentsStorage.Get(context, id, DocumentFields.Data);
+                if (doc != null)
+                    context.DocumentDatabase.DocumentsStorage.Put(context, id, expectedChangeVector: null, document: doc.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
+            }
 
             return (moreWork, deleted, revisionsPreviousCount);
         }
