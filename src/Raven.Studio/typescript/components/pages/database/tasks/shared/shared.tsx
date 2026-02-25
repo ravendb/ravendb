@@ -721,13 +721,21 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
 
     function getCategoryCount(category: OngoingTasksCategory["categoryName"]) {
         const categoryTasks = ongoingTasks.find((x) => x.categoryName === category)?.tasks ?? [];
-        return categoryTasks.filter((task) => task.hasAccess).length;
+        return categoryTasks.length;
     }
 
     const filteredTasks = ongoingTasks
         .map((category) => ({
             ...category,
-            tasks: category.tasks.filter((task) => task.hasAccess && matchesSearchText(task, searchText)),
+            tasks: category.tasks
+                .filter((task) => matchesSearchText(task, searchText))
+                .map((task) => ({
+                    ...task,
+                    disableReason:
+                        !task.hasAccess && !task.disableReason
+                            ? "You don't have permission to create this task"
+                            : task.disableReason,
+                })),
         }))
         .filter(
             (category) => isCategorySelected(category.categoryName, selectedCategories) && category.tasks.length > 0

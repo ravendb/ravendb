@@ -186,7 +186,7 @@ function TaskItem({
                     "card no-decor w-100 ongoing-tasks-card h-100 add-new-ongoing-task__card",
                     `variant-${variant}`,
                     {
-                        "opacity-25 pe-none": !!disableReason,
+                        "item-disabled": !!disableReason,
                     }
                 )}
             >
