@@ -1203,6 +1203,12 @@ namespace Raven.Server.Web.System
                                                 indexCompactionResult.AddInfo(
                                                     $"Skipping data compaction of '{indexName}' index because data compaction of Corax indexes isn't supported.");
                                             }
+                                            catch (Exception e)
+                                            {
+                                                indexCompactionResult.Skipped = true;
+                                                indexCompactionResult.AddInfo(
+                                                    $"Skipping data compaction of '{indexName}' index because of encountered error: {e.Message}. Stacktrace: {e.StackTrace}");
+                                            }
                                             
                                             indexCompactionResult.Processed = true;
                                         }
