@@ -429,5 +429,61 @@ namespace Raven.Server.Utils
             }
             return stringBuilder.ToString();
         }
+
+        internal static bool TryBase64ToGuid(string base64, out string guidString)
+        {
+            guidString = null;
+            if (string.IsNullOrEmpty(base64) || base64.Length > 24)
+                return false;
+            try
+            {
+                var padded = base64.Length % 4 == 0 ? base64 : base64.PadRight(base64.Length + (4 - base64.Length % 4), '=');
+                var bytes = Convert.FromBase64String(padded);
+                if (bytes.Length != 16)
+                    return false;
+                guidString = new Guid(bytes).ToString();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <param name="localEtags">DbId→etag map whose keys define "local" identity; the etag is used as an upper cap.</param>
+        /// <param name="alreadyReplicatedEtags">DbId→last-replicated-etag for non-local entries; may be null.</param>
+        /// <param name="localOriginEntries">Local-origin entries, each capped to the local etag.</param>
+        /// <param name="remoteOriginEntries">Non-local entries not yet fully replicated.</param>
+        internal static void ClassifyEntriesByOrigin(
+            List<ChangeVectorEntry> entries,
+            Dictionary<string, long> localEtags,
+            Dictionary<string, long> alreadyReplicatedEtags,
+            out List<ChangeVectorEntry> localOriginEntries,
+            out List<ChangeVectorEntry> remoteOriginEntries)
+        {
+            localOriginEntries = new List<ChangeVectorEntry>();
+            remoteOriginEntries = new List<ChangeVectorEntry>();
+
+            foreach (var entry in entries)
+            {
+                bool isLocal = localEtags.TryGetValue(entry.DbId, out long localEtag);
+
+                if (isLocal == false && TryBase64ToGuid(entry.DbId, out var asGuid))
+                    isLocal = localEtags.TryGetValue(asGuid, out localEtag);
+
+                if (isLocal)
+                {
+                    localOriginEntries.Add(new ChangeVectorEntry { DbId = entry.DbId, Etag = Math.Min(entry.Etag, localEtag), NodeTag = entry.NodeTag });
+                    continue;
+                }
+
+                if (alreadyReplicatedEtags == null ||
+                    alreadyReplicatedEtags.TryGetValue(entry.DbId, out long lastReplicated) == false ||
+                    entry.Etag > lastReplicated)
+                {
+                    remoteOriginEntries.Add(entry);
+                }
+            }
+        }
     }
 }

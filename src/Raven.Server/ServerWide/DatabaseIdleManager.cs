@@ -625,117 +625,55 @@ namespace Raven.Server.ServerWide
 
                 var sinkList = sinkChangeVector.ToChangeVectorList();
 
-                var localEntries = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-
-                // Retrieve topology ID securely. We bypass conditional optimization.
-                // hubDbId is passed as an argument.
-
-                // For newly created databases, the local Change Vector might not yet contain the node's Topology ID,
-                // but the Sink will report the Hub's real Storage Voron ID if it received echoing replication info.
-                // It is CRITICAL to register `hubDbId` and `idleInfo.HubVoronDbId` so Hub correctly identifies echoed data.
+                var localEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
                 if (string.IsNullOrEmpty(hubDbId) == false)
                 {
-                    long etag = 0;
-                    if (string.IsNullOrEmpty(idleInfo.ChangeVector) == false)
-                        etag = ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, hubDbId);
-
-                    localEntries[hubDbId] = etag;
-                    if (TryBase64ToGuid(hubDbId, out var guid))
-                        localEntries[guid] = etag;
+                    long etag = string.IsNullOrEmpty(idleInfo.ChangeVector) ? 0 : ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, hubDbId);
+                    localEtags[hubDbId] = etag;
+                    if (ChangeVectorUtils.TryBase64ToGuid(hubDbId, out var guid))
+                        localEtags[guid] = etag;
                 }
 
                 if (string.IsNullOrEmpty(idleInfo.HubVoronDbId) == false)
                 {
-                    long etag = 0;
-                    if (string.IsNullOrEmpty(idleInfo.ChangeVector) == false)
-                        etag = ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, idleInfo.HubVoronDbId);
-
-                    localEntries[idleInfo.HubVoronDbId] = etag;
-                    if (TryBase64ToGuid(idleInfo.HubVoronDbId, out var guid))
-                        localEntries[guid] = etag;
+                    long etag = string.IsNullOrEmpty(idleInfo.ChangeVector) ? 0 : ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, idleInfo.HubVoronDbId);
+                    localEtags[idleInfo.HubVoronDbId] = etag;
+                    if (ChangeVectorUtils.TryBase64ToGuid(idleInfo.HubVoronDbId, out var guid))
+                        localEtags[guid] = etag;
                 }
 
                 // ReplicationInfo keys may be GUID strings (from DbId.ToString()) while CV DbIds are Base64.
                 // Build a normalized lookup that accepts both representations.
-                Dictionary<string, long> replicationInfoLookup = null;
+                Dictionary<string, long> normalizedReplicationInfo = null;
                 if (idleInfo.ReplicationInfo != null && idleInfo.ReplicationInfo.Count > 0)
                 {
-                    replicationInfoLookup = new Dictionary<string, long>(idleInfo.ReplicationInfo.Count * 2, StringComparer.OrdinalIgnoreCase);
+                    normalizedReplicationInfo = new Dictionary<string, long>(idleInfo.ReplicationInfo.Count * 2, StringComparer.OrdinalIgnoreCase);
                     foreach (var kvp in idleInfo.ReplicationInfo)
                     {
-                        replicationInfoLookup[kvp.Key] = kvp.Value;
-                        // If the stored key is a GUID, also register its Base64 equivalent.
+                        normalizedReplicationInfo[kvp.Key] = kvp.Value;
                         if (Guid.TryParse(kvp.Key, out var g))
                         {
                             var base64 = Convert.ToBase64String(g.ToByteArray()).TrimEnd('=');
-                            replicationInfoLookup[base64] = kvp.Value;
+                            normalizedReplicationInfo[base64] = kvp.Value;
                         }
-                        // If the stored key is Base64, also register its GUID equivalent.
-                        else if (TryBase64ToGuid(kvp.Key, out var g2))
+                        else if (ChangeVectorUtils.TryBase64ToGuid(kvp.Key, out var g2))
                         {
-                            replicationInfoLookup[g2] = kvp.Value;
+                            normalizedReplicationInfo[g2] = kvp.Value;
                         }
                     }
                 }
 
-                var hubToSinkList = new List<ChangeVectorEntry>();
-                var sinkToHubList = new List<ChangeVectorEntry>();
+                ChangeVectorUtils.ClassifyEntriesByOrigin(sinkList, localEtags, normalizedReplicationInfo,
+                    out var hubOriginEntries, out var sinkOriginEntries);
 
-                foreach (var entry in sinkList)
-                {
-                    bool isHubEntry = localEntries.TryGetValue(entry.DbId, out long hubLocalEtag);
-
-                    if (isHubEntry == false && TryBase64ToGuid(entry.DbId, out var entryGuid))
-                        isHubEntry = localEntries.TryGetValue(entryGuid, out hubLocalEtag);
-
-                    if (isHubEntry)
-                    {
-                        // Hub-origin entry: belongs in HubToSink vector only.
-                        // Cap it to Hub's local etag — Sink may report a higher value if it received
-                        // data from Hub that Hub itself has since rolled back or hasn't committed yet.
-                        var cappedEtag = Math.Min(entry.Etag, hubLocalEtag);
-                        hubToSinkList.Add(new ChangeVectorEntry { DbId = entry.DbId, Etag = cappedEtag, NodeTag = entry.NodeTag });
-                        continue;
-                    }
-
-                    // Non-Hub entry: belongs in SinkToHub vector only, unless Hub already replicated it.
-                    bool alreadyReplicated = replicationInfoLookup != null &&
-                                            replicationInfoLookup.TryGetValue(entry.DbId, out long lastReplicated) &&
-                                            entry.Etag <= lastReplicated;
-
-                    if (alreadyReplicated == false)
-                        sinkToHubList.Add(entry);
-                }
-
-                sinkCvForHubToSink = hubToSinkList.Count == 0 ? string.Empty : hubToSinkList.SerializeVector();
-                sinkCvForSinkToHub = sinkToHubList.Count == 0 ? string.Empty : sinkToHubList.SerializeVector();
+                sinkCvForHubToSink = hubOriginEntries.Count == 0 ? string.Empty : hubOriginEntries.SerializeVector();
+                sinkCvForSinkToHub = sinkOriginEntries.Count == 0 ? string.Empty : sinkOriginEntries.SerializeVector();
             }
             catch
             {
                 sinkCvForHubToSink = sinkChangeVector;
                 sinkCvForSinkToHub = sinkChangeVector;
-            }
-        }
-
-        private static bool TryBase64ToGuid(string base64, out string guidString)
-        {
-            guidString = null;
-            if (string.IsNullOrEmpty(base64) || base64.Length > 24)
-                return false;
-            try
-            {
-                // Base64 DbIds are 22 chars (16 bytes without padding); add padding if needed
-                var padded = base64.Length % 4 == 0 ? base64 : base64.PadRight(base64.Length + (4 - base64.Length % 4), '=');
-                var bytes = Convert.FromBase64String(padded);
-                if (bytes.Length != 16)
-                    return false;
-                guidString = new Guid(bytes).ToString();
-                return true;
-            }
-            catch
-            {
-                return false;
             }
         }
 
