@@ -179,7 +179,7 @@ function TaskItem({
             }}
         >
             <a
-                href={link}
+                href={disableReason ? undefined : link}
                 onClick={() => reportEvent(target, "new")}
                 className={classNames(
                     "card no-decor w-100 ongoing-tasks-card h-100 add-new-ongoing-task__card",
