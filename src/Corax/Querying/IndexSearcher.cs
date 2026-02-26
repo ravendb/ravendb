@@ -33,8 +33,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     /// <summary>
     /// Used for testing purposes only.
     /// </summary>
-    private readonly CoraxTestingConfiguration _testingConfiguration;
-    internal bool VectorSearchScanningDisabled => _testingConfiguration is not null && _testingConfiguration.DisableVectorSearchScanning;
+    private CoraxTestingConfiguration _testingConfiguration;
+
+    public void SetTestingConfiguration(CoraxTestingConfiguration testingConfiguration) => _testingConfiguration = testingConfiguration;
     
     internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
     internal readonly Transaction _transaction;
@@ -48,14 +49,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private long? _numberOfEntries;
     private bool _nullTermsMarkersLoaded;
     private bool _nonExistingTermsMarkersLoaded;
-
-    /// <summary>
-    /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
-    /// way than reference algorithms. 
-    /// </summary>
-    public bool ForceNonAccelerated { get; set; }
-
-    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && (_testingConfiguration?.IsAccelerated ?? ForceNonAccelerated == false);
+    
+    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && (_testingConfiguration?.IsAccelerated ?? true);
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
@@ -122,34 +117,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping, CoraxTestingConfiguration testingConfiguration = null) : this(fieldsMapping, testingConfiguration)
+    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
         Init();
     }
 
-    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping, CoraxTestingConfiguration testingConfiguration = null) : this(fieldsMapping, testingConfiguration)
+    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)
     {
         _ownsTransaction = false;
         _transaction = tx;
         Init();
     }
-
-    private void Init()
+    
+    private IndexSearcher(IndexFieldsMapping fieldsMapping)
     {
-        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
-        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
-        _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
-        FieldCache = new FieldsCache(_transaction, _fieldsTree);
-    }
-
-    private IndexSearcher(IndexFieldsMapping fieldsMapping, CoraxTestingConfiguration testingConfiguration)
-    {
-        _testingConfiguration = testingConfiguration;
         if (fieldsMapping is null)
         {
             _ownsIndexMapping = true;
@@ -162,6 +145,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
+    private void Init()
+    {
+        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
+        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
+        _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
+        FieldCache = new FieldsCache(_transaction, _fieldsTree);
+    }
+    
     public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
     {
         if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)

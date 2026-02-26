@@ -61,7 +61,16 @@ public partial class Hnsw
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DistancesToScores(Span<float> distances) => _searchState.DistancesToScores(distances);
 
-        public int Fill(Span<long> matches, Span<float> distances)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Fill(Span<long> matches, Span<float> distances, GrowableBitArray? filter)
+        {
+            if (filter != null)
+                return Fill(matches, distances, filter.Value);
+            
+            return Fill(matches, distances);
+        }
+        
+        private int Fill(Span<long> matches, Span<float> distances)
         {
             long newVectorCount = 0;
             if (_vectorsSearcher.TryGetCurrentCandidates(out var indexes) == false)
@@ -148,7 +157,7 @@ public partial class Hnsw
             return index;
         }
         
-        public int Fill(Span<long> matches, Span<float> distances, GrowableBitArray filter)
+        private int Fill(Span<long> matches, Span<float> distances, GrowableBitArray filter)
         {
             if (_vectorsSearcher.TryGetCurrentCandidates(out var indexes) == false)
                 return 0;

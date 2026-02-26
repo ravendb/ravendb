@@ -54,7 +54,7 @@ public struct VectorSearchMatch : IQueryMatch
     /// </summary>
     private readonly bool _singleVectorSearchDoNotSort;
 
-    private GrowableBitArray _filterResults;
+    private GrowableBitArray? _filterResults;
     private IQueryMatch _filterQuery;
     private bool _filterQueryLoaded;
     private long _filterMatchesCount;
@@ -100,7 +100,7 @@ public struct VectorSearchMatch : IQueryMatch
         {
             _filterQueryLoaded = true;
             _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery);
-            _filterMatchesCount = _filterResults.Count;
+            _filterMatchesCount = _filterResults?.Count ?? 0;
 
             // Shortcut for empty filter
             if (_filterMatchesCount == 0)
@@ -118,12 +118,12 @@ public struct VectorSearchMatch : IQueryMatch
         ContextBoundNativeList<long> nodesIdsToScan = default;
         if (_scanningQuery)
         {
-            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults!.Value, out nodesIdsToScan);
             if (hasNodes == false)
             {
                 _isEmpty = true;
                 _vectorToSearch.Dispose();
-                _filterResults.Dispose();
+                _filterResults?.Dispose();
                 return;
             }
         }
@@ -133,7 +133,7 @@ public struct VectorSearchMatch : IQueryMatch
         {
             _ when _scanningQuery => Hnsw.ExactNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, hasFilterMatch: false, nodesIdsToScan),
             true => Hnsw.ExactNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
-            false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults, _random)), 
+            false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)), 
                 _ => Hnsw.ApproximateNearest(llt, fieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
         };
         
@@ -194,9 +194,7 @@ public struct VectorSearchMatch : IQueryMatch
 
         var distancesBuffer = _distances.GetSpace();
         
-        var read = _filterQuery == null 
-            ? _vectorSearchRetriever.Fill(matches, distancesBuffer)
-            : _vectorSearchRetriever.Fill(matches, distancesBuffer, _filterResults);
+        var read = _vectorSearchRetriever.Fill(matches, distancesBuffer, _filterResults);
         
         if (read == 0)
         {
@@ -234,12 +232,8 @@ public struct VectorSearchMatch : IQueryMatch
             var mBuf = matches.GetSpace();
             var dBuf = distances.GetSpace();
             Debug.Assert(mBuf.Length == dBuf.Length, "mBuf.Length == dBuf.Length");
-            
-            currentRead = (_filterQuery is null) switch
-            {
-                true => _vectorSearchRetriever.Fill(mBuf, dBuf),
-                false => _vectorSearchRetriever.Fill(mBuf, dBuf, _filterResults)
-            };
+
+            currentRead = _vectorSearchRetriever.Fill(mBuf, dBuf, _filterResults);
             
             matches.AddUsage(currentRead);
             distances.AddUsage(currentRead);
@@ -270,9 +264,6 @@ public struct VectorSearchMatch : IQueryMatch
             return;
         }
         
-        if (_isEmpty)
-            return;
-
         if (_singleVectorSearchDoNotSort == false)
         {
             ref var matchesRef = ref MemoryMarshal.GetReference(matches);
@@ -356,7 +347,7 @@ public struct VectorSearchMatch : IQueryMatch
 
     private void Dispose()
     {
-        _filterResults.Dispose();
+        _filterResults?.Dispose();
         _vectorSearchRetriever.Dispose();
         _vectorToSearch.Dispose();
     }

@@ -69,7 +69,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
                 MemoryMarshal.Cast<float, byte>(v1).ToArray(), 0f);
             Span<float> scores = new float[32];
             Span<long> docs = new long[32];
-            var r = nearest.Fill(docs, scores);
+            var r = nearest.Fill(docs, scores, filter: null);
             Assert.Equal(0, r);
         }
     }
@@ -131,7 +131,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             Span<long> matches = new long[8];
             Span<float> distances = new float[8];
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName, numberOfCandidates: 32, MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
-            int read = nearest.Fill(matches, distances);
+            int read = nearest.Fill(matches, distances, filter: null);
             Assert.Equal(3, read);
             Assert.False(distances.Slice(0, read).ToArray().Any(float.IsNaN));
             Assert.Equal(2, matches[0]);
@@ -190,7 +190,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
-            int read = nearest.Fill(matches, distances);
+            int read = nearest.Fill(matches, distances, filter: null);
             Assert.Equal(3, read);
             Assert.Equal(8, matches[0]);
             Assert.Equal(4, matches[1]);
@@ -254,7 +254,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
-            int read = nearest.Fill(matches, distances);
+            int read = nearest.Fill(matches, distances, filter: null);
             Assert.Equal(2, read);
             Assert.Equal(8, matches[0]);
             Assert.Equal(12, matches[1]);
@@ -296,7 +296,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using var search = Hnsw.ApproximateNearest(rTx.LowLevelTransaction, treeName, 12, vQ.GetEmbeddingMemory(), 0f);
             var distances = new float[16];
             var matches = new long[16];
-            var read = search.Fill(matches, distances);
+            var read = search.Fill(matches, distances, filter: null);
             Assert.Equal(2, read);
             var v1Pos = matches.AsSpan().Slice(0, read).IndexOf(1L);
             Assert.True(int.IsPositive(v1Pos));
@@ -355,7 +355,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             readFromGraph.Clear();
             do
             {
-                read = nearest.Fill(matches, distances);
+                read = nearest.Fill(matches, distances, filter: null);
                 readFromGraph.AddRange(matches.Slice(0, read));
             } while (read > 0);
             
@@ -387,7 +387,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             var read = 0;
             do
             {
-                read = nearest.Fill(matches, distances);
+                read = nearest.Fill(matches, distances, filter: null);
                 readFromGraph.AddRange(matches.Slice(0, read));
             } while (read > 0);
             
@@ -419,7 +419,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             var read = 0;
             do
             {
-                read = nearest.Fill(matches, distances);
+                read = nearest.Fill(matches, distances, filter: null);
                 readFromGraph.AddRange(matches.Slice(0, read));
             } while (read > 0);
             
@@ -444,7 +444,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
-            var read = nearest.Fill(matches, distances);
+            var read = nearest.Fill(matches, distances, filter: null);
             Assert.Equal(0, read);
         }
     }
@@ -513,7 +513,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using var nearest = Hnsw.ApproximateNearest(txr.LowLevelTransaction, treeName,
                 numberOfCandidates: 32,
                 MemoryMarshal.Cast<float, byte>(v3).ToArray(), 0f);
-            int read = nearest.Fill(matches, distances);
+            int read = nearest.Fill(matches, distances, filter: null);
             Assert.Equal(3, read);
         }
     }

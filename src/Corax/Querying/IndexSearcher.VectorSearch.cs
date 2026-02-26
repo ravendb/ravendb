@@ -213,6 +213,14 @@ public partial class IndexSearcher
 
             var uniqueCount = Sorting.SortAndRemoveDuplicates(nodesIdsToScan.ToSpan());
             nodesIdsToScan.Count = uniqueCount;
+
+            if (nodesIdsToScan.Count == 0)
+            {
+                nodesIdsToScan.Dispose();
+                nodesIdsToScan = default;
+                return false;
+            }
+            
             return nodesIdsToScan.Count > 0;
         }
     }

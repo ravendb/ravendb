@@ -59,7 +59,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
             var read = 0;
             do
             {
-                read = nearest.Fill(matches, distances);
+                read = nearest.Fill(matches, distances, filter: null);
                 totalReturned += read;
                 returnedDocuments.AddRange(matches[..read]);
             } while (read != 0);

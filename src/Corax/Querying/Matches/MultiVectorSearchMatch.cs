@@ -51,7 +51,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
     /// </summary>
     private readonly bool _singleVectorSearchDoNotSort;
 
-    private GrowableBitArray _filterResults;
+    private GrowableBitArray? _filterResults;
     private IQueryMatch _filterQuery;
     private long _filterMatchesCount;
 
@@ -80,7 +80,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
         if (_filterQuery != null)
         {
             _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery);
-            _filterMatchesCount = _filterResults.Count;
+            _filterMatchesCount = _filterResults!.Value.Count;
             
             // Shortcut for empty filter
             if (_filterMatchesCount == 0)
@@ -94,12 +94,12 @@ public struct MultiVectorSearchMatch : IQueryMatch
         ContextBoundNativeList<long> nodesIdsToScan = default;
         if (_scanningQuery)
         {
-            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults, out nodesIdsToScan);
+            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults!.Value, out nodesIdsToScan);
             if (hasNodes == false)
             {
                 _isEmpty = true;
                 nodesIdsToScan.Dispose();
-                _filterResults.Dispose();
+                _filterResults?.Dispose();
                 foreach (var vector in _vectorsToSearch)
                     vector.Dispose();
                 return;
@@ -116,14 +116,14 @@ public struct MultiVectorSearchMatch : IQueryMatch
             {
                 _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, nodesIdsToScan),
                 true => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
-                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults, _random)), 
+                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)), 
                 false => Hnsw.ApproximateNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
             };
 
             allEmpty &= _vectorsRetrievers[i].IsEmpty;
         }
 
-        _isEmpty = allEmpty || (_filterQuery != null && _filterResults.Count == 0);
+        _isEmpty = allEmpty || (_filterQuery != null && _filterResults!.Value.Count == 0);
     }
 
     public int Fill(Span<long> matches)
@@ -167,11 +167,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
                 var distanceBuffer = _distances.GetSpace();
                 Debug.Assert(matchBuffer.Length == distanceBuffer.Length, "matchBuffer.Length == distanceBuffer.Length");
 
-                currentRead = (_filterQuery is null) switch
-                {
-                    true => vectorSearcher.Fill(matchBuffer, distanceBuffer),
-                    false => vectorSearcher.Fill(matchBuffer, distanceBuffer, _filterResults),
-                };
+
+                currentRead = vectorSearcher.Fill(matchBuffer, distanceBuffer, _filterResults);
                 
                 _matches.AddUsage(currentRead);
                 _distances.AddUsage(currentRead);
@@ -191,7 +188,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
         if (_singleVectorSearchDoNotSort) 
             _distances.Results.Sort(_matches.Results);
         
-        _filterResults.Dispose();
+        _filterResults?.Dispose();
     }
 
     public int AndWith(Span<long> buffer, int matches)

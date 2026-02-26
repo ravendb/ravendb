@@ -4,6 +4,7 @@ using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying;
 using Corax.Querying.Matches.Meta;
+using Corax.Utils;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
@@ -51,8 +52,10 @@ public class RavenDB_21689 : StorageTest
             indexWriter.Commit();
         }
         
-        using (var indexSearcher = new IndexSearcher(Env, _fieldsMapping){ForceNonAccelerated = true})
+        using (var indexSearcher = new IndexSearcher(Env, _fieldsMapping))
         {
+            indexSearcher.SetTestingConfiguration(new CoraxTestingConfiguration(){IsAccelerated = false});
+            
             var searchQuery = indexSearcher.SearchQuery(_fieldsMapping.GetByFieldId(2).Metadata.ChangeAnalyzer(FieldIndexingMode.Search, defaultAnalyzer), new[] {"abc10*"}, Constants.Search.Operator.Or);
             var termQuery = indexSearcher.TermQuery(_fieldsMapping.GetByFieldId(1).Metadata, "false");
             

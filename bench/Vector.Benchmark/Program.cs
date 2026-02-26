@@ -51,8 +51,8 @@ void TestRecall(string path)
                 using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, wikiTreeName, 10, MemoryMarshal.AsBytes(vector).ToArray(), 0f, false);
                 using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, wikiTreeName, 64, MemoryMarshal.AsBytes(vector).ToArray(), 0f, false);
 
-                var aRead = ann.Fill(annMatches, annDistances);
-                var eRead = enn.Fill(ennMatches, ennDistances);
+                var aRead = ann.Fill(annMatches, annDistances, null);
+                var eRead = enn.Fill(ennMatches, ennDistances, null);
                 if (aRead != eRead)
                 {
                     Console.WriteLine("Mismatch in read count?");
