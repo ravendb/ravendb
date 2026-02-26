@@ -69,6 +69,8 @@
 
     static readonly externalScriptNotAllowedForNonClusterAdmins =
         "Setting up the configuration via an external script is not allowed for non cluster admins.";
+
+    static readonly etlTaskNameLocked = "ETL task name cannot be changed after creation. Delete and recreate the task to use a different name.";
 }
 
 export = tasksCommonContent;

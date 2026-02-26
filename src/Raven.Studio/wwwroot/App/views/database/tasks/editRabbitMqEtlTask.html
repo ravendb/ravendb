@@ -26,7 +26,13 @@
                         <div class="form-group margin-top">
                             <label for="taskName" class="control-label">Task Name</label>
                             <div class="flex-grow">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the RabbitMQ ETL task (optional)" data-bind="textInput: taskName, disable: !$root.isAddingNewRabbitMqEtlTask()">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="taskName"
+                                    placeholder="Enter a descriptive name for the RabbitMQ ETL task (optional)"
+                                    data-bind="textInput: taskName, disable: !!$root.taskNameDisabledReason(), attr: { title: $root.taskNameDisabledReason() }"
+                                >
                             </div>
                         </div>
                         <div class="form-group">
