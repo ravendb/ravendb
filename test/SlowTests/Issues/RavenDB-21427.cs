@@ -304,7 +304,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes)]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes, Architecture = RavenArchitecture.AllX64)]
         public async Task Prevent_License_Downgrade_Index_Additional_Assemblies()
         {
             DoNotReuseServer();
@@ -323,7 +323,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes)]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Indexes, Architecture = RavenArchitecture.AllX64)]
         public async Task Prevent_Put_Index_Additional_Assemblies()
         {
             DoNotReuseServer();
