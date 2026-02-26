@@ -196,7 +196,7 @@ public class AiConnectionStringsTests : RavenTestBase
 
     private readonly List<string> _testValuesList = ["First test value", "Second test value", "Third test value"];
 
-    [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
+    [RavenMultiplatformTheory(RavenTestCategory.Etl | RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.All)]
     public void SemanticKernel_WithValidConfiguration_ShouldWork(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {

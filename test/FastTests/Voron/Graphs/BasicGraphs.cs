@@ -252,7 +252,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
-    [RavenTheory(RavenTestCategory.Voron)]
+    [RavenMultiplatformTheory(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]
     [InlineDataWithRandomSeed]

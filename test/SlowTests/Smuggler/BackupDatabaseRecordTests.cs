@@ -68,7 +68,7 @@ namespace SlowTests.Smuggler
             Assert.Equal(52, fieldNames.Count);
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64)]
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
@@ -1114,7 +1114,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, SnowflakeRequired = true)]
+        [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64, SnowflakeRequired = true)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1446,7 +1446,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
+        [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions, RavenArchitecture.AllX64)]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1526,7 +1526,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [RavenMultiplatformTheory(RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)

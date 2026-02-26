@@ -30,7 +30,7 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Null(result.Singles);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void CanIndexNullWhenServerGeneratesTheEmbedding()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

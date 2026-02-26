@@ -17,7 +17,7 @@ public class RavenDB_23445 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void TestIndexingOfNulls(Options options)
     {
@@ -45,13 +45,13 @@ public class RavenDB_23445 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(VectorEmbeddingType.Binary, 0.65f)]
     [InlineData(VectorEmbeddingType.Int8, 0.80f)]
     [InlineData(VectorEmbeddingType.Single, 0.80f)]
     public void CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity) => CanCreateVectorIndexFromBase<TextVectorIndex>(vectorEmbeddingType, similarity);
     
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(VectorEmbeddingType.Binary, 0.65f)]
     [InlineData(VectorEmbeddingType.Int8, 0.80f)]
     [InlineData(VectorEmbeddingType.Single, 0.80f)]

@@ -20,11 +20,11 @@ namespace SlowTests.Issues;
 
 public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public void CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfiguration()
     => CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationBase<DtoIndex>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public void CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationJs()
         => CanIndexVectorWhenPreviousElementsAreNullWithoutExplicitVectorFieldConfigurationBase<DtoIndexJs>();
     
@@ -56,11 +56,11 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Null(errors);
     }
     
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocument()
     => await CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentBase<VectorIndex>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public async Task CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentJs()
         => await CanUpdateNoExplicitlyConfiguredVectorFieldViaSubscriptionWithLoadDocumentBase<VectorIndexJs>();
     

@@ -15,7 +15,7 @@ public class RavenDB_23695 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public void CanPerformNoopUpdateOfVector()
     {
         using var store = GetDocumentStore();
@@ -44,7 +44,7 @@ public class RavenDB_23695 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(4, 5)]
     [InlineData(5, 4)]
     public void CanPerformListDegradationAndUpgrade(int from, int to)

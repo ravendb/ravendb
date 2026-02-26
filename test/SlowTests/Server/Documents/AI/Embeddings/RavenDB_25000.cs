@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class RavenDB_25000(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanUseEmbeddingGenerationTaskInIndexEntriesQuery()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

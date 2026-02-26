@@ -18,7 +18,7 @@ public class TasksManagementTests : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     public void CanDeleteTask()
     {
         using var store = GetDocumentStore();
@@ -48,7 +48,7 @@ public class TasksManagementTests : RavenTestBase
         Assert.Null(ongoingTask);
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     public void CanUpdateTask()
     {
         using var store = GetDocumentStore();
