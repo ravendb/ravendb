@@ -1,6 +1,7 @@
 import {
     databaseAccessArgType,
     databaseArgType,
+    DatabaseType,
     licenseArgType,
     withBootstrap5,
     withForceRerender,

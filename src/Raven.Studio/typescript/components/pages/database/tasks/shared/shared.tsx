@@ -396,6 +396,7 @@ interface OngoingTasksCategory {
 interface GetDisableReasonProps {
     hasAccess: boolean;
     customReason?: string;
+    hasSharding?: boolean;
 }
 
 export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean }) {
@@ -405,7 +406,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
 
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
+
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
     const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
     const hasReplicationSink = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
@@ -422,6 +426,8 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
+    const hasEmbeddingGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
+
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
     const subscriptionsDatabaseLimit = useAppSelector(
         licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
@@ -455,13 +461,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
         return `${limitReachedReason} has reached the maximum number of subscriptions allowed per ${limitReachedReason.toLowerCase()}.`;
     };
 
-    const getTaskDisableReason = ({ hasAccess, customReason }: GetDisableReasonProps) => {
-        if (isSharded) {
-            return "Not supported in sharded databases";
-        }
-
+    const getTaskDisableReason = ({ hasAccess, customReason, hasSharding }: GetDisableReasonProps) => {
         if (!hasAccess) {
             return "You don't have permission to create this task";
+        }
+
+        if (!hasSharding && isSharded) {
+            return "Not supported in sharded databases";
         }
 
         return customReason ?? null;
@@ -478,10 +484,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     iconName: "genai",
                     variant: "AI",
                     target: "GenAi",
-                    showLicenseBadge: !hasGenAi,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     licenseBadge: "Enterprise AI",
                     link: forCurrentDatabase.editGenAiTaskUrl(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasGenAi ? "Your license doesn't include GenAI" : null,
+                    }),
                 },
                 {
                     title: "Embeddings Generation",
@@ -490,7 +499,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "AI",
                     target: "EmbeddingsGeneration",
                     link: forCurrentDatabase.editEmbeddingsGenerationTaskUrl(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasEmbeddingGeneration
+                            ? "Your license doesn't include Embeddings Generation"
+                            : null,
+                    }),
                 },
             ],
         },
@@ -506,9 +521,15 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "Replication",
                     target: "ExternalReplication",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !hasExternalReplication,
+                    showLicenseBadge: !isProfessionalOrAbove,
                     link: forCurrentDatabase.editExternalReplicationTaskUrl(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasExternalReplication
+                            ? "Your license doesn't include External Replication"
+                            : null,
+                    }),
                 },
                 {
                     title: "Replication Hub",
@@ -518,10 +539,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "Replication",
                     licenseBadge: "Enterprise",
                     target: "ReplicationHub",
-                    showLicenseBadge: !hasReplicationHub,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editReplicationHubTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasReplicationHub ? "Your license doesn't include Replication Hub" : null,
                     }),
                 },
                 {
@@ -532,10 +554,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "Replication",
                     target: "ReplicationSink",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !hasReplicationSink,
+                    showLicenseBadge: !isProfessionalOrAbove,
                     link: forCurrentDatabase.editReplicationSinkTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasReplicationSink ? "Your license doesn't include Replication Sink" : null,
                     }),
                 },
             ],
@@ -550,10 +573,14 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     iconName: "periodic-backup",
                     variant: "Backups",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !hasPeriodicBackups,
+                    showLicenseBadge: !isProfessionalOrAbove,
                     target: "PeriodicBackup",
                     link: forCurrentDatabase.editPeriodicBackupTask("OngoingTasks", false)(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasPeriodicBackups ? "Your license doesn't include Periodic Backup" : null,
+                    }),
                 },
             ],
         },
@@ -566,6 +593,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     disableReason: getTaskDisableReason({
                         hasAccess: true,
                         customReason: getSubscriptionLimitReason(),
+                        hasSharding: true,
                     }),
                     description: "Send batches of documents that match a pre-defined query to a client for processing.",
                     iconName: "subscriptions",
@@ -594,9 +622,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "RavenETL",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !hasRavenDbEtl,
+                    showLicenseBadge: !isProfessionalOrAbove,
                     link: forCurrentDatabase.editRavenEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasRavenDbEtl ? "Your license doesn't include RavenDB ETL" : null,
+                    }),
                 },
                 {
                     title: "Elasticsearch ETL",
@@ -606,9 +638,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "ElasticSearchETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasElasticSearchEtl,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editElasticSearchEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasElasticSearchEtl ? "Your license doesn't include Elasticsearch ETL" : null,
+                    }),
                 },
                 {
                     title: "Kafka ETL",
@@ -617,10 +653,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "KafkaETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasKafkaEtl,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editKafkaEtlTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasKafkaEtl ? "Your license doesn't include Kafka ETL" : null,
                     }),
                 },
                 {
@@ -631,9 +668,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "SqlETL",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !hasSqlEtl,
+                    showLicenseBadge: !isProfessionalOrAbove,
                     link: forCurrentDatabase.editSqlEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasSqlEtl ? "Your license doesn't include SQL ETL" : null,
+                    }),
                 },
                 {
                     title: "Snowflake ETL",
@@ -643,11 +684,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "SnowflakeETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasSnowflakeEtl,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editSnowflakeEtlTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
-                        customReason: getSubscriptionLimitReason(),
+                        customReason: !hasSnowflakeEtl ? "Your license doesn't include Snowflake ETL" : null,
                     }),
                 },
                 {
@@ -659,8 +700,12 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     target: "OlapETL",
                     link: forCurrentDatabase.editOlapEtlTaskUrl(),
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasOlapEtl,
-                    disableReason: getTaskDisableReason({ hasAccess: hasDatabaseAdminAccess }),
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    disableReason: getTaskDisableReason({
+                        hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
+                        customReason: !hasOlapEtl ? "Your license doesn't include OLAP ETL" : null,
+                    }),
                 },
                 {
                     title: "RabbitMQ ETL",
@@ -670,10 +715,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "RabbitMqETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasRabbitMqEtl,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editRabbitMqEtlTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasRabbitMqEtl ? "Your license doesn't include RabbitMQ ETL" : null,
                     }),
                 },
                 {
@@ -684,10 +730,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "AzureQueueStorageETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasAzureQueueStorageEtl,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editAzureQueueStorageEtlTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasAzureQueueStorageEtl
+                            ? "Your license doesn't include Azure Queue Storage ETL"
+                            : null,
                     }),
                 },
                 {
@@ -697,10 +746,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "ETL",
                     target: "AmazonSqsETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasAmazonSqsEtl,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editAmazonSqsEtlTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasAmazonSqsEtl ? "Your license doesn't include Amazon SQS ETL" : null,
                     }),
                 },
             ],
@@ -717,10 +767,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     variant: "Sink",
                     target: "KafkaSink",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasKafkaSink,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editKafkaSinkTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasKafkaSink ? "Your license doesn't include Kafka Sink" : null,
                     }),
                 },
                 {
@@ -731,10 +782,11 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     target: "RabbitMqSink",
                     variant: "Sink",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !hasRabbitMqSink,
+                    showLicenseBadge: !isEnterpriseOrDeveloper,
                     link: forCurrentDatabase.editRabbitMqSinkTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        customReason: !hasRabbitMqSink ? "Your license doesn't include RabbitMQ Sink" : null,
                     }),
                 },
             ],

@@ -1158,5 +1158,3 @@ interface AiModelsRequestDto {
 interface GetAiAgentResultDto {
     AiAgents: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration[];
 }
-
-type DatabaseType = "sharded" | "cluster" | "singleNode";
