@@ -132,8 +132,8 @@ export function OngoingTasksList({ filteredTasks, isAiOnly }: OngoingTasksListPr
                         </HrHeader>
                     )}
                     <div className="d-grid gap-3 ongoing-tasks-grid">
-                        {category.tasks.map((task, idx) => (
-                            <TaskItem key={idx} {...task} />
+                        {category.tasks.map((task) => (
+                            <TaskItem key={task.title} {...task} />
                         ))}
                     </div>
                 </div>
@@ -154,7 +154,6 @@ export interface TaskItemProps {
     disableReason?: ReactNode;
     licenseBadge?: LicenseBadgeText;
     showLicenseBadge?: boolean;
-    hasAccess: boolean;
     counterBadge?: ReactNode;
 }
 
