@@ -141,7 +141,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
     protected override int LoadInternal(IEnumerable<GenAiScriptResult> items, DocumentsOperationContext context, GenAiStatsScope scope)
     {
-        var results = PrepareItemsBeforeSendingToModel(items);
+        var (results, docIdsToClearTaskHashes) = PrepareItemsBeforeSendingToModel(items);
+        if (docIdsToClearTaskHashes.Count > 0)
+        {
+            var cmd = new GenAiClearMetadataHashesCommand(docIdsToClearTaskHashes, Configuration.Identifier);
+            Database.TxMerger.EnqueueSync(cmd);
+        }
+
         if (results.Count is 0)
             return 0;
 
@@ -439,7 +445,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 var genAiItem = new GenAiItem(document, Configuration.Collection);
                 var transformedResults = Transform([genAiItem], context, scope, new EtlProcessState());
 
-                items = PrepareItemsBeforeSendingToModel(transformedResults);
+                items = PrepareItemsBeforeSendingToModel(transformedResults).Result;
 
                 context.CloseTransaction();
 
@@ -596,14 +602,21 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private static List<GenAiResultItem> PrepareItemsBeforeSendingToModel(IEnumerable<GenAiScriptResult> items)
+    private static (List<GenAiResultItem> Result, List<string> DocIdsToClearTaskHashes) PrepareItemsBeforeSendingToModel(IEnumerable<GenAiScriptResult> items)
     {
         // TODO we can do this in the transform phase 
 
         var results = new List<GenAiResultItem>();
+        var docIdsToClearTaskHashes = new List<string>();
 
         foreach (var scriptResult in items)
         {
+            if (scriptResult.IsMetadataCleanupMarker)
+            {
+                docIdsToClearTaskHashes.Add(scriptResult.DocumentId);
+                continue; // this is just a marker to clear metadata, it doesn't need to be sent to the model
+            }
+
             var item = new GenAiResultItem
             {
                 DocumentId = scriptResult.DocumentId,
@@ -620,7 +633,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             results.Add(item);
         }
 
-        return results;
+        return (results, docIdsToClearTaskHashes);
     }
 
     internal ChatCompletionClient GetChatCompletionClient() => _chatCompletionClient;

@@ -576,9 +576,9 @@ public static class SettingsZipFileHelper
                         Environment.NewLine +
                         "When you enter the Setup Wizard on a new node, please choose 'Use Setup Package'." +
                         Environment.NewLine +
-                        "Do not try to start a new setup process again in this new node, it is not supported." +
+                        "Do not start a setup process on a node that has already been configured; this is not supported." +
                         Environment.NewLine +
-                        "You will be asked to upload the zip file which was just downloaded." +
+                        "You will be asked to upload the zip file that was just downloaded." +
                         Environment.NewLine +
                         "The new server node will join the already existing cluster." +
                         Environment.NewLine +
@@ -609,9 +609,9 @@ public static class SettingsZipFileHelper
                         Environment.NewLine +
                         "When you enter the Setup Wizard on a new node, please choose 'Use Setup Package'." +
                         Environment.NewLine +
-                        "Do not try to start a new setup process again in this new node, it is not supported." +
+                        "Do not start a setup process on a node that has already been configured; this is not supported." +
                         Environment.NewLine +
-                        "You will be asked to upload the zip file which was just downloaded." +
+                        "You will be asked to upload the zip file that was just downloaded." +
                         Environment.NewLine +
                         "The new server node will join the already existing cluster." +
                         Environment.NewLine +
@@ -667,9 +667,9 @@ public static class SettingsZipFileHelper
              Environment.NewLine +
              "When you enter the Setup Wizard on a new node, please choose 'Use Setup Package'." +
              Environment.NewLine +
-             "Do not try to start a new setup process again in this new node, it is not supported." +
+             "Do not start a setup process on a node that has already been configured; this is not supported." +
              Environment.NewLine +
-             "You will be asked to upload the zip file which was just downloaded." +
+             "You will be asked to upload the zip file that was just downloaded." +
              Environment.NewLine +
              "The new server node will join the already existing cluster." +
              Environment.NewLine +

@@ -130,6 +130,26 @@ namespace Raven.Client.Documents.Attachments
             };
         }
 
+        internal DynamicJsonValue ToStudioJson()
+        {
+            DynamicJsonValue destinations = null;
+
+            if (Destinations != null)
+            {
+                destinations = new DynamicJsonValue();
+                foreach (var kvp in Destinations)
+                {
+                    destinations[kvp.Key] = kvp.Value?.ToStudioJson();
+                }
+            }
+
+            return new DynamicJsonValue
+            {
+                [nameof(Disabled)] = Disabled,
+                [nameof(Destinations)] = destinations
+            };
+        }
+
         internal void AssertConfiguration(string databaseName = null)
         {
             var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";

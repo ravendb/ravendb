@@ -24,7 +24,6 @@ import documentHelpers = require("common/helpers/database/documentHelpers");
 import copyToClipboard = require("common/copyToClipboard");
 import deleteAttachmentCommand = require("commands/database/documents/attachments/deleteAttachmentCommand");
 import setCounterCommand = require("commands/database/documents/counters/setCounterCommand");
-import CountersDetail = Raven.Client.Documents.Operations.Counters.CountersDetail;
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
@@ -49,15 +48,16 @@ import shardedDatabase = require("models/resources/shardedDatabase");
 import assertUnreachable = require("components/utils/assertUnreachable");
 import getDocumentRevisionsPhysicalSizeCommand = require("commands/database/documents/getDocumentRevisionPhysicalSizeCommand");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
-import getRemoteAttachmentsConfigurationCommand = require("commands/database/settings/getRemoteAttachmentsConfigurationCommand");
-import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 import storeCompat = require("components/storeCompat");
 import chatbotSlice = require("components/shell/chatbot/store/chatbotSlice");
 import popoverUtils = require("common/popoverUtils");
 import validateDocumentSchemaCommand = require("commands/database/documents/validateDocumentSchemaCommand");
 import getSchemaValidationCommand = require("commands/database/settings/getSchemaValidationCommand");
-import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 import licenseModel = require("models/auth/licenseModel");
+import getRemoteAttachmentsDestinationsCommand
+    = require("commands/database/settings/getRemoteAttachmentsDestinationsCommand");
+import CountersDetail = Raven.Client.Documents.Operations.Counters.CountersDetail;
+import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 
 class editDocument extends shardViewModelBase {
     view = require("views/database/documents/editDocument.html");
@@ -1447,9 +1447,9 @@ class editDocument extends shardViewModelBase {
             return;
         }
 
-        new getRemoteAttachmentsConfigurationCommand(this.db)
+        new getRemoteAttachmentsDestinationsCommand(this.db)
             .execute()
-            .done((remoteAttachmentsConfiguration: RemoteAttachmentsConfiguration) => {
+            .done((remoteAttachmentsConfiguration: RemoteAttachmentsStudioConfiguration) => {
                 if (remoteAttachmentsConfiguration == null || remoteAttachmentsConfiguration.Disabled) {
                     this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings → Remote Attachments and update the configuration accordingly.");
                 }

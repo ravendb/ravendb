@@ -77,7 +77,7 @@ namespace SlowTests.Issues
 
                 for (var i = 0; i < total; i++)
                 {
-                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew());
+                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew(), EstimationAccuracy.EstimateIfLongRunning);
                     var expectedCount = Calculate(tree, i, out long expectedTotalCount);
 
                     Assert.Equal(inserted, expectedTotalCount);

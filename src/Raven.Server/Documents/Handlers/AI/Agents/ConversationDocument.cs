@@ -158,7 +158,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         foreach (var parameter in parameters)
         {
             var value = Parameters[parameter.Name];
-            sb.AppendLine($"{parameter.Name} = {value.ToString()}");
+            sb.AppendLine($"{parameter.Name} = {value?.ToString() ?? "null"}");
         }
 
         return sb.ToString();

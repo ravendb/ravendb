@@ -43,7 +43,7 @@ public class DatabaseIndexCreateController : AbstractIndexCreateController
     {
         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
-            return ValueTask.FromResult(_database.DocumentsStorage.GetCollection(collection, context).Count);
+            return ValueTask.FromResult(_database.DocumentsStorage.GetNumberOfDocumentsFor(collection, context));
     }
 
     protected override IEnumerable<IndexInformationHolder> GetIndexes()

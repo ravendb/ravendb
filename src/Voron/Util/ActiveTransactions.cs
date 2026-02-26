@@ -72,7 +72,8 @@ namespace Voron.Util
         {
             Id = transaction.Id,
             Flags = transaction.Flags,
-            AsyncCommit = transaction.AsyncCommit != null
+            AsyncCommit = transaction.AsyncCommit != null,
+            CallerName = transaction.CallerName
         }).ToList();
 
         internal List<LowLevelTransaction> AllTransactionsInstances => _activeTxs.ToList();

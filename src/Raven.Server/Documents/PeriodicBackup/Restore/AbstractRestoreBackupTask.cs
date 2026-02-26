@@ -191,6 +191,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             CreateDocumentDatabase();
 
             var databaseRecord = RestoreSettings.DatabaseRecord;
+
+            DisableOngoingTasksIfNeeded(databaseRecord);
             databaseRecord.Topology = new DatabaseTopology();
 
             // restoring to the current node only

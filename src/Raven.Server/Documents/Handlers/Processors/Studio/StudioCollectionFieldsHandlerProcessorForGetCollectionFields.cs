@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             else
             {
                 changeVector = RequestHandler.Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, collection);
-                totalResults = RequestHandler.Database.DocumentsStorage.GetCollection(collection, context).Count;
+                totalResults = RequestHandler.Database.DocumentsStorage.GetNumberOfDocumentsFor(collection, context);
 
                 if (changeVector != null)
                     etag = $"{changeVector}/{totalResults}";

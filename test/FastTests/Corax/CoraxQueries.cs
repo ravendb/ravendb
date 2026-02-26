@@ -294,6 +294,33 @@ namespace FastTests.Corax
             Assert.True(first.SequenceEqual(second));
         }
 
+        /// <summary>
+        /// RavenDB-22603: Test that optimized AndNot works correctly with TermMatch as base.
+        /// This test has an Equals anchor (TermQuery) which allows the MultiUnaryMatch optimization.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void AndNotWithTermMatchAsBase()
+        {
+            PrepareData();
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+
+            // AndNot(TermMatch("cde"), TermMatch(LongValue=1))
+            // Should return entries where TextualValue == "cde" AND LongValue != 1
+            var termCde = searcher.TermQuery(_textualItemFieldMetadata, "cde");
+            var term1 = searcher.TermQuery(_longItemFieldMetadata, 1L);
+            var andNot = searcher.AndNot(termCde, term1);
+
+            var results = FetchFromCorax(ref andNot);
+            var expected = _entries.Where(e => e.TextualValue == "cde" && e.LongValue != 1).Select(e => e.Id).ToList();
+
+            results.Sort();
+            expected.Sort();
+
+            Assert.Equal(expected.Count, results.Count);
+            Assert.True(expected.SequenceEqual(results));
+        }
+
         private List<string> FetchFromCorax<TMatch>(ref TMatch match, int batchSize = 256)
             where TMatch : IQueryMatch
         {

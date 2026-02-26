@@ -258,10 +258,10 @@ namespace Sparrow.Utils
                     {
                         var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
+                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
+
                         if (done)
                             break;
-
-                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
                     }
                 }
 
@@ -293,10 +293,10 @@ namespace Sparrow.Utils
                     {
                         var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
+                        _inner.Write(_tempBuffer, 0, outputBytes);
+
                         if (done)
                             break;
-
-                        _inner.Write(_tempBuffer, 0, outputBytes);
                     }
                 }
 

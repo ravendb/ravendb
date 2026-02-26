@@ -21,6 +21,7 @@ using Raven.Server.Documents.Refresh;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -2341,6 +2342,21 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
+        public long GetNumberOfDocumentsFor(string collection, DocumentsOperationContext context)
+        {
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return 0;
+
+            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
+                collectionName.GetTableName(CollectionTableType.Documents));
+            if (collectionTable == null)
+                return 0;
+
+            var indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
+            return collectionTable.GetNumberOfEntriesFor(indexDef);
+        }
+
         public sealed class CollectionStats
         {
             public string Name;
@@ -2436,36 +2452,6 @@ namespace Raven.Server.Documents
             return report;
         }
 
-        public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
-        {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-            {
-                return new CollectionStats
-                {
-                    Name = collection,
-                    Count = 0
-                };
-            }
-
-            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
-                collectionName.GetTableName(CollectionTableType.Documents));
-
-            if (collectionTable == null)
-            {
-                return new CollectionStats
-                {
-                    Name = collection,
-                    Count = 0
-                };
-            }
-
-            return new CollectionStats
-            {
-                Name = collectionName.Name,
-                Count = collectionTable.NumberOfEntries
-            };
-        }
 
         public long DeleteTombstonesBefore(DocumentsOperationContext context, string collection, long etag, long numberOfEntriesToDelete)
         {

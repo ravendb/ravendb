@@ -1,5 +1,5 @@
 import Modal from "components/common/Modal";
-import { Controller, ControllerRenderProps, FieldValues, FormProvider, useForm } from "react-hook-form";
+import { Controller, ControllerRenderProps, FieldValues, FormProvider, useForm, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { Icon } from "components/common/Icon";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -14,9 +14,11 @@ import Button from "react-bootstrap/Button";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import moment from "moment";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import RichAlert from "components/common/RichAlert";
+import { components, GroupBase, OptionProps } from "react-select";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
-import RemoteAttachmentsConfiguration = Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration;
 
 type AddAttachmentWithRemoteParametersModalProps = {
     document: KnockoutObservable<document>;
@@ -33,7 +35,7 @@ export default function AddAttachmentWithRemoteParametersModal({
 }: AddAttachmentWithRemoteParametersModalProps) {
     const { databasesService } = useServices();
     const asyncGetRemoteAttachmentParametersConfig = useAsyncCallback(() =>
-        databasesService.getRemoteAttachmentsConfiguration(db.name)
+        databasesService.getRemoteAttachmentsDestinations(db.name)
     );
 
     const form = useForm({
@@ -51,6 +53,10 @@ export default function AddAttachmentWithRemoteParametersModal({
     const asyncUploadFileWithRemoteParameters = useAsyncCallback((file: File, dto: RemoteAttachmentParameters) =>
         uploader.uploadFileWithRemoteParameters(file, dto)
     );
+
+    const selectedDestination = useWatch({
+        control, name: "identifier"
+    })
 
     const handleSubmit = async (formData: AttachmentWithRemoteParametersFormData) => {
         try {
@@ -108,6 +114,11 @@ export default function AddAttachmentWithRemoteParametersModal({
                                 )}
                                 name="identifier"
                                 control={control}
+                                components={{ Option: RemoteAttachmentDestinationOption }}
+                            />
+                            <RemoteAttachmentWarning
+                                config={asyncGetRemoteAttachmentParametersConfig.result}
+                                selectedDestination={selectedDestination}
                             />
                         </FormGroup>
                         <FormGroup>
@@ -143,6 +154,31 @@ export default function AddAttachmentWithRemoteParametersModal({
     );
 }
 
+interface RemoteAttachmentWarningProps {
+    config: RemoteAttachmentsStudioConfiguration;
+    selectedDestination: string;
+}
+
+function RemoteAttachmentWarning({ config, selectedDestination }: RemoteAttachmentWarningProps) {
+    if (config?.Disabled) {
+        return (
+            <RichAlert className="mt-2" icon="warning" variant="warning">
+                Remote attachments feature is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the feature is enabled.
+            </RichAlert>
+        );
+    }
+
+    if (config?.Destinations[selectedDestination]?.Disabled) {
+        return (
+            <RichAlert className="mt-2" icon="warning" variant="warning">
+                Destination is currently <b>disabled</b>. You can add an attachment to the remote storage, but it will be uploaded only after the destination is enabled.
+            </RichAlert>
+        );
+    }
+
+    return null;
+}
+
 const schema = yup.object({
     file: yup.mixed().required("File is required"),
     identifier: yup.string().required("Identifier is required"),
@@ -158,14 +194,17 @@ const mapToDto = (values: AttachmentWithRemoteParametersFormData): RemoteAttachm
     };
 };
 
-const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?: RemoteAttachmentsConfiguration) => {
+const getRemoteAttachmentsDestinationsOptions = (remoteAttachmentsConfiguration?: RemoteAttachmentsStudioConfiguration) => {
     if (!remoteAttachmentsConfiguration) {
         return [];
     }
-    return Object.keys(remoteAttachmentsConfiguration.Destinations).map((d) => ({ label: d, value: d }));
+    return Object.keys(remoteAttachmentsConfiguration.Destinations).map((destination) => {
+        const destinationKey = remoteAttachmentsConfiguration.Destinations[destination];
+        return { label: destination, value: destination, disabled: destinationKey.Disabled };
+    });
 };
 
-function getDefaultValues(configResult: RemoteAttachmentsConfiguration): AttachmentWithRemoteParametersFormData {
+function getDefaultValues(configResult: RemoteAttachmentsStudioConfiguration): AttachmentWithRemoteParametersFormData {
     const options = getRemoteAttachmentsDestinationsOptions(configResult);
     // if there is only one destination, use it as default
     if (options.length === 1) {
@@ -181,4 +220,30 @@ function getDefaultValues(configResult: RemoteAttachmentsConfiguration): Attachm
         uploadDate: new Date(),
         file: null,
     };
+}
+
+interface RemoteAttachmentDestination {
+    value: string;
+    label: string;
+    disabled?: boolean;
+}
+
+type RemoteAttachmentDestinationOptionProps = OptionProps<
+    RemoteAttachmentDestination,
+    false,
+    GroupBase<RemoteAttachmentDestination>
+>;
+
+function RemoteAttachmentDestinationOption(props: RemoteAttachmentDestinationOptionProps) {
+    const { data, label } = props;
+    return (
+        <components.Option {...props}>
+                {label}
+                {data.disabled && (
+                    <PopoverWithHoverWrapper message="Destination is disabled, so it will not be uploaded to the server. Destination must be enabled to do it.">
+                        <Icon icon="warning" color="warning" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                )}
+        </components.Option>
+    );
 }

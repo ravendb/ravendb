@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             InitializeShardingConfiguration();
 
             var databaseRecord = RestoreSettings.DatabaseRecord;
-
+            DisableOngoingTasksIfNeeded(databaseRecord);
             // we are currently restoring, shouldn't try to access it
             databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
             var index = await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, databaseValues: null, Result, Progress);
