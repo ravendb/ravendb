@@ -1124,3 +1124,5 @@ interface TrafficWatchPostgresChange extends Raven.Client.Documents.Changes.Traf
 }
 
 type Browser = "Chrome" | "Firefox" | "Safari" | "Other";
+
+type DatabaseType = "sharded" | "cluster" | "singleNode";
