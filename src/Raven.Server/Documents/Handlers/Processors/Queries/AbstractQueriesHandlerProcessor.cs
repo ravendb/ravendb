@@ -62,7 +62,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         return ReadIndexQueryForPost(context, tracker, addSpatialProperties);
     }
     
-    protected async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    internal async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         Debug.Assert(QueryMethod != HttpMethod.Get);
         var readJsonTask = context.ReadForMemoryAsync(_stream, "index/query");

@@ -37,7 +37,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
     protected TQueryContext QueryContext;
     protected TOperationContext OperationContext;
     protected RequestTimeTracker Tracker;
-    protected IndexQueryServerSide IndexQuery;
+    public IndexQueryServerSide IndexQuery;
     protected OperationCancelToken Token;
 
     protected AbstractQueriesHandlerProcessorForGet([NotNull] TRequestHandler requestHandler, QueryMetadataCache queryMetadataCache, HttpMethod method) : base(requestHandler, queryMetadataCache)
@@ -115,7 +115,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
     }
 
-    private void ProcessQueryException(Exception e)
+    internal void ProcessQueryException(Exception e)
     {
         if (Tracker.Query == null)
         {
@@ -143,6 +143,11 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         Token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
     }
 
+    public ValueTask<IndexQueryServerSide> ReadIndexQueryForPost()
+    {
+        return ReadIndexQueryForPost(OperationContext, Tracker, AddSpatialProperties);
+    }
+
     public void LoadIndexQueryForGet()
     {
         try
@@ -158,15 +163,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     public async ValueTask LoadIndexQueryForPost()
     {
-        try
-        {
-            IndexQuery = await ReadIndexQueryForPost(OperationContext, Tracker, AddSpatialProperties);
-        }
-        catch (Exception e)
-        {
-            ProcessQueryException(e);
-            throw;
-        }
+
     }
 
     private async ValueTask HandleIndexQueryAsync(IndexQueryServerSide indexQuery, long? existingResultEtag, QueryStringParameters parameters)
@@ -206,7 +203,9 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 result.Timings = indexQuery.Timings?.ToTimings();
                 var writeResultsTask = writer.WriteDocumentQueryResultAsync(OperationContext, result, parameters.MetadataOnly,
                     WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), Token.Token);
-                (numberOfResults, totalDocumentsSizeInBytes) = writeResultsTask.IsCompletedSuccessfully ? writeResultsTask.Result : await writeResultsTask;
+                (numberOfResults, totalDocumentsSizeInBytes) = writeResultsTask.IsCompletedSuccessfully 
+                    ? writeResultsTask.Result 
+                    : await writeResultsTask;
             }
             finally
             {
@@ -244,7 +243,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         EnsureQueryContextInitialized(QueryContext, IndexQuery);
 
-        return ExecuteWithExceptionHandling(ProcessQueryAsync());
+        return ProcessQueryAsync();
 
 
         ValueTask ProcessQueryAsync()
