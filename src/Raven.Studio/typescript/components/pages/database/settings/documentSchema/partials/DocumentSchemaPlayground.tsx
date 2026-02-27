@@ -216,7 +216,7 @@ function TestDocumentSchema({ index, remove, collectionOptions }: TestDocumentSc
                                 <FormSelect
                                     control={control}
                                     name={`documentSchemas.${index}.collection`}
-                                    placeholder="Select a collection (or enter a new one)"
+                                    placeholder="Select a collection"
                                     options={collectionOptions}
                                 />
                             </FormGroup>
