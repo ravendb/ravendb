@@ -59,6 +59,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import classNames from "classnames";
 import { StickyHeader } from "components/common/StickyHeader";
+import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
 
 const ajv = new Ajv({
     allErrors: true,
@@ -100,7 +101,7 @@ export default function DocumentSchema() {
                         licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
                     />
                     <StickyHeader>
-                        {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
+                        <DocumentSchemaSelectActions />
 
                         <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
                             {hasAnyValidator && (
@@ -120,26 +121,24 @@ export default function DocumentSchema() {
                         <HrHeader
                             count={filteredValidators.length}
                             right={
-                                hasDatabaseAdminAccess && (
-                                    <ConditionalPopover
-                                        conditions={{
-                                            isActive: !hasSchemaValidation,
-                                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                                        }}
+                                <DatabaseAccessPopover
+                                    conditions={{
+                                        isActive: !hasSchemaValidation,
+                                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                    }}
+                                >
+                                    <Button
+                                        size="xs"
+                                        variant="info"
+                                        className="rounded-pill"
+                                        onClick={handleAddNew}
+                                        disabled={!hasSchemaValidation || !hasDatabaseAdminAccess}
+                                        title="Click to add a new schema for a collection"
                                     >
-                                        <Button
-                                            size="xs"
-                                            variant="info"
-                                            className="rounded-pill"
-                                            onClick={handleAddNew}
-                                            disabled={!hasSchemaValidation}
-                                            title="Click to add a new schema for a collection"
-                                        >
-                                            <Icon icon="plus" />
-                                            Add new
-                                        </Button>
-                                    </ConditionalPopover>
-                                )
+                                        <Icon icon="plus" />
+                                        Add new
+                                    </Button>
+                                </DatabaseAccessPopover>
                             }
                         >
                             <Icon icon="documents" />

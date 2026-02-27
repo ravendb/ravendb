@@ -195,26 +195,24 @@ function DestinationsList() {
         <div className="mb-4">
             <HrHeader
                 right={
-                    hasDatabaseAdminAccess && (
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: !hasRemoteAttachments,
-                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                            }}
+                    <ConditionalPopover
+                        conditions={{
+                            isActive: !hasDatabaseAdminAccess,
+                            message: getDatabaseAccessRequiredMessage("DatabaseAdmin"),
+                        }}
+                    >
+                        <Button
+                            size="sm"
+                            onClick={() => handleOpenSheet()}
+                            variant="info"
+                            className="rounded-pill"
+                            title="Click to define a new destination"
+                            disabled={!hasDatabaseAdminAccess}
                         >
-                            <Button
-                                size="sm"
-                                onClick={() => handleOpenSheet()}
-                                variant="info"
-                                className="rounded-pill"
-                                title="Click to define a new destination"
-                                disabled={!hasRemoteAttachments}
-                            >
-                                <Icon icon="plus" size="sm" />
-                                Add new
-                            </Button>
-                        </ConditionalPopover>
-                    )
+                            <Icon icon="plus" size="sm" />
+                            Add new
+                        </Button>
+                    </ConditionalPopover>
                 }
                 count={destinationsTotal}
             >

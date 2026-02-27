@@ -30,8 +30,9 @@ import { useViewSheet } from "components/common/splitView/ViewSheet";
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 import classNames from "classnames";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
 
 export interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
@@ -61,7 +62,9 @@ export default function DocumentSchemaSelectActions() {
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
     const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
     const selectionState = genUtils.getSelectionState(allCollectionNames, selectedCollectionNames);
+
     const hasSchemaValidation = useAppSelector(licenseSelectors.statusValue("HasSchemaValidation"));
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const handleOpenSheet = () => {
         const validators = allValidators.filter((v) => selectedCollectionNames.includes(v.Name));
@@ -171,16 +174,18 @@ export default function DocumentSchemaSelectActions() {
             >
                 {allCollectionNames.length !== 0 && (
                     <div>
-                        <Checkbox
-                            selected={selectionState === "AllSelected"}
-                            indeterminate={selectionState === "SomeSelected"}
-                            toggleSelection={toggleAll}
-                            color="primary"
-                            title="Select all or none"
-                            size="lg"
-                        >
-                            <span className="small-label">Select All</span>
-                        </Checkbox>
+                        {hasDatabaseAdminAccess && (
+                            <Checkbox
+                                selected={selectionState === "AllSelected"}
+                                indeterminate={selectionState === "SomeSelected"}
+                                toggleSelection={toggleAll}
+                                color="primary"
+                                title="Select all or none"
+                                size="lg"
+                            >
+                                <span className="small-label">Select All</span>
+                            </Checkbox>
+                        )}
                         <SelectionActions active={selectionState !== "Empty"}>
                             <div className="d-flex align-items-center justify-content-center flex-wrap gap-2">
                                 <div className="lead text-nowrap">
@@ -238,7 +243,7 @@ export default function DocumentSchemaSelectActions() {
                     </div>
                 )}
                 <div className="d-flex gap-2 align-items-center">
-                    <ConditionalPopover
+                    <DatabaseAccessPopover
                         conditions={{
                             isActive: !hasSchemaValidation,
                             message: <FeatureNotAvailableInYourLicensePopoverBody />,
@@ -246,18 +251,18 @@ export default function DocumentSchemaSelectActions() {
                     >
                         <a
                             className={classNames("btn btn-secondary rounded-pill", {
-                                disabled: !hasSchemaValidation,
+                                disabled: !hasSchemaValidation || !hasDatabaseAdminAccess,
                             })}
                             href={urls.documentSchemaPlayground()}
                         >
                             <Icon icon="rocket" />
                             Schema Playground
                         </a>
-                    </ConditionalPopover>
+                    </DatabaseAccessPopover>
                     {allCollectionNames.length !== 0 && (
-                        <ConditionalPopover
+                        <DatabaseAccessPopover
                             conditions={{
-                                isActive: !hasSchemaValidation,
+                                isActive: !hasSchemaValidation || !hasDatabaseAdminAccess,
                                 message: <FeatureNotAvailableInYourLicensePopoverBody />,
                             }}
                         >
@@ -265,13 +270,13 @@ export default function DocumentSchemaSelectActions() {
                                 variant={isGlobalDisabled ? "success" : "secondary"}
                                 onClick={() => handleGlobalStatusOperation(!isGlobalDisabled)}
                                 isSpinning={isTogglingGlobalStatus}
-                                disabled={!hasSchemaValidation}
+                                disabled={!hasSchemaValidation || !hasDatabaseAdminAccess}
                                 className="rounded-pill"
                             >
                                 <Icon icon={isGlobalDisabled ? "play" : "stop"} />
                                 {isGlobalDisabled ? "Enable" : "Disable"} Schema Validation
                             </ButtonWithSpinner>
-                        </ConditionalPopover>
+                        </DatabaseAccessPopover>
                     )}
                 </div>
             </div>
