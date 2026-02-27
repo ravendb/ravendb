@@ -61,12 +61,11 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
         return RequestHandler.Database.QueryRunner.ExecuteQuery(query, QueryContext, existingResultEtag, Token);
     }
 
-    protected override void EnsureQueryContextInitialized(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
+    protected override void EnsureQueryContextInitialized()
     {
         Debug.Assert(QueryContext is not null);
         Debug.Assert(IndexQuery is not null);
         QueryContext.WithQuery(IndexQuery.Metadata);
-        queryContext.WithQuery(indexQuery.Metadata);
     }
 
     protected override Task<IndexEntriesQueryResult> GetIndexEntriesAsync(IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit)

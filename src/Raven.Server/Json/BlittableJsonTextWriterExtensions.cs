@@ -998,6 +998,10 @@ namespace Raven.Server.Json
             (numberOfResults, totalDocumentsSizeInBytes) = writeResultsAsync.IsCompletedSuccessfully 
                 ? writeResultsAsync.Result 
                 : await writeResultsAsync;
+            
+            if (writer.ShouldFlushAsync)
+                await writer.FlushAsync(token);
+            
             writer.WriteComma();
             
             var includes = (object)result.Includes;
@@ -1017,6 +1021,7 @@ namespace Raven.Server.Json
                 throw new NotSupportedException($"Cannot write query includes of '{includes.GetType()}' type in '{result.GetType()}'.");
             }
 
+            // WriteIncludesAsync flushes internally.
             if (writeIncludesAsync.IsCompletedSuccessfully == false)
                 await writeIncludesAsync;
             writer.WriteComma();
@@ -2112,7 +2117,7 @@ namespace Raven.Server.Json
                 using (o)
                 {
                     writer.WriteObject(o);
-
+                    
                     var maybeFlush = writer.MaybeFlushAsync(token);
                     var writtenBytes = maybeFlush.IsCompletedSuccessfully 
                         ? maybeFlush.Result 

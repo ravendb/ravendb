@@ -161,11 +161,6 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         }
     }
 
-    public async ValueTask LoadIndexQueryForPost()
-    {
-
-    }
-
     private async ValueTask HandleIndexQueryAsync(IndexQueryServerSide indexQuery, long? existingResultEtag, QueryStringParameters parameters)
     {
         TQueryResultsContainer result = null;
@@ -241,8 +236,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         var existingResultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
-        EnsureQueryContextInitialized(QueryContext, IndexQuery);
-
+        EnsureQueryContextInitialized();
         return ProcessQueryAsync();
 
 
@@ -275,7 +269,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
     {
     }
 
-    protected virtual void EnsureQueryContextInitialized(TQueryContext queryContext, IndexQueryServerSide indexQuery)
+    protected virtual void EnsureQueryContextInitialized()
     {
     }
 
