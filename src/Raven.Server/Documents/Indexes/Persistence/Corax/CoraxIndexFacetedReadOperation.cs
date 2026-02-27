@@ -70,11 +70,10 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         var query = facetQuery.Query;
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
-        var coraxPageSize = CoraxBufferSize(_indexSearcher, facetQuery.Query.PageSize, query);
-        var ids = CoraxIndexReadOperation.QueryPool.Rent(coraxPageSize);
         CreateMappingForRanges(results, facetsByRange, facetQuery);
         foreach (var result in results)
         {
+            using var facetTiming = queryTimings?.For($"{nameof(QueryTimingsScope.Names.AggregateBy)}/{result.Key}");
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
             Dictionary<string, FacetValues> facetValues;
             if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
@@ -151,7 +150,6 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         UpdateFacetResults(results, query, facetsByName);
         CompleteFacetCalculationsStage(results, query);
 
-        CoraxIndexReadOperation.QueryPool.Return(ids);
         return results.Values
             .Select(x => x.Result)
             .ToList();
@@ -217,6 +215,9 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         UpdateFacetResults(results, query, facetsByName);
 
         CompleteFacetCalculationsStage(results, query);
+        queryTimings?.SetQueryPlan(baseQuery.Inspect());
+
+        
         CoraxIndexReadOperation.QueryPool.Return(ids);
         return results.Values
             .Select(x => x.Result)
