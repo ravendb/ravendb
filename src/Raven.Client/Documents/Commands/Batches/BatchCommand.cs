@@ -36,8 +36,8 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
+        private bool _commandsCreated;
         private readonly BlittableJsonReaderObject[] _commandsAsJson;
-        private bool? _supportsAtomicWrites;
         private HashSet<Stream> _uniqueAttachmentStreams;
         private readonly DocumentConventions _conventions;
         private readonly IList<ICommandData> _commands;
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         private void HandlePutAttachmentCommandData(ICommandData command)
         {
-            if (command is not PutAttachmentCommandData putAttachmentCommandData) 
+            if (command is not PutAttachmentCommandData putAttachmentCommandData)
                 return;
 
             if (PutAttachmentCommandHelper.TryValidateStream(putAttachmentCommandData.Stream, putAttachmentCommandData.RemoteParameters) == false)
@@ -81,21 +81,18 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            if (_supportsAtomicWrites == null)
+            if (_commandsCreated == false)
             {
-                _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
                 for (var i = 0; i < _commands.Count; i++)
                 {
                     var command = _commands[i];
 
                     var json = command.ToJson(_conventions, ctx);
 
-                    if (node.SupportsAtomicClusterWrites == false)
-                    {   // support older clients
-                        json.RemoveInMemoryPropertyByName(nameof(PutCommandData.OriginalChangeVector));
-                    }
                     _commandsAsJson[i] = ctx.ReadObject(json, "command");
                 }
+
+                _commandsCreated = true;
             }
 
             var request = new HttpRequestMessage
