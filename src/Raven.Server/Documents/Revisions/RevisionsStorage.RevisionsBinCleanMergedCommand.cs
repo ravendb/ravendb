@@ -59,8 +59,8 @@ public partial class RevisionsStorage
                             if (_isFirst == false)
                                 return (deletedEntities, index);
 
-                            (bool moreWork, long _, long _) =
-                                revisionsStorage.ForceDeleteAllRevisionsFor(context, id, lowerId, prefixSlice, collectionName, MaxDeletesUponUpdate, etagBarrier: etag);
+                            (bool moreWork, long _) =
+                                revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, MaxDeletesUponUpdate, etagBarrier: etag);
                             if (moreWork)
                                 return (deletedEntities, index);
 

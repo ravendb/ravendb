@@ -49,7 +49,7 @@ public partial class RevisionsStorage
 
                 foreach (var cv in _cvs)
                 {
-                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, _id, lowerId, prefixSlice, collectionName,
+                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
                         (table, _) => GetRevision(context, table, cv));
                     deleted += result.Deleted;
                 }
