@@ -297,8 +297,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context.Documents);
             else
             {
-                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context.Documents);
-                numberOfDocuments = collectionStats.Count;
+                numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocumentsFor(collection, context.Documents);
             }
 
             // If the query has include or load, it's too difficult to check the etags for just the included collections,

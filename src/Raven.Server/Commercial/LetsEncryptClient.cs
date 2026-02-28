@@ -213,34 +213,18 @@ namespace Raven.Server.Commercial
         {
             var hasNonce = _nonce != null;
             var retries = 3;
+
             do
             {
-                var request = new HttpRequestMessage(method, uri);
-                if (message != null)
-                {
-                    var encodedMessage = _jws.Encode(message, new JwsHeader
-                    {
-                        Nonce = _nonce,
-                        Url = uri
-                    });
-                    var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
-
-                    request.Content = new StringContent(json, Encoding.UTF8, "application/jose+json")
-                    {
-                        Headers =
-                        {
-                            ContentType =
-                            {
-                                CharSet = string.Empty
-                            }
-                        }
-                    };
-                }
-
                 HttpResponseMessage response;
+                HttpRequestMessage lastRequest = null;
                 try
                 {
-                    response = await RetryPolicy.ExecuteAsync(t => _client.SendAsync(request, t), token, continueOnCapturedContext: false).ConfigureAwait(false);
+                    response = await RetryPolicy.ExecuteAsync(t =>
+                    {
+                        lastRequest = CreateRequest();
+                        return _client.SendAsync(lastRequest, t);
+                    }, token, continueOnCapturedContext: false).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -249,7 +233,7 @@ namespace Raven.Server.Commercial
                         continue;
                     }
 
-                    throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {request}", e);
+                    throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {lastRequest}", e);
                 }
 
                 if (response.Headers.TryGetValues("Replay-Nonce", out var vals))
@@ -272,7 +256,7 @@ namespace Raven.Server.Commercial
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {request}. Problem: {problemJson}", e);
+                        throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {lastRequest}. Problem: {problemJson}", e);
                     }
                 }
 
@@ -282,6 +266,34 @@ namespace Raven.Server.Commercial
                 }
                 hasNonce = true; // we only allow it once
             } while (true);
+
+            HttpRequestMessage CreateRequest()
+            {
+                var request = new HttpRequestMessage(method, uri);
+                if (message == null) 
+                    return request;
+
+                var encodedMessage = _jws.Encode(message, new JwsHeader
+                {
+                    Nonce = _nonce,
+                    Url = uri
+                });
+
+                var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
+
+                request.Content = new StringContent(json, Encoding.UTF8, "application/jose+json")
+                {
+                    Headers =
+                    {
+                        ContentType =
+                        {
+                            CharSet = string.Empty
+                        }
+                    }
+                };
+
+                return request;
+            }
         }
 
         public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, string profile = null, CancellationToken token = default(CancellationToken))

@@ -4,7 +4,7 @@ using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Properties;
 
-[assembly: RavenVersion(Build = "72", CommitHash = "a377982", Version = "7.2", FullVersion = "7.2.0-custom-72", ReleaseDateString = "2025-11-12")]
+[assembly: RavenVersion(Build = "72", CommitHash = "a377982", Version = "7.2", FullVersion = "7.2.1-custom-72", ReleaseDateString = "2026-02-02")]
 
 namespace Raven.Client.Properties
 {

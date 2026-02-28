@@ -141,9 +141,9 @@ export function SetupWizardNodeAddressStep() {
             <div className="mb-4">
                 <h2 className="mb-1">Node addresses</h2>
                 <p className="mb-4 text-muted">
-                    Enter your server settings to ensure clear communication and smooth work of your database.
+                    Configure the cluster by adding nodes and setting their network details.
                     <br />
-                    If you are building a cluster this is the place to add nodes and configure them.
+                    For each node, specify its tag name, ports, and IP address or host name.
                 </p>
             </div>
             <div className="vstack">
@@ -289,9 +289,9 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
         }
     };
 
-    const handleNodeUrl = () => {
+    const handleNodeUrl = (formData: NodeEditFormData) => {
         if (securityOption === "letsEncrypt") {
-            return `${nodeData.nodeTag.toLowerCase()}.${domainStep.domain.toLocaleLowerCase()}.${domainStep.rootDomain}`;
+            return `${formData.nodeTag.toLowerCase()}.${domainStep.domain.toLocaleLowerCase()}.${domainStep.rootDomain}`;
         }
 
         if (securityOption === "ownCertificate") {
@@ -300,18 +300,18 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
             if (isWildcardCertificate) {
                 // For wildcard certificates, construct domain from CN and node tag
                 if (cns.length > 0 && cns[0].includes("*")) {
-                    nodeUrl = cns[0].replace("*", nodeData.nodeTag.toLowerCase());
+                    nodeUrl = cns[0].replace("*", formData.nodeTag.toLowerCase());
                 } else {
                     // Fallback to dnsName if available
-                    nodeUrl = nodeData.dnsName || "";
+                    nodeUrl = formData.dnsName || "";
                 }
             } else {
                 // For non-wildcard certificates, use the selected dnsName
-                nodeUrl = nodeData.dnsName || "";
+                nodeUrl = formData.dnsName || "";
             }
 
-            if (nodeData.httpPort !== 443 && nodeData.httpPort != null) {
-                nodeUrl += ":" + nodeData.httpPort;
+            if (formData.httpPort !== 443 && formData.httpPort != null) {
+                nodeUrl += ":" + formData.httpPort;
             }
             return nodeUrl;
         }
@@ -322,7 +322,7 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
     const handleSaveEdit = handleSubmit(async (formData: NodeEditFormData) => {
         setValue(`nodeAddressStep.nodes.${index}`, {
             ...formData,
-            nodeUrl: handleNodeUrl(),
+            nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
             nodeTag: formData.isPassive ? undefined : formData.nodeTag,
             isEditing: false,
@@ -399,8 +399,17 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
                             </Button>
                         </ConditionalPopover>
                         <Button variant="secondary" onClick={handleDiscardEdit}>
-                            <Icon icon="close" />
-                            Discard
+                            {nodeData.isNewlyAdded ? (
+                                <>
+                                    <Icon icon="trash" />
+                                    Remove
+                                </>
+                            ) : (
+                                <>
+                                    <Icon icon="close" />
+                                    Discard
+                                </>
+                            )}
                         </Button>
                     </>
                 ) : (
@@ -602,7 +611,9 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="When enabled, the node remains passive and does not join any cluster. This is useful when the node is meant for monitoring, initialization, or handling setup tasks without actively participating in cluster operations. It can also be used to isolate the node for testing or debugging purposes."
+                                            description="When enabled, the node starts in passive mode and does not join a cluster. 
+                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations. 
+                                                It can also be used to isolate the node for testing or debugging."
                                             docsLink="https://docs.ravendb.net/server/clustering/rachis/cluster-topology#state"
                                         />
                                     }
@@ -624,7 +635,7 @@ function NodeDetailsPanelEdit({
                                             description="Defines a unique identifier for each node in the cluster."
                                             alert={
                                                 <RichAlert variant="info" icon="info" className="mt-1">
-                                                    Node tag can contain maximum of 4 uppercase letters (A-Z).
+                                                    Node tag can contain a maximum of 4 uppercase letters (A-Z).
                                                 </RichAlert>
                                             }
                                             docsLink="https://docs.ravendb.net/glossary/node-tag"
@@ -684,8 +695,8 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the private communication endpoint for clients and browsers.
-                                                    By default, this value is set to 443."
+                                            description="Defines the private HTTPS port used by clients and browsers.
+                                                By default, this value is set to 443."
                                             docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
                                         />
                                     }
@@ -708,8 +719,8 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the privately accessible TCP endpoint for cluster nodes to
-                                                    communicate with each other. By default, this value is set to 38888."
+                                            description="Defines the TCP port used for internal communication between cluster nodes.
+                                                By default, this value is set to 38888."
                                             docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurltcp"
                                         />
                                     }
@@ -762,8 +773,8 @@ function NodeDetailsPanelEdit({
                             <PopoverWithHoverWrapper
                                 message={
                                     <SetupWizardInfoPopover
-                                        description="External overrides allow you to specify an alternative IP address, hostname, or
-                                        HTTPS port that clients should use instead of the default settings."
+                                        description="External overrides allow you to specify an alternative IP address, hostname, 
+                                            or HTTPS port that clients will use instead of the server’s default settings."
                                         docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
                                     />
                                 }
@@ -806,8 +817,8 @@ function EditFormExternalAddressInputs({
                             <PopoverWithHoverWrapper
                                 message={
                                     <SetupWizardInfoPopover
-                                        description="Defines the public network endpoint from which the requests will be
-                                            forwarded to the private IP address (which RavenDB listens on)."
+                                        description="Defines the public IP address from which requests will be
+                                            forwarded to the private IP address that RavenDB listens on."
                                         docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
                                     />
                                 }
@@ -819,7 +830,7 @@ function EditFormExternalAddressInputs({
                     <FormInput
                         type="text"
                         name="externalIpAddress"
-                        placeholder="Enter Server IP A address/hostname"
+                        placeholder="Enter Server IP address/hostname"
                         control={control}
                     />
                 </FormGroup>
@@ -833,8 +844,8 @@ function EditFormExternalAddressInputs({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the public HTTPS endpoint that clients and browsers should use
-                                                instead of default binding."
+                                            description="Defines the public HTTPS port that clients and browsers will use
+                                                instead of the default binding."
                                             docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
                                         />
                                     }
@@ -862,7 +873,7 @@ function EditFormExternalAddressInputs({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the publicly accessible TCP endpoint for inter-node communication
+                                            description="Defines the public TCP port used for inter-node communication
                                                 and client connections."
                                             docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
                                         />
@@ -1073,7 +1084,7 @@ function IpAddressList({
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the private network endpoint where the server is accessible."
+                                    description="Defines the IP address or hostname used to access the server."
                                     docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
                                 />
                             }
@@ -1264,7 +1275,7 @@ export function SetupWizardNodeAddressStepFooter() {
         if (nodeCount % 2 === 0) {
             const isConfirmed = await confirm({
                 title: "Confirm even node count",
-                message: `You've chosen an even number of nodes for your cluster. For optimal replication and database performance, an odd number of nodes is usually recommended.
+                message: `You've chosen an even number of nodes for your cluster. For optimal replication and high availability, an odd number of nodes is usually recommended.
                         Are you sure you want to proceed with an even node count?`,
                 icon: "warning",
                 confirmText: "Proceed",

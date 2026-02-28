@@ -172,6 +172,7 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                         JavascriptConversionExtensions.StringSupport.Instance,
+                        JavascriptConversionExtensions.RegexSupport.Instance,
                         new JavascriptConversionExtensions.IdentityPropertySupport(conventions)
                     ));
 

@@ -1674,7 +1674,7 @@ namespace Voron.Data.Fixed
             return Name.ToString();
         }
 
-        public long GetNumberOfEntriesAfter(TVal value, out long totalCount, Stopwatch overallDuration)
+        public long GetNumberOfEntriesAfter(TVal value, out long totalCount, Stopwatch overallDuration, EstimationAccuracy accuracy)
         {
             totalCount = NumberOfEntries;
             if (totalCount == 0)
@@ -1698,13 +1698,17 @@ namespace Voron.Data.Fixed
             if (page.LastMatch >= 0)
                 page.LastSearchPosition++;
 
-            var state = new RemainingNumberOfEntriesState { Start = overallDuration };
+            var state = new RemainingNumberOfEntriesState { Start = overallDuration, EstimationAccuracy = accuracy };
             var maxDepth = _cursor.Count + 1;
             var count = GetRemainingNumberOfEntriesFor(page, maxDepth, maxDepth, ref state);
             while (_cursor.TryPop(out page))
             {
                 System.Diagnostics.Debug.Assert(page.IsBranch);
                 page.LastSearchPosition++;
+
+                if (page.LastSearchPosition == page.NumberOfEntries)
+                    continue;
+
                 var depth = _cursor.Count + 1;
                 long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref state);
                 count += recursivePageCount;
@@ -1721,11 +1725,10 @@ namespace Voron.Data.Fixed
 
         private struct RemainingNumberOfEntriesState
         {
-            public long NumberOfEntriesInLeafPagesScanned;
-            public int NumberOfLeafPagesScanned;
             public bool EstimatedAmount;
             public long NonEstimatedAmount;
             public Stopwatch Start;
+            public EstimationAccuracy EstimationAccuracy;
         }
 
         private long GetRemainingNumberOfEntriesFor(FixedSizeTreePage<TVal> page, int depth, int maxDepth, ref RemainingNumberOfEntriesState state)
@@ -1733,8 +1736,6 @@ namespace Voron.Data.Fixed
             if (page.IsLeaf)
             {
                 int entries = page.NumberOfEntries - page.LastSearchPosition;
-                state.NumberOfLeafPagesScanned++;
-                state.NumberOfEntriesInLeafPagesScanned += page.NumberOfEntries;
                 state.NonEstimatedAmount += entries;
                 return entries;
             }
@@ -1742,10 +1743,11 @@ namespace Voron.Data.Fixed
             if (page.IsBranch == false) 
                 throw new InvalidOperationException("Should not happen!");
 
-            if (state.Start.Elapsed > TimeSpan.FromSeconds(1))
+            if ((state.EstimationAccuracy == EstimationAccuracy.EstimateIfLongRunning && state.Start.Elapsed > TimeSpan.FromSeconds(1)) 
+                || state.EstimationAccuracy == EstimationAccuracy.Estimated)
             {
                 state.EstimatedAmount = true;
-                return EstimateRemainingEntriesFor(page, depth, maxDepth, ref state);
+                return EstimateRemainingEntriesFor(page, depth, maxDepth, ref state).Count;
             }
 
             long count = 0;
@@ -1759,43 +1761,101 @@ namespace Voron.Data.Fixed
 
             return count;
         }
-        
-        private long EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int depth, int maxDepth, ref RemainingNumberOfEntriesState state)
+
+        private (long Count, int ReachedDepth) EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int currentDepth, int maxDepth, ref RemainingNumberOfEntriesState state)
         {
-            if (page.IsBranch == false)
-                throw new InvalidOperationException("This is only valid for branches!");
+            var lastEntry = page.GetEntry(page.NumberOfEntries - 1);
+            var lastPage = GetReadOnlyPage(lastEntry->PageNumber);
 
-            // here we can assume that we are working on a dense tree. We are only called if we already scanned > 1 million
-            // entries, and we care about the overall speed more than exact results. Dense tree assumption means that we can
-            // compute the total number of entries based on the projected size of the tree and its depth
+            long totalEstimate = 0;
 
-            var entriesPerLeafPage = state.NumberOfEntriesInLeafPagesScanned / (state.NumberOfLeafPagesScanned == 0 ? 1 : state.NumberOfLeafPagesScanned);
-
-            long sum = 1;
-            for (int i = depth; i < maxDepth; i++)
+            if (lastPage.IsLeaf)
             {
-                sum *= entriesPerLeafPage;
+                totalEstimate += lastPage.NumberOfEntries;
+                state.NonEstimatedAmount += lastPage.NumberOfEntries;
+                var reachedDepth = currentDepth;
+
+                if (page.LastSearchPosition >= page.NumberOfEntries - 1)
+                    return (totalEstimate, currentDepth);
+
+                var firstEntry = page.GetEntry(page.LastSearchPosition);
+                var firstPage = GetPageHeader(firstEntry->PageNumber);
+                if (firstPage.TreeFlags == FixedSizeTreePageFlags.Leaf)
+                {
+                    // assuming that all entries are leafs
+                    // apply this estimate to all previous leafs
+                    totalEstimate += (long)firstPage.NumberOfEntries * (page.NumberOfEntries - page.LastSearchPosition - 1);
+                }
+                else
+                {
+                    // mix of leafs and branches
+                    while (page.LastSearchPosition < page.NumberOfEntries - 1)
+                    {
+                        var entry = page.GetEntry(page.LastSearchPosition);
+                        var childPage = GetReadOnlyPage(entry->PageNumber);
+
+                        if (childPage.IsLeaf)
+                        {
+                            totalEstimate += childPage.NumberOfEntries;
+                            state.NonEstimatedAmount += childPage.NumberOfEntries;
+                        }
+                        else
+                        {
+                            var branchEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
+                            totalEstimate += branchEstimate.Count;
+                            reachedDepth = Math.Max(reachedDepth, branchEstimate.ReachedDepth);
+                        }
+
+                        page.LastSearchPosition++;
+                    }
+                }
+
+                return (totalEstimate, reachedDepth);
             }
 
-            // our estimate for remaining descendants. 
-            long count = (page.NumberOfEntries - 1 - page.LastSearchPosition) * sum;
-            
-            // we'll still check the right most entry anyway...
-            var entry = page.GetEntry(page.NumberOfEntries - 1);
-            var childPage = GetReadOnlyPage(entry->PageNumber);
-            if (childPage.IsLeaf)
+            int index;
+
+            // iterate backwards from the last entry (right-to-left).
+            // in a less balanced tree, the right-most branches might be shallower or 
+            // contain fewer entries than the "steady" branches on the left.
+            var currentPage = lastPage;
+            for (index = page.NumberOfEntries - 1; index >= page.LastSearchPosition; index--)
             {
-                int entries = childPage.NumberOfEntries - childPage.LastSearchPosition;
-                count += entries;
-                state.NumberOfLeafPagesScanned++;
-                state.NumberOfEntriesInLeafPagesScanned += childPage.NumberOfEntries;
-            }
-            else
-            {
-                count += EstimateRemainingEntriesFor(childPage, depth + 1, maxDepth, ref state);
+                var estimate = EstimateRemainingEntriesFor(currentPage, currentDepth + 1, maxDepth, ref state);
+                totalEstimate += estimate.Count;
+
+                // check if this branch reaches the full expected depth (maxDepth - 1).
+                // if it does, we assume we have reached the "steady state" of the tree.
+                // instead of iterating through the remaining (left-side) pages individually,
+                // we can break here and use this "full" branch to extrapolate the count 
+                // for all preceding branches, significantly improving performance.
+                if (estimate.ReachedDepth == maxDepth - 1)
+                {
+                    // move to the left neighbor to use as sample
+                    index--;
+
+                    if (index >= page.LastSearchPosition)
+                    {
+                        var steadyEntry = page.GetEntry(index);
+                        var steadyBranchPage = GetReadOnlyPage(steadyEntry->PageNumber);
+
+                        var steadyBranchEstimate = EstimateRemainingEntriesFor(steadyBranchPage, currentDepth + 1, maxDepth, ref state);
+
+                        // apply this estimate to itself and all previous branches
+                        long remainingEntries = index - page.LastSearchPosition + 1;
+                        totalEstimate += steadyBranchEstimate.Count * remainingEntries;
+                    }
+                    break;
+                }
+
+                if (index > page.LastSearchPosition)
+                {
+                    var nextEntry = page.GetEntry(index - 1);
+                    currentPage = GetReadOnlyPage(nextEntry->PageNumber);
+                }
             }
 
-            return count;
+            return (totalEstimate, currentDepth);
         }
 
         internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
@@ -1804,5 +1864,12 @@ namespace Voron.Data.Fixed
 
             _newPageAllocator = newPageAllocator;
         }
+    }
+
+    public enum EstimationAccuracy
+    {
+        EstimateIfLongRunning,
+        Exact,
+        Estimated
     }
 }

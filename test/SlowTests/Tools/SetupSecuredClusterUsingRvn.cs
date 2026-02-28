@@ -453,11 +453,12 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         });
 
         var dbName = GetDatabaseName();
+        var certForCommunication = CertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out _);
 
         using (var store = new DocumentStore
         {
             Urls = new[] { url1 },
-            Certificate = serverCert,
+            Certificate = certForCommunication,
             Conventions =
             {
                 DisposeCertificate = false
@@ -638,11 +639,12 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         });
 
         var dbName = GetDatabaseName();
+        var certForCommunication = CertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out _);
 
         using (var store = new DocumentStore
         {
             Urls = new[] { url1 },
-            Certificate = serverCert,
+            Certificate = certForCommunication,
             Conventions =
             {
                 DisposeCertificate = false

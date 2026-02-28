@@ -22,9 +22,10 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_RawQuery(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_RawQuery(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -49,11 +50,10 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
                     var count = values.Count;
-                    var rand = new Random();
 
                     for (int i = 0; i < count; i++)
                     {
-                        var index = rand.Next(0, values.Count - 1);
+                        var index = random.Next(0, values.Count - 1);
 
                         tsf.Append(baseline.AddHours(i), values[index]);
 
@@ -82,9 +82,11 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_Linq(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_Linq(Options options, int seed)
         {
+            var random = new Random(seed);
+            
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -109,11 +111,10 @@ select timeseries(
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
                     var count = values.Count;
-                    var rand = new Random();
 
                     for (int i = 0; i < count; i++)
                     {
-                        var index = rand.Next(0, values.Count - 1);
+                        var index = random.Next(0, values.Count - 1);
 
                         tsf.Append(baseline.AddHours(i), values[index]);
 
@@ -173,9 +174,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_WithGroupBy(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithGroupBy(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -186,14 +188,13 @@ select timeseries(
                     session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
                         if (i % 7 == 0)
                             continue;
 
-                        var value = rand.NextDouble();
+                        var value = random.NextDouble();
 
                         tsf.Append(baseline.AddMinutes(i), value);
                     }
@@ -203,7 +204,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    var number = new Random().NextDouble() * 100;
+                    var number = GetRandomPercentile(random);
 
                     var allEntries = session.TimeSeriesFor(id, "HeartRate").Get();
                     var groupByHour = allEntries
@@ -238,9 +239,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_WithWhere(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithWhere(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -254,11 +256,10 @@ select timeseries(
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
-                        var value = rand.NextDouble();
+                        var value = random.NextDouble();
                         tsf.Append(baseline.AddMinutes(i), value, tag: tags[i % 3]);
                     }
 
@@ -273,7 +274,7 @@ select timeseries(
                         .Select(e => e.Value)
                         .ToList();
 
-                    var number = new Random().NextDouble() * 100;
+                    var number = GetRandomPercentile(random);
                     var expectedPercentile = GetExpectedPercentile(values, number);
 
                     var query = session.Query<Person>()
@@ -299,9 +300,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_WithMultipleValues(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithMultipleValues(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -312,15 +314,14 @@ select timeseries(
                     session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
                         if (i % 7 == 0)
                             continue;
 
-                        var value1 = rand.NextDouble() * rand.Next(1, 100);
-                        var value2 = rand.NextDouble() * rand.Next(1, 100);
+                        var value1 = random.NextDouble() * random.Next(1, 100);
+                        var value2 = random.NextDouble() * random.Next(1, 100);
 
                         tsf.Append(baseline.AddMinutes(i), new[] { value1, value2 });
                     }
@@ -330,7 +331,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    var number = new Random().NextDouble() * 100;
+                    var number = GetRandomPercentile(random);
 
                     var allEntries = session.TimeSeriesFor(id, "HeartRate").Get();
                     var groupByHour = allEntries
@@ -370,9 +371,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_WithScale(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithScale(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -384,12 +386,11 @@ select timeseries(
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
-                    var rand = new Random();
                     var scale = 1000;
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
-                        var value = rand.NextDouble() * scale;
+                        var value = random.NextDouble() * scale;
                         tsf.Append(baseline.AddMinutes(i), value);
                     }
 
@@ -403,7 +404,7 @@ select timeseries(
                         .Select(e => e.Value * 0.001)
                         .ToList();
 
-                    var number = new Random().NextDouble() * 100;
+                    var number = GetRandomPercentile(random);
                     var expected = GetExpectedPercentile(values, number);
 
                     var query = session.Query<Person>()
@@ -432,9 +433,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_WithInterpolation(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_WithInterpolation(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -446,14 +448,13 @@ select timeseries(
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromHours(4).TotalMinutes; i++)
                     {
                         if (i >= 60 && i <= 180)
                             continue;
 
-                        var value = rand.NextDouble();
+                        var value = random.NextDouble();
                         tsf.Append(baseline.AddMinutes(i), value);
                     }
 
@@ -462,7 +463,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    var number = new Random().NextDouble() * 100;
+                    var number = GetRandomPercentile(random);
 
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
@@ -528,9 +529,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUsePercentileInTimeSeriesQuery_EdgeCases(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUsePercentileInTimeSeriesQuery_EdgeCases(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -541,12 +543,10 @@ select timeseries(
                     session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
-
-                    var rand = new Random();
-
+                    
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
-                        var value = rand.NextDouble();
+                        var value = random.NextDouble();
                         tsf.Append(baseline.AddMinutes(i), value);
                     }
 
@@ -1003,9 +1003,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseStdDevInTimeSeriesQuery_RawQuery(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_RawQuery(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1027,11 +1028,10 @@ select timeseries(
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
                     var count = values.Count;
-                    var rand = new Random();
 
                     for (int i = 0; i < count; i++)
                     {
-                        var index = rand.Next(0, values.Count - 1);
+                        var index = random.Next(0, values.Count - 1);
 
                         tsf.Append(baseline.AddHours(i), values[index]);
 
@@ -1068,9 +1068,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseStdDevInTimeSeriesQuery_Linq(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_Linq(Options options, int seed)
         {
+            var rand = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1095,7 +1096,6 @@ select timeseries(
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
                     var count = values.Count;
-                    var rand = new Random();
 
                     for (int i = 0; i < count; i++)
                     {
@@ -1166,9 +1166,11 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseStdDevInTimeSeriesQuery_WithGroupBy(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithGroupBy(Options options, int seed)
         {
+            var rand = new Random(seed);
+            
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1182,7 +1184,6 @@ select timeseries(
                     }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
@@ -1234,9 +1235,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseStdDevInTimeSeriesQuery_WithWhere(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithWhere(Options options, int seed)
         {
+            var random = new Random(seed);
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1249,12 +1251,10 @@ select timeseries(
                     session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
-
-                    var rand = new Random();
-
+                    
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
-                        var value = rand.NextDouble();
+                        var value = random.NextDouble();
                         tsf.Append(baseline.AddMinutes(i), value, tag: tags[i % 3]);
                     }
 
@@ -1300,6 +1300,7 @@ select timeseries(
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseStdDevInTimeSeriesQuery_WithScale(Options options)
         {
+            var random = new Random();
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1311,12 +1312,11 @@ select timeseries(
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
-                    var rand = new Random();
                     var scale = 1000;
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
-                        var value = rand.NextDouble() * scale;
+                        var value = random.NextDouble() * scale;
                         tsf.Append(baseline.AddMinutes(i), value);
                     }
 
@@ -1358,9 +1358,10 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseStdDevInTimeSeriesQuery_WithMultipleValues(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithMultipleValues(Options options, int seed)
         {
+            var random = new Random();
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1371,15 +1372,14 @@ select timeseries(
                     session.Store(new Person { Name = "Oren", }, id);
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
                     {
                         if (i % 7 == 0)
                             continue;
 
-                        var value1 = rand.NextDouble() * rand.Next(1, 100);
-                        var value2 = rand.NextDouble() * rand.Next(1, 100);
+                        var value1 = random.NextDouble() * random.Next(1, 100);
+                        var value2 = random.NextDouble() * random.Next(1, 100);
 
                         tsf.Append(baseline.AddMinutes(i), new[] { value1, value2 });
                     }
@@ -1389,7 +1389,7 @@ select timeseries(
 
                 using (var session = store.OpenSession())
                 {
-                    var number = new Random().NextDouble() * 100;
+                    var number = GetRandomPercentile(random);
 
                     var allEntries = session.TimeSeriesFor(id, "HeartRate").Get();
                     var groupByHour = allEntries
@@ -1433,9 +1433,11 @@ select timeseries(
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanUseStdDevInTimeSeriesQuery_WithInterpolation(Options options)
+        [RavenDataWithRandomSeed(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseStdDevInTimeSeriesQuery_WithInterpolation(Options options, int seed)
         {
+            var random = new Random(seed);
+
             using (var store = GetDocumentStore(options))
             {
                 var baseline = RavenTestHelper.UtcToday;
@@ -1447,14 +1449,13 @@ select timeseries(
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
-                    var rand = new Random();
 
                     for (int i = 0; i < TimeSpan.FromHours(4).TotalMinutes; i++)
                     {
                         if (i >= 60 && i <= 180)
                             continue;
 
-                        var value = rand.NextDouble();
+                        var value = random.NextDouble();
                         tsf.Append(baseline.AddMinutes(i), value);
                     }
 
@@ -1600,6 +1601,19 @@ select timeseries(
                     Assert.Contains("Cannot use aggregation method 'StandardDeviation' on rolled-up time series", ex.InnerException.Message);
                 }
             }
+        }
+
+        internal static double GetRandomPercentile(Random random)
+        {
+            int maxTries = 1024;
+            double percentile;
+            do
+            {
+                percentile = 100 * random.NextDouble();
+                maxTries--;
+            } while (percentile < 0.0001d && maxTries > 0);
+
+            return percentile;
         }
 
         internal static double GetExpectedPercentile(List<double> values, double percentile)

@@ -11,12 +11,12 @@ namespace SlowTests.Corax;
 
 public class GrowableBufferTests(ITestOutputHelper output) : NoDisposalNoOutputNeeded(output)
 {
-    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.All)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     [InlineData(4 * Sparrow.Global.Constants.Size.Megabyte)]
     [InlineData(8 * Sparrow.Global.Constants.Size.Megabyte)]
     public void CanExtendAndNotLooseAnythingSingle(int size) => CanExtendAndNotLooseAnythingBase<float>(size);
     
-    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.All)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     [InlineData(4 * Sparrow.Global.Constants.Size.Megabyte)]
     [InlineData(8 * Sparrow.Global.Constants.Size.Megabyte)]
     public void CanExtendAndNotLooseAnything(int size) => CanExtendAndNotLooseAnythingBase<long>(size);

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
             _indexDefinitions = indexDefinitions
-                .Where(i => i.Value.Type.IsAuto() == false && i.Value.Type.IsJavaScript() == false)
+                .Where(i => i.Value.Type.IsAuto() == false)
                 .ToDictionary(i => i.Key, i=> i.Value);
         }
 
@@ -63,6 +63,10 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 {
                     if (current.IsMapReduceOrMultiMap)
                         continue;
+                    
+                    if (current.IsJavaScriptIndex)
+                        continue;
+                    
                     if (mergeData.ProposedForMerge.All(other => CanMergeIndexes(other, current)) == false)
                         continue;
 
@@ -81,6 +85,12 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         private static List<string> CheckForUnsuitableIndexForMerging(IndexData indexData)
         {
             var failComments = new List<string>();
+
+            if (indexData.Index.Type.IsJavaScript())
+            {
+                failComments.Add("Cannot merge JavaScript indexes.");
+            }
+            
             if (indexData.Index.Type == IndexType.MapReduce)
             {
                 failComments.Add("Cannot merge map/reduce indexes.");
@@ -140,6 +150,12 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
                 indexes.Add(indexData);
 
+                if (index.Type.IsJavaScript())
+                {
+                    indexData.IsJavaScriptIndex = true;
+                    continue;
+                }
+                
                 if (index.Type == IndexType.MapReduce || index.Maps.Count > 1)
                 {
                     indexData.IsMapReduceOrMultiMap = true;

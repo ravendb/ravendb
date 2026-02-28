@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.2</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.3</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests.Tools</AssemblyName>
     <PackageId>SlowTests.Tools</PackageId>

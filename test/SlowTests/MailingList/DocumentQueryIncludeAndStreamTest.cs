@@ -89,7 +89,7 @@ namespace SlowTests.MailingList
                         }
                     }
                 });
-                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
+                Assert.Contains("Document Includes are not supported by this type of query.", notSupportedException.Message);
             }
         }
         
@@ -112,7 +112,79 @@ namespace SlowTests.MailingList
                         }
                     }
                 });
-                Assert.Contains("Includes are not supported by this type of query.", notSupportedException.Message);
+                Assert.Contains("Document Includes are not supported by this type of query.", notSupportedException.Message);
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StreamQueryWithCounterInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include counters('likes')");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using var stream = session.Advanced.Stream(query);
+                    while (stream.MoveNext());
+                });
+                Assert.Contains("Counter Includes are not supported by this type of query.", notSupportedException.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StreamQueryWithTimeSeriesInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include timeseries('Heartrate', last(1, 'day'))");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using var stream = session.Advanced.Stream(query);
+                    while (stream.MoveNext());
+                });
+                Assert.Contains("TimeSeries Includes are not supported by this type of query.", notSupportedException.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StreamQueryWithRevisionInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include revisions('StepExecutionsId')");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using var stream = session.Advanced.Stream(query);
+                    while (stream.MoveNext());
+                });
+                Assert.Contains("Revision Includes are not supported by this type of query.", notSupportedException.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StreamQueryWithCompareExchangeInclude()
+        {
+            var store = GetDocumentStore();
+            Setup(store);
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<ProcessStep>("from ProcessSteps include cmpxchg('StepExecutionsId')");
+                var notSupportedException = Assert.Throws<RavenException>(() =>
+                {
+                    using var stream = session.Advanced.Stream(query);
+                    while (stream.MoveNext());
+                });
+                Assert.Contains("CompareExchangeValue Includes are not supported by this type of query.", notSupportedException.Message);
             }
         }
 

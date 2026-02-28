@@ -167,6 +167,25 @@ var ai = new AI();
         ObjectInstance ai = DocumentScript.ScriptEngine.GetValue("ai").AsObject();
         Function retrieveContexts = ai.Prototype!.GetOwnProperty("__retrieveContexts").Value.AsFunctionInstance();
         JsArray contexts = retrieveContexts.Call(ai, []).AsArray();
+        if (contexts.Length == 0)
+        {
+            // No contexts were generated for this document.
+            // If metadata still contains GenAI hashes for this task, enqueue a marker so the load phase can remove them.
+            if (Current.Document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection) &&
+                hashesSection.TryGet(_configuration.Identifier, out object _))
+            {
+                _currentRun.Add(new GenAiScriptResult(
+                    Current.DocumentId,
+                    Context: null,
+                    AiHash: null,
+                    IsCached: true,
+                    IsMetadataCleanupMarker: true));
+            }
+
+            return;
+        }
+
         List<string> attachmentsHashes = null;
         foreach (var ctx in contexts)
         {

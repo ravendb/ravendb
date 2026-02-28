@@ -111,7 +111,7 @@ public class RavenDbInstance : IDisposable
         }
     }
 
-    private static string NewDataPath(string? testName, int serverPort, bool forceCreateDir = false)
+    private static string NewDataPath(string testName, int serverPort, bool forceCreateDir = false)
     {
         testName = testName?.Replace("<", "").Replace(">", "");
 

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -118,7 +118,7 @@ for(const comment of this.Comments)
             public string Role { get; set; }
 
             [JsonProperty("content")]
-            public object Content { get; set; }
+            public JToken Content { get; set; }
         }
     }
 }

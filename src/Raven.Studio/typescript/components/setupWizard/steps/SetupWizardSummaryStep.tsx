@@ -40,7 +40,7 @@ export function SetupWizardSummaryStep() {
         <div>
             <div className="mb-5">
                 <h2 className="mb-1">Summary</h2>
-                <p className="mb-4 text-muted">Check if everything’s correct before proceeding.</p>
+                <p className="mb-4 text-muted">Verify that all settings are correct before proceeding.</p>
             </div>
             <div className="vstack gap-1 mb-2">
                 <h5 className="mb-0">Security & license</h5>
