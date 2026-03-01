@@ -22,6 +22,8 @@ namespace Raven.Client.Documents.Indexes
 
         public sealed class CollectionStats
         {
+            public bool Estimated { get; set; }
+
             public long LastProcessedItemEtag { get; set; }
 
             public long NumberOfItemsToProcess { get; set; }

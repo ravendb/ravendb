@@ -162,15 +162,19 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration)
         {
-            progressStats.NumberOfItemsToProcess +=
-                DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
-            progressStats.TotalNumberOfItems += totalCount;
+            var entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
+                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration);
 
-            progressStats.NumberOfTimeSeriesDeletedRangesToProcess +=
-                DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
-                    progressStats.LastProcessedTimeSeriesDeletedRangeEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfTimeSeriesDeletedRanges += totalCount;
+            progressStats.NumberOfItemsToProcess += entriesAfter.Count;
+            progressStats.TotalNumberOfItems += entriesAfter.Total;
+            progressStats.Estimated |= entriesAfter.Estimated;
+
+            entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
+                progressStats.LastProcessedTimeSeriesDeletedRangeEtag, overallDuration);
+
+            progressStats.NumberOfTimeSeriesDeletedRangesToProcess += entriesAfter.Count;
+            progressStats.TotalNumberOfTimeSeriesDeletedRanges += entriesAfter.Total;
+            progressStats.Estimated |= entriesAfter.Estimated;
         }
 
         internal void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, TransactionOperationContext indexContext)

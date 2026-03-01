@@ -3087,19 +3087,25 @@ namespace Raven.Server.Documents.Indexes
         internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration)
         {
-            progressStats.NumberOfItemsToProcess += collectionName == Constants.Documents.Collections.AllDocumentsCollection
+            var entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration)
+                    queryContext.Documents, progressStats.LastProcessedItemEtag, overallDuration)
                 : DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfItems += totalCount;
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration);
 
-            progressStats.NumberOfTombstonesToProcess += collectionName == Constants.Documents.Collections.AllDocumentsCollection
+            progressStats.NumberOfItemsToProcess += entriesAfter.Count;
+            progressStats.TotalNumberOfItems += entriesAfter.Total;
+            progressStats.Estimated |= entriesAfter.Estimated;
+
+            entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                    queryContext.Documents, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration)
+                    queryContext.Documents, progressStats.LastProcessedTombstoneEtag, overallDuration)
                 : DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfTombstones += totalCount;
+                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, overallDuration);
+
+            progressStats.NumberOfTombstonesToProcess += entriesAfter.Count;
+            progressStats.TotalNumberOfTombstones += entriesAfter.Total;
+            progressStats.Estimated |= entriesAfter.Estimated;
         }
 
         private IEnumerable<string> GetCollections(QueryOperationContext queryContext, out bool isAllDocs)

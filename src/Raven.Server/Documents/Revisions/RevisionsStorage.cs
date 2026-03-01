@@ -26,6 +26,7 @@ using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -2938,25 +2939,19 @@ namespace Raven.Server.Documents.Revisions
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
-        public long GetNumberOfRevisionsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfRevisionsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null || collectionName.IsHiLo)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions));
 
             if (table == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var indexDef = RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
         }
 
         public long GetNumberOfRevisionTombstones(DocumentsOperationContext context)

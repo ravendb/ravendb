@@ -557,12 +557,12 @@ namespace SlowTests.Voron
 
                 for (int i = 0; i < count; i++)
                 {
-                    var actualCount = fst.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew(), accuracy);
+                    var result = fst.GetNumberOfEntriesAfter(i, Stopwatch.StartNew(), accuracy);
                     var expectedCount = CalculateExpectedEntriesAfter(fst, i, out long expectedTotalCount);
 
                     Assert.Equal(count, expectedTotalCount);
-                    Assert.Equal(expectedTotalCount, totalCount);
-                    Assert.Equal(expectedCount, actualCount);
+                    Assert.Equal(expectedTotalCount, result.Total);
+                    Assert.Equal(expectedCount, result.Count);
                 }
             }
         }
@@ -600,12 +600,12 @@ namespace SlowTests.Voron
 
                 foreach (var position in testPositions)
                 {
-                    var actualCount = fst.GetNumberOfEntriesAfter(position, out long totalCount, Stopwatch.StartNew(), accuracy);
+                    var result = fst.GetNumberOfEntriesAfter(position, Stopwatch.StartNew(), accuracy);
                     var expectedCount = CalculateExpectedEntriesAfter(fst, position, out long expectedTotalCount);
 
                     Assert.Equal(count, expectedTotalCount);
-                    Assert.Equal(expectedTotalCount, totalCount);
-                    Assert.Equal(expectedCount, actualCount);
+                    Assert.Equal(expectedTotalCount, result.Total);
+                    Assert.Equal(expectedCount, result.Count);
                 }
             }
         }
@@ -662,10 +662,10 @@ namespace SlowTests.Voron
                 var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
                 // Don't add any entries
 
-                var actualCount = fst.GetNumberOfEntriesAfter(0, out long totalCount, Stopwatch.StartNew(), accuracy);
+                var result = fst.GetNumberOfEntriesAfter(0, Stopwatch.StartNew(), accuracy);
 
-                Assert.Equal(0, totalCount);
-                Assert.Equal(0, actualCount);
+                Assert.Equal(0, result.Total);
+                Assert.Equal(0, result.Count);
             }
         }
 
@@ -690,19 +690,19 @@ namespace SlowTests.Voron
                 var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
 
                 // Query before the entry
-                var beforeCount = fst.GetNumberOfEntriesAfter(50, out long totalCount1, Stopwatch.StartNew(), accuracy);
-                Assert.Equal(1, totalCount1);
-                Assert.Equal(1, beforeCount);
+                var resultBefore = fst.GetNumberOfEntriesAfter(50, Stopwatch.StartNew(), accuracy);
+                Assert.Equal(1, resultBefore.Total);
+                Assert.Equal(1, resultBefore.Count);
 
                 // Query at the entry
-                var atCount = fst.GetNumberOfEntriesAfter(100, out long totalCount2, Stopwatch.StartNew(), accuracy);
-                Assert.Equal(1, totalCount2);
-                Assert.Equal(0, atCount);
+                var resultAt = fst.GetNumberOfEntriesAfter(100, Stopwatch.StartNew(), accuracy);
+                Assert.Equal(1, resultAt.Total);
+                Assert.Equal(0, resultAt.Count);
 
                 // Query after the entry
-                var afterCount = fst.GetNumberOfEntriesAfter(150, out long totalCount3, Stopwatch.StartNew(), accuracy);
-                Assert.Equal(1, totalCount3);
-                Assert.Equal(0, afterCount);
+                var resultAfter = fst.GetNumberOfEntriesAfter(150, Stopwatch.StartNew(), accuracy);
+                Assert.Equal(1, resultAfter.Total);
+                Assert.Equal(0, resultAfter.Count);
             }
         }
 
@@ -733,10 +733,10 @@ namespace SlowTests.Voron
                 var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
 
                 // Query way beyond the last entry
-                var actualCount = fst.GetNumberOfEntriesAfter(count + 1000, out long totalCount, Stopwatch.StartNew(), accuracy);
+                var result = fst.GetNumberOfEntriesAfter(count + 1000, Stopwatch.StartNew(), accuracy);
 
-                Assert.Equal(count, totalCount);
-                Assert.Equal(0, actualCount);
+                Assert.Equal(count, result.Total);
+                Assert.Equal(0, result.Count);
             }
         }
 
@@ -768,10 +768,10 @@ namespace SlowTests.Voron
                 var fst = tx.FixedTreeFor(treeId, valSize: sizeof(long));
 
                 // Query before all entries
-                var actualCount = fst.GetNumberOfEntriesAfter(0, out long totalCount, Stopwatch.StartNew(), accuracy);
+                var result = fst.GetNumberOfEntriesAfter(0, Stopwatch.StartNew(), accuracy);
 
-                Assert.Equal(count, totalCount);
-                Assert.Equal(count, actualCount);
+                Assert.Equal(count, result.Total);
+                Assert.Equal(count, result.Count);
             }
         }
 
@@ -810,12 +810,12 @@ namespace SlowTests.Voron
 
                 for (var i = 0; i < total; i++)
                 {
-                    var count = tree.GetNumberOfEntriesAfter(i, out long totalCount, Stopwatch.StartNew(), accuracy);
+                    var result = tree.GetNumberOfEntriesAfter(i, Stopwatch.StartNew(), accuracy);
                     var expectedCount = CalculateExpectedEntriesAfter(tree, i, out long expectedTotalCount);
 
                     Assert.Equal(inserted, expectedTotalCount);
-                    Assert.Equal(expectedTotalCount, totalCount);
-                    Assert.Equal(expectedCount, count);
+                    Assert.Equal(expectedTotalCount, result.Total);
+                    Assert.Equal(expectedCount, result.Count);
                 }
             }
         }

@@ -256,10 +256,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration)
         {
-            progressStats.NumberOfItemsToProcess +=
-                DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalNumberOfItems, overallDuration);
-            progressStats.TotalNumberOfItems += totalNumberOfItems;
+            var entriesAfter = DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
+                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration);
+
+            progressStats.NumberOfItemsToProcess += entriesAfter.Count;
+            progressStats.TotalNumberOfItems += entriesAfter.Total;
+            progressStats.Estimated |= entriesAfter.Estimated;
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)

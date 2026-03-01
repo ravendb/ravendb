@@ -21,6 +21,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -1230,18 +1231,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfAttachmentsToProcess(DocumentsOperationContext context, long afterEtag, out long totalCount, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfAttachmentsToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
             if (table == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var indexDef = AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
         }
 
         public long GetNumberOfAttachmentTombstones(DocumentsOperationContext context)
