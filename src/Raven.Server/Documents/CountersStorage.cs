@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -20,6 +19,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -211,27 +211,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount,
-            Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
             if (table == null)
-            {
-                totalCount = 0;
-                return 0;
-            }
+                return new NumberOfEntriesAfterResult();
 
             var indexDef = CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice];
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
         }
 
         public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, ref TableValueReader tvr)
@@ -1948,14 +1941,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
             var indexDef = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out _, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
         }
 
-        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag)
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
             long count = 0;
@@ -1983,7 +1976,12 @@ namespace Raven.Server.Documents
                 }
             }
 
-            return count;
+            return new NumberOfEntriesAfterResult
+            {
+                Count = count,
+                Total = -1, // we don't use the total for tombstones count
+                Estimated = false
+            };
         }
 
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
