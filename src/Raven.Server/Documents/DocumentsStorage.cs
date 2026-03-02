@@ -2288,27 +2288,27 @@ namespace Raven.Server.Documents
             return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, cv, oldChangeVectorForClusterTransactionIndexCheck, flags, nonPersistentFlags);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, overallDuration);
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: false, overallDuration, exact);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfDocumentsToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfDocumentsToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            return GetNumberOfItemsToProcess(context, afterEtag, tombstones: false, overallDuration);
+            return GetNumberOfItemsToProcess(context, afterEtag, tombstones: false, overallDuration, exact);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, overallDuration);
+            return GetNumberOfItemsToProcess(context, collection, afterEtag, tombstones: true, overallDuration, exact);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            return GetNumberOfItemsToProcess(context, afterEtag, tombstones: true, overallDuration);
+            return GetNumberOfItemsToProcess(context, afterEtag, tombstones: true, overallDuration, exact);
         }
 
-        private NumberOfEntriesAfterResult GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, Stopwatch overallDuration)
+        private NumberOfEntriesAfterResult GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, Stopwatch overallDuration, bool exact)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -2333,10 +2333,10 @@ namespace Raven.Server.Documents
             if (table == null)
                 return new NumberOfEntriesAfterResult();
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
-        private NumberOfEntriesAfterResult GetNumberOfItemsToProcess(DocumentsOperationContext context, long afterEtag, bool tombstones, Stopwatch overallDuration)
+        private NumberOfEntriesAfterResult GetNumberOfItemsToProcess(DocumentsOperationContext context, long afterEtag, bool tombstones, Stopwatch overallDuration, bool exact)
         {
             Table table;
             TableSchema.FixedSizeKeyIndexDef indexDef;
@@ -2351,7 +2351,7 @@ namespace Raven.Server.Documents
                 indexDef = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
             }
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public long GetNumberOfDocuments()

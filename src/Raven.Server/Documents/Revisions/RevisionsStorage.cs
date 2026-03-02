@@ -2939,7 +2939,7 @@ namespace Raven.Server.Documents.Revisions
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfRevisionsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfRevisionsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null || collectionName.IsHiLo)
@@ -2951,7 +2951,7 @@ namespace Raven.Server.Documents.Revisions
                 return new NumberOfEntriesAfterResult();
 
             var indexDef = RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public long GetNumberOfRevisionTombstones(DocumentsOperationContext context)

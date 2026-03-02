@@ -160,17 +160,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         }
         
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
-            Stopwatch overallDuration)
+            Stopwatch overallDuration, bool exact)
         {
             var entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
-                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration);
+                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
             progressStats.NumberOfItemsToProcess += entriesAfter.Count;
             progressStats.TotalNumberOfItems += entriesAfter.Total;
             progressStats.Estimated |= entriesAfter.Estimated;
 
             entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
-                progressStats.LastProcessedTimeSeriesDeletedRangeEtag, overallDuration);
+                progressStats.LastProcessedTimeSeriesDeletedRangeEtag, overallDuration, exact);
 
             progressStats.NumberOfTimeSeriesDeletedRangesToProcess += entriesAfter.Count;
             progressStats.TotalNumberOfTimeSeriesDeletedRanges += entriesAfter.Total;
