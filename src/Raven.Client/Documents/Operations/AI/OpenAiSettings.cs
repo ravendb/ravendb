@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 namespace Raven.Client.Documents.Operations.AI;
 
 /// <summary>
-/// The configuration for the OpenAI API client.
+/// Configuration for the OpenAI API client.
 /// </summary>
 public sealed class OpenAiSettings : OpenAiBaseSettings
 {

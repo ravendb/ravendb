@@ -16,6 +16,9 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
+/// <summary>
+/// Continues or resumes a conversation with an AI agent, returning a typed response and tool call requests.
+/// </summary>
 public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>>
 {
     private readonly string _agentId;
@@ -31,6 +34,15 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly Func<string, Task> _streamedChunksCallback;
     private readonly List<ICommandData> _attachmentsCommands;
 
+    /// <summary>
+    /// Initializes a new conversation step for the specified agent and conversation.
+    /// </summary>
+    /// <param name="agentId">The agent identifier to route this conversation to.</param>
+    /// <param name="conversationId">The conversation document ID used to maintain state.</param>
+    /// <param name="userPrompt">The user’s prompt to send to the model.</param>
+    /// <param name="actionResponses">Optional responses for tool action requests from a previous step.</param>
+    /// <param name="options">Creation options including conversation expiration and tool parameters.</param>
+    /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
     public RunConversationOperation(
         string agentId,
         string conversationId,
@@ -40,7 +52,17 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string changeVector) : this(agentId, conversationId, promptParts, actionResponses, [], options, changeVector, null, null)
     {
     }
-    
+
+    /// <summary>
+    /// Initializes a new conversation step, including artificial actions injected into the conversation flow.
+    /// </summary>
+    /// <param name="agentId">The agent identifier to route this conversation to.</param>
+    /// <param name="conversationId">The conversation document ID used to maintain state.</param>
+    /// <param name="promptParts">The parts of the user prompt to send to the model.</param>
+    /// <param name="actionResponses">Optional responses for tool action requests from a previous step.</param>
+    /// <param name="artificialActions">Manually injected responses to tool calls.</param>
+    /// <param name="options">Creation options including conversation expiration and tool parameters.</param>
+    /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
     public RunConversationOperation(
         string agentId,
         string conversationId,
@@ -51,7 +73,18 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string changeVector) : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, null, null)
     {
     }
-    
+
+    /// <summary>
+    /// Initializes a new conversation step with support for streaming the response.
+    /// </summary>
+    /// <param name="agentId">The agent identifier to route this conversation to.</param>
+    /// <param name="conversationId">The conversation document ID used to maintain state.</param>
+    /// <param name="promptParts">The parts of the user prompt to send to the model.</param>
+    /// <param name="actionResponses">Optional responses for tool action requests from a previous step.</param>
+    /// <param name="options">Creation options including conversation expiration and tool parameters.</param>
+    /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
+    /// <param name="streamPropertyPath">The JSON path of the property to stream back to the client.</param>
+    /// <param name="streamedChunksCallback">The callback function invoked when a new chunk of streamed data arrives.</param>
     public RunConversationOperation(
         string agentId,
         string conversationId,
@@ -64,6 +97,18 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     {
     }
 
+    /// <summary>
+    /// Initializes a new conversation step with full control over artificial actions and streaming.
+    /// </summary>
+    /// <param name="agentId">The agent identifier to route this conversation to.</param>
+    /// <param name="conversationId">The conversation document ID used to maintain state.</param>
+    /// <param name="promptParts">The parts of the user prompt to send to the model.</param>
+    /// <param name="actionResponses">Optional responses for tool action requests from a previous step.</param>
+    /// <param name="artificialActions">Manually injected responses to tool calls.</param>
+    /// <param name="options">Creation options including conversation expiration and tool parameters.</param>
+    /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
+    /// <param name="streamPropertyPath">The JSON path of the property to stream back to the client.</param>
+    /// <param name="streamedChunksCallback">The callback function invoked when a new chunk of streamed data arrives.</param>
     public RunConversationOperation(string agentId,
         string conversationId,
         IEnumerable<ContentPart> promptParts,
@@ -122,6 +167,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         }, actionResponses, [], options, changeVector, streamPropertyPath, streamedChunksCallback)
     {
     }
+
+    /// <summary>
+    /// Creates the command that will be sent to the server to execute the conversation step.
+    /// </summary>
     public virtual RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new RunConversationOperationCommand(this, conventions);

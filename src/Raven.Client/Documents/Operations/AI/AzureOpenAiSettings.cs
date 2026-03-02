@@ -4,6 +4,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Configuration for Azure OpenAI deployments.
+/// </summary>
 public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 {
     public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null, double? temperature = null) : base(apiKey, endpoint, model, dimensions, temperature)

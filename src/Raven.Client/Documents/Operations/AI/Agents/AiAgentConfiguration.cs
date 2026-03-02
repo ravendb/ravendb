@@ -16,6 +16,12 @@ public class AiAgentConfiguration : IDynamicJson
         // for serialization purposes
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="AiAgentConfiguration"/> with the specified name, connection string, and system prompt.
+    /// </summary>
+    /// <param name="name">The name of the AI agent configuration.</param>
+    /// <param name="connectionStringName">The name of the connection string used to connect to the AI provider.</param>
+    /// <param name="systemPrompt">The prompt that guides the behavior and purpose of the AI agent.</param>
     public AiAgentConfiguration(string name, string connectionStringName, string systemPrompt)
     {
         ValidationMethods.AssertNotNullOrEmpty(name, nameof(Name));
@@ -138,6 +144,9 @@ public class AiAgentConfiguration : IDynamicJson
         return null;
     }
 
+    /// <summary>
+    /// Serializes the configuration to a JSON structure.
+    /// </summary>
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue

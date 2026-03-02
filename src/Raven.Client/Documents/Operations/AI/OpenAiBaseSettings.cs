@@ -5,6 +5,10 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Base configuration for OpenAI-compatible providers (OpenAI, Azure OpenAI),
+/// including common fields like API key, endpoint, model and embedding dimensions.
+/// </summary>
 public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 {
     protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null, double? temperature = null)

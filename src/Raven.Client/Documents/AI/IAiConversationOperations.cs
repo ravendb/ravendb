@@ -8,6 +8,11 @@ using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Client.Documents.AI;
 
+/// <summary>
+/// Fluent API for handling tool calls and running a conversation with an AI agent.
+/// Implementations allow registering handlers/receivers for tools, adding responses,
+/// setting the user prompt, and executing conversation turns.
+/// </summary>
 public interface IAiConversationOperations
 {
     /// <summary>
@@ -271,12 +276,25 @@ public interface IAiConversationOperations
     event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 }
 
+/// <summary>
+/// Specifies how errors thrown by tool handlers/receivers should be handled.
+/// </summary>
 public enum AiHandleErrorStrategy
 {
-    SendErrorsToModel,
-    RaiseImmediately
+ /// <summary>
+ /// Convert the error to a textual message and send it back to the model as the tool response.
+ /// </summary>
+ SendErrorsToModel,
+
+ /// <summary>
+ /// Throw the exception immediately to the caller instead of sending it to the model.
+ /// </summary>
+ RaiseImmediately
 }
 
+/// <summary>
+/// Event arguments for <see cref="IAiConversationOperations.OnUnhandledAction"/>.
+/// </summary>
 public class UnhandledActionEventArgs
 {
     internal UnhandledActionEventArgs(IAiConversationOperations sender, AiAgentActionRequest action, CancellationToken token)
@@ -286,7 +304,17 @@ public class UnhandledActionEventArgs
         Token = token;
     }
 
+    /// <summary>
+    /// The sender that raised the event.
+    /// </summary>
     public IAiConversationOperations Sender { get; private set; }
+
+    /// <summary>
+    /// The action (tool call) requested by the AI model that requires handling.    /// </summary>
     public AiAgentActionRequest Action { get; private set; }
+
+    /// <summary>
+    /// Cancellation token associated with the current turn.
+    /// </summary>
     public CancellationToken Token { get; private set; }
 }

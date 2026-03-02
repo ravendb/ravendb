@@ -53,6 +53,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </summary>
         public string ParametersSchema { get; set; }
 
+        /// <summary>
+        /// Serializes this tool action to JSON structure.
+        /// </summary>
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

@@ -8,15 +8,26 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
+/// <summary>
+/// Deletes an AI agent configuration by its identifier.
+/// </summary>
 public class DeleteAiAgentOperation : IMaintenanceOperation<AiAgentConfigurationResult>
 {
     private readonly string _identifier;
+
+    /// <summary>
+    /// Initializes the delete operation.
+    /// </summary>
+    /// <param name="identifier">The unique identifier of the agent to delete.</param>
     public DeleteAiAgentOperation(string identifier)
     {
         ValidationMethods.AssertNotNullOrEmpty(identifier, nameof(identifier));
         _identifier = identifier;
     }
 
+    /// <summary>
+    /// Creates the underlying command that will be sent to the server.
+    /// </summary>
     public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new DeleteAiAgentOperationCommand(_identifier);

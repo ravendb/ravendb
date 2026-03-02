@@ -13,6 +13,13 @@ public sealed class VertexSettings : AbstractAiSettings
         // deserialization
     }
     
+    /// <summary>
+    /// Initializes a new instance of <see cref="VertexSettings"/> with the specified model, credentials, and location.
+    /// </summary>
+    /// <param name="model">The model ID for the Vertex AI service.</param>
+    /// <param name="googleCredentialsJson">The JSON string containing the Google service account credentials.</param>
+    /// <param name="location">The Google Cloud region where the model is deployed.</param>
+    /// <param name="aiVersion">The optional API version of Vertex AI.</param>
     public VertexSettings(string model, string googleCredentialsJson, string location, VertexAIVersion? aiVersion = null)
     {
         Model = model;
@@ -28,10 +35,19 @@ public sealed class VertexSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
+    /// <summary>
+    /// The JSON string containing the Google service account credentials.
+    /// </summary>
     public string GoogleCredentialsJson { get; set; }
 
+    /// <summary>
+    /// The specific API version of Vertex AI to use.
+    /// </summary>
     public VertexAIVersion? AiVersion { get; set; }
     
+    /// <summary>
+    /// The Google Cloud region (location) where the model is deployed (e.g., "us-central1").
+    /// </summary>
     public string Location { get; set; }
 
     internal string GetProjectId()
@@ -79,6 +95,9 @@ public sealed class VertexSettings : AbstractAiSettings
         return differences;
     }
 
+    /// <summary>
+    /// Serializes the settings to JSON structure.
+    /// </summary>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
