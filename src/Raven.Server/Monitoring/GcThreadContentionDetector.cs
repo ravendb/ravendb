@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime;
 using System.Threading;
@@ -46,6 +47,17 @@ namespace Raven.Server.Monitoring
 
                 if (utilizedCores >= totalCores * CoreUtilizationThreshold)
                     return;
+
+                IReadOnlyDictionary<string, object> gcConfig = GC.GetConfigurationVariables();
+
+                if (gcConfig.TryGetValue("HeapCount", out object heapCount))
+                {
+                    var heapCountInt64 = Convert.ToInt64(heapCount);
+
+                    if (heapCountInt64 <= utilizedCores)
+                        return;
+                }
+
 
                 RaiseAlert(totalCores, utilizedCores);
             }
