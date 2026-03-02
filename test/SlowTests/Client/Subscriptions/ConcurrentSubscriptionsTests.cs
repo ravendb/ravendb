@@ -20,6 +20,7 @@ using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1526,6 +1527,134 @@ where predicate.call(doc)"
                 docs.UnionWith(await RunSubscriptionWorkerAndProcessOneDocumentAsync(store, id));
 
                 Assert.Equal(3, docs.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task UnluckyConcurrentSubscriptionsShouldSendHeartbeats()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
+                {
+                    Query = @"declare function f(u) { 
+// sleep for 3 seconds 
+
+sleep(u.Age);
+    return u;
+}
+from Users as u
+select f(u)
+"
+                });
+
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var testingStuff = db.ForTestingPurposesOnly();
+                long location = 0L;
+                var docsCount = 0;
+                using (testingStuff.CallDuringWaitForChangedDocuments(async hasMoreDocsTask =>
+                {
+                    if (Interlocked.Read(ref location) == 1)
+                    {
+                        return false;
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User() { Age = 1 });
+                        session.SaveChanges();
+                    }
+
+                    var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(1));
+
+                    var res = await Task.WhenAny(hasMoreDocsTask, timeoutTask);
+                    docsCount++;
+                    if (res == hasMoreDocsTask)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }))
+                {
+                    var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
+                        Strategy = SubscriptionOpeningStrategy.Concurrent,
+                        ConnectionStreamTimeout = TimeSpan.FromSeconds(15),
+                        MaxDocsPerBatch = 6
+                    });
+
+                    await using (var secondSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                    {
+                        Strategy = SubscriptionOpeningStrategy.Concurrent,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
+                        ConnectionStreamTimeout = TimeSpan.FromSeconds(15)
+
+                    }))
+                    {
+                        using (var session = store.OpenSession())
+                        {
+                            session.Store(new User { Age = 3000 }, "user/0");
+                            session.Store(new User { Age = 3000 }, "user/1");
+                            session.Store(new User { Age = 3000 }, "user/2");
+                            session.Store(new User { Age = 3000 }, "user/3");
+                            session.Store(new User { Age = 3000 }, "user/4");
+                            session.Store(new User { Age = 3000 }, "user/5");
+
+                            session.SaveChanges();
+                        }
+
+                        var mre = new AsyncManualResetEvent();
+                        var mre2 = new AsyncManualResetEvent();
+
+                        subscription.OnEstablishedSubscriptionConnection += () =>
+                        {
+                            mre.Set();
+                        };
+                        subscription.AfterAcknowledgment += batch =>
+                        {
+                            mre2.Set();
+                            return Task.CompletedTask;
+                        };
+                        var con1Docs = new ConcurrentSet<string>();
+                        var con2Docs = new ConcurrentSet<string>();
+
+                        var t = subscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                con1Docs.Add(item.Id);
+                            }
+                        });
+
+                        Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                        var exceptions = new ConcurrentSet<Exception>();
+
+                        secondSubscription.OnUnexpectedSubscriptionError += ex =>
+                        {
+                            exceptions.Add(ex);
+                        };
+
+                        var _ = secondSubscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                con2Docs.Add(item.Id);
+                            }
+                        });
+
+                        Assert.True(await mre2.WaitAsync(_reasonableWaitTime));
+                        Interlocked.Increment(ref location);
+
+                        await subscription.DisposeAsync();
+
+                        await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == docsCount + 6), Convert.ToInt32(_reasonableWaitTime.TotalMilliseconds));
+                        await AssertNoLeftovers(store, id);
+                        Assert.NotEmpty(con2Docs);
+                        Assert.True(exceptions.Count == 0, $"exceptions.Count == 0{Environment.NewLine}"+string.Join(", ", exceptions));
+                    }
+                }
             }
         }
 

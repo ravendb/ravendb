@@ -313,6 +313,8 @@ namespace Raven.Server.Documents.Patch
                 consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunction(ScriptEngine, "log", OutputDebug), false, false, false));
                 ScriptEngine.SetValue("console", consoleObject);
 
+                ScriptEngine.SetValue("sleep", new Action<int>(Thread.Sleep));
+
                 //spatial.distance
                 ObjectInstance spatialObject = new JsObject(ScriptEngine);
                 var spatialFunc = new ClrFunction(ScriptEngine, "distance", Spatial_Distance);

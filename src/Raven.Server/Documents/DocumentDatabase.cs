@@ -2205,12 +2205,12 @@ namespace Raven.Server.Documents
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
 
-            internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
+            internal Func<Task, Task<bool>> Subscription_ActionToCallDuringWaitForChangedDocuments;
             internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
             internal Action<ConcurrentSet<SubscriptionConnection>> ConcurrentSubscription_ActionToCallDuringWaitForSubscribe;
             internal Action Subscription_ActionToCallDuringWaitForAck;
 
-            internal IDisposable CallDuringWaitForChangedDocuments(Action action)
+            internal IDisposable CallDuringWaitForChangedDocuments(Func<Task, Task<bool>> action)
             {
                 Subscription_ActionToCallDuringWaitForChangedDocuments = action;
 
