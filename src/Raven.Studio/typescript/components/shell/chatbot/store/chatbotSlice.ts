@@ -90,6 +90,7 @@ interface ChatbotState {
     deniedEndpoints: string[];
     isAlwaysAllowEndpointCalls: boolean;
     isDataSubmissionEnabled: boolean;
+    isAsciiAnimationFinished: boolean;
 }
 
 const chatbotMessagesAdapter = createEntityAdapter<ChatbotMessage, string>({
@@ -118,6 +119,7 @@ const initialState: ChatbotState = {
     newContextTab: null,
     isAlwaysAllowEndpointCalls: true,
     isDataSubmissionEnabled: true,
+    isAsciiAnimationFinished: false,
 };
 
 export const chatbotSlice = createSlice({
@@ -129,6 +131,9 @@ export const chatbotSlice = createSlice({
         },
         isOpenToggled: (state) => {
             state.isOpen = !state.isOpen;
+        },
+        asciiAnimationFinished: (state) => {
+            state.isAsciiAnimationFinished = true;
         },
         isPinnedToggled: (state) => {
             state.isPinned = !state.isPinned;
@@ -435,4 +440,5 @@ export const chatbotSelectors = {
     deniedEndpoints: (state: RootState) => state.chatbot.deniedEndpoints,
     isAlwaysAllowEndpointCalls: (state: RootState) => state.chatbot.isAlwaysAllowEndpointCalls,
     isDataSubmissionEnabled: (state: RootState) => state.chatbot.isDataSubmissionEnabled,
+    isAsciiAnimationFinished: (state: RootState) => state.chatbot.isAsciiAnimationFinished,
 };

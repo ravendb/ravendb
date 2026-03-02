@@ -1,12 +1,17 @@
-import React, { useEffect, useRef } from "react";
 import "./IconAscii.scss";
+import { useEffect, useRef } from "react";
 import { useThemeColors } from "./useThemeColors";
 import { useMouseTracking } from "./useMouseTracking";
 import { useParticles } from "./useParticles";
 import { lerpColor } from "./helpers";
 import { settings, shapeTemplate } from "./config";
+import { chatbotActions, chatbotSelectors } from "components/shell/chatbot/store/chatbotSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
 
 export default function AsciiLogo() {
+    const dispatch = useAppDispatch();
+    const isAnimationFinished = useAppSelector(chatbotSelectors.isAsciiAnimationFinished);
+
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const mouseRef = useMouseTracking();
     const particles = useParticles(shapeTemplate, settings);
@@ -14,10 +19,14 @@ export default function AsciiLogo() {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
 
         const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+        if (!ctx) {
+            return;
+        }
         const dpr = window.devicePixelRatio || 1;
 
         canvas.width = settings.boxSize * dpr;
@@ -26,18 +35,20 @@ export default function AsciiLogo() {
         canvas.style.height = `${settings.boxSize}px`;
         ctx.scale(dpr, dpr);
 
-        let animationId: number;
+        let animationId = 0;
         let frameCount = 0;
-        let currentScanIndex = 0;
+        const scanEndIndex = particles.length + settings.scanTailPadding;
+        let currentScanIndex = isAnimationFinished ? scanEndIndex : 0;
         const hoverRadiusSq = settings.hoverRadius * settings.hoverRadius;
         let time = 0;
+        let introFinished = isAnimationFinished;
 
         const render = () => {
             ctx.clearRect(0, 0, settings.boxSize, settings.boxSize);
             time += settings.gradientSpeed;
 
-            const isScanning = frameCount > settings.startDelay;
-            if (isScanning && currentScanIndex < particles.length + 50) {
+            const isScanning = !introFinished && frameCount > settings.startDelay;
+            if (isScanning && currentScanIndex < scanEndIndex) {
                 currentScanIndex += settings.charsPerFrame;
             }
 
@@ -47,6 +58,8 @@ export default function AsciiLogo() {
             const rect = canvas.getBoundingClientRect();
             const mx = mouseRef.current.x - rect.left;
             const my = mouseRef.current.y - rect.top;
+
+            let hasActiveTimers = false;
 
             particles.forEach((p, index) => {
                 const dx = mx - p.centerX;
@@ -62,6 +75,7 @@ export default function AsciiLogo() {
 
                 if (p.timer > 0) {
                     p.timer--;
+                    hasActiveTimers = true;
                     if (frameCount % settings.flickerSpeed === 0) {
                         p.current = settings.possibleChars.charAt(
                             Math.floor(Math.random() * settings.possibleChars.length)
@@ -84,6 +98,12 @@ export default function AsciiLogo() {
                 ctx.fillText(p.current, p.x, p.y);
             });
 
+            const isScanFinished = currentScanIndex >= scanEndIndex;
+            if (!introFinished && isScanFinished && !hasActiveTimers) {
+                introFinished = true;
+                dispatch(chatbotActions.asciiAnimationFinished());
+            }
+
             frameCount++;
             animationId = requestAnimationFrame(render);
         };
@@ -93,7 +113,7 @@ export default function AsciiLogo() {
         return () => {
             cancelAnimationFrame(animationId);
         };
-    }, [mouseRef, activeColor, baseColor]);
+    }, [mouseRef, activeColor, baseColor, isAnimationFinished]);
 
     return (
         <div className="ascii-wrapper">

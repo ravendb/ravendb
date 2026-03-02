@@ -7,6 +7,7 @@ export const settings = {
     lineHeight: 9,
     startDelay: 60,
     charsPerFrame: 2,
+    scanTailPadding: 50,
     hoverRadius: 15,
     randomDuration: 10,
     flickerSpeed: 4,
