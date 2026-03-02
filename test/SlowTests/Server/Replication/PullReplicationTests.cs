@@ -940,7 +940,7 @@ namespace SlowTests.Server.Replication
                         return false;
 
                     // Verify the specific reason from ServerStore.cs logic
-                    return statistics.Explanations.Any(x => x.Contains("Pull Replication Hub or Sink configurations with 'HubToSink' mode enabled"));
+                    return statistics.Explanations.Any(x => x.Contains("active Sink Pull Replication configuration"));
 
                 }, true, 75_000, 1000));
 
@@ -952,7 +952,7 @@ namespace SlowTests.Server.Replication
                     server.ServerStore.DatabasesLandlord.CanUnloadDatabase(hubDbKvp.Key, hubDbKvp.Value, hubStats, out _);
 
                     // The Hub should NOT have the configuration-based blocking message
-                    Assert.DoesNotContain(hubStats.Explanations, x => x.Contains("Pull Replication Hub or Sink configurations with 'HubToSink' mode enabled"));
+                    Assert.DoesNotContain(hubStats.Explanations, x => x.Contains("active Sink Pull Replication configuration"));
                 }
 
                 using (var s2 = hub.OpenSession())
