@@ -50,9 +50,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await using (var star = GetEmbeddedImgStream("star.png"))
             await using (var heart = GetEmbeddedImgStream("heart.png"))
             {
-                chat.AddAttachment(banana, "image/png");
-                chat.AddAttachment(star, "image/png");
-                chat.AddAttachment(heart, "image/png");
+                chat.AddAttachment("banana.png", banana, "image/png");
+                chat.AddAttachment("star.png", star, "image/png");
+                chat.AddAttachment("heart.png", heart, "image/png");
 
                 result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             }
@@ -163,7 +163,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await using (var banana = GetEmbeddedImgStream("banana.png"))
             {
-                chat.AddAttachment(banana, "image/png");
+                chat.AddAttachment("banana.png", banana, "image/png");
 
                 await chat.RunAsync<OutputSchema>(CancellationToken.None);
                 chat.SetUserPrompt("load the attachment I sent you, which fruit is inside of it?");
@@ -195,7 +195,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await using (var banana = GetEmbeddedImgStream("banana.png"))
             {
-                chat.AddAttachment(banana, "image/png");
+                chat.AddAttachment("banana.png", banana, "image/png");
 
                 await chat.RunAsync<OutputSchema>(CancellationToken.None);
                 chat.SetUserPrompt("What is inside the image I previously uploaded?");
@@ -231,7 +231,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             chat.SetUserPrompt("I am sending you a file.");
             await using (var banana = GetEmbeddedImgStream(fileName))
             {
-                chat.AddAttachment(banana, "image/png");
+                chat.AddAttachment(fileName, banana, "image/png");
                 result1 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             }
 
@@ -268,7 +268,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await using (var banana = GetEmbeddedImgStream("banana.png"))
             {
-                chat.AddAttachment(banana, "image/png");
+                chat.AddAttachment("banana.png", banana, "image/png");
                 result1 = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             }
 

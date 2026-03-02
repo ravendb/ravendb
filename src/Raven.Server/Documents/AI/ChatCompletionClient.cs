@@ -474,6 +474,12 @@ internal class ChatCompletionClient : IDisposable
                 continue;
             }
 
+            content.Add(new DynamicJsonValue
+            {
+                [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
+                [Constants.AttachmentsRequestFields.TypeText] = $"AttachmentName: {attachment.Name}"
+            });
+
             content.Add(attachment.Type switch
             {
                 Constants.AttachmentsRequestFields.MediaTypeTextPlain => new DynamicJsonValue
@@ -1023,6 +1029,8 @@ internal class ChatCompletionClient : IDisposable
             public const string Id = "id";
             public const string Function = "function";
             public const string Arguments = "arguments";
+            public const string Parameters = "parameters";
+            public const string Tool = "tool";
 
             // Values
             public const string TypeObject = "object";

@@ -4,7 +4,7 @@ using Raven.Server.Documents.AI;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal static class AiAgentActionRequetExtensions
+internal static class AiAgentActionRequestExtensions
 {
     internal static bool IsInternalToolCall(this AiAgentActionRequest request)
     {

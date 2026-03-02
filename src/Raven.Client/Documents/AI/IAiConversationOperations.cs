@@ -247,9 +247,11 @@ public interface IAiConversationOperations
     /// <summary>
     /// Adds a file attachment as a stream to the conversation turn.
     /// </summary>
+    /// <param name="name">The name of the attachment (e.g., ""monthly_budget.pdf").
+    /// A descriptive name is highly recommended as it helps the LLM understand the file's context and content.</param>
     /// <param name="stream">The data stream of the file.</param>
     /// <param name="contentType">The MIME media type of the attachment content (e.g. image/png).</param>
-    void AddAttachment(Stream stream, string contentType);
+    void AddAttachment(string name, Stream stream, string contentType);
 
     /// <summary>
     /// Copies an existing attachment from a document in RavenDB into the conversation context.

@@ -303,14 +303,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
             var tool = new DynamicJsonValue
             {
-                ["type"] = "function",
-                ["function"] = new DynamicJsonValue
+                [ChatCompletionClient.Constants.ResponseFields.Type] = ChatCompletionClient.Constants.ResponseFields.Function,
+                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
                 {
-                    ["name"] = q.Name,
-                    ["description"] = q.Description,
-                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+                    [ChatCompletionClient.Constants.ResponseFields.Name] = q.Name,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = q.Description,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Parameters] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
                 },
-                ["strict"] = true
+                [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
             };
             tools.Add(context.ReadObject(tool, "tool"));
         }
@@ -330,14 +330,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
             var tool = new DynamicJsonValue
             {
-                ["type"] = "function",
-                ["function"] = new DynamicJsonValue
+                [ChatCompletionClient.Constants.ResponseFields.Type] = ChatCompletionClient.Constants.ResponseFields.Function,
+                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
                 {
-                    ["name"] = a.Name,
-                    ["description"] = a.Description,
-                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+                    [ChatCompletionClient.Constants.ResponseFields.Name] = a.Name,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = a.Description,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Parameters] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
                 },
-                ["strict"] = true
+                [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
             };
             tools.Add(context.ReadObject(tool, "tool"));
         }

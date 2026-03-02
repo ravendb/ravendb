@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
         public record ImageDescription(string Description, bool SafeForWork, string[] Tags);
 
         private const string NonEmptyAnswerHint =
-            " ;Always provide a valid structured response matching the schema (if you have no answer or an empty answer - please return default values instead)";
+            " ;Always provide a valid structured response matching the schema do not return an empty answer";
 
         private const string FormatScript = @"
 ai.genContext({})

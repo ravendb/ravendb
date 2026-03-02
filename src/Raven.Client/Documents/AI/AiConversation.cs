@@ -48,13 +48,13 @@ internal class AiConversation : IAiConversationOperations
         _changeVector = changeVector;
     }
     
-    public void AddAttachment(Stream stream, string contentType)
+    public void AddAttachment(string name, Stream stream, string contentType)
     {
         if (stream == null)
             throw new ArgumentNullException(nameof(stream));
 
-        var fileName = Guid.NewGuid().ToString(); //do we want an ending?
-        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", fileName, stream, contentType, changeVector: string.Empty));
+        var attachmentName = name;
+        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: string.Empty));
     }
 
     public void CopyAttachmentFrom(string sourceDocumentId, string fileName)

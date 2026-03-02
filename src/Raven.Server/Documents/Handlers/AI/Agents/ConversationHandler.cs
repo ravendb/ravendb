@@ -78,7 +78,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 };
             }
 
-            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands.ParsedCommands is {Count: > 0} == false)
+            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands?.ParsedCommands is {Count: > 0} == false)
             {
                 throw new InvalidOperationException(
                     $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
@@ -125,11 +125,9 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
 
-        if (_request.AttachmentCommands.ParsedCommands is { Count: >0})
+        if (_request.AttachmentCommands?.ParsedCommands is { Count: >0})
         {
             using var it = _request.AttachmentCommands.AttachmentStreams?.GetEnumerator() ?? default;
-
-            var attachmentList = _request.Attachments = new List<AiAttachment>();
             foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
             {
                 switch (cmd.Type)
@@ -201,6 +199,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         var sw = Stopwatch.StartNew();
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
+        bool isFirstIteration = true;
         while (shouldContinueConversation)
         {
             var attachments = _request.Attachments ?? new List<AiAttachment>();
@@ -210,6 +209,12 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, token);
             
             var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
+            //we want that message only on when we upload an attachment and not when the internal tool is called.
+            if (isFirstIteration && _request.AttachmentCommands?.ParsedCommands.Count > 0)
+            {
+                AddMessageWithAttachmentsName(context, isFirstIteration);
+            }
+            isFirstIteration = false;
 
             _document.AddMessage(context, r.Message, currentTurnUsage);
             _document.UpdateUsage(talker.AiUsage);
@@ -272,6 +277,16 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return (r.Result, talker.AiUsage);
     }
 
+    private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
+    {
+        var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
+        _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
+        {
+            ["role"] = "user",
+            ["content"] = $"[Attachments: {attachmentNames}]"
+        }, "user/attachments-msg"), usage: null); // usage: null
+    }
+
     private void HandleInternalSystemActions(JsonOperationContext context, List<AiAgentActionRequest> toolCalls)
     {
         if (ConversationHandlerAttachments.NeedsReadTransactionForInternalActions(toolCalls) == false)
@@ -288,6 +303,13 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     {
         var reduction = _configuration.ChatTrimming;
         if (reduction == null || _document.OpenActionCalls.Count > 0)
+            return null;
+
+        // do not use reduction if attachments are being added in the current request.
+        // Attachments cause single-turn spike in token usage.
+        // which usually trigger chat reduction that is not needed
+        // as the raw file data is not persisted on the messages we send to the LLM.
+        if (_request.AttachmentCommands?.ParsedCommands.Count > 0)
             return null;
 
         TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
