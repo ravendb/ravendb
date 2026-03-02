@@ -24,6 +24,8 @@ internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcess
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
+        var exact = RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
+
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
         using (context.OpenReadTransaction())
@@ -33,7 +35,7 @@ internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcess
             {
                 TaskName = x.Key,
                 EtlType = x.Value.First().EtlType,
-                ProcessesProgress = x.Value.Select(y => y.GetProgress(context)).ToArray(),
+                ProcessesProgress = x.Value.Select(y => y.GetProgress(context, exact)).ToArray(),
                 QueueBrokerType = x.Value.First() switch
                 {
                     RabbitMqEtl => QueueBrokerType.RabbitMq,

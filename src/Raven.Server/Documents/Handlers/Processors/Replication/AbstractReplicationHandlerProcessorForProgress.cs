@@ -28,5 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         }
 
         protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString("name", required: false);
+
+        protected bool IsExact() => RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
     }
 }

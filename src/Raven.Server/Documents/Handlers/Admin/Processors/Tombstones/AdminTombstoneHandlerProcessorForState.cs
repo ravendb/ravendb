@@ -11,15 +11,18 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Tombstones;
 
 internal sealed class AdminTombstoneHandlerProcessorForState : AbstractAdminTombstoneHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AdminTombstoneHandlerProcessorForState([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    private readonly bool _exact;
+
+    public AdminTombstoneHandlerProcessorForState([NotNull] DatabaseRequestHandler requestHandler, bool exact) : base(requestHandler)
     {
+        _exact = exact;
     }
 
     protected override bool SupportsCurrentNode => true;
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        var state = RequestHandler.Database.TombstoneCleaner.GetState(addInfoForDebug: true);
+        var state = RequestHandler.Database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: _exact);
         var response = new GetTombstonesStateCommand.Response(state);
 
         using (RequestHandler.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))

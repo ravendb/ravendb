@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -16,8 +17,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorForProgress<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    private readonly HashSet<string> _indexesWithExactProgress;
+
+    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler, StringValues indexesWithExactProgress) : base(requestHandler)
     {
+        _indexesWithExactProgress = indexesWithExactProgress.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     protected override bool SupportsCurrentNode => true;
@@ -46,7 +50,7 @@ internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerPro
                     if (index.DeployedOnAllNodes && index.IsStale(context) == false)
                         continue;
 
-                    indexProgress = index.GetProgress(context, overallDuration);
+                    indexProgress = index.GetProgress(context, overallDuration, exact: _indexesWithExactProgress.Contains(index.Name));
                 }
                 catch (ObjectDisposedException)
                 {

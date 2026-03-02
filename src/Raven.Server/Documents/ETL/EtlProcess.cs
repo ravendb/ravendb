@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
-        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext);
+        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact);
 
         internal abstract bool IsRunning { get; }
 
@@ -1361,7 +1361,7 @@ namespace Raven.Server.Documents.ETL
             });
         }
 
-        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact)
         {
             var result = new EtlProcessProgress
             {
@@ -1379,19 +1379,19 @@ namespace Raven.Server.Documents.ETL
             var overallDuration = Stopwatch.StartNew();
             foreach (var collection in collections)
             {
-                var entriesAfter = Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration);
+                var entriesAfter = Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
                 result.NumberOfDocumentsToProcess += entriesAfter.Count;
                 result.TotalNumberOfDocuments += entriesAfter.Total;
                 result.Estimated |= entriesAfter.Estimated;
 
-                entriesAfter = Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration);
+                entriesAfter = Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
                 result.NumberOfDocumentTombstonesToProcess += entriesAfter.Count;
                 result.TotalNumberOfDocumentTombstones += entriesAfter.Total;
                 result.Estimated |= entriesAfter.Estimated;
 
                 if (ShouldTrackCounters())
                 {
-                    entriesAfter = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration);
+                    entriesAfter = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
                     result.NumberOfCounterGroupsToProcess += entriesAfter.Count;
                     result.TotalNumberOfCounterGroups += entriesAfter.Total;
                     result.Estimated |= entriesAfter.Estimated;
@@ -1399,12 +1399,12 @@ namespace Raven.Server.Documents.ETL
 
                 if (ShouldTrackTimeSeries())
                 {
-                    entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration);
+                    entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
                     result.NumberOfTimeSeriesSegmentsToProcess += entriesAfter.Count;
                     result.TotalNumberOfTimeSeriesSegments += entriesAfter.Total;
                     result.Estimated |= entriesAfter.Estimated;
 
-                    entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration);
+                    entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
                     result.NumberOfTimeSeriesDeletedRangesToProcess += entriesAfter.Count;
                     result.TotalNumberOfTimeSeriesDeletedRanges += entriesAfter.Total;
                     result.Estimated |= entriesAfter.Estimated;

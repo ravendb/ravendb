@@ -132,10 +132,10 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         }
         
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
-            Stopwatch overallDuration)
+            Stopwatch overallDuration, bool exact)
         {
             var entriesAfter = DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
-                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration);
+                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
             
             progressStats.NumberOfItemsToProcess += entriesAfter.Count;
             progressStats.TotalNumberOfItems += entriesAfter.Total;

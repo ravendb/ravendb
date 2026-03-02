@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Jint.Native;
 using Jint.Native.Object;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -128,7 +129,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Progress()
         {
-            using (var processor = new IndexHandlerProcessorForProgress(this))
+            var indexesWithExactProgress = GetStringValuesQueryString("exact", required: false);
+
+            using (var processor = new IndexHandlerProcessorForProgress(this, indexesWithExactProgress))
                 await processor.ExecuteAsync();
         }
 

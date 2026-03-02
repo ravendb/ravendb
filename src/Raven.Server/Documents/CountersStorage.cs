@@ -211,7 +211,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents
 
             var indexDef = CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice];
 
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, ref TableValueReader tvr)
@@ -1941,11 +1941,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
             var indexDef = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag)

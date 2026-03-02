@@ -1231,7 +1231,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfAttachmentsToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfAttachmentsToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -1239,7 +1239,7 @@ namespace Raven.Server.Documents
                 return new NumberOfEntriesAfterResult();
 
             var indexDef = AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration);
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public long GetNumberOfAttachmentTombstones(DocumentsOperationContext context)
