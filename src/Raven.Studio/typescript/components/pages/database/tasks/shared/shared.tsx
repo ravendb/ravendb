@@ -689,6 +689,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     link: forCurrentDatabase.editSnowflakeEtlTaskUrl(),
                     disableReason: getTaskDisableReason({
                         hasAccess: hasDatabaseAdminAccess,
+                        hasSharding: true,
                         customReason: !hasSnowflakeEtl ? "Your license doesn't include Snowflake ETL" : null,
                     }),
                 },
