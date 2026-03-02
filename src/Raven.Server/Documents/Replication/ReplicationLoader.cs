@@ -2079,19 +2079,10 @@ namespace Raven.Server.Documents.Replication
             using (ctx.OpenReadTransaction())
             using (var rawDatabase = _server.Cluster?.ReadRawDatabaseRecord(ctx, Database.Name))
             {
-                if (rawDatabase == null)
+                if (rawDatabase?.SinkPullReplications == null || rawDatabase.SinkPullReplications.Count == 0)
                     return 0;
 
-                var count = 0;
-
-                if (rawDatabase.SinkPullReplications != null)
-                {
-                    count += rawDatabase.SinkPullReplications
-                        .Where(asSink => asSink.Disabled == false)
-                        .Count(asSink => (asSink.Mode & PullReplicationMode.HubToSink) != 0);
-                }
-
-                return count;
+                return rawDatabase.SinkPullReplications.Count(asSink => asSink.Disabled == false);
             }
         }
     }

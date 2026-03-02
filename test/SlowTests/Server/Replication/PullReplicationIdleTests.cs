@@ -150,25 +150,25 @@ namespace SlowTests.Server.Replication
         }
 
         [NightlyBuildFact]
-        public async Task SinkToHub_LocalCvEmpty_OnConnect_BothStayIdle_AndWakeUpOnlyOnSinkChanges()
+        public async Task SinkToHub_LocalCvEmpty_OnConnect_SinkStaysAwake_HubStaysIdle_AndHubWakesUpOnSinkChanges()
         {
             using var context = new PullReplicationTestContext(this);
             await context.Initialize(PullReplicationMode.SinkToHub);
 
             // 1. Initial State:
-            // Sink (Push) -> Can sleep (wakes up on local write).
+            // Sink -> Must stay awake: any Sink Pull Replication configuration prevents idle,
+            //         because the Hub may come back online while Sink is asleep and nobody would wake it.
             // Hub (Passive) -> Can sleep.
             await using (var monitor = PullReplicationTestContext.Monitor())
             {
-                monitor.ExpectIdle(context.SinkServer, context.SinkDbName);
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
                 monitor.ExpectIdle(context.HubServer, context.HubDbName);
             }
 
             // 2. Action: Write to Sink
-            // Expectation: Sink wakes up (local write). Hub wakes up (incoming replication).
+            // Expectation: Hub wakes up to receive incoming replication from Sink.
             await using (var monitor = PullReplicationTestContext.Monitor())
             {
-                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
                 monitor.ExpectWakeup(context.HubServer, context.HubDbName);
 
                 using (var session = context.SinkStore.OpenSession())
@@ -179,7 +179,7 @@ namespace SlowTests.Server.Replication
             }
 
             Assert.True(WaitForDocument(context.HubStore, "users/1", timeout: 15_000),
-                "Document failed to replicate from Sink to Hub after waking up.");
+                "Document failed to replicate from Sink to Hub.");
         }
 
         [NightlyBuildFact]
@@ -313,6 +313,102 @@ namespace SlowTests.Server.Replication
                 "Hub failed to replicate document from Sink after correctly handling identity crisis.");
         }
 
+        [NightlyBuildFact]
+        public async Task SinkToHub_HubOffline_SinkWritesWhileHubDown_HubReceivesDataOnReturn()
+        {
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.SinkToHub);
+
+            // 1. Initial state: Sink is awake (config prevents idle), Hub is idle
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+            }
+
+            // 2. Kill the Hub
+            var hubDisposeResult = await DisposeServerAndWaitForFinishOfDisposalAsync(context.HubServer);
+
+            // 3. Write to Sink while Hub is offline
+            using (var session = context.SinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "BufferedWhileHubDown" }, "users/buffered");
+                session.SaveChanges();
+            }
+
+            // 4. Sink MUST stay awake despite Hub being unreachable.
+            // The anti-flicker check waits MaxIdleTime+3s to confirm Sink never goes idle.
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+            }
+
+            // 5. Resurrect Hub
+            using (var resurrectedHub = ResurrectServer(hubDisposeResult, context.Certificates))
+            using (var newHubStore = OpenStoreForResurrectedServer(resurrectedHub, context.HubDbName, context.Certificates))
+            {
+                // 6. Sink was awake → reconnects → data flows to Hub
+                Assert.True(WaitForDocument(newHubStore, "users/buffered", timeout: 30_000),
+                    "Buffered Sink data was not replicated to Hub after it came back online. " +
+                    "Sink may have gone idle while Hub was down and failed to wake up on Hub's return.");
+            }
+        }
+
+        [NightlyBuildFact]
+        public async Task TwoWay_HubOffline_SinkWritesWhileHubDown_HubReceivesDataOnReturn()
+        {
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub);
+
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+                monitor.ExpectIdle(context.HubServer, context.HubDbName);
+            }
+
+            var hubDisposeResult = await DisposeServerAndWaitForFinishOfDisposalAsync(context.HubServer);
+
+            using (var session = context.SinkStore.OpenSession())
+            {
+                session.Store(new User { Name = "BufferedTwoWay" }, "users/buffered-twoway");
+                session.SaveChanges();
+            }
+
+            await using (var monitor = PullReplicationTestContext.Monitor())
+            {
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+            }
+
+            using (var resurrectedHub = ResurrectServer(hubDisposeResult, context.Certificates))
+            using (var newHubStore = OpenStoreForResurrectedServer(resurrectedHub, context.HubDbName, context.Certificates))
+            {
+                Assert.True(WaitForDocument(newHubStore, "users/buffered-twoway", timeout: 30_000),
+                    "TwoWay: Buffered Sink data was not replicated to Hub after it came back online.");
+            }
+        }
+
+        [NightlyBuildFact]
+        public async Task SinkToHub_DisabledConfiguration_SinkCanGoIdle()
+        {
+            using var context = new PullReplicationTestContext(this);
+            await context.Initialize(PullReplicationMode.SinkToHub);
+
+            // 1. Initially Sink stays awake (active config prevents idle)
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectWakeup(context.SinkServer, context.SinkDbName);
+
+            // 2. Disable the pull replication task
+            await context.SinkStore.Maintenance.SendAsync(
+                new Raven.Client.Documents.Operations.OngoingTasks.ToggleOngoingTaskStateOperation(
+                    context.SinkTaskId,
+                    Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType.PullReplicationAsSink,
+                    disable: true));
+
+            // 3. Sink is now free to go idle (no active replication config)
+            await using (var monitor = PullReplicationTestContext.Monitor())
+                monitor.ExpectIdle(context.SinkServer, context.SinkDbName);
+        }
+
         #region Helpers
 
         private class PullReplicationTestContext : IDisposable
@@ -328,6 +424,7 @@ namespace SlowTests.Server.Replication
 
             public string HubDbName => HubStore.Database;
             public string SinkDbName => SinkStore.Database;
+            public long SinkTaskId { get; private set; }
 
             public PullReplicationTestContext(PullReplicationIdleTests testBase)
             {
@@ -423,13 +520,14 @@ namespace SlowTests.Server.Replication
                 }));
 
                 // 4. Define Sink Task
-                await SinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                var sinkResult = await SinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
                 {
                     ConnectionStringName = connectionStringName,
                     HubName = pullName,
                     Mode = mode,
                     CertificateWithPrivateKey = Convert.ToBase64String(Certificates.ClientCertificate2.Value.Export(X509ContentType.Pfx))
                 }));
+                SinkTaskId = sinkResult.TaskId;
             }
 
             /// <summary>

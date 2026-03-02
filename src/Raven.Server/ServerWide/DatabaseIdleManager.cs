@@ -17,7 +17,6 @@ using Sparrow.Logging;
 using Sparrow.Server.Threading;
 using System.Linq;
 using System.Threading.Tasks;
-using Jint;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Util;
@@ -27,7 +26,9 @@ using Raven.Server.Web.System;
 
 namespace Raven.Server.ServerWide
 {
-    public record IdleDatabaseInfo(Dictionary<string, long> ReplicationInfo, string ChangeVector, string HubVoronDbId = null);
+    /// <param name="ReplicationInfo">Base64-22 DbId → last etag Hub replicated from that source.
+    /// Keys must be Base64-22; <see cref="DatabaseIdleManager.IdleOperations"/> normalizes GUID storage keys to Base64 before constructing this record.</param>
+    public record IdleDatabaseInfo(Dictionary<string, long> ReplicationInfo, string ChangeVector, string DbBase64Id = null);
 
     public sealed class DatabaseIdleManager : IDisposable
     {
@@ -467,23 +468,14 @@ namespace Raven.Server.ServerWide
                             var dbIdEtagDictionary = new Dictionary<string, long>();
                             foreach (var kvp in DocumentsStorage.GetAllReplicatedEtags(documentsContext))
                             {
-                                if (Guid.TryParse(kvp.Key, out Guid parsedGuid))
-                                    dbIdEtagDictionary[parsedGuid.ToBase64Unpadded()] = kvp.Value;
-                                else
-                                    dbIdEtagDictionary[kvp.Key] = kvp.Value;
+                                if (Guid.TryParse(kvp.Key, out Guid parsedGuid) == false)
+                                    throw new InvalidOperationException($"Invalid GUID in database '{database.Name}': {kvp.Key}");
+
+                                dbIdEtagDictionary[parsedGuid.ToBase64Unpadded()] = kvp.Value;
                             }
 
                             var changeVector = DocumentsStorage.GetDatabaseChangeVector(tx.InnerTransaction);
                             idleInfo = new IdleDatabaseInfo(dbIdEtagDictionary, changeVector, database.DbBase64Id);
-                        }
-
-                        var repInfoStr = idleInfo.ReplicationInfo != null && idleInfo.ReplicationInfo.Count > 0
-                            ? string.Join(", ", idleInfo.ReplicationInfo.Select(kvp => $"{kvp.Key}={kvp.Value}"))
-                            : "(empty)";
-
-                        if (_logger.IsOperationsEnabled)
-                        {
-                            _logger.Operations($"[IdleInfo] {database.Name}: CV='{idleInfo.ChangeVector}' ReplicationInfo={repInfoStr}");
                         }
 
                         var nextActivity = database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name);
@@ -600,13 +592,14 @@ namespace Raven.Server.ServerWide
         }
 
         /// <summary>
-        /// Keeping these two vectors separate prevents cross-contamination: Sink's own entries must not
-        /// influence the HubToSink check, and Hub's echoed entries must not influence the SinkToHub check.
+        /// Splits Sink's CV into two filtered vectors used for idle wake-up decisions.
+        /// Idle-path augmentation over write-path <see cref="ChangeVectorUtils.ClassifyHubIncomingEntries"/>:
+        /// Hub-origin entries are additionally capped; Sink-origin entries filtered by ReplicationInfo.
         /// </summary>
-        /// <param name="sinkCvForHubToSink">contains only Hub-origin entries from Sink's CV (capped to Hub's local etag).
-        /// Used to answer: "Does Sink already have everything Hub has?" (HubToSink direction)</param>
-        /// <param name="sinkCvForSinkToHub">contains only non-Hub entries from Sink's CV that Hub hasn't replicated yet.
-        /// Used to answer: "Does Sink have new data Hub hasn't received?" (SinkToHub direction)</param>
+        /// <param name="sinkCvForHubToSink">Hub-origin entries from Sink's CV, capped to Hub's local etag.
+        /// Answers: "Does Sink already have everything Hub has?" (HubToSink direction)</param>
+        /// <param name="sinkCvForSinkToHub">Non-Hub entries from Sink's CV not yet replicated to Hub.
+        /// Answers: "Does Sink have new data Hub hasn't seen?" (SinkToHub direction)</param>
         internal static void FilterIrrelevantEntries(
             string sinkChangeVector,
             IdleDatabaseInfo idleInfo,
@@ -625,50 +618,53 @@ namespace Raven.Server.ServerWide
 
                 var sinkList = sinkChangeVector.ToChangeVectorList();
 
-                var localEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                // Hub identity = topology ID + DbBase64Id only, never all CV entries.
+                // Using the full CV causes Identity Crisis: Sink's own DbIds appear in Hub's CV
+                // after SinkToHub replication -> misclassified as Hub-origin -> Hub stays asleep incorrectly.
+                var localEtags = new Dictionary<string, long>(StringComparer.Ordinal);
 
                 if (string.IsNullOrEmpty(hubDbId) == false)
+                    localEtags[hubDbId] = HubEtag(idleInfo, hubDbId);
+
+                if (string.IsNullOrEmpty(idleInfo.DbBase64Id) == false)
+                    localEtags[idleInfo.DbBase64Id] = HubEtag(idleInfo, idleInfo.DbBase64Id);
+
+                HashSet<string> hubKnownDbIds = localEtags.Count > 0
+                    ? new HashSet<string>(localEtags.Keys, StringComparer.Ordinal)
+                    : null;
+
+                // Step 1: Classify
+                // clusterTransactionId=null -> TRXN entries land in trxnEntries (treated as Sink-origin below).
+                ChangeVectorUtils.ClassifyHubIncomingEntries(
+                    sinkList,
+                    hubKnownDbIds,
+                    clusterTransactionId: null,
+                    out List<ChangeVectorEntry> hubKnownEntries,
+                    out List<ChangeVectorEntry> sinkOriginEntries,
+                    out List<ChangeVectorEntry> trxnEntries);
+
+                // Step 2: Cap Hub-known entries to Hub's actual etag.
+                // Backup/restore safety: Sink may carry Hub's DbId with etag higher than Hub's own record.
+                var cappedHubEntries = new List<ChangeVectorEntry>(hubKnownEntries.Count);
+                foreach (var entry in hubKnownEntries)
                 {
-                    long etag = string.IsNullOrEmpty(idleInfo.ChangeVector) ? 0 : ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, hubDbId);
-                    localEtags[hubDbId] = etag;
-                    if (ChangeVectorUtils.TryBase64ToGuid(hubDbId, out var guid))
-                        localEtags[guid] = etag;
+                    localEtags.TryGetValue(entry.DbId, out long localEtag);
+                    cappedHubEntries.Add(entry with { Etag = Math.Min(entry.Etag, localEtag) });
                 }
 
-                if (string.IsNullOrEmpty(idleInfo.HubVoronDbId) == false)
+                // Step 3: Filter Sink+TRXN entries; exclude already-replicated ones.
+                // TRXN entries carry no Sink data relevant to Hub's HubToSink/SinkToHub wake-up decision.
+                var filteredSinkEntries = new List<ChangeVectorEntry>(sinkOriginEntries.Count + trxnEntries.Count);
+                foreach (var entry in sinkOriginEntries.Concat(trxnEntries))
                 {
-                    long etag = string.IsNullOrEmpty(idleInfo.ChangeVector) ? 0 : ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, idleInfo.HubVoronDbId);
-                    localEtags[idleInfo.HubVoronDbId] = etag;
-                    if (ChangeVectorUtils.TryBase64ToGuid(idleInfo.HubVoronDbId, out var guid))
-                        localEtags[guid] = etag;
+                    if (idleInfo.ReplicationInfo == null ||
+                        idleInfo.ReplicationInfo.TryGetValue(entry.DbId, out long lastReplicated) == false ||
+                        entry.Etag > lastReplicated)
+                        filteredSinkEntries.Add(entry);
                 }
 
-                // ReplicationInfo keys may be GUID strings (from DbId.ToString()) while CV DbIds are Base64.
-                // Build a normalized lookup that accepts both representations.
-                Dictionary<string, long> normalizedReplicationInfo = null;
-                if (idleInfo.ReplicationInfo != null && idleInfo.ReplicationInfo.Count > 0)
-                {
-                    normalizedReplicationInfo = new Dictionary<string, long>(idleInfo.ReplicationInfo.Count * 2, StringComparer.OrdinalIgnoreCase);
-                    foreach (var kvp in idleInfo.ReplicationInfo)
-                    {
-                        normalizedReplicationInfo[kvp.Key] = kvp.Value;
-                        if (Guid.TryParse(kvp.Key, out var g))
-                        {
-                            var base64 = Convert.ToBase64String(g.ToByteArray()).TrimEnd('=');
-                            normalizedReplicationInfo[base64] = kvp.Value;
-                        }
-                        else if (ChangeVectorUtils.TryBase64ToGuid(kvp.Key, out var g2))
-                        {
-                            normalizedReplicationInfo[g2] = kvp.Value;
-                        }
-                    }
-                }
-
-                ChangeVectorUtils.ClassifyEntriesByOrigin(sinkList, localEtags, normalizedReplicationInfo,
-                    out var hubOriginEntries, out var sinkOriginEntries);
-
-                sinkCvForHubToSink = hubOriginEntries.Count == 0 ? string.Empty : hubOriginEntries.SerializeVector();
-                sinkCvForSinkToHub = sinkOriginEntries.Count == 0 ? string.Empty : sinkOriginEntries.SerializeVector();
+                sinkCvForHubToSink = cappedHubEntries.Count == 0 ? string.Empty : cappedHubEntries.SerializeVector();
+                sinkCvForSinkToHub = filteredSinkEntries.Count == 0 ? string.Empty : filteredSinkEntries.SerializeVector();
             }
             catch
             {
@@ -676,6 +672,11 @@ namespace Raven.Server.ServerWide
                 sinkCvForSinkToHub = sinkChangeVector;
             }
         }
+
+        private static long HubEtag(IdleDatabaseInfo idleInfo, string dbId) =>
+            string.IsNullOrEmpty(idleInfo.ChangeVector)
+                ? 0
+                : ChangeVectorUtils.GetEtagById(idleInfo.ChangeVector, dbId);
 
         public void Dispose()
         {

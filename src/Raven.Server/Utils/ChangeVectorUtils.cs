@@ -450,40 +450,69 @@ namespace Raven.Server.Utils
             }
         }
 
-        /// <param name="localEtags">DbId→etag map whose keys define "local" identity; the etag is used as an upper cap.</param>
-        /// <param name="alreadyReplicatedEtags">DbId→last-replicated-etag for non-local entries; may be null.</param>
-        /// <param name="localOriginEntries">Local-origin entries, each capped to the local etag.</param>
-        /// <param name="remoteOriginEntries">Non-local entries not yet fully replicated.</param>
-        internal static void ClassifyEntriesByOrigin(
-            List<ChangeVectorEntry> entries,
-            Dictionary<string, long> localEtags,
-            Dictionary<string, long> alreadyReplicatedEtags,
-            out List<ChangeVectorEntry> localOriginEntries,
-            out List<ChangeVectorEntry> remoteOriginEntries)
+        /// <summary>
+        /// Classifies incoming Sink CV entries: Hub-known, Sink-origin, or TRXN. No capping (write path).
+        /// Callers apply SINK/TRXN tags to respective buckets and register sinkOriginEntries' DbIds
+        /// in DbIdsToIgnore to preserve Hub's global CV invariant (see <see cref="CleanHubGlobalCv"/>).
+        /// </summary>
+        /// <param name="incomingEntries">Parsed entries from the Sink's incoming change vector.</param>
+        /// <param name="hubKnownDbIds">Hub's authoritative DbIds (Base64-22).
+        /// Write path: all entries from Hub's cleaned global CV are safe — <see cref="CleanHubGlobalCv"/> guarantees no Sink DbIds.
+        /// Idle path: topology ID + DbBase64Id only — using the full CV risks Identity Crisis
+        /// (Sink DbIds in Hub's CV would be misclassified as Hub-origin). See <see cref="DatabaseIdleManager.FilterIrrelevantEntries"/>.</param>
+        /// <param name="clusterTransactionId">Hub's RAFT cluster DbId (Base64-22); null treats all non-Hub entries as Sink-origin.</param>
+        /// <param name="hubKnownEntries">Hub-origin — merge into Hub's global CV as-is.</param>
+        /// <param name="sinkOriginEntries">Sink-origin — caller must SINK-tag and add DbIds to DbIdsToIgnore.</param>
+        /// <param name="trxnEntries">Cluster-transaction — caller must apply TRXN tag.</param>
+        internal static void ClassifyHubIncomingEntries(
+            List<ChangeVectorEntry> incomingEntries,
+            HashSet<string> hubKnownDbIds,
+            string clusterTransactionId,
+            out List<ChangeVectorEntry> hubKnownEntries,
+            out List<ChangeVectorEntry> sinkOriginEntries,
+            out List<ChangeVectorEntry> trxnEntries)
         {
-            localOriginEntries = new List<ChangeVectorEntry>();
-            remoteOriginEntries = new List<ChangeVectorEntry>();
+            hubKnownEntries = []; sinkOriginEntries = []; trxnEntries = [];
 
-            foreach (var entry in entries)
+            if (incomingEntries == null || incomingEntries.Count == 0)
+                return;
+
+            foreach (var entry in incomingEntries)
             {
-                bool isLocal = localEtags.TryGetValue(entry.DbId, out long localEtag);
-
-                if (isLocal == false && TryBase64ToGuid(entry.DbId, out var asGuid))
-                    isLocal = localEtags.TryGetValue(asGuid, out localEtag);
-
-                if (isLocal)
+                if (hubKnownDbIds?.Contains(entry.DbId) == true)
                 {
-                    localOriginEntries.Add(new ChangeVectorEntry { DbId = entry.DbId, Etag = Math.Min(entry.Etag, localEtag), NodeTag = entry.NodeTag });
-                    continue;
+                    hubKnownEntries.Add(entry);
                 }
-
-                if (alreadyReplicatedEtags == null ||
-                    alreadyReplicatedEtags.TryGetValue(entry.DbId, out long lastReplicated) == false ||
-                    entry.Etag > lastReplicated)
+                else if (clusterTransactionId != null && entry.DbId == clusterTransactionId)
                 {
-                    remoteOriginEntries.Add(entry);
+                    trxnEntries.Add(entry);
+                }
+                else
+                {
+                    sinkOriginEntries.Add(entry);
                 }
             }
+        }
+
+        /// <summary>
+        /// Enforces Hub's global CV invariant: strips SINK/TRXN tags and removes Sink DbIds (dbIdsToIgnore).
+        /// Without this, Sink DbIds would leak into hubKnownDbIds on the next write cycle,
+        /// silently misclassifying incoming Sink entries as Hub-origin.
+        /// </summary>
+        /// <param name="dbIdsToIgnore">Sink DbIds accumulated this transaction (from sinkOriginEntries); null/empty is safe.</param>
+        public static ChangeVector CleanHubGlobalCv(
+            ChangeVector rawCv,
+            IChangeVectorOperationContext context,
+            HashSet<string> dbIdsToIgnore = null)
+        {
+            var value = rawCv.StripSinkTags(context);
+            value = value.StripTrxnTags(context);
+
+            if (dbIdsToIgnore == null || dbIdsToIgnore.Count == 0 || value.IsNullOrEmpty)
+                return value;
+
+            value.TryRemoveIds(dbIdsToIgnore, context, out value);
+            return value;
         }
     }
 }

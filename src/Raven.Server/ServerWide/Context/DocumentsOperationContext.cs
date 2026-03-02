@@ -24,17 +24,7 @@ namespace Raven.Server.ServerWide.Context
                 if (value.IsSingle == false)
                     throw new InvalidOperationException($"The global change vector '{value}' cannot contain pipe");
 
-                value = value.StripSinkTags(this);
-                value = value.StripTrxnTags(this);
-
-                if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || value.IsNullOrEmpty)
-                {
-                    _lastDatabaseChangeVector = value;
-                    return;
-                }
-
-                value.TryRemoveIds(DbIdsToIgnore, this, out value);
-                _lastDatabaseChangeVector = value;
+                _lastDatabaseChangeVector = ChangeVectorUtils.CleanHubGlobalCv(value, context: this, DbIdsToIgnore);
             }
         }
 

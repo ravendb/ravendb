@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -80,6 +78,25 @@ namespace FastTests.Server.Cluster
             Assert.Equal(string.Empty, forSinkToHub);
         }
 
+        [RavenFact(RavenTestCategory.Replication)]
+        public void HubToSink_WithVoronDbId_SinkEchoesVoronEntry_IsCappedToLocalEtag()
+        {
+            // Hub has NO topology ID, only a Voron DbBase64Id (e.g. after fallback identity construction).
+            // Sink echoes back Hub's Voron-originated entry with a higher etag (backup/restore scenario).
+            var voronId = "VoronBase64IdForXXXXXA"; // 22-char Base64
+
+            var localCv = FormatCv(voronId, 10);
+            var sinkCv  = FormatCv(voronId, 20); // Sink reports Hub's Voron entry at etag 20
+
+            var idleInfo = new IdleDatabaseInfo(null, localCv, voronId); // DbBase64Id = voronId
+
+            DatabaseIdleManager.FilterIrrelevantEntries(sinkCv, idleInfo, hubDbId: null, out var forHubToSink, out var forSinkToHub);
+
+            // Voron entry classified as Hub-known → capped to Hub's local etag 10
+            Assert.Equal(FormatCv(voronId, 10), forHubToSink);
+            Assert.Equal(string.Empty, forSinkToHub);
+        }
+
         #endregion
 
         #region SinkToHub Tests
@@ -137,6 +154,24 @@ namespace FastTests.Server.Cluster
             Assert.Equal(string.Empty, forSinkToHub);
         }
 
+        [RavenFact(RavenTestCategory.Replication)]
+        public void SinkToHub_RemoteCvHasPartiallyReplicatedEntry_IncludesHigherEtag()
+        {
+            // Hub has replicated this DbId up to etag 5 (ReplicationInfo).
+            // Sink now reports etag 10 for the same DbId → new data → must be included.
+            // This is the "> lastReplicated" branch; existing test only covers the "==" case.
+            var sinkId = "wOG7DpOFCEaNIRJrwjAzBg";
+
+            var replicationInfo = new Dictionary<string, long> { { sinkId, 5 } };
+            var sinkCv = FormatCv(sinkId, 10); // 10 > 5 → new data not yet replicated
+            var idleInfo = new IdleDatabaseInfo(replicationInfo, string.Empty);
+
+            DatabaseIdleManager.FilterIrrelevantEntries(sinkCv, idleInfo, hubDbId: null, out var forHubToSink, out var forSinkToHub);
+
+            Assert.Equal(string.Empty, forHubToSink);
+            Assert.Equal(FormatCv(sinkId, 10), forSinkToHub);
+        }
+
         #endregion
 
         #region TwoWay Tests
@@ -192,6 +227,27 @@ namespace FastTests.Server.Cluster
         }
 
         [RavenFact(RavenTestCategory.Replication)]
+        public void TwoWay_RemoteCvHasMultipleSinkIds_OnlyReplicatedExcluded_NewIncluded()
+        {
+            // Sink sends two of its own DbIds. Hub has already replicated sink1Id fully (etag == max),
+            // but sink2Id is new. Only sink2Id should appear in SinkToHub.
+            var hubId   = "AAAAAAAAAAAAAAAAAAAAAQ";
+            var sink1Id = "wOG7DpOFCEaNIRJrwjAzBg";
+            var sink2Id = "dgkaYTbY1kis2xFGE2jUmQ";
+
+            var localCv = FormatCv(hubId, 5);
+            var sinkCv  = FormatCv((hubId, 5), (sink1Id, 5), (sink2Id, 3));
+
+            var replicationInfo = new Dictionary<string, long> { { sink1Id, 5 } }; // sink1 fully replicated
+            var idleInfo = new IdleDatabaseInfo(replicationInfo, localCv);
+
+            DatabaseIdleManager.FilterIrrelevantEntries(sinkCv, idleInfo, hubId, out var forHubToSink, out var forSinkToHub);
+
+            Assert.Equal(FormatCv(hubId, 5), forHubToSink);   // Hub entry, min(5,5)=5
+            Assert.Equal(FormatCv(sink2Id, 3), forSinkToHub); // sink1 excluded (5==5), sink2 included
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
         public void TwoWay_LocalCvMixed_RemoteCvHasUpdatedSinkData_AvoidsIdentityCrisis_AndProcessesSinkDataCorrectly()
         {
             var hubId = "1xxID9Byu0yy2dtdfzIlWg";
@@ -221,28 +277,27 @@ namespace FastTests.Server.Cluster
             Assert.Equal(FormatCv(sinkId, 10), forSinkToHub);
         }
 
+        #endregion
+
+        #region EdgeCase Tests
+
         [RavenFact(RavenTestCategory.Replication)]
-        public void TwoWay_LocalCvHubOnly_RemoteCvHasAlreadyReplicatedSinkDataWithGuidKey_MatchesGuidToBase64_AndIgnoresReplicatedData()
+        public void FilterIrrelevantEntries_BothHubIdsNull_AllEntriesTreatedAsSinkOrigin()
         {
-            // In production, SetLastReplicatedEtagFrom stores SourceDatabaseId (GUID string) as the key,
-            // while the CV DbId is Base64. This test verifies the format mismatch is handled correctly.
-            var hubId = "1xxID9Byu0yy2dtdfzIlWg";
-            var sinkIdBase64 = "wOG7DpOFCEaNIRJrwjAzBg";
-            // GUID equivalent of sinkIdBase64 (what SetLastReplicatedEtagFrom actually stores)
-            var sinkIdGuid = new System.Guid(System.Convert.FromBase64String(sinkIdBase64 + "==")).ToString();
+            // When Hub has no known IDs (no topology ID, no Voron DbBase64Id),
+            // hubKnownDbIds is null → ClassifyHubIncomingEntries puts everything in sinkOriginEntries.
+            // All entries pass ReplicationInfo filter (null) → all go to SinkToHub.
+            // Note: SerializeVector() outputs entries sorted alphabetically by DbId.
+            var sink1Id = "dgkaYTbY1kis2xFGE2jUmQ"; // 'd' < 'w' → first in sorted output
+            var sink2Id = "wOG7DpOFCEaNIRJrwjAzBg";
+            var sinkCv = FormatCv((sink1Id, 3), (sink2Id, 5));
 
-            var localCv = FormatCv(hubId, 5);
-            var sinkCv = FormatCv((hubId, 5), (sinkIdBase64, 3));
+            var idleInfo = new IdleDatabaseInfo(null, string.Empty); // DbBase64Id = null by default
 
-            // ReplicationInfo uses the GUID key (as stored by SetLastReplicatedEtagFrom)
-            var replicationInfo = new Dictionary<string, long> { { sinkIdGuid, 3 } };
-            var idleInfo = new IdleDatabaseInfo(replicationInfo, localCv);
+            DatabaseIdleManager.FilterIrrelevantEntries(sinkCv, idleInfo, hubDbId: null, out var forHubToSink, out var forSinkToHub);
 
-            DatabaseIdleManager.FilterIrrelevantEntries(sinkCv, idleInfo, hubId, out var forHubToSink, out var forSinkToHub);
-
-            // Hub entry → HubToSink; Sink entry already replicated (GUID key matched Base64 CV entry) → excluded from SinkToHub
-            Assert.Equal(FormatCv(hubId, 5), forHubToSink);
-            Assert.Equal(string.Empty, forSinkToHub);
+            Assert.Equal(string.Empty, forHubToSink);
+            Assert.Equal(sinkCv, forSinkToHub); // all entries pass through, alphabetical order preserved
         }
 
         #endregion
@@ -272,7 +327,7 @@ namespace FastTests.Server.Cluster
         {
             var hugeChangeVector = new string('A', 50_000); 
             var cmd = new Raven.Client.Documents.Commands.GetRemoteTaskTopologyCommand("dummy-db", "dummy-group", "dummy-task", hugeChangeVector);
-            using (var ctx = global::Sparrow.Json.JsonOperationContext.ShortTermSingleUse())
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var node = new Raven.Client.Http.ServerNode { Url = "http://localhost:8080" };
                 var request = cmd.CreateRequest(ctx, node, out string url);

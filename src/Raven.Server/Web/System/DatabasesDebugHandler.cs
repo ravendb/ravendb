@@ -79,7 +79,7 @@ namespace Raven.Server.Web.System
 
             public int NumberOfActivePullReplicationAsSinkConnections { get; set; }
 
-            public int NumberOfActiveHubToSinkConfigurations { get; set; }
+            public int NumberOfActiveSinkPullReplicationConfigurations { get; set; }
 
             public bool HasActiveOperations { get; set; }
 
@@ -100,6 +100,7 @@ namespace Raven.Server.Web.System
                     [nameof(NumberOfChangesApiConnections)] = NumberOfChangesApiConnections,
                     [nameof(NumberOfSubscriptionConnections)] = NumberOfSubscriptionConnections,
                     [nameof(NumberOfActivePullReplicationAsSinkConnections)] = NumberOfActivePullReplicationAsSinkConnections,
+                    [nameof(NumberOfActiveSinkPullReplicationConfigurations)] = NumberOfActiveSinkPullReplicationConfigurations,
                     [nameof(HasActiveOperations)] = HasActiveOperations,
                     [nameof(Explanations)] = Explanations,
                 };

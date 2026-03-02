@@ -401,16 +401,17 @@ namespace Raven.Server.Documents
             if (statistics != null)
                 statistics.NumberOfActivePullReplicationAsSinkConnections = numberOfActivePullReplicationAsSinkConnections;
 
-            var numberOfActiveHubToSinkConfigurations = database.ReplicationLoader.GetNumberOfPullReplicationsPreventingIdle();
+            var numberOfActiveSinkPullConfigurations = database.ReplicationLoader.GetNumberOfPullReplicationsPreventingIdle();
             if (statistics != null)
-                statistics.NumberOfActiveHubToSinkConfigurations = numberOfActiveHubToSinkConfigurations;
+                statistics.NumberOfActiveSinkPullReplicationConfigurations = numberOfActiveSinkPullConfigurations;
 
-            if (numberOfActiveHubToSinkConfigurations > 0)
+            if (numberOfActiveSinkPullConfigurations > 0)
             {
                 if (statistics == null)
                     return false;
 
-                statistics.Explanations.Add($"Cannot unload database because there are ({numberOfActiveHubToSinkConfigurations}) Pull Replication Hub or Sink configurations with 'HubToSink' mode enabled. The database must remain active to ensure data can be replicated.");
+                statistics.Explanations.Add($"Cannot unload database because there are ({numberOfActiveSinkPullConfigurations}) active Sink Pull Replication configuration{(numberOfActiveSinkPullConfigurations > 1 ? "s" : string.Empty)}. " +
+                                            $"The Sink must remain active to avoid data loss when the Hub is offline.");
             }
 
             var hasActiveOperations = database.Operations.HasActive;
