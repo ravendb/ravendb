@@ -922,7 +922,7 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 }
 
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
-    "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" |
+    "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" | 
     "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
     "KafkaQueueSink" | "RabbitQueueSink" | "EmbeddingsGeneration" | "GenAi";
 

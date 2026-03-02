@@ -68,6 +68,12 @@ const isEnterpriseOrDeveloper = (store: RootState): boolean => {
     return type === "Enterprise" || type === "Developer";
 };
 
+const isEnterpriseAiOrDeveloper = (store: RootState): boolean => {
+    const type = licenseSelectors.licenseType(store);
+
+    return type === "EnterpriseAi" || type === "Developer";
+};
+
 const isProfessionalOrAbove = (store: RootState): boolean => {
     return isEnterpriseOrDeveloper(store) || licenseSelectors.licenseType(store) === "Professional";
 };
@@ -80,5 +86,6 @@ export const licenseSelectors = {
     licenseType: (store: RootState) => store.license.status?.Type,
     limitsUsage: (store: RootState) => store.license.limitsUsage,
     isEnterpriseOrDeveloper,
+    isEnterpriseAiOrDeveloper,
     isProfessionalOrAbove,
 };

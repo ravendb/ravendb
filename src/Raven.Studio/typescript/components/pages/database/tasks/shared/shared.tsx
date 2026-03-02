@@ -409,6 +409,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
 
     const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
     const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const isEnterpriseAiOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseAiOrDeveloper);
 
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
     const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
@@ -484,7 +485,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     iconName: "genai",
                     variant: "AI",
                     target: "GenAi",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !isEnterpriseAiOrDeveloper,
                     licenseBadge: "Enterprise AI",
                     link: forCurrentDatabase.editGenAiTaskUrl(),
                     disableReason: getTaskDisableReason({
