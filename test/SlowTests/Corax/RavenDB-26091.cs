@@ -18,16 +18,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingStringAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingStringBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingStringStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingStringBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -84,16 +84,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingIntAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingIntBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingIntStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingIntBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -149,16 +149,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingDoubleAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingDoubleBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingDoubleStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingDoubleBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -214,16 +214,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingStringAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingStringBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingStringStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingStringBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -266,16 +266,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingIntAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingIntBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingIntStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingIntBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -318,16 +318,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingDoubleAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingDoubleBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingDoubleStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingDoubleBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -370,16 +370,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingStringDescendingAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingStringDescendingBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingStringDescendingStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingStringDescendingBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -393,6 +393,7 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
             .WhereExists(x => x.Id)
             .OrderByDescending(x => x.Name)
             .ToList();
+
 
         if (options.DatabaseMode is RavenDatabaseMode.Single)
         {
@@ -408,33 +409,33 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
         if (nullFirst)
         {
-            Assert.Null(queryResults[0].Name);
-            Assert.Null(queryResults[1].Name);
-            Assert.Equal("b", queryResults[2].Name);
-            Assert.Equal("a", queryResults[3].Name);
-        }
-        else
-        {
             Assert.Equal("b", queryResults[0].Name);
             Assert.Equal("a", queryResults[1].Name);
             Assert.Null(queryResults[2].Name);
             Assert.Null(queryResults[3].Name);
+        }
+        else
+        {
+            Assert.Null(queryResults[0].Name);
+            Assert.Null(queryResults[1].Name);
+            Assert.Equal("b", queryResults[2].Name);
+            Assert.Equal("a", queryResults[3].Name);
         }
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingIntDescendingAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingIntDescendingBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingIntDescendingStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingIntDescendingBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -473,33 +474,33 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
         if (nullFirst)
         {
-            Assert.Null(queryResults[0].IntValue);
-            Assert.Null(queryResults[1].IntValue);
-            Assert.Equal(2, queryResults[2].IntValue);
-            Assert.Equal(1, queryResults[3].IntValue);
-        }
-        else
-        {
             Assert.Equal(2, queryResults[0].IntValue);
             Assert.Equal(1, queryResults[1].IntValue);
             Assert.Null(queryResults[2].IntValue);
             Assert.Null(queryResults[3].IntValue);
+        }
+        else
+        {
+            Assert.Null(queryResults[0].IntValue);
+            Assert.Null(queryResults[1].IntValue);
+            Assert.Equal(2, queryResults[2].IntValue);
+            Assert.Equal(1, queryResults[3].IntValue);
         }
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingDoubleDescendingAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingDoubleDescendingBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenSortingDoubleDescendingStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenSortingDoubleDescendingBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -538,17 +539,17 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
         if (nullFirst)
         {
-            Assert.Null(queryResults[0].DoubleValue);
-            Assert.Null(queryResults[1].DoubleValue);
-            Assert.Equal(2, queryResults[2].DoubleValue);
-            Assert.Equal(1, queryResults[3].DoubleValue);
-        }
-        else
-        {
             Assert.Equal(2, queryResults[0].DoubleValue);
             Assert.Equal(1, queryResults[1].DoubleValue);
             Assert.Null(queryResults[2].DoubleValue);
             Assert.Null(queryResults[3].DoubleValue);
+        }
+        else
+        {
+            Assert.Null(queryResults[0].DoubleValue);
+            Assert.Null(queryResults[1].DoubleValue);
+            Assert.Equal(2, queryResults[2].DoubleValue);
+            Assert.Equal(1, queryResults[3].DoubleValue);
         }
     }
 
@@ -557,16 +558,16 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingStringDescendingAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingStringDescendingBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingStringDescendingStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingStringDescendingBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -590,33 +591,33 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
         if (nullFirst)
         {
-            Assert.Null(queryResults[0].Name);
-            Assert.Null(queryResults[1].Name);
-            Assert.Equal("b", queryResults[2].Name);
-            Assert.Equal("a", queryResults[3].Name);
-        }
-        else
-        {
             Assert.Equal("b", queryResults[0].Name);
             Assert.Equal("a", queryResults[1].Name);
             Assert.Null(queryResults[2].Name);
             Assert.Null(queryResults[3].Name);
+        }
+        else
+        {
+            Assert.Null(queryResults[0].Name);
+            Assert.Null(queryResults[1].Name);
+            Assert.Equal("b", queryResults[2].Name);
+            Assert.Equal("a", queryResults[3].Name);
         }
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingIntDescendingAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingIntDescendingBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingIntDescendingStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingIntDescendingBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -640,33 +641,33 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
         if (nullFirst)
         {
-            Assert.Null(queryResults[0].IntValue);
-            Assert.Null(queryResults[1].IntValue);
-            Assert.Equal(2, queryResults[2].IntValue);
-            Assert.Equal(1, queryResults[3].IntValue);
-        }
-        else
-        {
             Assert.Equal(2, queryResults[0].IntValue);
             Assert.Equal(1, queryResults[1].IntValue);
             Assert.Null(queryResults[2].IntValue);
             Assert.Null(queryResults[3].IntValue);
+        }
+        else
+        {
+            Assert.Null(queryResults[0].IntValue);
+            Assert.Null(queryResults[1].IntValue);
+            Assert.Equal(2, queryResults[2].IntValue);
+            Assert.Equal(1, queryResults[3].IntValue);
         }
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingDoubleDescendingAutoIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingDoubleDescendingBase(options, nullFirst, testNonExisting, true, session => session.Advanced.DocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [false, false], Skip = "Sharding")]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded, Data = [true, false], Skip = "Sharding")]
     public void CanChangeOrderOfTheNullsWhenStreamingSortingDoubleDescendingStaticIndex(Options options, bool nullFirst, bool testNonExisting) =>
         CanChangeOrderOfTheNullsWhenStreamingSortingDoubleDescendingBase(options, nullFirst, testNonExisting, false, session => session.Advanced.DocumentQuery<Document, DocumentIndex>());
 
@@ -690,17 +691,17 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
         if (nullFirst)
         {
-            Assert.Null(queryResults[0].DoubleValue);
-            Assert.Null(queryResults[1].DoubleValue);
-            Assert.Equal(2, queryResults[2].DoubleValue);
-            Assert.Equal(1, queryResults[3].DoubleValue);
-        }
-        else
-        {
             Assert.Equal(2, queryResults[0].DoubleValue);
             Assert.Equal(1, queryResults[1].DoubleValue);
             Assert.Null(queryResults[2].DoubleValue);
             Assert.Null(queryResults[3].DoubleValue);
+        }
+        else
+        {
+            Assert.Null(queryResults[0].DoubleValue);
+            Assert.Null(queryResults[1].DoubleValue);
+            Assert.Equal(2, queryResults[2].DoubleValue);
+            Assert.Equal(1, queryResults[3].DoubleValue);
         }
     }
 

@@ -241,7 +241,7 @@ public partial class IndexSearcher
         {
             if (termAsSpan.SequenceEqual(Constants.NullValueSpan))
             {
-                if (TryGetPostingListForNull(tree.Name, out containerId))
+                if (TryGetPostingListForNull(tree.Name, out containerId, out _))
                     return NumberOfDocumentsUnderSpecificTerm(containerId);
             }
             

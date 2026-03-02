@@ -525,18 +525,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool TryGetPostingListForNonExisting(in FieldMetadata field, out long postingListId) => TryGetPostingListForNonExisting(field.FieldName, out postingListId);
+    internal bool TryGetPostingListForNonExisting(in FieldMetadata field, out long postingListId) => TryGetPostingListForNonExisting(field.FieldName, out postingListId, out _);
     
-    private bool TryGetPostingListForNonExisting(Slice name, out long postingListId)
+    internal bool TryGetPostingListForNonExisting(Slice name, out long postingListId, out long termContainerId)
     {
         InitNonExistingPostingList();
         var result = _nonExistingPostingListsTree?.ReadStructure<(long PostingListId, long TermContainerId)>(name);
         if (result == null)
         {
             postingListId = -1;
+            termContainerId = -1;
             return false;
         }
         postingListId = result.Value.PostingListId;
+        termContainerId = result.Value.TermContainerId;
         return true;
     }
     
@@ -550,18 +552,21 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId);
+    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId, out _);
     
-    private bool TryGetPostingListForNull(Slice name, out long postingListId)
+    internal bool TryGetPostingListForNull(Slice name, out long postingListId, out long termContainerId)
     {
         InitNullPostingList();
         var result = _nullPostingListsTree?.ReadStructure<(long PostingListId, long TermContainerId)>(name);
         if (result == null)
         {
             postingListId = -1;
+            termContainerId = -1;
             return false;
         }
+        
         postingListId = result.Value.PostingListId;
+        termContainerId = result.Value.TermContainerId;
         return true;
     }
 
@@ -575,17 +580,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward)
+    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullFirsts)
         where TInner : IQueryMatch
     {
-        return new IncludeNullMatch<TInner>(this, inner, field, forward);
+        return new IncludeNullMatch<TInner>(this, inner, field, forward, nullFirsts);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward)
+    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullFirsts)
         where TInner : IQueryMatch
     {
-        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
+        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward, nullFirsts);
     }
 
     public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner, bool forceHashset = false) 

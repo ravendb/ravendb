@@ -11,6 +11,7 @@ using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
@@ -165,6 +166,8 @@ unsafe partial struct SortingMatch<TInner>
 
     private struct EntryComparerByTerm : IEntryComparer, IComparer<UnmanagedSpan>
     {
+        private long NonExistingTermContainerId;
+        private long NullTermContainerId;
         private CompactKeyComparer _cmpTerm;
         private Lookup<Int64LookupKey> _lookup;
 
@@ -173,7 +176,10 @@ unsafe partial struct SortingMatch<TInner>
         public void Init(ref SortingMatch<TInner> match)
         {
             _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata.Field.FieldName);
+            match._searcher.TryGetPostingListForNull(match._orderMetadata.Field.FieldName, out _, out NullTermContainerId);
+            match._searcher.TryGetPostingListForNonExisting(match._orderMetadata.Field.FieldName, out _, out NonExistingTermContainerId);
         }
+
 
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
@@ -187,9 +193,31 @@ unsafe partial struct SortingMatch<TInner>
 
             match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
+            int nullOrEmpties = 0;
+            if (NullTermContainerId != -1 || NonExistingTermContainerId != -1)
+            {
+                for (int i = 0; i < batchTermIds.Length; i++)
+                {
+                    if (batchTermIds[i] == NullTermContainerId || batchTermIds[i] == NonExistingTermContainerId)
+                    {
+                        batchTermIds[i] = long.MinValue;
+                        nullOrEmpties++;
+                    }
+                }
+            }
+                
+            
+            var terms = new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length);
+            Container.GetAll(llt, batchTermIds, terms, long.MinValue, pageLocator);
+
+            
             var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer(), descending);
             var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer);
+            
+            // In our sort
+            
+            
+            
             for (int i = 0; i < indexes.Length; i++)
             {
                 int bIdx = indexes[i];
@@ -247,7 +275,9 @@ unsafe partial struct SortingMatch<TInner>
                 }
                 else
                 {
-                    l = -1 >>> 16; // effectively move to the end
+                    l = match._nullFirst 
+                        ? 0 
+                        : -1 >>> 16;
                 }
 
                 l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
@@ -348,8 +378,9 @@ unsafe partial struct SortingMatch<TInner>
                 match._results.AddRange(batchResults);
                 return;
             }
-
-            _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+            
+            var missingValue = match._nullFirst ? long.MinValue : long.MaxValue;
+            _lookup.GetFor(batchResults, batchTermIds, missingValue);
             match._cancellationToken.ThrowIfCancellationRequested();
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize <= 0 ? batchResults.Length : heapSize;
@@ -383,7 +414,8 @@ unsafe partial struct SortingMatch<TInner>
                 return;
             }
 
-            _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(double.MinValue));
+            var missingValue = match._nullFirst ? double.MinValue : double.MaxValue;
+            _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(missingValue));
             match._cancellationToken.ThrowIfCancellationRequested();
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize <= 0 ? batchResults.Length : heapSize;
@@ -506,7 +538,15 @@ unsafe partial struct SortingMatch<TInner>
                 SpatialResult distance; 
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
-                    distance = new SpatialResult() { Distance = descending ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
+                    var distanceForMissing = (Descending: descending, NullFirst: match._nullFirst)
+                        switch
+                        {
+                            (Descending: true, NullFirst: true) => double.MinValue,
+                            (Descending: false, NullFirst: true) => double.MaxValue,
+                            (Descending: false, NullFirst: false) => double.MaxValue,
+                            (Descending: true, NullFirst: false) => double.MinValue,
+                        };
+                    distance = new SpatialResult() { Distance = distanceForMissing, Latitude = Double.NaN, Longitude = Double.NaN };
                 }
                 else
                 {

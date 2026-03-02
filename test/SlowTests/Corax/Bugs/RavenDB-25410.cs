@@ -62,7 +62,7 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
             }
             else
             {
-                var q = indexSearcher.OrderBy(dummyMatch, new OrderMetadata(true, MatchCompareFieldType.Score));
+                var q = indexSearcher.OrderBy(dummyMatch, new OrderMetadata(true, MatchCompareFieldType.Score), nullFirst: true);
                 q.SetScoreAndDistanceBuffer(transfer);
                 sortingMatch = q;
             }

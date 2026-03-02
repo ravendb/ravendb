@@ -10,10 +10,10 @@ public unsafe partial class IndexSearcher
 {
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderBy<TInner>(in TInner set, OrderMetadata metadata, int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
+    public SortingMatch OrderBy<TInner>(in TInner set, OrderMetadata metadata, bool nullFirst, int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
         where TInner : IQueryMatch
     {
-        return SortingMatch.Create(new SortingMatch<TInner>(this,  set, metadata, token, take));
+        return SortingMatch.Create(new SortingMatch<TInner>(this,  set, metadata, token, nullFirst, take));
     }
     
         

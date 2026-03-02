@@ -31,6 +31,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
+    private readonly bool _nullFirst;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly int _take;
     private const int NotStarted = -1;
@@ -48,12 +49,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
     
-    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
+    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, bool nullFirst, int take = -1)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
         _cancellationToken = cancellationToken;
+        _nullFirst = nullFirst;
         _take = take;
         _alreadyReadIdx = 0;
         _results = new ContextBoundNativeList<long>(searcher.Allocator);

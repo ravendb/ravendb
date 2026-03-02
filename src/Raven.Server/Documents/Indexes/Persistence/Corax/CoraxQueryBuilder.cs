@@ -184,8 +184,8 @@ public static partial class CoraxQueryBuilder
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
             sortMetadata = GetSortMetadata(builderParameters);
-            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost);
-
+            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, builderParameters.Index.Configuration.NullFirst);
+            
             if (metadata.Query.Where is not null)
             {
                 coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where,  ref streamingOptimization);
@@ -215,13 +215,13 @@ public static partial class CoraxQueryBuilder
                     _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending);
+                var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending, builderParameters.Index.Configuration.NullFirst);
 
                 var indexVersion = builderParameters.Index.Definition.Version;
 
                 if (IndexDefinitionBaseServerSide.IndexVersion.IsNonExistingPostingListSupported(indexVersion))
                 {
-                    var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending);
+                    var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending, builderParameters.Index.Configuration.NullFirst);
                     coraxQuery = queryWithNullAndNonExistingMatches;
                 }
 
@@ -1396,7 +1396,7 @@ public static partial class CoraxQueryBuilder
             case 0:
                 return match;
             case 1:
-                return indexSearcher.OrderBy(match, orderMetadata[0], take, builderParameters.Token);
+                return indexSearcher.OrderBy(match, orderMetadata[0], builderParameters.Index.Configuration.NullFirst, take, builderParameters.Token);
             default:
                 return indexSearcher.OrderBy(match, orderMetadata, take, builderParameters.Token);
         }
