@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Subscriptions
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
-            if (await state.WaitForSubscriptionActiveLock(300) == false)
+            if (await state.WaitForSubscriptionActiveLock(ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs, CancellationTokenSource.Token) == false)
                 return SubscriptionBatchStatus.EmptyBatch;
 
             try

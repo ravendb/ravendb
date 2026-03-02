@@ -328,9 +328,9 @@ public abstract class AbstractSubscriptionConnectionsState<TSubscriptionConnecti
         return _connections.IsEmpty == false;
     }
 
-    public Task<bool> WaitForSubscriptionActiveLock(int millisecondsTimeout)
+    public Task<bool> WaitForSubscriptionActiveLock(int millisecondsTimeout, CancellationToken token)
     {
-        return _subscriptionActivelyWorkingLock.WaitAsync(millisecondsTimeout);
+        return _subscriptionActivelyWorkingLock.WaitAsync(millisecondsTimeout, token);
     }
 
     public void ReleaseSubscriptionActiveLock()
