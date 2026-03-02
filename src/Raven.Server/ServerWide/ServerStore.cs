@@ -2538,7 +2538,7 @@ namespace Raven.Server.ServerWide
 
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
                         
-                        GenAiConfiguration.ApplyHashVersionBackwardCompatibility(rawRecord, genAi);
+                        GenAiConfiguration.ApplyHashVersionBackwardCompatibility(rawRecord, genAi, id);
 
                         command = new UpdateGenAiCommand(id, genAi, databaseName, changeVector, raftRequestId);
                         break;

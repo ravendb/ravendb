@@ -175,7 +175,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             config.Collection = "Posts";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
             config.Identifier = "posts-translation-v1-stays-v1";
-            config.Version = GenAiConfiguration.None;
+            config.Version = null;
             config.SampleObject = sampleObjectV1;
 
             var command = new Raven.Server.ServerWide.Commands.AI.AddGenAiCommand(
@@ -276,7 +276,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 var finalGenAiTaskInfo = finalTaskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 
                 Assert.NotNull(finalGenAiTaskInfo);
-                Assert.Equal(GenAiConfiguration.None, finalGenAiTaskInfo.Configuration.Version);
+                Assert.Equal(null, finalGenAiTaskInfo.Configuration.Version);
             }
         }
     }

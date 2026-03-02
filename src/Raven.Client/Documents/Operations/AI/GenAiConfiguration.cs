@@ -45,7 +45,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     private const int DefaultMaxConcurrency = 4;
 
     internal readonly string TransformationName = "GenAi-transform-script";
-    internal const int None = 0;
     internal const int WithSampleObject = 1;
 
     [JsonDeserializationIgnore]
@@ -124,18 +123,20 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         return errors.Count == 0;
     }
 
-    internal static void ApplyHashVersionBackwardCompatibility(DatabaseRecord record, GenAiConfiguration configuration)
+    internal static void ApplyHashVersionBackwardCompatibility(DatabaseRecord record, GenAiConfiguration configuration, long taskId)
     {
-        var existing = record.GenAis?.FirstOrDefault(x => x.Name == configuration.Name);
+        var existing = record.GenAis?.FirstOrDefault(x => x.TaskId == taskId);
 
-        // Fallback for updates where the task somehow doesn't exist
         if (existing == null)
+        {
+            configuration.Version = WithSampleObject;
             return;
+        }
 
         // Existing version
         var existingVersion = existing.Version;
 
-        if (existingVersion == None)
+        if (existingVersion == null)
         {
             //did Sample object changed?
             if (string.Equals(existing.SampleObject, configuration.SampleObject, StringComparison.Ordinal) == false)
@@ -145,21 +146,21 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             else
             {
                 // If the SampleObject is IDENTICAL, and existing version is None we MUST force None.
-                configuration.Version = None;
+                configuration.Version = null;
             }
 
             return;
         }
 
         // Preserving WithSampleObject
-        if (configuration.Version == None)
+        if (configuration.Version == null)
         {
             configuration.Version = existingVersion;
         }
     }
 
     [ForceJsonSerialization]
-    internal int Version = None;
+    internal int? Version;
 
     public override DynamicJsonValue ToJson()
     {
@@ -177,7 +178,10 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
         json[nameof(EnableTracing)] = EnableTracing;
         json[nameof(ExpirationInSec)] = ExpirationInSec;
-        json[nameof(Version)] = Version;
+        if (Version.HasValue)
+        {
+            json[nameof(Version)] = Version;
+        }
 
         return json;
     }
