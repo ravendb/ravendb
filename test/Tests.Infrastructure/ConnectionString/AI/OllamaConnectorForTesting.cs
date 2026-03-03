@@ -5,7 +5,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddingsOllamaConnectorForTesting>
 {
-    public const string Model = "phi:latest";
+    public const string Model = "nomic-embed-text:latest";
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
 
     public EmbeddingsOllamaConnectorForTesting()
@@ -20,7 +20,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
 {
-    public const string Model = "llama3.2:latest";
+    public const string Model = "qwen2.5:0.5b";
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_CHAT_URI";
 
     public GenAiOllamaConnectorForTesting()

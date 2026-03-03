@@ -130,11 +130,14 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
         if (aiIntegration.HasFlag(RavenAiIntegration.OpenAi))
             yield return GenAiOpenAiConnectorForTesting.Instance;
 
-        /*if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
-            yield return GenAiOllamaConnectorForTesting.Instance;*/
+        if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
+            yield return GenAiOllamaConnectorForTesting.Instance;
 
         if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
             yield return GenAiAzureOpenAiConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.vLLM))
+            yield return GenAiVllmConnectorForTesting.Instance;
     }
 
     public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);
@@ -150,8 +153,8 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
         if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
             yield return EmbeddingsAzureOpenAiConnectorForTesting.Instance;
 
-        /*if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
-            yield return EmbeddingsOllamaConnectorForTesting.Instance;*/
+        if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
+            yield return EmbeddingsOllamaConnectorForTesting.Instance;
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Onnx))
             yield return EmbeddedConnectorForTesting.Instance;
@@ -167,6 +170,9 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Vertex))
             yield return EmbeddingsVertexConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.vLLM))
+            yield return EmbeddingsVllmConnectorForTesting.Instance;
     }
 
     public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);

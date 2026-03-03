@@ -85,7 +85,7 @@ ai.genContext({})
     private record Transaction(string User, DateTime Date, string Location, Summary[] Summary = null);
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM | RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanAttachTextFile(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

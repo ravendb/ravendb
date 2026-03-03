@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Raven.Client.Documents.Operations.AI;
-using Tests.Infrastructure.ConnectionString.AI;
 
+namespace Tests.Infrastructure.ConnectionString.AI;
 public class EmbeddingsVllmConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddingsVllmConnectorForTesting>
 {
     private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_VLLM_API_KEY";
