@@ -184,7 +184,7 @@ public static partial class CoraxQueryBuilder
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
             sortMetadata = GetSortMetadata(builderParameters);
-            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, builderParameters.Index.Configuration.NullFirst);
+            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost);
             
             if (metadata.Query.Where is not null)
             {

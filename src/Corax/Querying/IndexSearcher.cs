@@ -57,6 +57,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private EntryIdPaginationSupportStatus? _entryIdPaginationSupportStatus;
 
     private long? _lastEntryId;
+    
+    /// <summary>
+    /// Used for testing purposes only.
+    /// </summary>
+    internal CoraxTestingConfiguration _testingConfiguration;
+
+    public void SetTestingConfiguration(CoraxTestingConfiguration testingConfiguration) => _testingConfiguration = testingConfiguration;
 
     
     public long LastEntryId
