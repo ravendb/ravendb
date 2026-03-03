@@ -268,7 +268,7 @@ const Configuration = ({ configurationProcess, errorLogs }: ConfigurationProps) 
             <ConfigurationItem
                 stepTitle="Acquiring let's encrypt certificate"
                 configurationState={
-                    configurationProcess?.SetupActionSteps?.StepsByConfigurationStepType.ClientCertificate
+                    configurationProcess?.SetupActionSteps?.StepsByConfigurationStepType.AcquiringLetsEncryptCertificate
                 }
                 errorLogs={errorLogs}
             />
