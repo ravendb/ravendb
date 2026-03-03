@@ -21,6 +21,7 @@ import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongo
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
 interface AddNewOngoingTaskProps {
     isAiOnly: boolean;
@@ -189,7 +190,7 @@ function TaskItem({
             conditions={[
                 {
                     isActive: !canHandleOperation,
-                    message: "You don't have permission to perform this operation",
+                    message: getDatabaseAccessRequiredMessage(accessRequired),
                 },
                 {
                     isActive: isShardingNotSupported,
