@@ -76,6 +76,8 @@ public sealed class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
 
         while (_alreadyScannedForDuplicates < _query.Start && reader.Read(out var doc, out var score))
         {
+            _alreadyScannedForDuplicates++;
+
             var retrieverInput = new RetrieverInput(_searcher.Doc(doc, _state), (doc, score), _state);
             var result = _retriever.Get(ref retrieverInput, token);
 
