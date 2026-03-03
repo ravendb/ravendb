@@ -70,7 +70,7 @@ export function SetupWizardSummaryStep() {
                         <LocationDistribution>
                             <DistributionLegend>
                                 <div className="top"></div>
-                                <div className="node">HTTPS port</div>
+                                <div className="node">{securityOption === "none" ? "HTTP" : "HTTPS"} port</div>
                                 <div>TCP port</div>
                                 <div>IP address/Hostname</div>
                             </DistributionLegend>
