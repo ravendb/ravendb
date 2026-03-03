@@ -25,7 +25,6 @@ export default {
 } satisfies Meta;
 
 interface DefaultDocumentSchemaArgs {
-    databaseAccess: databaseAccessLevel;
     hasLicense: boolean;
 }
 
@@ -41,9 +40,7 @@ export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
             HasSchemaValidation: args.hasLicense,
         });
         databasesService.withSchemaValidations();
-        accessManager.with_databaseAccess({
-            [db.name]: args.databaseAccess,
-        });
+        accessManager.with_securityClearance("ClusterAdmin");
 
         return <DocumentSchema />;
     },
