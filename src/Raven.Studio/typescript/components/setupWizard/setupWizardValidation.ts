@@ -144,7 +144,26 @@ const additionalSettingsStepSchema = yup.object({
 
     // advanced settings
     dataDirectory: yup.string().nullable(),
-    setupCertificatePath: yup.string().nullable(),
+    setupCertificatePath: yup
+        .string()
+        .nullable()
+        .test(
+            "is-pfx-file",
+            "The certificate path must be a full file path ending with .pfx extension, not a directory path.",
+            (value) => {
+                if (!value) {
+                    return true; // Allow empty/null values
+                }
+
+                // Check if the path ends with .pfx (case-insensitive)
+                if (!/\.pfx$/i.test(value)) {
+                    return false;
+                }
+
+                // Check if the path doesn't end with a directory separator
+                return !(value.endsWith("/") || value.endsWith("\\"));
+            }
+        ),
     postgresqlIntegration: yup.boolean(),
     logsPath: yup.string().nullable(),
     staticIndexingEngineType: yup.string().oneOf(setupWizardConstants.indexingEngineTypes).nullable(),
