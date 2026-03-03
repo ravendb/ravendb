@@ -41,7 +41,7 @@ export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
     args: {
         isAiOnly: false,
         databaseType: "sharded",
-        licenseType: "Enterprise",
+        licenseType: "EnterpriseAi",
         databaseAccess: "DatabaseAdmin",
     },
 };

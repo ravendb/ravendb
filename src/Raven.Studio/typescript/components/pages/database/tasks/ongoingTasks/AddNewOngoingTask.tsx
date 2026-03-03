@@ -18,13 +18,16 @@ import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/Lice
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface AddNewOngoingTaskProps {
     isAiOnly: boolean;
 }
 
 export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskProps>) {
-    const isAiOnly = queryParams?.isAiOnly ?? false;
+    const isAiOnly = queryParams?.isAiOnly;
 
     const { forCurrentDatabase, appUrl } = useAppUrls();
     const { filteredTasks, categoryList, searchText, selectedCategories, setSearchText, setSelectedCategories } =
@@ -151,41 +154,61 @@ export interface TaskItemProps {
     variant: TaskCardVariant;
     link: string;
     target: string;
-    disableReason?: ReactNode;
     licenseBadge?: LicenseBadgeText;
-    showLicenseBadge?: boolean;
     counterBadge?: ReactNode;
+    showLicenseBadge?: boolean;
+    isShardingSupported?: boolean;
+    accessRequired: databaseAccessLevel;
+    customDisabledReason?: ReactNode;
 }
 
 function TaskItem({
     title,
     description,
     link,
-    disableReason,
     iconName,
     target,
     variant,
     licenseBadge,
     showLicenseBadge,
     counterBadge,
+    isShardingSupported,
+    accessRequired,
+    customDisabledReason,
 }: TaskItemProps) {
     const { reportEvent } = useEventsCollector();
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
+    const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation)(accessRequired);
+
+    const isShardingNotSupported = !isShardingSupported && isSharded;
+    const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
+
     return (
         <ConditionalPopover
             className="w-100 h-100"
-            conditions={{
-                isActive: !!disableReason,
-                message: disableReason,
-            }}
+            conditions={[
+                {
+                    isActive: !canHandleOperation,
+                    message: "You don't have permission to perform this operation",
+                },
+                {
+                    isActive: isShardingNotSupported,
+                    message: "Sharding is not supported for this task",
+                },
+                {
+                    isActive: !!customDisabledReason,
+                    message: customDisabledReason,
+                },
+            ]}
         >
             <a
-                href={disableReason ? undefined : link}
+                href={isDisabled ? undefined : link}
                 onClick={() => reportEvent(target, "new")}
                 className={classNames(
                     "card no-decor w-100 ongoing-tasks-card h-100 add-new-ongoing-task__card",
                     `variant-${variant}`,
                     {
-                        "item-disabled": !!disableReason,
+                        "item-disabled": !!isDisabled,
                     }
                 )}
             >

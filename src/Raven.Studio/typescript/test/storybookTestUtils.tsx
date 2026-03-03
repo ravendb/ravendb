@@ -90,6 +90,7 @@ export const licenseArgType = {
         "Essential",
         "Professional",
         "Enterprise",
+        "EnterpriseAi",
         "Developer",
     ] satisfies Raven.Server.Commercial.LicenseType[],
 } as const;
