@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
             {
-                await SendHeartBeatAsync($"Didn't find any documents to send and more then {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
+                await SendHeartBeatAsync($"Didn't find any documents to send and more than {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
                 sendingCurrentBatchStopwatch.Restart();
             }
         }
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Subscriptions
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
-            if (await state.WaitForSubscriptionActiveLock(ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs, CancellationTokenSource.Token) == false)
+            if (await state.WaitForSubscriptionActiveLockAsync(ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs, CancellationTokenSource.Token) == false)
                 return SubscriptionBatchStatus.EmptyBatch;
 
             try

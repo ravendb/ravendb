@@ -1535,6 +1535,14 @@ where predicate.call(doc)"
         {
             using (var store = GetDocumentStore())
             {
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var testingStuff = db.ForTestingPurposesOnly();
+
+                testingStuff.CallDuringScriptRunnerCreation(scriptEngine =>
+                {
+                    scriptEngine.SetValue("sleep", new Action<int>(Thread.Sleep));
+                });
+
                 var id = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions()
                 {
                     Query = @"declare function f(u) { 
@@ -1548,8 +1556,6 @@ select f(u)
 "
                 });
 
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-                var testingStuff = db.ForTestingPurposesOnly();
                 long location = 0L;
                 var docsCount = 0;
                 using (testingStuff.CallDuringWaitForChangedDocuments(async hasMoreDocsTask =>

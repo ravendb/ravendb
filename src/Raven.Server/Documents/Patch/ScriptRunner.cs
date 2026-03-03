@@ -313,7 +313,8 @@ namespace Raven.Server.Documents.Patch
                 consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunction(ScriptEngine, "log", OutputDebug), false, false, false));
                 ScriptEngine.SetValue("console", consoleObject);
 
-                ScriptEngine.SetValue("sleep", new Action<int>(Thread.Sleep));
+                // add more functions to the script engine that are needed for testing purposes
+                _database?.ForTestingPurposes?.ActionToCallDuringScriptRunnerCreation?.Invoke(ScriptEngine);
 
                 //spatial.distance
                 ObjectInstance spatialObject = new JsObject(ScriptEngine);
