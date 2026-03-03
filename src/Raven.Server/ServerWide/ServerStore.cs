@@ -2638,6 +2638,21 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
+                        var queueSinks = rawRecord.QueueSinks;
+
+                        // Don't delete the connection string if used by tasks types: Queue Sink
+                        if (queueSinks != null)
+                        {
+                            foreach (var queueSinkTask in queueSinks)
+                            {
+                                if (queueSinkTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {queueSinkTask.Name}");
+                                }
+                            }
+                        }
+
                         command = new RemoveQueueConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
                         break;
 
