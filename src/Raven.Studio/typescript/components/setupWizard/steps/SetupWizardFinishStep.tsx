@@ -158,7 +158,7 @@ export function SetupWizardFinishStep() {
 
     return (
         <div className="finish-step">
-            <TopInfo status={finishStep.finishingStatus} />
+            <TopInfo />
             <div
                 className={classNames(
                     "hstack mt-4 mb-1",
@@ -360,17 +360,29 @@ const ConfigurationItem = ({ configurationState, stepTitle, errorLogs }: Configu
     );
 };
 
-function TopInfo({ status }: { status: OperationStatus }) {
-    if (status === "InProgress") {
+function TopInfo() {
+    const { control } = useFormContext<SetupWizardFormData>();
+
+    const {
+        setupMethodStep,
+        finishStep: { finishingStatus },
+    } = useWatch({ control });
+
+    if (finishingStatus === "InProgress") {
         return (
             <>
                 <h2 className="mb-1">Configuration in progress</h2>
-                <p className="mb-4 text-muted">Please wait a moment. Your RavenDB server will be ready shortly.</p>
+                <p className="mb-4 text-muted">
+                    Please wait a moment.{" "}
+                    {setupMethodStep.method === "createPackage"
+                        ? "Your setup package will be ready shortly."
+                        : "Your RavenDB server will be ready shortly."}
+                </p>
             </>
         );
     }
 
-    if (status === "Faulted") {
+    if (finishingStatus === "Faulted") {
         return (
             <>
                 <h2 className="mb-1">Setup failed</h2>
@@ -381,7 +393,7 @@ function TopInfo({ status }: { status: OperationStatus }) {
         );
     }
 
-    if (status === "Canceled") {
+    if (finishingStatus === "Canceled") {
         return (
             <>
                 <h2 className="mb-1">Setup canceled</h2>
@@ -389,7 +401,7 @@ function TopInfo({ status }: { status: OperationStatus }) {
         );
     }
 
-    if (status === "Completed") {
+    if (finishingStatus === "Completed") {
         return (
             <>
                 <h2 className="mb-1">All set!</h2>
