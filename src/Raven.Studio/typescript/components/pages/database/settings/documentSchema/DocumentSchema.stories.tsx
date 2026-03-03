@@ -1,4 +1,4 @@
-import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
 import DocumentSchema from "components/pages/database/settings/documentSchema/DocumentSchema";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -9,9 +9,6 @@ export default {
     title: "Pages/Settings/Document Schema",
     component: DocumentSchema,
     decorators: [withStorybookContexts, withBootstrap5],
-    argTypes: {
-        databaseAccess: databaseAccessArgType,
-    },
     parameters: {
         design: {
             type: "figma",
@@ -19,7 +16,6 @@ export default {
         },
     },
     args: {
-        databaseAccess: "DatabaseAdmin",
         hasLicense: true,
     },
 } satisfies Meta;

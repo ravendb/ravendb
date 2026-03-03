@@ -60,7 +60,7 @@ function DocumentSchemaPlaygroundBody() {
 
     const form = useForm({
         resolver: yupResolver(schema),
-        defaultValues: { documentSchemas: [{ collection: "", schema: "" }] },
+        defaultValues: schemaInitialValues,
     });
 
     const { control, handleSubmit } = form;
@@ -257,6 +257,15 @@ function TestDocumentSchema({ index, remove, collectionOptions }: TestDocumentSc
         </RichPanel>
     );
 }
+
+const schemaInitialValues = {
+    documentSchemas: [
+        {
+            collection: "",
+            schema: "",
+        },
+    ],
+};
 
 const schema = yup.object({
     documentSchemas: yup.array().of(

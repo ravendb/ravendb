@@ -59,7 +59,6 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import classNames from "classnames";
 import { StickyHeader } from "components/common/StickyHeader";
-import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
 
 const ajv = new Ajv({
     allErrors: true,
@@ -121,7 +120,7 @@ export default function DocumentSchema() {
                         <HrHeader
                             count={filteredValidators.length}
                             right={
-                                <DatabaseAccessPopover
+                                <ConditionalPopover
                                     conditions={{
                                         isActive: !hasSchemaValidation,
                                         message: <FeatureNotAvailableInYourLicensePopoverBody />,
@@ -138,7 +137,7 @@ export default function DocumentSchema() {
                                         <Icon icon="plus" />
                                         Add new
                                     </Button>
-                                </DatabaseAccessPopover>
+                                </ConditionalPopover>
                             }
                         >
                             <Icon icon="documents" />
