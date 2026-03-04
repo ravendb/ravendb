@@ -66,7 +66,7 @@ export function SetupWizardNodeAddressStep() {
 
     const getDomainForWildcard = (tag: string | null): string => {
         if (cns.length === 0) {
-            return "";
+            return null;
         }
 
         const cn = cns[0];
@@ -323,9 +323,10 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
     const handleSaveEdit = handleSubmit(async (formData: NodeEditFormData) => {
         setValue(`nodeAddressStep.nodes.${index}`, {
             ...formData,
+            dnsName: securityOption === "ownCertificate" ? formData.dnsName : null,
             nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
-            nodeTag: formData.isPassive ? undefined : formData.nodeTag,
+            nodeTag: formData.isPassive ? null : formData.nodeTag,
             isEditing: false,
             isNewlyAdded: false,
         });
@@ -1321,7 +1322,7 @@ export function SetupWizardNodeAddressStepFooter() {
         }
     };
 
-    const isContinueDisabled = isEditing || exceedsLicenseLimit;
+    const isContinueDisabled = isEditing || exceedsLicenseLimit || nodeData.length === 0;
 
     return (
         <div className="hstack justify-content-between">
@@ -1358,8 +1359,33 @@ function useRevalidatePersistedNodesOnEntry() {
 
     useEffect(() => {
         const nodes = getValues("nodeAddressStep.nodes");
+        const securityOption = getValues("securityStep.securityOption");
+        const cns = getValues("selfSignedCertificateStep.cns");
 
-        nodes.forEach((_, index) => {
+        nodes.forEach((node, index) => {
+            if (securityOption !== "ownCertificate" && node.dnsName) {
+                setValue(`nodeAddressStep.nodes.${index}.dnsName`, null);
+            }
+
+            if (securityOption === "ownCertificate" && node.dnsName) {
+                const isDnsNameInCns = cns?.some((cn) => cn === node.dnsName);
+                if (!isDnsNameInCns) {
+                    if (cns.length === 1) {
+                        // set first CN if only one is available
+                        setValue(`nodeAddressStep.nodes.${index}.dnsName`, cns[0]);
+                    } else {
+                        setValue(`nodeAddressStep.nodes.${index}.dnsName`, null);
+                    }
+                }
+            }
+
+            /*
+             * “Discard” restores the node to its pre-edit state. If the user returned here after changing earlier steps, restoring is not allowed because it would cause a validation error, the node must be either saved or removed.
+             * When `isNewlyAdded` is true, the “Remove” button is shown instead of “Discard”.
+             */
+            setValue(`nodeAddressStep.nodes.${index}.isNewlyAdded`, true, {
+                shouldValidate: true,
+            });
             setValue(`nodeAddressStep.nodes.${index}.isEditing`, true, {
                 shouldValidate: true,
             });
