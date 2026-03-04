@@ -15,7 +15,7 @@ namespace Raven.Server.Monitoring
     public sealed class GcThreadContentionDetector : IDisposable
     {
         private static readonly TimeSpan InitialCheckDelay = TimeSpan.FromSeconds(30);
-        private const double CoreUtilizationThreshold = 0.5;
+        private const double MinimumContentionRatioThreshold = 0.5;
         private const int MinimumCoreDifference = 8;
 
         private readonly ServerStore _serverStore;
@@ -41,12 +41,13 @@ namespace Raven.Server.Monitoring
                 var totalCores = ProcessorInfo.ProcessorCount;
                 var utilizedCores = _serverStore.LicenseManager.GetNumberOfUtilizedCores();
                 var coreDifference = totalCores - utilizedCores;
+                var contentionRatio = (double)coreDifference / utilizedCores;
 
-                if (coreDifference < MinimumCoreDifference)
+                if (coreDifference < MinimumCoreDifference || contentionRatio < MinimumContentionRatioThreshold)
+                {
+                    DismissAlert();
                     return;
-
-                if (utilizedCores >= totalCores * CoreUtilizationThreshold)
-                    return;
+                }
 
                 IReadOnlyDictionary<string, object> gcConfig = GC.GetConfigurationVariables();
 
@@ -55,7 +56,10 @@ namespace Raven.Server.Monitoring
                     var heapCountInt64 = Convert.ToInt64(heapCount);
 
                     if (heapCountInt64 <= utilizedCores)
+                    {
+                        DismissAlert();
                         return;
+                    }
                 }
 
 
@@ -101,6 +105,12 @@ namespace Raven.Server.Monitoring
                 _logger.Operations($"GC thread contention detected: {totalCores} total cores but only {utilizedCores} utilized core(s). " +
                                   $"Consider configuring System.GC.HeapCount={utilizedCores} in Raven.Server.runtimeconfig.json or set DOTNET_GCHeapCount={utilizedCores:X} env variable");
             }
+        }
+
+
+        private void DismissAlert()
+        {
+            _notificationCenter.Dismiss(AlertRaised.GetKey(AlertType.GcThreadContention, null));
         }
 
         public void Dispose()
