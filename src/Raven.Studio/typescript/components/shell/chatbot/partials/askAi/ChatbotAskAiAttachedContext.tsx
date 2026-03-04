@@ -106,10 +106,6 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
             )}
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
-            style={{
-                fontSize: "0.875em",
-                height: "22px",
-            }}
             onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
         >
             <PopoverWithHoverWrapper message={<LabelTooltipContent item={item} />} wrapperClassName="mw-100">

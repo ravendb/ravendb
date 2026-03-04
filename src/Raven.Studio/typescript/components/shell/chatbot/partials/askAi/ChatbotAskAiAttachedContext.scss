@@ -2,13 +2,22 @@
 @use "Content/scss//sizes";
 
 .attached-context {
+    font-size: 0.875em;
+    height: 22px;
+
     .context-label,
     .context-additional-info {
         padding: 1px sizes.$border-radius-sm;
     }
 
     .context-label {
-        background-color: colors.$input-bg;
+        background-color: colors.$input-bg-var;
         max-width: 128px;
+    }
+
+    .context-additional-info {
+        i {
+            font-size: 11px;
+        }
     }
 }

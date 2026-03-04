@@ -148,7 +148,7 @@ function RequestSizeIndicator({ estimatedRequestSizeInBytes }: RequestSizeIndica
                     <div>
                         {sizeText} / {limitText}
                     </div>
-                    <div className="text-muted">Includes server metadata overhead.</div>
+                    <div className="small mt-2">Includes server metadata overhead.</div>
                 </div>
             }
             inline={false}
@@ -167,7 +167,7 @@ function RequestSizeIndicator({ estimatedRequestSizeInBytes }: RequestSizeIndica
                         />
                     </svg>
                 </div>
-                <div className="chatbot-request-size-value">{sizeText}</div>
+                <div className="chatbot-request-size-value text-body">{sizeText}</div>
             </div>
         </PopoverWithHoverWrapper>
     );

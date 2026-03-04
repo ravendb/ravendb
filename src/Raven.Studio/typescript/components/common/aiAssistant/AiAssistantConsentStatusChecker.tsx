@@ -12,13 +12,13 @@ import classNames from "classnames";
 interface AiAssistantConsentStatusCheckerProps {
     className?: string;
     onConsentGiven?: () => void;
-    showAsciiIcon?: boolean;
+    hasAsciiIcon?: boolean;
 }
 
 export default function AiAssistantConsentStatusChecker({
     className,
     onConsentGiven,
-    showAsciiIcon = false,
+    hasAsciiIcon = false,
 }: AiAssistantConsentStatusCheckerProps) {
     const dispatch = useAppDispatch();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
@@ -31,7 +31,7 @@ export default function AiAssistantConsentStatusChecker({
             {!isConsentSuccess && (
                 <div className={className}>
                     {consentStatus.status === "loading" && (
-                        <div className="hstack align-items-center gap-1">
+                        <div className="hstack align-items-center gap-1 justify-content-center">
                             <Spinner size="sm" variant="progress" />
                             Checking consent... Please wait.
                         </div>
@@ -52,13 +52,13 @@ export default function AiAssistantConsentStatusChecker({
                         <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>
                     )}
                     {consentStatus.data === "ConsentRequired" && (
-                        <div className={classNames(showAsciiIcon && "vstack justify-content-center p-4 text-center")}>
-                            {showAsciiIcon && <IconAsciiPlaceholder />}
-                            <p className={classNames("mb-0", showAsciiIcon && "mt-2")}>
+                        <div className={classNames(hasAsciiIcon && "vstack justify-content-center p-4 text-center")}>
+                            {hasAsciiIcon && <IconAsciiPlaceholder />}
+                            <p className={classNames("mb-0", hasAsciiIcon && "mt-2")}>
                                 To use our built-in AI features, such as <em>AI Assistant</em>, you need to provide
                                 consent. The feature will remain unavailable until accepted.
                             </p>
-                            <div className={classNames(showAsciiIcon ? "mt-3 justify-content-center" : "hstack mt-2")}>
+                            <div className={classNames(hasAsciiIcon ? "mt-3 justify-content-center" : "hstack mt-2")}>
                                 <Button variant="primary" className="rounded-pill" onClick={toggleEulaOpen}>
                                     Review the consent
                                 </Button>

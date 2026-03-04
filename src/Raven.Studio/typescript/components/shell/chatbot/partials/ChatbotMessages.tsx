@@ -136,7 +136,7 @@ function AgentMessageBody({ message }: AgentMessageProps) {
         return (
             <AiAssistantConsentStatusChecker
                 onConsentGiven={() => dispatch(chatbotActions.retryRunChat())}
-                showAsciiIcon
+                hasAsciiIcon
             />
         );
     }

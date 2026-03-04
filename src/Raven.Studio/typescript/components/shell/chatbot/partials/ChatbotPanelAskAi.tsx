@@ -30,7 +30,7 @@ export default function ChatbotPanelAskAi() {
                 <AiAssistantConsentStatusChecker
                     className="p-2 flex-grow"
                     onConsentGiven={onConsentGiven}
-                    showAsciiIcon
+                    hasAsciiIcon
                 />
                 <ChatbotAskAiWelcome />
             </div>
