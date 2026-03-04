@@ -156,12 +156,7 @@ const additionalSettingsStepSchema = yup.object({
                 }
 
                 // Check if the path ends with .pfx (case-insensitive)
-                if (!/\.pfx$/i.test(value)) {
-                    return false;
-                }
-
-                // Check if the path doesn't end with a directory separator
-                return !(value.endsWith("/") || value.endsWith("\\"));
+                return /\.pfx$/i.test(value);
             }
         ),
     postgresqlIntegration: yup.boolean(),
