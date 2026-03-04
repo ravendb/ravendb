@@ -18,12 +18,15 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import { useForm, useWatch } from "react-hook-form";
 import classNames from "classnames";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
 
 export default function ChatbotAskAiPromptPanel() {
     const dispatch = useAppDispatch();
     const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const conversationId = useAppSelector(chatbotSelectors.conversationId);
     const attachedContexts = useAppSelector(chatbotSelectors.attachedContexts);
+    const buildVersion = useAppSelector(clusterSelectors.serverVersion)?.BuildVersion;
+
     const isConsentSuccess = consentStatus.data === "Success";
 
     const { control, formState, handleSubmit, reset } = useForm({
@@ -40,6 +43,7 @@ export default function ChatbotAskAiPromptPanel() {
     const hasPrompt = Boolean(prompt.trim());
 
     const estimatedRequestSizeInBytes = estimateChatbotRunChatRequestSize({
+        ravenVersion: buildVersion,
         message: prompt,
         conversationId,
         attachedContexts: attachedContexts.filter((context) => context.state === "included"),

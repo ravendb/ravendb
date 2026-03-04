@@ -16,6 +16,7 @@ function commonInit() {
 
     license.with_License();
     cluster.with_ClientVersion("7.2");
+    cluster.with_ServerVersion();
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
     chatbot.with_isAlwaysAllowEndpointCalls(false);

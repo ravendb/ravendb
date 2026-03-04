@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import buildInfo = require("models/resources/buildInfo");
 
 export interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
@@ -13,7 +12,7 @@ export interface RunChatbotAssistAiAssistantRequestDto {
 
 export type RunChatbotAiAssistantViewData = Omit<
     RunChatbotAssistAiAssistantRequestDto,
-    "OperationType" | "RavenVersion"
+    "OperationType"
 >;
 
 export function getRunChatbotAssistAiAssistantRequestDto(
@@ -21,7 +20,6 @@ export function getRunChatbotAssistAiAssistantRequestDto(
 ): RunChatbotAssistAiAssistantRequestDto {
     return {
         OperationType: "Chatbot",
-        RavenVersion: buildInfo.serverBuildVersion().BuildVersion,
         ...viewData,
     };
 }

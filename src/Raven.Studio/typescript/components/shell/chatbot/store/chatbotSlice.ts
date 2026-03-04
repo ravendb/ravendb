@@ -37,6 +37,7 @@ interface ChatbotRunChatData {
 interface ChatbotRunChatInput extends ChatbotRunChatData {
     conversationId?: string;
     attachedContexts: ChatbotAttachedContext[];
+    ravenVersion: number;
 }
 
 export type ChatbotAttachedContextId =
@@ -250,7 +251,7 @@ export const chatbotSlice = createSlice({
 const runChat = createAsyncThunk(
     chatbotSlice.name + "/runChat",
     async (payload: ChatbotRunChatData, { dispatch, getState }): Promise<ChatbotAssistantMessage> => {
-        const { aiAssistant, chatbot } = getState() as RootState;
+        const { aiAssistant, chatbot, cluster } = getState() as RootState;
 
         chatAbortController = new AbortController();
 
@@ -298,6 +299,7 @@ const runChat = createAsyncThunk(
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
         const runChatbotViewData = createChatbotViewData({
+            ravenVersion: cluster.serverVersion?.BuildVersion,
             message: payload.message,
             conversationId: chatbot.conversationId,
             actionResponses: payload.actionResponses,
@@ -366,6 +368,7 @@ const exportConversation = createAsyncThunk(chatbotSlice.name + "/exportConversa
 
 function createChatbotViewData(data: ChatbotRunChatInput): RunChatbotAiAssistantViewData {
     return {
+        RavenVersion: data.ravenVersion,
         Message: data.message,
         ConversationId: data.conversationId,
         ActionsResponses: data.actionResponses,
