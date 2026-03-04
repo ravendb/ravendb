@@ -172,7 +172,8 @@ public unsafe struct TermsReader : IDisposable
         term = scope.Key.Decoded();
     }
 
-    private UnmanagedSpan GetTerm(long entryId)
+
+    public UnmanagedSpan GetTerm(long entryId, long nullTermId = -1, long nonExistingTermId = -1)
     {
         var idx = (uint)Hashing.Mix(entryId) % CacheSize;
         ref (long Key, UnmanagedSpan Value) cache = ref _cache[idx];
@@ -183,6 +184,13 @@ public unsafe struct TermsReader : IDisposable
         }
 
         var hasValue = _lookup.TryGetValue(entryId, out var termId);
+        if (hasValue && (termId == nullTermId || termId == nonExistingTermId))
+        {
+            cache = (entryId, default);
+            return default;
+        }
+        
+        
         UnmanagedSpan term = UnmanagedSpan.Empty;
         if (hasValue)
         {
@@ -193,28 +201,7 @@ public unsafe struct TermsReader : IDisposable
         cache = (entryId, term);
         return term;
     }
-
-    public int Compare(long x, long y)
-    {
-        var xItem = GetTerm(x);
-        var yItem = GetTerm(y);
-
-        if (yItem.Address == null)
-        {
-            return xItem.Address == null ? 0 : 1;
-        }
-
-        if (xItem.Address == null)
-            return -1;
-
-        var match = Memory.CompareInline(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
-        if (match != 0)
-            return match;
-        var xItemLengthInBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);
-        var yItemLengthInBits = (yItem.Length - 1) * 8 - (yItem.Address[0] >> 4);
-        return xItemLengthInBits - yItemLengthInBits;
-    }
-
+    
     public void Dispose()
     {
         _pagesToPrefetch.Dispose();

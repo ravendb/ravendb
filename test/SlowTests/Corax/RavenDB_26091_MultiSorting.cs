@@ -16,27 +16,37 @@ namespace SlowTests.Corax;
 public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringAutoIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringStaticIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(Options options, bool nullFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = await queryCreator(session)
-            .WhereExists(x => x.Id)
-            .OrderBy(x => x.Name)
-            .OrderBy(x => x.ToIgnore)
-            .ToListAsync();
+        var queryResults = fieldFirst
+            ? await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.Name)
+                .OrderBy(x => x.ToIgnore)
+                .ToListAsync()
+            : await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.ToIgnore)
+                .OrderBy(x => x.Name)
+                .ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
 
@@ -57,27 +67,37 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntAutoIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntStaticIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(Options options, bool nullFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = await queryCreator(session)
-            .WhereExists(x => x.Id)
-            .OrderBy(x => x.IntValue, OrderingType.Long)
-            .OrderBy(x => x.ToIgnore)
-            .ToListAsync();
+        var queryResults = fieldFirst
+            ? await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.IntValue, OrderingType.Long)
+                .OrderBy(x => x.ToIgnore)
+                .ToListAsync()
+            : await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.ToIgnore)
+                .OrderBy(x => x.IntValue, OrderingType.Long)
+                .ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
 
@@ -98,27 +118,37 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleAutoIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleStaticIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(Options options, bool nullFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = await queryCreator(session)
-            .WhereExists(x => x.Id)
-            .OrderBy(x => x.DoubleValue, OrderingType.Double)
-            .OrderBy(x => x.ToIgnore)
-            .ToListAsync();
+        var queryResults = fieldFirst
+            ? await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.DoubleValue, OrderingType.Double)
+                .OrderBy(x => x.ToIgnore)
+                .ToListAsync()
+            : await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.ToIgnore)
+                .OrderBy(x => x.DoubleValue, OrderingType.Double)
+                .ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
 
@@ -139,27 +169,37 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingAutoIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingStaticIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(Options options, bool nullFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = await queryCreator(session)
-            .WhereExists(x => x.Id)
-            .OrderByDescending(x => x.Name)
-            .OrderBy(x => x.ToIgnore)
-            .ToListAsync();
+        var queryResults = fieldFirst
+            ? await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderByDescending(x => x.Name)
+                .OrderBy(x => x.ToIgnore)
+                .ToListAsync()
+            : await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.ToIgnore)
+                .OrderByDescending(x => x.Name)
+                .ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
 
@@ -180,27 +220,37 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    //[RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingAutoIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingStaticIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(Options options, bool nullFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = await queryCreator(session)
-            .WhereExists(x => x.Id)
-            .OrderByDescending(x => x.IntValue, OrderingType.Long)
-            .OrderBy(x => x.ToIgnore)
-            .ToListAsync();
+        var queryResults = fieldFirst
+            ? await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderByDescending(x => x.IntValue, OrderingType.Long)
+                .OrderBy(x => x.ToIgnore)
+                .ToListAsync()
+            : await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.ToIgnore)
+                .OrderByDescending(x => x.IntValue, OrderingType.Long)
+                .ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
 
@@ -221,31 +271,38 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingAutoIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingStaticIndex(Options options, bool nullFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(options, nullFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(Options options, bool nullFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = await queryCreator(session)
-            .Timings(out var timings)
-            .WhereExists(x => x.Id)
-            .OrderByDescending(x => x.DoubleValue, OrderingType.Double)
-            .OrderBy(x => x.ToIgnore)
-            .ToListAsync();
+        var queryResults = fieldFirst
+            ? await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderByDescending(x => x.DoubleValue, OrderingType.Double)
+                .OrderBy(x => x.ToIgnore)
+                .ToListAsync()
+            : await queryCreator(session)
+                .WhereExists(x => x.Id)
+                .OrderBy(x => x.ToIgnore)
+                .OrderByDescending(x => x.DoubleValue, OrderingType.Double)
+                .ToListAsync();
 
-
-        var qp = timings;
         Assert.Equal(4, queryResults.Count);
 
         if (nullFirst)
@@ -265,32 +322,50 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialAutoIndex(Options options, bool nullFirst, bool ascending) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(options, nullFirst, autoIndex: true, ascending);
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialAutoIndex(Options options, bool nullFirst, bool ascending, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(options, nullFirst, autoIndex: true, ascending, fieldFirst);
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialStaticIndex(Options options, bool nullFirst, bool ascending) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(options, nullFirst, autoIndex: false, ascending);
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialStaticIndex(Options options, bool nullFirst, bool ascending, bool fieldFirst) => await
+        CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(options, nullFirst, autoIndex: false, ascending, fieldFirst);
 
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(Options options, bool nullFirst, bool autoIndex, bool ascending)
+    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(Options options, bool nullFirst, bool autoIndex, bool ascending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, autoIndex);
         using var session = store.OpenAsyncSession();
-        
-        var orderClause = ascending ? "" : " desc";
-        var rql = autoIndex 
-            ? $"from Documents where exists(ToIgnore) order by spatial.distance(spatial.point(Location.Latitude, Location.Longitude), spatial.point(0,0)) {orderClause}, ToIgnore"
-            : $"from index '{new DocumentIndex().IndexName}' where exists(ToIgnore) order by spatial.distance(Location, spatial.point(0,0)){orderClause}, ToIgnore";
 
-        rql += " include timings()";
+        var orderClause = ascending ? "" : " desc";
+        string rql;
+
+        if (fieldFirst)
+        {
+            rql = autoIndex
+                ? $"from Documents where exists(ToIgnore) order by spatial.distance(spatial.point(Location.Latitude, Location.Longitude), spatial.point(0,0)){orderClause}, ToIgnore"
+                : $"from index '{new DocumentIndex().IndexName}' where exists(ToIgnore) order by spatial.distance(Location, spatial.point(0,0)){orderClause}, ToIgnore";
+        }
+        else
+        {
+            rql = autoIndex
+                ? $"from Documents where exists(ToIgnore) order by ToIgnore, spatial.distance(spatial.point(Location.Latitude, Location.Longitude), spatial.point(0,0)){orderClause}"
+                : $"from index '{new DocumentIndex().IndexName}' where exists(ToIgnore) order by ToIgnore, spatial.distance(Location, spatial.point(0,0)){orderClause}";
+        }
+
         var queryResults = await session.Advanced.AsyncRawQuery<Document>(rql).ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
@@ -305,7 +380,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
                 Assert.Equal(expected: 20, actual: queryResults[3].Location.Latitude);
                 Assert.Equal(expected: 20, actual: queryResults[3].Location.Longitude);
                 break;
-            
+
             case (ascending: true, nullFirst: false):
                 Assert.Equal(expected: 10, actual: queryResults[0].Location.Latitude);
                 Assert.Equal(expected: 10, actual: queryResults[0].Location.Longitude);
@@ -314,7 +389,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
                 Assert.Null(queryResults[2].Location);
                 Assert.Null(queryResults[3].Location);
                 break;
-            
+
             case (ascending: false, nullFirst: true):
                 Assert.Equal(expected: 20, actual: queryResults[0].Location.Latitude);
                 Assert.Equal(expected: 20, actual: queryResults[0].Location.Longitude);
@@ -323,7 +398,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
                 Assert.Null(queryResults[2].Location);
                 Assert.Null(queryResults[3].Location);
                 break;
-            
+
             case (ascending: false, nullFirst: false):
                 Assert.Null(queryResults[0].Location);
                 Assert.Null(queryResults[1].Location);
@@ -408,14 +483,15 @@ update {{
     {
         public DocumentIndex()
         {
-            Map = docs => from doc in docs select new 
-            { 
-                doc.Name, 
-                doc.IntValue, 
-                doc.DoubleValue, 
-                doc.ToIgnore,
-                Location = doc.Location == null ? null : CreateSpatialField(doc.Location.Latitude, doc.Location.Longitude)
-            };
+            Map = docs => from doc in docs
+                select new
+                {
+                    doc.Name,
+                    doc.IntValue,
+                    doc.DoubleValue,
+                    doc.ToIgnore,
+                    Location = doc.Location == null ? null : CreateSpatialField(doc.Location.Latitude, doc.Location.Longitude)
+                };
         }
     }
 }

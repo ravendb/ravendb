@@ -11,6 +11,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
@@ -116,14 +117,13 @@ namespace FastTests.Corax
                 var term0 = entry1.Content.OrderBy(x => x).First();
                 var term1 = entry2.Content.OrderBy(x => x).First();
                 
-                
-                var cmp = reader.Compare(ids[0], ids[1]);
+                var cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[1]), true);
                 Assert.Equal(string.Compare(term0, term1, StringComparison.Ordinal),Math.Sign(cmp));
-                cmp = reader.Compare(ids[1], ids[0]);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[0]), true);
                 Assert.Equal(string.Compare(term1, term0, StringComparison.Ordinal), Math.Sign(cmp));
-                cmp = reader.Compare(ids[0], ids[0]);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[0]), true);
                 Assert.Equal(string.Compare(term0, term0, StringComparison.Ordinal), Math.Sign(cmp));
-                cmp = reader.Compare(ids[1], ids[1]);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[1]), true);
                 Assert.Equal(string.Compare(term1, term1, StringComparison.Ordinal), Math.Sign(cmp));
             }
         }

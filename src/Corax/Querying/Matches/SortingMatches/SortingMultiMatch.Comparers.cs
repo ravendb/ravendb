@@ -265,7 +265,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         public int Compare(int x, int y)
         {
-            return _termsReader.Compare(_batchResults[x], _batchResults[y]);
+            var termX = _termsReader.GetTerm(_batchResults[x], nullTermId: _nullTermContainerId, nonExistingTermId: _nonExistingTermContainerId);
+            var termY = _termsReader.GetTerm(_batchResults[y], nullTermId: _nullTermContainerId, nonExistingTermId: _nonExistingTermContainerId);
+            
+            return CompactKeyComparer.Compare(termX, termY, _nullFirst);
         }
     }
 
