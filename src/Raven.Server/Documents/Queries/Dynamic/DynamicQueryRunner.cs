@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -225,8 +226,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         continue;
                     
                     var embeddingsGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(field.Vector.EmbeddingsGenerationTaskIdentifier);
-                    if (Database.EmbeddingsGeneratorQueries.EmbeddingTaskExists(embeddingsGenerationTaskIdentifier) == false)
+
+                    if (Database.EmbeddingsGeneratorQueries.EmbeddingTaskExists(embeddingsGenerationTaskIdentifier))
+                        continue;
+                    
+                    var taskConfiguration = Database.EtlLoader.EmbeddingsGenerationDestinations.SingleOrDefault(x => x.Identifier == field.Vector.EmbeddingsGenerationTaskIdentifier);
+
+                    if (taskConfiguration is null)
                         throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{field.Vector.EmbeddingsGenerationTaskIdentifier}' identifier");
+                        
+                    if (taskConfiguration.Disabled)
+                        throw new InvalidQueryException($"Embeddings Generation task with '{field.Vector.EmbeddingsGenerationTaskIdentifier}' identifier is disabled, and cannot be used for querying");
                 }
             }
         }
