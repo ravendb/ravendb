@@ -421,15 +421,15 @@ function CompletedSummary() {
     const {
         nodeAddressStep,
         securityStep: { securityOption },
-        usePackageStep: { nodeTag },
+        usePackageStep: { nodeTag, isZipSecure },
         setupMethodStep: { method },
     } = useWatch({ control });
 
     const { getStudioUrl } = useSetupWizardFinishUtils();
 
-    const isSettingCluster = nodeAddressStep.nodes.length > 1;
+    const isSettingCluster = nodeAddressStep.nodes.length > 1 || method === "usePackage";
     const localNodeTag = nodeAddressStep.nodes?.[0]?.nodeTag ?? nodeTag;
-    const isSetupUnsecured = securityOption === "none";
+    const isSetupUnsecured = securityOption === "none" || (method === "usePackage" && !isZipSecure);
     const isSetupPackage = method === "createPackage";
     const showInfoAboutInstalledCertificate = !isSetupUnsecured && !isSetupPackage;
     const studioUrl = getStudioUrl();
@@ -501,7 +501,7 @@ function CompletedSummary() {
 
     return (
         <div className="summary-tab-container mb-6">
-            <Tab.Container id="summary-tabs" defaultActiveKey="connectToServer">
+            <Tab.Container id="summary-tabs" defaultActiveKey={isSettingCluster ? "cluster" : "connectToServer"}>
                 <Nav className="mb-2">
                     <Nav.Item className="flex-grow">
                         <Nav.Link eventKey="connectToServer" className="connect-to-server-tab">
