@@ -6,7 +6,12 @@ import {
     PayloadAction,
     Update,
 } from "@reduxjs/toolkit";
-import { RunChatbotAiAssistantResultDto } from "commands/aiAssistant/runChatbotAiAssistantCommand";
+import genUtils from "common/generalUtils";
+import {
+    getRunChatbotAssistAiAssistantRequestDto,
+    RunChatbotAiAssistantResultDto,
+    RunChatbotAiAssistantViewData,
+} from "commands/aiAssistant/runChatbotAiAssistantCommand";
 import fileDownloader from "common/fileDownloader";
 import { aiAssistantActions } from "components/common/shell/aiAssistantSlice";
 import { services } from "components/hooks/useServices";
@@ -16,6 +21,10 @@ import moment from "moment";
 
 let chatAbortController: AbortController = null;
 
+export const chatbotRequestSizeLimitBytes = 32 * 1024;
+export const chatbotRequestSizeWarningBytes = 4 * 1024;
+export const chatbotServerMetadataOverheadBytes = 644; // Overhead for metadata added in Raven Server (License + CertificateThumbprint)
+
 type ChatbotTab = "aiAssistant" | "resources";
 type ChatbotResourcesTab = "helpAndResources" | "joinTheCommunity" | "contactSupport" | "submitFeedback";
 export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "skipped" | "denied" | "error";
@@ -23,6 +32,11 @@ export type ChatbotUserActionState = "waiting" | "allowed" | "alwaysAllowed" | "
 interface ChatbotRunChatData {
     message?: string;
     actionResponses?: Record<string, any>;
+}
+
+interface ChatbotRunChatInput extends ChatbotRunChatData {
+    conversationId?: string;
+    attachedContexts: ChatbotAttachedContext[];
 }
 
 export type ChatbotAttachedContextId =
@@ -283,17 +297,15 @@ const runChat = createAsyncThunk(
 
         dispatch(chatbotActions.messageAdded(assistantMessage));
 
+        const runChatbotViewData = createChatbotViewData({
+            message: payload.message,
+            conversationId: chatbot.conversationId,
+            actionResponses: payload.actionResponses,
+            attachedContexts,
+        });
+
         const result = await processStreamingResponse<RunChatbotAiAssistantResultDto>({
-            promiseFn: () =>
-                services.aiAssistantService.runChatbot(
-                    {
-                        Message: payload.message,
-                        ConversationId: chatbot.conversationId,
-                        ActionsResponses: payload.actionResponses,
-                        AdditionalAttachedContext: getAdditionalAttachedContext(attachedContexts),
-                    },
-                    chatAbortController.signal
-                ),
+            promiseFn: () => services.aiAssistantService.runChatbot(runChatbotViewData, chatAbortController.signal),
             streamPropertyPath: "Response.Answer",
             onChunksCombined(text) {
                 dispatch(
@@ -351,6 +363,21 @@ const exportConversation = createAsyncThunk(chatbotSlice.name + "/exportConversa
         `conversation-${chatbot.conversationId}.json`
     );
 });
+
+function createChatbotViewData(data: ChatbotRunChatInput): RunChatbotAiAssistantViewData {
+    return {
+        Message: data.message,
+        ConversationId: data.conversationId,
+        ActionsResponses: data.actionResponses,
+        AdditionalAttachedContext: getAdditionalAttachedContext(data.attachedContexts),
+    };
+}
+
+export function estimateChatbotRunChatRequestSize(input: ChatbotRunChatInput): number {
+    const viewData = createChatbotViewData(input);
+    const requestBody = JSON.stringify(getRunChatbotAssistAiAssistantRequestDto(viewData));
+    return genUtils.getSizeInBytesAsUTF8(requestBody) + chatbotServerMetadataOverheadBytes;
+}
 
 function getEndpointItems(endpointsDto: Record<string, string[]>): ChatbotEndpointItem[] {
     if (!_.isObject(endpointsDto)) {

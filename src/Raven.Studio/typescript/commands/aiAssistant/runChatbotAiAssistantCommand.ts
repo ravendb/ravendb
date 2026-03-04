@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import buildInfo = require("models/resources/buildInfo");
 
-interface RunChatbotAssistAiAssistantRequestDto {
+export interface RunChatbotAssistAiAssistantRequestDto {
     OperationType: "Chatbot";
     Message: string;
     RavenVersion: number;
@@ -15,6 +15,16 @@ export type RunChatbotAiAssistantViewData = Omit<
     RunChatbotAssistAiAssistantRequestDto,
     "OperationType" | "RavenVersion"
 >;
+
+export function getRunChatbotAssistAiAssistantRequestDto(
+    viewData: RunChatbotAiAssistantViewData
+): RunChatbotAssistAiAssistantRequestDto {
+    return {
+        OperationType: "Chatbot",
+        RavenVersion: buildInfo.serverBuildVersion().BuildVersion,
+        ...viewData,
+    };
+}
 
 export interface ChatbotRelevantLink {
     Title: string;
@@ -40,12 +50,7 @@ export default class runChatbotAiAssistantCommand extends commandBase {
 
     execute() {
         const relativeUrl = endpoints.global.aiAssistant.assistantAssist;
-
-        const dto: RunChatbotAssistAiAssistantRequestDto = {
-            OperationType: "Chatbot",
-            RavenVersion: buildInfo.serverBuildVersion().BuildVersion,
-            ...this.viewData,
-        };
+        const dto = getRunChatbotAssistAiAssistantRequestDto(this.viewData);
 
         return this.fetch({
             relativeUrl,
