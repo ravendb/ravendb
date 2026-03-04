@@ -22,6 +22,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
     private readonly IndexSearcher _searcher;
     private TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
+    private readonly bool _nullFirst;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly IEntryComparer[] _nextComparers;
     private readonly int _take;
@@ -46,11 +47,12 @@ public unsafe partial struct SortingMultiMatch<TInner>
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
 
-    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, int take = -1, in CancellationToken token = default)
+    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, bool nullFirst, int take = -1, in CancellationToken token = default)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
+        _nullFirst = nullFirst;
         _take = take;
         _token = token;
         _alreadyReadIdx = 0;

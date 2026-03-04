@@ -56,7 +56,7 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
             IQueryMatch sortingMatch;
             if (multiSort)
             {
-                var q = indexSearcher.OrderBy(dummyMatch, [new OrderMetadata(true, MatchCompareFieldType.Score), new OrderMetadata(mapping.GetByFieldId(0).Metadata, true, MatchCompareFieldType.Sequence)]);
+                var q = indexSearcher.OrderBy(dummyMatch, [new OrderMetadata(true, MatchCompareFieldType.Score), new OrderMetadata(mapping.GetByFieldId(0).Metadata, true, MatchCompareFieldType.Sequence)], nullFirst: true);
                 q.SetSortingDataTransfer(transfer);
                 sortingMatch = q;
             }

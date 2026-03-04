@@ -1398,7 +1398,7 @@ public static partial class CoraxQueryBuilder
             case 1:
                 return indexSearcher.OrderBy(match, orderMetadata[0], builderParameters.Index.Configuration.NullFirst, take, builderParameters.Token);
             default:
-                return indexSearcher.OrderBy(match, orderMetadata, take, builderParameters.Token);
+                return indexSearcher.OrderBy(match, orderMetadata, builderParameters.Index.Configuration.NullFirst, take, builderParameters.Token);
         }
     }
 }
