@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
+
 public class EmbeddingsVllmConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddingsVllmConnectorForTesting>
 {
     private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_VLLM_API_KEY";
@@ -10,7 +11,9 @@ public class EmbeddingsVllmConnectorForTesting : AbstractEmbeddingsConnectorForT
     public EmbeddingsVllmConnectorForTesting()
     {
         RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableEndpoint, EnvironmentVariableModelName];
+        NamePrefix = new Lazy<string>(() => nameof(RavenAiIntegration.vLLM));
     }
+    
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
@@ -28,10 +31,13 @@ public class GenAiVllmConnectorForTesting : AbstractGenAiConnectorForTesting<Gen
     private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_VLLM_API_KEY";
     private const string EnvironmentVariableEndpoint = "RAVEN_AI_INTEGRATION_VLLM_CHAT_ENDPOINT";
     private const string EnvironmentVariableModelName = "RAVEN_AI_INTEGRATION_VLLM_CHAT_MODEL";
+
     public GenAiVllmConnectorForTesting()
     {
         RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableEndpoint, EnvironmentVariableModelName];
+        NamePrefix = new Lazy<string>(() => nameof(RavenAiIntegration.vLLM));
     }
+
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()

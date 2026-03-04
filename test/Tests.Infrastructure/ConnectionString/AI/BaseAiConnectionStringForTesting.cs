@@ -32,8 +32,6 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
     public static T Instance => _instance ??= new T();
 
-    internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = new Lazy<string>(prefixName) };
-
     protected readonly Lazy<TConfig> _aiIntegrationConfiguration;
 
     public Lazy<bool> CanConnect { get; }
@@ -57,7 +55,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
         return false;
     }
 
-    private Lazy<string> NamePrefix { get; init; }
+    protected Lazy<string> NamePrefix { get; set; }
 
     protected BaseAiConnectorForTesting()
     {
