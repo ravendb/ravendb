@@ -30,8 +30,8 @@ import { useViewSheet } from "components/common/splitView/ViewSheet";
 import { ValidationSchemaViewSheetPanel } from "components/pages/database/settings/documentSchema/partials/ValidationSchemaViewSheetPanel";
 import classNames from "classnames";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export interface OperationConfirm {
     type: DocumentSchemaOperationConfirmType;
@@ -61,6 +61,7 @@ export default function DocumentSchemaSelectActions() {
     const selectedCollectionNames = useAppSelector(documentSchemaSelectors.selectedCollectionNames);
     const isGlobalDisabled = useAppSelector(documentSchemaSelectors.isGlobalDisabled);
     const selectionState = genUtils.getSelectionState(allCollectionNames, selectedCollectionNames);
+
     const hasSchemaValidation = useAppSelector(licenseSelectors.statusValue("HasSchemaValidation"));
 
     const handleOpenSheet = () => {
@@ -165,7 +166,7 @@ export default function DocumentSchemaSelectActions() {
         <>
             <div
                 className={classNames(
-                    "position-relative d-flex w-100 align-items-center gap-2",
+                    "position-relative d-flex w-100 align-items-center gap-2 mb-3",
                     allCollectionNames.length !== 0 ? "justify-content-between" : "justify-content-end"
                 )}
             >
@@ -176,6 +177,7 @@ export default function DocumentSchemaSelectActions() {
                             indeterminate={selectionState === "SomeSelected"}
                             toggleSelection={toggleAll}
                             color="primary"
+                            disabled={!hasSchemaValidation}
                             title="Select all or none"
                             size="lg"
                         >

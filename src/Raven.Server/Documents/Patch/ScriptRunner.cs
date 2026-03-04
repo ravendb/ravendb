@@ -333,6 +333,9 @@ namespace Raven.Server.Documents.Patch
                 consoleObject.SetClfFunc("log", OutputDebug);
                 ScriptEngine.SetValue("console", consoleObject);
 
+                // add more functions to the script engine that are needed for testing purposes
+                _database?.ForTestingPurposes?.ActionToCallDuringScriptRunnerCreation?.Invoke(ScriptEngine);
+
                 //spatial.distance
                 ObjectInstance spatialObject = new JsObject(ScriptEngine);
                 var spatialFunc = new ClrFunction(ScriptEngine, "distance", Spatial_Distance);

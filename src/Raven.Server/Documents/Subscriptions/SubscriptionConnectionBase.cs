@@ -159,6 +159,8 @@ namespace Raven.Server.Documents.Subscriptions
 
                 AfterProcessorCreation();
 
+                var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
                     _buffer.SetLength(0);
@@ -173,7 +175,6 @@ namespace Raven.Server.Documents.Subscriptions
                         try
                         {
                             using var markInUse = MarkInUse();
-                            var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
                             var status = await TrySendingBatchToClientAsync<TState, TConnection>(state, sendingCurrentBatchStopwatch, batchScope, inProgressBatchStats);
 
@@ -275,7 +276,10 @@ namespace Raven.Server.Documents.Subscriptions
             Stats.UpdateBatchPerformanceStats(0, false);
 
             if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
-                await SendHeartBeatAsync($"Didn't find any documents to send and more then {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
+            {
+                await SendHeartBeatAsync($"Didn't find any documents to send and more than {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
+                sendingCurrentBatchStopwatch.Restart();
+            }
         }
 
         protected virtual void OnError(Exception e) { }
@@ -289,7 +293,7 @@ namespace Raven.Server.Documents.Subscriptions
             where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
         {
-            if (await state.WaitForSubscriptionActiveLock(300) == false)
+            if (await state.WaitForSubscriptionActiveLockAsync(ISubscriptionConnection.WaitForChangedDocumentsTimeoutInMs, CancellationTokenSource.Token) == false)
                 return SubscriptionBatchStatus.EmptyBatch;
 
             try
@@ -420,7 +424,11 @@ namespace Raven.Server.Documents.Subscriptions
                 var resultingTask = await Task
                     .WhenAny(hasMoreDocsTask, _lastReplyFromClientTask, timeoutTask).ConfigureAwait(false);
 
-                TcpConnection.DocumentDatabase?.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
+                if (TcpConnection.DocumentDatabase is { ForTestingPurposes.Subscription_ActionToCallDuringWaitForChangedDocuments: not null })
+                {
+                    if (await TcpConnection.DocumentDatabase.ForTestingPurposes.Subscription_ActionToCallDuringWaitForChangedDocuments(hasMoreDocsTask))
+                        return true;
+                }
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;

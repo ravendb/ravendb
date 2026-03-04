@@ -42,7 +42,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         public int Quantity;
     }
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
     public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config, bool sendSchema)

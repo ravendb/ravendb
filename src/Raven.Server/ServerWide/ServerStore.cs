@@ -2303,6 +2303,8 @@ namespace Raven.Server.ServerWide
                             genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
 
+                        genAi.Version = GenAiConfiguration.WithSampleObject;
+
                         command = new AddGenAiCommand(genAi, databaseName, changeVector, raftRequestId);
                     }
                         break;
@@ -2459,8 +2461,9 @@ namespace Raven.Server.ServerWide
                 switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
                 {
                     case EtlType.Raven:
+                        var existingRvnConfiguration = rawRecord.RavenEtls.Single(x => x.TaskId == id);
                         var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
-                        rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
+                        rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false, validateIdentifier: true, existingRvnConfiguration);
                         if (ValidateConnectionString(rawRecord, rvnEtl.ConnectionStringName, rvnEtl.EtlType) == false)
                             rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
@@ -2469,8 +2472,9 @@ namespace Raven.Server.ServerWide
                         command = new UpdateRavenEtlCommand(id, rvnEtl, databaseName, raftRequestId);
                         break;
                     case EtlType.Sql:
+                        var existingSqlConfiguration = rawRecord.SqlEtls.Single(x => x.TaskId == id);
                         var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
-                        sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
+                        sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false, validateIdentifier: true, existingSqlConfiguration);
                         if (ValidateConnectionString(rawRecord, sqlEtl.ConnectionStringName, sqlEtl.EtlType) == false)
                             sqlEtlErr.Add($"Could not find connection string named '{sqlEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
@@ -2479,8 +2483,9 @@ namespace Raven.Server.ServerWide
                         command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
                         break;
                     case EtlType.Olap:
+                        var existingOlapConfiguration = rawRecord.OlapEtls.Single(x => x.TaskId == id);
                         var olapEtl = JsonDeserializationCluster.OlapEtlConfiguration(etlConfiguration);
-                        olapEtl.Validate(out var olapEtlErr, validateName: false, validateConnection: false);
+                        olapEtl.Validate(out var olapEtlErr, validateName: false, validateConnection: false, validateIdentifier: true, existingOlapConfiguration);
                         if (ValidateConnectionString(rawRecord, olapEtl.ConnectionStringName, olapEtl.EtlType) == false)
                             olapEtlErr.Add($"Could not find connection string named '{olapEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
@@ -2489,8 +2494,9 @@ namespace Raven.Server.ServerWide
                         command = new UpdateOlapEtlCommand(id, olapEtl, databaseName, raftRequestId);
                         break;
                     case EtlType.ElasticSearch:
+                        var existingElasticSearchConfiguration = rawRecord.ElasticSearchEtls.Single(x => x.TaskId == id);
                         var elasticSearchEtl = JsonDeserializationCluster.ElasticSearchEtlConfiguration(etlConfiguration);
-                        elasticSearchEtl.Validate(out var elasticSearchEtlErr, validateName: false, validateConnection: false);
+                        elasticSearchEtl.Validate(out var elasticSearchEtlErr, validateName: false, validateConnection: false, validateIdentifier: true, existingElasticSearchConfiguration);
                         if (ValidateConnectionString(rawRecord, elasticSearchEtl.ConnectionStringName, elasticSearchEtl.EtlType) == false)
                             elasticSearchEtlErr.Add($"Could not find connection string named '{elasticSearchEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
@@ -2499,8 +2505,9 @@ namespace Raven.Server.ServerWide
                         command = new UpdateElasticSearchEtlCommand(id, elasticSearchEtl, databaseName, raftRequestId);
                         break;
                     case EtlType.Queue:
+                        var existingQueueConfiguration = rawRecord.QueueEtls.Single(x => x.TaskId == id);
                         var queueEtl = JsonDeserializationCluster.QueueEtlConfiguration(etlConfiguration);
-                        queueEtl.Validate(out var queueEtlErr, validateName: false, validateConnection: false);
+                        queueEtl.Validate(out var queueEtlErr, validateName: false, validateConnection: false, validateIdentifier: true, existingQueueConfiguration);
                         if (ValidateConnectionString(rawRecord, queueEtl.ConnectionStringName, queueEtl.EtlType) == false)
                             queueEtlErr.Add($"Could not find connection string named '{queueEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
@@ -2539,6 +2546,8 @@ namespace Raven.Server.ServerWide
                             genAiErr.Add($"Could not find AI connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
 
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
+                        
+                        GenAiConfiguration.ApplyHashVersionBackwardCompatibility(rawRecord, genAi, id);
 
                         command = new UpdateGenAiCommand(id, genAi, databaseName, changeVector, raftRequestId);
                         break;
@@ -2745,6 +2754,21 @@ namespace Raven.Server.ServerWide
                                 {
                                     throw new InvalidOperationException(
                                         $"Can't delete connection string: {connectionStringName}. It is used by task: {queueEtlTask.Name}");
+                                }
+                            }
+                        }
+
+                        var queueSinks = rawRecord.QueueSinks;
+
+                        // Don't delete the connection string if used by tasks types: Queue Sink
+                        if (queueSinks != null)
+                        {
+                            foreach (var queueSinkTask in queueSinks)
+                            {
+                                if (queueSinkTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {queueSinkTask.Name}");
                                 }
                             }
                         }

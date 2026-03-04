@@ -5,12 +5,12 @@ import Popover from "react-bootstrap/Popover";
 import classNames from "classnames";
 import { ClassNameProps } from "components/models/common";
 
-interface Condition {
+export interface Condition {
     isActive: boolean;
     message?: ReactNode | ReactNode[];
 }
 
-interface ConditionalPopoverProps extends Required<PropsWithChildren>, ClassNameProps {
+export interface ConditionalPopoverProps extends Required<PropsWithChildren>, ClassNameProps {
     conditions: Condition | Condition[];
     popoverPlacement?: Placement;
     className?: string;

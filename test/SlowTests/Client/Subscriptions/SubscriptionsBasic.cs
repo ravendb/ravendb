@@ -1218,7 +1218,7 @@ namespace SlowTests.Client.Subscriptions
                 var testingStuff = db.ForTestingPurposesOnly();
 
                 var subscriptionInterrupt = new AsyncManualResetEvent();
-                using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                using (testingStuff.CallDuringWaitForChangedDocuments(_ =>
                        {
                            worker1Retry ??= new AsyncManualResetEvent();
                            subscriptionInterrupt.Set();
@@ -1252,7 +1252,7 @@ namespace SlowTests.Client.Subscriptions
                        }))
                 {
                     subscriptionInterrupt.Reset(true);
-                    using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                    using (testingStuff.CallDuringWaitForChangedDocuments(_ =>
                            {
                                // drop subscription
                                worker2Retry ??= new ManualResetEvent(false);

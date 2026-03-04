@@ -28,6 +28,7 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditSqlEtlInfoHub = require("viewmodels/database/tasks/EditSqlEtlInfoHub");
 import typeUtils = require("common/typeUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import SqlEtlConfiguration = Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
 
 class sqlTaskTestMode {
@@ -210,6 +211,8 @@ class editSqlEtlTask extends shardViewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
+    taskNameDisabledReason: KnockoutComputed<string>;
+
     collections = collectionsTracker.default.collections;
     collectionNames: KnockoutComputed<string[]>;
     
@@ -329,6 +332,14 @@ class editSqlEtlTask extends shardViewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewSqlEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        }); 
 
         this.collectionNames = ko.pureComputed(() => {
            return collectionsTracker.default.getCollectionNames(); 

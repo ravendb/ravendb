@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
+import LicenseType = Raven.Server.Commercial.LicenseType;
 
 interface LicenseState {
     status: LicenseStatus;
@@ -22,6 +23,18 @@ const initialState: LicenseState = {
         NumberOfAnalyzersInCluster: 0,
         NumberOfSubscriptionsInCluster: 0,
     },
+};
+
+const licenseTiers: Record<LicenseType, number> = {
+    None: 0,
+    Invalid: 0,
+    Reserved: 0,
+    Community: 1,
+    Essential: 1,
+    Professional: 2,
+    Enterprise: 3,
+    EnterpriseAi: 4,
+    Developer: 999, // Enterprise-level set of features
 };
 
 export const licenseSlice = createSlice({
@@ -62,14 +75,16 @@ const licenseRegistered = (store: RootState): boolean => {
     return !!licenseStatus && licenseStatus.Type !== "None" && licenseStatus.Type !== "Invalid";
 };
 
-const isEnterpriseOrDeveloper = (store: RootState): boolean => {
-    const type = licenseSelectors.licenseType(store);
+const licenseInfo = (store: RootState) => {
+    const type = licenseSelectors.licenseType(store) ?? "None";
 
-    return type === "Enterprise" || type === "Developer";
-};
-
-const isProfessionalOrAbove = (store: RootState): boolean => {
-    return isEnterpriseOrDeveloper(store) || licenseSelectors.licenseType(store) === "Professional";
+    return {
+        type,
+        isAtLeast: (minimumType: LicenseType) => licenseTiers[type] >= licenseTiers[minimumType],
+        isHigherThan: (compareType: LicenseType) => licenseTiers[type] > licenseTiers[compareType],
+        isExact: (compareType: LicenseType) => licenseTiers[type] === licenseTiers[compareType],
+        hasLicense: () => type !== "None" && type !== "Invalid",
+    };
 };
 
 export const licenseSelectors = {
@@ -79,6 +94,5 @@ export const licenseSelectors = {
     support: (store: RootState) => store.license.support,
     licenseType: (store: RootState) => store.license.status?.Type,
     limitsUsage: (store: RootState) => store.license.limitsUsage,
-    isEnterpriseOrDeveloper,
-    isProfessionalOrAbove,
+    licenseInfo,
 };

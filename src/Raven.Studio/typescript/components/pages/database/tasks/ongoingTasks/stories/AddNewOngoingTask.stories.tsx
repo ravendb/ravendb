@@ -1,4 +1,12 @@
-import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
+import {
+    databaseAccessArgType,
+    databaseArgType,
+    DatabaseType,
+    licenseArgType,
+    withBootstrap5,
+    withForceRerender,
+    withStorybookContexts,
+} from "test/storybookTestUtils";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
 import AddNewOngoingTask from "../AddNewOngoingTask";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -10,17 +18,16 @@ export default {
     title: "Pages/Tasks/Ongoing tasks/Add New Ongoing Task",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     argTypes: {
-        databaseType: {
-            control: "radio",
-            options: ["sharded", "cluster", "singleNode"],
-        },
+        databaseType: databaseArgType,
+        licenseType: licenseArgType,
+        databaseAccess: databaseAccessArgType,
     },
 } satisfies Meta;
 
-type DatabaseType = "sharded" | "cluster" | "singleNode";
-
 interface AddNewOngoingTaskStoryArgs {
     databaseType: DatabaseType;
+    licenseType: Raven.Server.Commercial.LicenseType;
+    databaseAccess: databaseAccessLevel;
     isAiOnly: boolean;
 }
 
@@ -34,30 +41,39 @@ export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
     args: {
         isAiOnly: false,
         databaseType: "sharded",
+        licenseType: "EnterpriseAi",
+        databaseAccess: "DatabaseAdmin",
     },
 };
 
-const commonInit = ({ databaseType }: AddNewOngoingTaskStoryArgs) => {
+const commonInit = ({ databaseType, licenseType, databaseAccess }: AddNewOngoingTaskStoryArgs) => {
     const { accessManager, license, databases } = mockStore;
-    const { tasksService, licenseService } = mockServices;
+    const { tasksService } = mockServices;
 
-    license.with_License();
-
+    let db;
     switch (databaseType) {
         case "sharded":
-            databases.withActiveDatabase_Sharded();
+            db = databases.withActiveDatabase_Sharded();
             break;
         case "cluster":
-            databases.withActiveDatabase_NonSharded_Cluster();
+            db = databases.withActiveDatabase_NonSharded_Cluster();
             break;
         case "singleNode":
-            databases.withActiveDatabase_NonSharded_SingleNode();
+            db = databases.withActiveDatabase_NonSharded_SingleNode();
             break;
         default:
             assertUnreachable(databaseType);
     }
 
-    accessManager.with_securityClearance("ClusterAdmin");
+    accessManager.with_databaseAccess({
+        [db.name]: databaseAccess,
+    });
+
+    license.with_LicenseLimited({
+        Type: licenseType,
+    });
+
+    accessManager.with_securityClearance("ValidUser");
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
@@ -67,7 +83,6 @@ const commonInit = ({ databaseType }: AddNewOngoingTaskStoryArgs) => {
         dto.PullReplications = [];
     });
 
-    licenseService.withLimitsUsage();
     tasksService.withGetSubscriptionTaskInfo();
     tasksService.withGetSubscriptionConnectionDetails();
     tasksService.withGetExternalReplicationProgress((dto) => {

@@ -19,10 +19,10 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexSingleVectorGeneratedByEtl() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByName>();
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexSingleVectorGeneratedByEtlJs() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByNameJs>();
 
     private async Task CanIndexSingleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
@@ -106,10 +106,10 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["sdklfjklsadjkl;assdjaskll"], id);
     }
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexMultipleVectorGeneratedByEtl() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNames>();
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexMultipleVectorGeneratedByEtlJs() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNamesJs>();
 
     private async Task CanIndexMultipleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
@@ -189,10 +189,10 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
     }
 
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexVectorFromTwoDifferentEtl() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFields>();
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexVectorFromTwoDifferentEtlJs() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFieldsJs>();
 
     private async Task CanIndexVectorFromTwoDifferentEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()

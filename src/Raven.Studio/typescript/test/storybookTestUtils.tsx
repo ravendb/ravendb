@@ -90,6 +90,7 @@ export const licenseArgType = {
         "Essential",
         "Professional",
         "Enterprise",
+        "EnterpriseAi",
         "Developer",
     ] satisfies Raven.Server.Commercial.LicenseType[],
 } as const;
@@ -125,4 +126,11 @@ export const securityClearanceArgType = {
         "ValidUser",
         "UnauthenticatedClients",
     ] satisfies Raven.Client.ServerWide.Operations.Certificates.SecurityClearance[],
+} as const;
+
+export type DatabaseType = "sharded" | "cluster" | "singleNode";
+
+export const databaseArgType = {
+    control: "radio",
+    options: ["sharded", "cluster", "singleNode"] satisfies DatabaseType[],
 } as const;

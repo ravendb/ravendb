@@ -7,7 +7,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_25508(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public void CanSortByScoreWhenMultiVectorSearchIsSkippedInBinaryMatch()
     {
         using var store = GetDocumentStore();
@@ -32,7 +32,7 @@ public class RavenDB_25508(ITestOutputHelper output) : RavenTestBase(output)
         Assert.NotEmpty(result);
     }
     
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public void CanSortByScoreWhenVectorSearchIsSkippedInBinaryMatch()
     {
         using var store = GetDocumentStore();

@@ -2183,7 +2183,7 @@ namespace Raven.Server.Documents.Revisions
             var revisionsPreviousCount = GetRevisionsCount(context, prefixSlice);
             if (revisionsPreviousCount == 0)
             {
-                return (false, 0);
+                return (false, Deleted: 0);
             }
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -2199,6 +2199,14 @@ namespace Raven.Server.Documents.Revisions
 
             result.Remaining = revisionsPreviousCount - deleted;
             var moreWork = result.HasMore && result.Remaining > 0;
+
+            if (result.Remaining == 0)
+            {
+                // remove the HasRevisions flag
+                using var doc = context.DocumentDatabase.DocumentsStorage.Get(context, lowerId, DocumentFields.Data | DocumentFields.Id);
+                if (doc != null)
+                    context.DocumentDatabase.DocumentsStorage.Put(context, doc.Id, expectedChangeVector: null, document: doc.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
+            }
 
             return (moreWork, deleted);
         }

@@ -262,6 +262,8 @@ class editOlapEtlTask extends shardViewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    taskNameDisabledReason: KnockoutComputed<string>;
     
     collections = collectionsTracker.default.collections;
     
@@ -409,6 +411,14 @@ class editOlapEtlTask extends shardViewModelBase {
         
         this.showEditOlapTableArea = ko.pureComputed(() => !!this.editedOlapTableSandbox());
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewOlapEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        }); 
 
         this.newConnectionString(connectionStringOlapEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.olapEtlConnectionStringsNames().find(x => x.toLocaleLowerCase() === name.toLocaleLowerCase()));

@@ -16,7 +16,7 @@ namespace FastTests.Corax.Vectors;
 
 public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     public void CanSearchByMultipleVectorsByTexts()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
@@ -60,7 +60,7 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     public void CanSearchByMultipleVectorsByEmbeddings()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
@@ -112,7 +112,7 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         }
     }
 
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     public void CanSearchByMultipleVectorsByRavenVector()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
@@ -164,7 +164,7 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         }
     }
     
-     [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying)]
+     [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     public void CanSearchByMultipleVectorsByBase64()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

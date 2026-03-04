@@ -17,7 +17,7 @@ public class RavenDB_23720 : EmbeddingsGenerationTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Indexes | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task AutoIndexWithVectorSearchShouldBeConvertibleToStatic()
     {
         using (var store = GetDocumentStore())

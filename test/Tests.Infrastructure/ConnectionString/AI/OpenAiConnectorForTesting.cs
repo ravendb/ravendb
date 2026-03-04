@@ -18,7 +18,7 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOpenAiConnectorForTesting>
 {
-    private const string Model = "gpt-4o-mini";
+    private const string Model = "gpt-5-mini";
 
     public GenAiOpenAiConnectorForTesting()
     {
@@ -41,7 +41,7 @@ internal static class OpenAiConnectorHelper
         return new AiConnectionString
         {
             ModelType = modelType,
-            OpenAiSettings = new OpenAiSettings(apiKey, Endpoint, model) { Temperature = 0 }
+            OpenAiSettings = new OpenAiSettings(apiKey, Endpoint, model) { Temperature = 1 }
         };
     }
 }

@@ -107,6 +107,7 @@ const amazonS3Source = yup.object({
         is: "amazonS3",
         then: (schema) => schema.trim().strict().required(),
     }),
+    sessionToken: yup.string().trim().strict(),
     awsRegion: yup.string().when(["isUseCustomHost", "$sourceType"], {
         is: (isUseCustomHost: boolean, sourceType: RestoreSource) => !isUseCustomHost && sourceType === "amazonS3",
         then: (schema) => schema.trim().strict().required(),

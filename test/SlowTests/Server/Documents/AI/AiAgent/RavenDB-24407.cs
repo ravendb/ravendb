@@ -51,7 +51,7 @@ public class RavenDB_24407 : RavenTestBase
         public JToken Content { get; set; }
     }
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true], Skip = "RavenDB-24806")]

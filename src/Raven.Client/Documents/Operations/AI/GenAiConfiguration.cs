@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -43,6 +45,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     private const int DefaultMaxConcurrency = 4;
 
     internal readonly string TransformationName = "GenAi-transform-script";
+    internal const int WithSampleObject = 1;
 
     [JsonDeserializationIgnore]
     [JsonIgnore]
@@ -69,7 +72,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         }
     }
 
-    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
+    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<AiConnectionString> existingConfiguration = null)
     {
         if (validateConnection && Initialized == false)
             throw new InvalidOperationException("GenAi configuration must be initialized");
@@ -120,6 +123,45 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         return errors.Count == 0;
     }
 
+    internal static void ApplyHashVersionBackwardCompatibility(DatabaseRecord record, GenAiConfiguration configuration, long taskId)
+    {
+        var existing = record.GenAis?.FirstOrDefault(x => x.TaskId == taskId);
+
+        if (existing == null)
+        {
+            configuration.Version = WithSampleObject;
+            return;
+        }
+
+        // Existing version
+        var existingVersion = existing.Version;
+
+        if (existingVersion == null)
+        {
+            //did Sample object changed?
+            if (string.Equals(existing.SampleObject, configuration.SampleObject, StringComparison.Ordinal) == false)
+            {
+                configuration.Version = WithSampleObject;
+            }
+            else
+            {
+                // If the SampleObject is IDENTICAL, and existing version is None we MUST force None.
+                configuration.Version = null;
+            }
+
+            return;
+        }
+
+        // Preserving WithSampleObject
+        if (configuration.Version == null)
+        {
+            configuration.Version = existingVersion;
+        }
+    }
+
+    [ForceJsonSerialization]
+    internal int? Version;
+
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
@@ -136,6 +178,10 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null;
         json[nameof(EnableTracing)] = EnableTracing;
         json[nameof(ExpirationInSec)] = ExpirationInSec;
+        if (Version.HasValue)
+        {
+            json[nameof(Version)] = Version;
+        }
 
         return json;
     }

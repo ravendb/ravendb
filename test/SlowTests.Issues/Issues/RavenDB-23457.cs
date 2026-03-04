@@ -18,12 +18,12 @@ public class RavenDB_23457 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenMultiplatformTheory(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClause(Options options)
     => CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseBase<DummyIndex>(options);
-    
-    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+
+    [RavenMultiplatformTheory(RavenTestCategory.Indexes | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseJs(Options options)
         => CanShowIndexRawEntryWhenVectorSearchIsInsideWhereClauseBase<DummyIndexJs>(options);

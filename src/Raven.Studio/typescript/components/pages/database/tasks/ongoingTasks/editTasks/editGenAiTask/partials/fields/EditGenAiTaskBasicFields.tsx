@@ -8,7 +8,7 @@ import EditConnectionStrings from "components/pages/database/settings/connection
 import { useAppDispatch, useAppSelector } from "components/store";
 import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
-import { editGenAiTaskActions } from "../../store/editGenAiTaskSlice";
+import { editGenAiTaskActions, editGenAiTaskSelectors } from "../../store/editGenAiTaskSlice";
 import EditGenAiTaskNodeField from "./EditGenAiTaskNodeField";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useServices } from "components/hooks/useServices";
@@ -20,6 +20,8 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import { editGenAiTaskUtils } from "../../utils/editGenAiTaskUtils";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import tasksCommonContent from "models/database/tasks/tasksCommonContent";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
@@ -28,6 +30,7 @@ export default function EditGenAiTaskBasicFields() {
 
     const isEncrypted = useAppSelector(databaseSelectors.activeDatabase)?.isEncrypted;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isEditTask = useAppSelector(editGenAiTaskSelectors.isEditTask);
 
     const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
 
@@ -68,17 +71,26 @@ export default function EditGenAiTaskBasicFields() {
         <>
             <FormGroup>
                 <FormLabel>Task Name</FormLabel>
-                <FormInput
-                    type="text"
-                    control={control}
-                    name="name"
-                    placeholder="My task"
-                    onBlur={() => {
-                        if (!formValues.identifier) {
-                            handleGenerateIdentifier();
-                        }
+                <ConditionalPopover
+                    conditions={{
+                        isActive: isEditTask,
+                        message: tasksCommonContent.taskNameLocked,
                     }}
-                />
+                    className="w-100"
+                >
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name="name"
+                        placeholder="My task"
+                        onBlur={() => {
+                            if (!formValues.identifier) {
+                                handleGenerateIdentifier();
+                            }
+                        }}
+                        disabled={isEditTask}
+                    />
+                </ConditionalPopover>
             </FormGroup>
             <FormGroup>
                 <FormLabel>

@@ -4,6 +4,7 @@ import jsonUtil = require("common/jsonUtil");
 abstract class amazonSettings extends backupSettings {
     awsAccessKey = ko.observable<string>();
     awsSecretKey = ko.observable<string>();
+    awsSessionToken = ko.observable<string>();
     awsRegionName = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
 
@@ -57,6 +58,7 @@ abstract class amazonSettings extends backupSettings {
         
         this.awsAccessKey(dto.AwsAccessKey);
         this.awsSecretKey(dto.AwsSecretKey);
+        this.awsSessionToken(dto.AwsSessionToken || "");
         this.awsRegionName(dto.AwsRegionName);
         this.remoteFolderName(dto.RemoteFolderName || "");
 
@@ -161,6 +163,7 @@ abstract class amazonSettings extends backupSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.AmazonSettings;
         dto.AwsAccessKey = this.awsAccessKey();
         dto.AwsSecretKey = this.awsSecretKey();
+        dto.AwsSessionToken = this.awsSessionToken() || null;
         dto.AwsRegionName = this.awsRegionName();
         dto.RemoteFolderName = this.remoteFolderName() || null;
         return dto;

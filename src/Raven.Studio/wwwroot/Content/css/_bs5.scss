@@ -108,12 +108,12 @@ body {
 //Move to scss ace styles after PR merge
 .ace_editor.disabled {
     filter: saturate(0.2);
-    opacity: 0.7;
+    opacity: 0.75;
 }
 
 input::placeholder,
 textarea::placeholder {
-    opacity: 0.5 !important;
+    opacity: 0.75 !important;
 }
 
 // Custom Utilities

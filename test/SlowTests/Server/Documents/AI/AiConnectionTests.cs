@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.AI
             }
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
         [ClassData(typeof(IntegrationDataType<Embeddings>))]
         public void CanConnectEmbeddings(RavenAiIntegration integration)
         {
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.AI
             }
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
         [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanTestAiEmbeddingsConnectionString(Options options, EmbeddingsGenerationConfiguration configuration)
         {

@@ -9,7 +9,7 @@
 }
 
 .react-select-container {
-    border: 1px solid bs5variables.$border-color-light-var;
+    border: 1px solid colors.$border-color-light-var;
     border-radius: bs5variables.$input-border-radius;
     flex: 1 1 auto;
 
@@ -18,7 +18,8 @@
     }
 
     .react-select__placeholder {
-        opacity: 0.5;
+        opacity: 0.75;
+        color: colors.$text-muted-var !important;
     }
 
     .react-select__control {
@@ -28,26 +29,22 @@
         cursor: pointer;
 
         &:hover {
-            box-shadow: 0 0 0 0.25rem rgba(bs5variables.$primary-var, 0.25);
+            box-shadow: 0 0 0 0.25rem rgba(colors.$primary-var, 0.25);
         }
 
         .react-select__value-container {
             * {
-                color: bs5variables.$text-color-var;
-            }
-
-            .react-select__placeholder {
-                color: bs5variables.$text-muted-color;
+                color: colors.$text-color-var;
             }
 
             .react-select__multi-value {
-                background-color: bs5variables.$panel-header-bg-var;
+                background-color: colors.$panel-header-bg-var;
 
                 .react-select__multi-value__remove {
-                    background-color: bs5variables.$panel-header-bg-var;
+                    background-color: colors.$panel-header-bg-var;
 
                     &:hover {
-                        background-color: bs5variables.$panel-bg-3-var;
+                        background-color: colors.$panel-bg-3-var;
                     }
                 }
             }
@@ -59,20 +56,20 @@
     }
 
     .react-select__control--is-disabled {
-        background-color: bs5variables.$panel-bg-1-var;
+        background-color: colors.$panel-bg-1-var;
         pointer-events: all !important;
         cursor: not-allowed !important;
         opacity: 0.66 !important;
 
         .react-select__dropdown-indicator {
-            color: bs5variables.$border-color-light-var;
+            color: colors.$border-color-light-var;
         }
     }
 
     .react-select__menu {
-        border: 1px solid bs5variables.$border-color-light-var;
+        border: 1px solid colors.$border-color-light-var;
         border-radius: bs5variables.$border-radius-md;
-        background-color: bs5variables.$panel-bg-1-var;
+        background-color: colors.$panel-bg-1-var;
         z-index: bs5variables.$zindex-dropdown;
         width: fit-content;
 
@@ -84,23 +81,23 @@
                 padding: bs5variables.$gutter-xxs;
                 background-color: transparent;
                 border-radius: sizes.$border-radius;
-                color: bs5variables.$text-color-var;
+                color: colors.$text-color-var;
                 cursor: pointer;
 
                 &:hover {
-                    background-color: bs5variables.$panel-bg-2-var;
-                    color: bs5variables.$text-emphasis-var;
+                    background-color: colors.$panel-bg-2-var;
+                    color: colors.$text-emphasis-var;
                 }
             }
 
             .react-select__option--is-focused {
-                background-color: bs5variables.$panel-bg-2-var;
-                color: bs5variables.$text-emphasis-var;
+                background-color: colors.$panel-bg-2-var;
+                color: colors.$text-emphasis-var;
             }
 
             .react-select__option--is-disabled {
                 opacity: 0.5;
-                color: bs5variables.$text-muted-var;
+                color: colors.$text-muted-var;
                 cursor: not-allowed;
             }
 
@@ -108,5 +105,12 @@
                 margin: bs5variables.$gutter-xxs;
             }
         }
+    }
+}
+
+.input-group-text,
+.database-switcher {
+    .react-select__single-value {
+        color: colors.$text-color-var;
     }
 }

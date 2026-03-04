@@ -83,7 +83,7 @@ export default function AddAttachmentWithRemoteParametersModal({
 
     return (
         <Modal size="lg" show contentClassName="modal-border bulge-info">
-            <Modal.Header onCloseClick={onClose}>
+            <Modal.Header className="pb-0" onCloseClick={onClose}>
                 <h3>
                     <Icon icon="remote-attachment" color="info" />
                     Add attachment to remote storage

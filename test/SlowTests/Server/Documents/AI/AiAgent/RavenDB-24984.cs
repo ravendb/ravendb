@@ -107,6 +107,7 @@ public class RavenDB_24984 : RavenTestBase
         Assert.Equal(AiConversationResult.Done, result.Status);
 
         var lastToolResult = lastNumber - 1;
+        Console.WriteLine(result.Answer.Answer);
         Assert.Equal(lastToolResult.ToString(), result.Answer.Answer);
         Assert.Equal(maxModelIterationsPerCall, lastToolResult);
 

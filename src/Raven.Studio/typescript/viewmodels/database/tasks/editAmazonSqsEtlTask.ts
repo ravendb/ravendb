@@ -25,6 +25,7 @@ import licenseModel = require("models/auth/licenseModel");
 import ongoingTaskAmazonSqsEtlEditModel = require("models/database/tasks/ongoingTaskAmazonSqsEtlEditModel");
 import connectionStringAmazonSqsModel = require("models/database/settings/connectionStringAmazonSqsModel");
 import EditAmazonSqsEtlInfoHub = require("viewmodels/database/tasks/EditAmazonSqsEtlInfoHub");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class amazonSqsTaskTestMode {
     documentId = ko.observable<string>();
@@ -186,6 +187,8 @@ class editAmazonSqsEtlTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
+    taskNameDisabledReason: KnockoutComputed<string>;
+
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringAmazonSqsModel>();
 
@@ -281,6 +284,14 @@ class editAmazonSqsEtlTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        }); 
 
         this.newConnectionString(connectionStringAmazonSqsModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.etlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));

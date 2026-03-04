@@ -7,6 +7,8 @@ import common = require("components/utils/common");
 
 type S3StorageClass = Raven.Client.Documents.Operations.Backups.S3StorageClass;
 
+type TargetOperation = "PeriodicBackup" | "ManualBackup" | "OLAP";
+
 class s3Settings extends amazonSettings {
     
     view = require("views/database/tasks/destinations/s3Settings.html");
@@ -18,14 +20,15 @@ class s3Settings extends amazonSettings {
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
     isSecretHidden = ko.observable<boolean>(true);
+    isSessionTokenHidden = ko.observable<boolean>(true);
 
-    targetOperation: string;
+    targetOperation: TargetOperation;
 
     storageClassOptions = common.storageClassOptions;
     storageClass = ko.observable<S3StorageClass>("Standard");
     storageClassLabel: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>, targetOperation: string) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>, targetOperation: TargetOperation) {
         super(dto, "S3", allowedRegions);
 
         this.bucketName(dto.BucketName);
@@ -42,6 +45,7 @@ class s3Settings extends amazonSettings {
             this.bucketName,
             this.awsAccessKey,
             this.awsSecretKey,
+            this.awsSessionToken,
             this.awsRegionName,
             this.remoteFolderName,
             this.selectedAwsRegion,
@@ -75,11 +79,19 @@ class s3Settings extends amazonSettings {
     private static isBackBlaze(useCustomS3Host: boolean, customServerUrl: string) {
         return useCustomS3Host && customServerUrl && customServerUrl.toLowerCase().endsWith(".backblazeb2.com");
     }
+
+    private getPopoverTargetOperation(): string {
+        if (this.targetOperation === "ManualBackup" || this.targetOperation === "PeriodicBackup") {
+            return "Backup";
+        }
+
+        return this.targetOperation;
+    }
     
     compositionComplete(view: Element, container: HTMLElement) {
         popoverUtils.longWithHover($(".bucket-info", container),
             {
-                content: tasksCommonContent.textForPopover("Bucket", this.targetOperation)
+                content: tasksCommonContent.textForPopover("Bucket", this.getPopoverTargetOperation())
             });
     }
     
@@ -163,10 +175,10 @@ class s3Settings extends amazonSettings {
         dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : false;
         dto.StorageClass = this.storageClass();
         
-        return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
+        return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey", "AwsSessionToken"]);
     }
 
-    static empty(allowedRegions: Array<string>, targetOperation: string): s3Settings {
+    static empty(allowedRegions: Array<string>, targetOperation: TargetOperation): s3Settings {
         return new s3Settings({
             Disabled: true,
             AwsAccessKey: null,
@@ -184,6 +196,10 @@ class s3Settings extends amazonSettings {
     
     toggleIsSecretHidden() {
         this.isSecretHidden(!this.isSecretHidden());
+    }
+
+    toggleIsSessionTokenHidden() {
+        this.isSessionTokenHidden(!this.isSessionTokenHidden());
     }
 }
 

@@ -260,7 +260,7 @@ function GenerateDeveloper() {
                 <br />
                 <Icon icon="check" color="developer" /> Enterprise-level set of features
                 <br />
-                <Icon icon="check" color="developer" /> Max of 5 nodes in cluster, 9 CPU cores, and 36 GB RAM
+                <Icon icon="check" color="developer" /> Max of 3 nodes in cluster, 9 CPU cores, and 36 GB RAM
             </p>
             <SeeAllPlansButton />
             <GenerateLicenseFields />

@@ -75,7 +75,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         }
     }
 
-    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
+    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<AiConnectionString> existingConfiguration = null)
     {
         if (validateConnection && Initialized == false)
             throw new InvalidOperationException("Embeddings Generation configuration must be initialized");

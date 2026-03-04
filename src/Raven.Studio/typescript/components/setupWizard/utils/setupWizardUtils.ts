@@ -53,3 +53,7 @@ export function base64ToFile(base64: string, filename: string, mimeType = "appli
 export function getFullDomain(domainStep: SetupWizardFormData["domainStep"]) {
     return domainStep.domain + "." + domainStep.rootDomain;
 }
+
+export function sanitizeCommonName(cn: string) {
+    return cn.replace(/\*/g, "").replace(/\.{2,}/g, ".");
+}

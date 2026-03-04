@@ -830,10 +830,11 @@ namespace RachisTests
                             var testingStuff = db.ForTestingPurposesOnly();
                             bool shouldWaitForClusterStabilization = false;
                             var subscriptionInterrupt = new AsyncManualResetEvent();
-                            using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                            using (testingStuff.CallDuringWaitForChangedDocuments(_ =>
                                    {
                                        shouldWaitForClusterStabilization = db.SubscriptionStorage.ShouldWaitForClusterStabilization();
                                        subscriptionInterrupt.Set();
+                                       return Task.FromResult(false);
                                    }))
                             {
                                 await subscriptionInterrupt.WaitAsync(_reasonableWaitTime);
@@ -848,10 +849,11 @@ namespace RachisTests
                         var testingStuff = db.ForTestingPurposesOnly();
                         bool shouldWaitForClusterStabilization = false;
                         var subscriptionInterrupt = new AsyncManualResetEvent();
-                        using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                        using (testingStuff.CallDuringWaitForChangedDocuments(_ =>
                                {
                                    shouldWaitForClusterStabilization = db.SubscriptionStorage.ShouldWaitForClusterStabilization();
                                    subscriptionInterrupt.Set();
+                                   return Task.FromResult(false);
                                }))
                         {
                             await subscriptionInterrupt.WaitAsync(_reasonableWaitTime);

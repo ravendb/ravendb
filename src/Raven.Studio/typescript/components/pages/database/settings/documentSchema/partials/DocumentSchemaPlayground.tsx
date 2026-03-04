@@ -60,7 +60,7 @@ function DocumentSchemaPlaygroundBody() {
 
     const form = useForm({
         resolver: yupResolver(schema),
-        defaultValues: { documentSchemas: [{ collection: "", schema: "" }] },
+        defaultValues: schemaInitialValues,
     });
 
     const { control, handleSubmit } = form;
@@ -104,20 +104,16 @@ function DocumentSchemaPlaygroundBody() {
             <AboutViewHeading
                 marginBottom={4}
                 title="Document Schema Playground"
-                icon="rocket"
+                backUrl={appUrl.forDocumentSchema(databaseName)}
                 licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
             />
             <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
                 <span>
-                    Quickly create and test schemas against your documents without affecting your saved data. The Schema
-                    Playground is a temporary workspace designed for safe experimentation.
+                    Quickly create and test schemas against your documents without affecting your saved data.
+                    <br /> The Schema Playground is a temporary workspace designed for safe experimentation.
                 </span>
 
-                <div className="mt-5 d-flex align-items-center justify-content-between">
-                    <a href={appUrl.forDocumentSchema(databaseName)} className="btn btn-secondary">
-                        <Icon icon="close" />
-                        Cancel
-                    </a>
+                <div className="mt-4 d-flex align-items-center">
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasSchemaValidation,
@@ -143,7 +139,7 @@ function DocumentSchemaPlaygroundBody() {
                             >
                                 <Button
                                     onClick={handleAppendTestField}
-                                    size="xs"
+                                    size="sm"
                                     variant="info"
                                     className="rounded-pill"
                                     disabled={!hasSchemaValidation}
@@ -219,7 +215,7 @@ function TestDocumentSchema({ index, remove, collectionOptions }: TestDocumentSc
                                 <FormSelect
                                     control={control}
                                     name={`documentSchemas.${index}.collection`}
-                                    placeholder="Select a collection (or enter a new one)"
+                                    placeholder="Select a collection"
                                     options={collectionOptions}
                                 />
                             </FormGroup>
@@ -260,6 +256,15 @@ function TestDocumentSchema({ index, remove, collectionOptions }: TestDocumentSc
         </RichPanel>
     );
 }
+
+const schemaInitialValues = {
+    documentSchemas: [
+        {
+            collection: "",
+            schema: "",
+        },
+    ],
+};
 
 const schema = yup.object({
     documentSchemas: yup.array().of(

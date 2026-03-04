@@ -53,6 +53,9 @@ public static class GenerateEmbeddings
         {
             OnnxSessionOptions = new Lazy<SessionOptions>(valueFactory: () =>
             {
+                if (PlatformDetails.Is32Bits)
+                    throw new IncorrectDllException("Could not initialize 'ONNX Runtime'. The x86 architecture is not supported by the ONNX Runtime.");
+
                 if (PlatformDetails.RunningOnCortexA53)
                     throw new IncorrectDllException("Could not initialize 'ONNX Runtime'. Your CPU, the Cortex A53, is not supported by ONNX Runtime: https://github.com/microsoft/onnxruntime/issues/25472");
                 

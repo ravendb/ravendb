@@ -12,7 +12,7 @@ namespace SlowTests.Corax;
 
 public class RavenDB_24132(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Indexes | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void CanGetVectorsFromIndex()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

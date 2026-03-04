@@ -370,7 +370,7 @@ public class AiAgentErrors : RavenTestBase
             "chats/",
             creationOptions: null);
 
-        chat.SetUserPrompt("Can you answer Aviv questions?");
+        chat.SetUserPrompt("Can you answer Aviv's questions?");
         var r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
 
         var aviv = r.Answer;
@@ -378,7 +378,7 @@ public class AiAgentErrors : RavenTestBase
         Assert.NotNull(aviv.Answer);
         Assert.False(aviv.RefusedToAnswer, aviv.ToString());
 
-        chat.SetUserPrompt("Can you answer Karmel questions?");
+        chat.SetUserPrompt("Can you answer Karmel's questions?");
         r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
 
         var karmel = r.Answer;
@@ -386,7 +386,7 @@ public class AiAgentErrors : RavenTestBase
         Assert.NotNull(karmel.Answer);
         Assert.False(karmel.RefusedToAnswer, karmel.ToString());
 
-        chat.SetUserPrompt("Can you answer Shahar questions?");
+        chat.SetUserPrompt("Can you answer Shahar's questions?");
         r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
 
         var shahar = r.Answer;

@@ -26,6 +26,7 @@ import EditAzureQueueStorageEtlInfoHub = require("viewmodels/database/tasks/Edit
 import ongoingTaskAzureQueueStorageEtlEditModel = require("models/database/tasks/ongoingTaskAzureQueueStorageEtlEditModel");
 import connectionStringAzureQueueStorageModel = require("models/database/settings/connectionStringAzureQueueStorageModel");
 import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class azureQueueStorageTaskTestMode {
     documentId = ko.observable<string>();
@@ -187,6 +188,8 @@ class editAzureQueueStorageEtlTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
+    taskNameDisabledReason: KnockoutComputed<string>;
+
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringAzureQueueStorageModel>();
 
@@ -290,6 +293,14 @@ class editAzureQueueStorageEtlTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        });  
 
         this.newConnectionString(connectionStringAzureQueueStorageModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.etlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));

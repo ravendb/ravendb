@@ -18,9 +18,9 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 
         public bool SkipAutomaticQueueDeclaration { get; set; }
 
-        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
+        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<QueueConnectionString> existingConfiguration = null)
         {
-            var validationResult = base.Validate(out errors, validateName, validateConnection);
+            var validationResult = base.Validate(out errors, validateName, validateConnection, validateIdentifier, existingConfiguration);
             if (Connection != null && BrokerType != Connection.BrokerType)
             {
                 errors.Add("Broker type must be the same in the ETL configuration and in Connection string.");

@@ -29,6 +29,7 @@ import ongoingTaskSnowflakeEtlTransformationModel = require("models/database/tas
 import ongoingTaskSnowflakeEtlTableModel = require("models/database/tasks/ongoingTaskSnowflakeEtlTableModel");
 import ongoingTaskSnowflakeEtlEditModel = require("models/database/tasks/ongoingTaskSnowflakeEtlEditModel");
 import EditSnowflakeEtlInfoHub = require("viewmodels/database/tasks/EditSnowflakeEtlInfoHub");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class snowflakeTaskTestMode {
     
@@ -208,6 +209,8 @@ class editSnowflakeEtlTask extends shardViewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
+    taskNameDisabledReason: KnockoutComputed<string>;
+
     collections = collectionsTracker.default.collections;
     collectionNames: KnockoutComputed<string[]>;
     
@@ -322,6 +325,14 @@ class editSnowflakeEtlTask extends shardViewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewSnowflakeEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        }); 
 
         this.collectionNames = ko.pureComputed(() => {
            return collectionsTracker.default.getCollectionNames(); 
