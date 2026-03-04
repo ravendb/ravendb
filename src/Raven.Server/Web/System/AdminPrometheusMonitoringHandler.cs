@@ -11,6 +11,7 @@ using Raven.Server.Documents;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Monitoring;
 using Sparrow;
 using Sparrow.LowMemory;
@@ -57,6 +58,7 @@ namespace Raven.Server.Web.System
             var skipDatabases = GetBoolValueQueryString("skipDatabasesMetrics", false) ?? false;
             var skipIndexes = GetBoolValueQueryString("skipIndexesMetrics", false) ?? false;
             var skipCollections = GetBoolValueQueryString("skipCollectionsMetrics", false) ?? false;
+            var includeGc = GetBoolValueQueryString("includeGcMetrics", false) ?? false;
 
             var provider = new MetricsProvider(Server);
 
@@ -66,7 +68,7 @@ namespace Raven.Server.Web.System
             
             if (skipServer == false)
             {
-                await WriteServerMetricsAsync(provider, responseStream);
+                await WriteServerMetricsAsync(provider, responseStream, includeGc);
             }
 
             if (skipDatabases == false)
@@ -85,7 +87,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WriteServerMetricsAsync(MetricsProvider provider, Stream responseStream)
+        private async Task WriteServerMetricsAsync(MetricsProvider provider, Stream responseStream, bool includeGc)
         {
             var serverMetrics = provider.CollectServerMetrics();
 
@@ -147,6 +149,12 @@ namespace Raven.Server.Web.System
                     WriteGaugeWithHelp(writer, "Unmanaged memory", "unmanaged_memory_bytes",
                         new Size(serverMetrics.Memory.UnmanagedMemoryInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Bytes));
 
+                    // gc
+                    if (includeGc)
+                    {
+                        WriteGcMetrics(writer, Server.MetricCacher);
+                    }
+
                     // network
                     WriteGaugeWithHelp(writer, "Number of active TCP connections", "network_tcp_active_connections", serverMetrics.Network.TcpActiveConnections);
                     WriteGaugeWithHelp(writer, "Number of concurrent requests", "network_concurrent_requests_count", serverMetrics.Network.ConcurrentRequestsCount);
@@ -194,6 +202,54 @@ namespace Raven.Server.Web.System
                 ms.Position = 0;
                 await ms.CopyToAsync(responseStream);
             }
+        }
+
+        private void WriteGcMetrics(StreamWriter writer, MetricCacher metricCacher)
+        {
+            WriteGcMetricsForKind(writer, metricCacher, GCKind.Any, MetricCacher.Keys.Server.GcAny);
+        }
+
+        private void WriteGcMetricsForKind(StreamWriter writer, MetricCacher metricCacher, GCKind gcKind, string cacheKey)
+        {
+
+            var info = metricCacher.GetValue<GCMemoryInfo>(MetricCacher.Keys.Server.GcAny);
+
+            var tags = SerializeTags(new Dictionary<string, string> { { nameof(GCKind).ToLower(), gcKind.ToString().ToLower() } });
+
+            // HELP strings for the GC metrics below are based on the official .NET API documentation for System.GCMemoryInfo (property descriptions),
+            // lightly adapted to match our Prometheus help style
+            // https://learn.microsoft.com/en-us/dotnet/api/system.gcmemoryinfo
+
+            WriteGaugeWithHelp(writer, "The index of this GC.", "gc_index", info.Index, tags);
+            WriteGaugeWithHelp(writer, "Gets the generation this GC collected.", "gc_generation", info.Generation, tags);
+            WriteGaugeWithHelp(writer, "Specifies if this is a compacting GC or not.", "gc_compacted", info.Compacted ? 1 : 0, tags);
+            WriteGaugeWithHelp(writer, "Specifies if this is a concurrent GC or not.", "gc_concurrent", info.Concurrent ? 1 : 0, tags);
+            WriteGaugeWithHelp(writer, "Gets the number of objects ready for finalization this GC observed.", "gc_finalization_pending_count", info.FinalizationPendingCount, tags);
+            WriteGaugeWithHelp(writer, "Gets the total fragmentation (in MB) when the last garbage collection occurred.", "gc_fragmented_mb", BytesToMb(info.FragmentedBytes), tags);
+            WriteGaugeWithHelp(writer, "Gets the total heap size (in MB) when the last garbage collection occurred.", "gc_heap_size_mb", BytesToMb(info.HeapSizeBytes), tags);
+            WriteGaugeWithHelp(writer, "Gets the high memory load threshold (in MB) when the last garbage collection occurred.", "gc_high_memory_load_threshold_mb", BytesToMb(info.HighMemoryLoadThresholdBytes), tags);
+            WriteGaugeWithHelp(writer, "Gets the memory load (in MB) when the last garbage collection occurred.", "gc_memory_load_mb", BytesToMb(info.MemoryLoadBytes), tags);
+            WriteGaugeWithHelp(writer, "Gets the pause durations. First item in the array.", "gc_pause_durations_1_seconds", GetPauseSeconds(info, 0), tags);
+            WriteGaugeWithHelp(writer, "Gets the pause durations. Second item in the array.", "gc_pause_durations_2_seconds", GetPauseSeconds(info, 1), tags);
+            WriteGaugeWithHelp(writer, "Gets the pause time percentage in the GC so far.", "gc_pause_time_percentage", info.PauseTimePercentage, tags);
+            WriteGaugeWithHelp(writer, "Gets the number of pinned objects this GC observed.", "gc_pinned_objects_count", info.PinnedObjectsCount, tags);
+            WriteGaugeWithHelp(writer, "Gets the promoted MB for this GC.", "gc_promoted_mb", BytesToMb(info.PromotedBytes), tags);
+            WriteGaugeWithHelp(writer, "Gets the total available memory (in MB) for the garbage collector to use when the last garbage collection occurred.", "gc_total_available_memory_mb", BytesToMb(info.TotalAvailableMemoryBytes), tags);
+            WriteGaugeWithHelp(writer, "Gets the total committed MB of the managed heap.", "gc_total_committed_mb", BytesToMb(info.TotalCommittedBytes), tags);
+        }
+
+        private static long BytesToMb(long bytes)
+        {
+            return new Size(bytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        }
+
+        private static double? GetPauseSeconds(GCMemoryInfo info, int index)
+        {
+            var pauses = info.PauseDurations;
+            if (pauses.IsEmpty || pauses.Length <= index)
+                return null;
+
+            return pauses[index].TotalSeconds;
         }
 
         private static double KiloBytesToBytes(long? input)
