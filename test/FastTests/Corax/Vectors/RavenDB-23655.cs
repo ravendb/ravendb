@@ -21,7 +21,7 @@ public class RavenDB_23655 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes, LicenseRequired = true)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes, RavenArchitecture.AllX64, LicenseRequired = true)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task ExactVectorSearchHasNoEffectOnIndex(bool firstIsExact)

@@ -224,6 +224,9 @@ export function SetupWizardSecurityStepFooter() {
         }
     };
 
+    const isContinueDisabled =
+        (!isLetsEncryptAgreementAccepted && securityOption === "letsEncrypt") || securityOption === null;
+
     return (
         <div className="hstack justify-content-between">
             <Button variant="secondary" className="rounded-pill" onClick={handleBack}>
@@ -244,7 +247,7 @@ export function SetupWizardSecurityStepFooter() {
                     </FormCheckbox>
                 )}
                 <Button
-                    disabled={!isLetsEncryptAgreementAccepted && securityOption === "letsEncrypt"}
+                    disabled={isContinueDisabled}
                     variant="primary"
                     className="rounded-pill"
                     onClick={handleContinue}

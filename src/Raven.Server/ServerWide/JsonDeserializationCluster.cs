@@ -316,7 +316,6 @@ namespace Raven.Server.ServerWide
             [nameof(DestinationMigrationConfirmCommand)] = GenerateJsonDeserializationRoutine<DestinationMigrationConfirmCommand>(),
             [nameof(SourceMigrationCleanupCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationCleanupCommand>(),
             [nameof(UpdateServerPublishedUrlsCommand)] = GenerateJsonDeserializationRoutine<UpdateServerPublishedUrlsCommand>(),
-            [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
             [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkCommand>(),
             [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
             [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),

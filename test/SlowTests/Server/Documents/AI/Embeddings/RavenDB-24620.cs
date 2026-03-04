@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class RavenDB_24620(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [InlineData(null, null)]
     [InlineData(null, VectorEmbeddingType.Single)]
     [InlineData(null, VectorEmbeddingType.Int8)]

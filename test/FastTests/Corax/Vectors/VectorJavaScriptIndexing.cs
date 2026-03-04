@@ -19,14 +19,14 @@ public class VectorJavaScriptIndexing : RavenTestBase
     public VectorJavaScriptIndexing(ITestOutputHelper output) : base(output)
     {
     }
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void TextToSinglesTest() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void TextToInt8Test() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void TextToInt1Test() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
     

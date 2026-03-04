@@ -4,16 +4,19 @@ import genUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
+type TargetOperation = "PeriodicBackup" | "ManualBackup" | "OLAP";
+
 class glacierSettings extends amazonSettings {
 
     view = require("views/database/tasks/destinations/glacierSettings.html");
     
     vaultName = ko.observable<string>();
     isSecretHidden = ko.observable<boolean>(true);
-
-    targetOperation: string;
+    isSessionTokenHidden = ko.observable<boolean>(true);
     
-    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings, allowedRegions: Array<string>, targetOperation: string) {
+    targetOperation: TargetOperation;
+    
+    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings, allowedRegions: Array<string>, targetOperation: TargetOperation) {
         super(dto, "Glacier", allowedRegions);
 
         this.vaultName(dto.VaultName);
@@ -27,17 +30,26 @@ class glacierSettings extends amazonSettings {
             this.vaultName,
             this.awsAccessKey,
             this.awsSecretKey,
+            this.awsSessionToken,
             this.awsRegionName,
             this.remoteFolderName,
             this.selectedAwsRegion,
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
+
+    private getPopoverTargetOperation(): string {
+        if (this.targetOperation === "ManualBackup" || this.targetOperation === "PeriodicBackup") {
+            return "Backup";
+        }
+
+        return this.targetOperation;
+    }
     
     compositionComplete() {
         popoverUtils.longWithHover($(".vault-info"),
             {
-                content: tasksCommonContent.textForPopover("Vault", this.targetOperation)
+                content: tasksCommonContent.textForPopover("Vault", this.getPopoverTargetOperation())
             });
     }
     
@@ -73,10 +85,10 @@ class glacierSettings extends amazonSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GlacierSettings;
         dto.VaultName = this.vaultName();
 
-        return genUtils.trimProperties(dto, ["RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
+        return genUtils.trimProperties(dto, ["RemoteFolderName", "AwsRegionName", "AwsAccessKey", "AwsSessionToken"]);
     }
 
-    static empty(allowedRegions: Array<string>, targetOperation: string): glacierSettings {
+    static empty(allowedRegions: Array<string>, targetOperation: TargetOperation): glacierSettings {
         return new glacierSettings({
             Disabled: true,
             AwsAccessKey: null,
@@ -91,6 +103,10 @@ class glacierSettings extends amazonSettings {
     
     toggleIsSecretHidden() {
         this.isSecretHidden(!this.isSecretHidden());
+    }
+
+    toggleIsSessionTokenHidden() {
+        this.isSessionTokenHidden(!this.isSessionTokenHidden());
     }
 }
 

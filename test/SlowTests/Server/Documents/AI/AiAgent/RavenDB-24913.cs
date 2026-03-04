@@ -100,7 +100,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions()
                 .AddParameter("username", "ayende"));
 
-        chat.SetUserPrompt("What is my name?");
+        chat.SetUserPrompt("What is my full name?");
 
         var sb = new StringBuilder();
         var result = await chat.StreamAsync<Reply>(r => r.Answer, chunk =>

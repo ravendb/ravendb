@@ -167,6 +167,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: 'Document Schema',
             nav: true,
+            requiredAccess: "DatabaseAdmin",
             css: 'icon-document-schema',
             dynamicHash: appUrls.documentSchema,
         }),
@@ -177,6 +178,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             css: 'icon-document',
             dynamicHash: appUrls.documentSchemaPlayground,
+            requiredAccess: "DatabaseAdmin",
             itemRouteToHighlight: "databases/settings/documentSchema",
         }),
         new leafMenuItem({

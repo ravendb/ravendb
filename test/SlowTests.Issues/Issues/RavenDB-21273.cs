@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Smuggler | RavenTestCategory.Compression)]
+        [RavenMultiLicenseRequiredFact(RavenTestCategory.Licensing | RavenTestCategory.Smuggler | RavenTestCategory.Compression, Architecture = RavenArchitecture.AllX64)]
         public async Task ExceptionWhenImportingAdditionalAssembliesWithCommunityLicense()
         {
             DoNotReuseServer();

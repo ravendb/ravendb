@@ -14,7 +14,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public async Task ReferencedCollectionsShouldWorkWithStalenessHandling()
     {
         const string collectionName = "Dtos";
@@ -123,7 +123,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public async Task TombstonesAreProcessed()
     {
         const string collectionName = "Dtos";
@@ -175,7 +175,7 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenFact(RavenTestCategory.Indexes)]
+    [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenArchitecture.AllX64)]
     public async Task DeletesAreHandled()
     {
         using (var store = GetDocumentStore())

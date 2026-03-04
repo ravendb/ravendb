@@ -22,7 +22,7 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
     public override EtlType EtlType => EtlType.Snowflake;
         
         
-    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
+    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<SnowflakeConnectionString> existingConfiguration = null)
     {
         base.Validate(out errors, validateName, validateConnection);
 

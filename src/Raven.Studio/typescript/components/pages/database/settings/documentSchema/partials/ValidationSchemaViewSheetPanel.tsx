@@ -190,8 +190,10 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
                 <ViewSheet className="h-100 validation-schema-view-sheet-panel">
                     <ViewSheet.Header>
                         <div className="d-flex gap-2 align-items-center">
-                            <Icon icon="rocket" size="lg" className="text-primary" />
-                            <h3 className="mb-0">Validation schema test</h3>
+                            <h3 className="mb-0">
+                                <Icon icon="rocket" className="text-primary" />
+                                Validation schema test
+                            </h3>
                         </div>
                     </ViewSheet.Header>
                     <ViewSheet.Body className="p-4">
@@ -232,7 +234,7 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
                             })}
                         >
                             <FormSwitch color="primary" control={control} name="isTestSettingsEnabled">
-                                Test settings
+                                <h4 className="mb-0">Test settings</h4>
                             </FormSwitch>
                             <div>Specify maximum documents and run time - leave unset for unlimited.</div>
                             <div
@@ -531,7 +533,7 @@ function ValidationDocumentCountDisplay({
     }
 
     const docCount = getCollectionDocumentCount(collectionName, collections);
-    return <span> ({docCount}) documents</span>;
+    return <span> ({docCount} documents)</span>;
 }
 
 interface ValidationCollectionAccordionItemProps {
@@ -592,7 +594,7 @@ function ValidationCollectionAccordionItem({
                     )}
                     <span>{validator.Name}</span>{" "}
                 </div>
-                <small className="ms-3 text-muted text-truncate flex-grow-1">
+                <small className="ms-1 text-muted text-truncate flex-grow-1">
                     {isErrored && (
                         <b className="text-danger">
                             <Icon icon="danger" color="danger" />

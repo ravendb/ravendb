@@ -14,7 +14,7 @@ public class RavenDB_23792 : RavenTestBase
 
     public record Item(RavenVector<float> Vector, string Name);
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void TestRqlGeneration(Options options)
     {
@@ -37,7 +37,7 @@ public class RavenDB_23792 : RavenTestBase
         }
     }
     
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanQueryByDocumentVector(Options options)
     {

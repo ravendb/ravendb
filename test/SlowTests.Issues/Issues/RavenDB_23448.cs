@@ -12,11 +12,11 @@ namespace SlowTests.Issues;
 
 public class RavenDB_23448(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     public void CanQueryTextualValuesInVectorSearchWhenFieldConfigurationIsNotExplicitlySet() =>
         CanQueryTextualValuesInVectorSearchWhenFieldConfigurationIsNotExplicitlySetBase<Index>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     public void CanQueryTextualValuesInVectorSearchWhenFieldConfigurationIsNotExplicitlySetJs() =>
         CanQueryTextualValuesInVectorSearchWhenFieldConfigurationIsNotExplicitlySetBase<IndexJs>();
     

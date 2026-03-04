@@ -133,11 +133,11 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                 <div className="d-flex gap-2 flex-wrap flex-grow justify-content-end">
                     <Button
                         variant="primary"
-                        size="sm"
                         onClick={handleNewChat}
                         className="rounded-pill"
                         title="Clear the current conversation and start a new chat"
                     >
+                        <Icon icon="plus" />
                         New chat
                     </Button>
                     {testDocument?.Parameters && (
@@ -146,7 +146,6 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                     {testDocument && messages.length > 0 && (
                         <Button
                             variant="secondary"
-                            size="sm"
                             onClick={() => dispatch(editAiAgentActions.isRawDataSet(!isRawData))}
                             className="rounded-pill"
                             title="Switch between chat and raw data display"
@@ -154,22 +153,22 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                             <Icon icon={isRawData ? "ai-agents" : "json"} margin="m-0" />
                         </Button>
                     )}
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => dispatch(editAiAgentActions.isTestOpenSet(false))}
-                        className="rounded-pill"
-                    >
-                        <Icon icon="close" /> Close
-                    </Button>
-                    <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => dispatch(editAiAgentActions.isTestPinnedSet(!isTestPinned))}
-                        className={classNames({ "text-reset": !isTestPinned })}
-                    >
-                        <Icon icon={isTestPinned ? "pinned" : "pin"} margin="m-0" />
-                    </Button>
+                    <div className="d-flex align-items-center">
+                        <Button
+                            variant="link"
+                            onClick={() => dispatch(editAiAgentActions.isTestPinnedSet(!isTestPinned))}
+                            className={classNames({ "text-reset": !isTestPinned })}
+                        >
+                            <Icon icon={isTestPinned ? "pinned" : "pin"} margin="m-0" />
+                        </Button>
+                        <Button
+                            variant="link"
+                            onClick={() => dispatch(editAiAgentActions.isTestOpenSet(false))}
+                            className="text-reset"
+                        >
+                            <Icon icon="close" margin="m-0" />
+                        </Button>
+                    </div>
                 </div>
             </div>
             <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">

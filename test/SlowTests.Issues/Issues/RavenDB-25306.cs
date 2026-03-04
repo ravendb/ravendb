@@ -13,7 +13,7 @@ public class RavenDB_25306 : EmbeddingsGenerationTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     public async Task EmbeddingsGenerationTaskShouldHandleReset()
     {
         using (var store = GetDocumentStore())

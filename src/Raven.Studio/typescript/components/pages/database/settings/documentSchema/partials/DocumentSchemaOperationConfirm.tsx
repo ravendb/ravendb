@@ -47,7 +47,7 @@ export default function DocumentSchemaOperationConfirm({
 
     return (
         <Modal scrollable show onHide={toggle} contentClassName={`modal-border bulge-${getTypeColor(type)}`}>
-            <Modal.Header className="vstack pb-1" onCloseClick={toggle}>
+            <Modal.Header className="vstack" onCloseClick={toggle}>
                 <Icon
                     icon="document-schema"
                     color={getTypeColor(type)}
@@ -59,9 +59,9 @@ export default function DocumentSchemaOperationConfirm({
             <Modal.Body className="vstack gap-4">
                 {schemaGroups.map((schemaGroup, idx) => (
                     <div key={"schema-group-" + idx}>
-                        <div className="text-center lead mb-3">{schemaGroup.title}</div>
+                        <div className="text-center lead mb-4">{schemaGroup.title}</div>
                         <div style={{ maxHeight: "45vh", overflow: "auto" }}>
-                            <div className="vstack gap-1 my-4">
+                            <div className="vstack gap-1">
                                 {schemaGroup.schemas.map((schema) => (
                                     <div key={schema.Name} className="d-flex">
                                         <div

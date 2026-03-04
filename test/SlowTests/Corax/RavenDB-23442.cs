@@ -27,7 +27,7 @@ public class RavenDB_23442(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
     
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [MemberData(nameof(Theory))]
     public void SingleVectorSearchWillAlwaysBeSortedByDistance(bool sortVectorSearchByScoreAutomatically, bool includeScore)
     {
@@ -45,7 +45,7 @@ public class RavenDB_23442(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal("banana", results[1].Name);
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [MemberData(nameof(Theory))]
     public void VectorSearchWillAlwaysBeSortedByDistance(bool sortVectorSearchByScoreAutomatically, bool includeScore)
     {

@@ -28,6 +28,8 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditElasticSearchEtlInfoHub = require("viewmodels/database/tasks/EditElasticSearchEtlInfoHub");
 import typeUtils = require("common/typeUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+
 class elasticSearchTaskTestMode {
 
     documentId = ko.observable<string>();
@@ -200,6 +202,8 @@ class editElasticSearchEtlTask extends shardViewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    taskNameDisabledReason: KnockoutComputed<string>;
     
     collectionNames: KnockoutComputed<string[]>;
 
@@ -308,6 +312,14 @@ class editElasticSearchEtlTask extends shardViewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewElasticSearchEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        }); 
 
         this.collectionNames = ko.pureComputed(() => {
             return collectionsTracker.default.getCollectionNames();

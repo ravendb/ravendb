@@ -18,13 +18,17 @@ import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/Lice
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
 interface AddNewOngoingTaskProps {
     isAiOnly: boolean;
 }
 
 export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskProps>) {
-    const isAiOnly = queryParams?.isAiOnly ?? false;
+    const isAiOnly = queryParams?.isAiOnly;
 
     const { forCurrentDatabase, appUrl } = useAppUrls();
     const { filteredTasks, categoryList, searchText, selectedCategories, setSearchText, setSelectedCategories } =
@@ -100,28 +104,45 @@ export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps
                     </Col>
                 )}
             </Row>
-            {filteredTasks.length > 0 ? (
-                filteredTasks.map((category, index) => (
-                    <div className="pb-2" key={index}>
-                        {!isAiOnly && (
-                            <HrHeader>
-                                <Icon icon={category.categoryIcon} />
-                                {category.categoryName}
-                            </HrHeader>
-                        )}
-                        <div className="d-grid gap-3 ongoing-tasks-grid">
-                            {category.tasks.map((task, idx) => (
-                                <div key={idx}>
-                                    <TaskItem {...task} />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <EmptySet>No tasks match your filter criteria</EmptySet>
-            )}
+            <OngoingTasksList filteredTasks={filteredTasks} isAiOnly={isAiOnly} />
         </div>
+    );
+}
+
+interface TaskCategory {
+    categoryName: string;
+    categoryIcon: IconName;
+    tasks: TaskItemProps[];
+}
+
+interface OngoingTasksListProps {
+    filteredTasks: TaskCategory[];
+    isAiOnly: boolean;
+}
+
+export function OngoingTasksList({ filteredTasks, isAiOnly }: OngoingTasksListProps) {
+    if (filteredTasks.length === 0) {
+        return <EmptySet>No tasks match your filter criteria</EmptySet>;
+    }
+
+    return (
+        <>
+            {filteredTasks.map((category, index) => (
+                <div className="pb-2" key={index}>
+                    {!isAiOnly && (
+                        <HrHeader>
+                            <Icon icon={category.categoryIcon} />
+                            {category.categoryName}
+                        </HrHeader>
+                    )}
+                    <div className="d-grid gap-3 ongoing-tasks-grid">
+                        {category.tasks.map((task) => (
+                            <TaskItem key={task.title} {...task} />
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </>
     );
 }
 
@@ -134,42 +155,61 @@ export interface TaskItemProps {
     variant: TaskCardVariant;
     link: string;
     target: string;
-    disableReason?: ReactNode;
     licenseBadge?: LicenseBadgeText;
-    showLicenseBadge?: boolean;
-
     counterBadge?: ReactNode;
+    showLicenseBadge?: boolean;
+    isShardingSupported?: boolean;
+    accessRequired: databaseAccessLevel;
+    customDisabledReason?: ReactNode;
 }
 
 function TaskItem({
     title,
     description,
     link,
-    disableReason,
     iconName,
     target,
     variant,
     licenseBadge,
     showLicenseBadge,
     counterBadge,
+    isShardingSupported,
+    accessRequired,
+    customDisabledReason,
 }: TaskItemProps) {
     const { reportEvent } = useEventsCollector();
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
+    const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation)(accessRequired);
+
+    const isShardingNotSupported = !isShardingSupported && isSharded;
+    const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
+
     return (
         <ConditionalPopover
             className="w-100 h-100"
-            conditions={{
-                isActive: !!disableReason,
-                message: disableReason,
-            }}
+            conditions={[
+                {
+                    isActive: !canHandleOperation,
+                    message: getDatabaseAccessRequiredMessage(accessRequired),
+                },
+                {
+                    isActive: isShardingNotSupported,
+                    message: "Sharding is not supported for this task",
+                },
+                {
+                    isActive: !!customDisabledReason,
+                    message: customDisabledReason,
+                },
+            ]}
         >
             <a
-                href={link}
+                href={isDisabled ? undefined : link}
                 onClick={() => reportEvent(target, "new")}
                 className={classNames(
                     "card no-decor w-100 ongoing-tasks-card h-100 add-new-ongoing-task__card",
                     `variant-${variant}`,
                     {
-                        "opacity-25 pe-none": !!disableReason,
+                        "item-disabled": !!isDisabled,
                     }
                 )}
             >

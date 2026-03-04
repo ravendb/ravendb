@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings.Cache;
 
 public class QueryEmbeddingsCacherTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Ai)]
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     public async Task ShouldCacheEmbeddings()
     {
         var store = GetDocumentStore();

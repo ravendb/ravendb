@@ -50,3 +50,17 @@
         </div>
     </div>
 </div>
+<div class="row margin-bottom" data-bind="visible: targetOperation === 'ManualBackup'">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Session token</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <div class="input-group flex-grow">
+            <input data-bind="textInput: awsSessionToken, attr: { type: isSessionTokenHidden() ? 'password' : 'text' }" class="form-control" />
+            <button type="button" class="btn btn-default" data-bind="click: toggleIsSessionTokenHidden, visible: isSessionTokenHidden()" title="View hidden characters">
+                <i class="icon-preview"></i>
+            </button>
+            <button type="button" class="btn btn-info" data-bind="click: toggleIsSessionTokenHidden, visible: !isSessionTokenHidden()" title="Hide characters">
+                <i class="icon-preview-off"></i>
+            </button>
+        </div>
+    </div>
+</div>

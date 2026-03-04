@@ -27,6 +27,7 @@ import testAiConnectionStringCommand = require("commands/database/cluster/testAi
 import aiConnectionStringUtils = require("components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.TimeInSeconds.Day * 36;
 
@@ -56,6 +57,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    taskNameDisabledReason: KnockoutComputed<string>;
     
     collectionNames: KnockoutComputed<string[]>;
 
@@ -273,6 +276,14 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewEtlTask()) {
+                return tasksCommonContent.taskNameLocked;
+            }
+
+            return null;
+        }); 
 
         const connectionStringName = this.editedEmbeddingsGeneration().connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.connectionStringsNames()

@@ -35,6 +35,8 @@ namespace Tests.Infrastructure
             HasLicense = RavenLicense && RavenLicenseDeveloper && RavenLicenseCommunity && RavenLicenseProfessional;
         }
 
+        public RavenArchitecture Architecture { get; set; } = RavenArchitecture.All;
+
         public override string Skip
         {
             get
@@ -46,6 +48,11 @@ namespace Tests.Infrastructure
 
                 if (ShouldSkip(licenseRequired: true))
                     return SkipMessage;
+
+                var multiPlatformSkip = RavenMultiplatformFactAttribute.ShouldSkip(RavenPlatform.All, Architecture, RavenIntrinsics.None, false, false, snowflakeRequired: false);
+
+                if (multiPlatformSkip != null)
+                    return multiPlatformSkip;
 
                 return null;
             }

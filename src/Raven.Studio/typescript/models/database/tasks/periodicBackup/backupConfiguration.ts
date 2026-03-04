@@ -14,6 +14,8 @@ import encryptionSettings = require("models/database/tasks/periodicBackup/encryp
 import generalUtils = require("common/generalUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 
+type TargetOperation = "PeriodicBackup" | "ManualBackup";
+
 interface backupUploadModeOption {
     name: string;
     fullName: Raven.Client.Documents.Operations.Backups.BackupUploadMode;
@@ -74,7 +76,9 @@ abstract class backupConfiguration {
                      Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration,
                 serverLimits: periodicBackupServerLimitsResponse,
                 encryptedDatabase: boolean,
-                isServerWide = false) {
+                targetOperation: TargetOperation,
+                isServerWide = false,
+            ) {
         this.taskId(dto.TaskId);
         this.backupType(dto.BackupType);
 
@@ -82,10 +86,10 @@ abstract class backupConfiguration {
         this.backupUploadMode(backupUploadMode.name);
 
         this.localSettings(!dto.LocalSettings ? localSettings.empty("backup") : new localSettings(dto.LocalSettings, "backup"));
-        this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, "Backup") : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, "Backup"));
+        this.s3Settings(!dto.S3Settings ? s3Settings.empty(serverLimits.AllowedAwsRegions, targetOperation) : new s3Settings(dto.S3Settings, serverLimits.AllowedAwsRegions, targetOperation));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty("Backup") : new azureSettings(dto.AzureSettings, "Backup"));
         this.googleCloudSettings(!dto.GoogleCloudSettings ? googleCloudSettings.empty("Backup") : new googleCloudSettings(dto.GoogleCloudSettings, "Backup"));
-        this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions, "Backup") : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions, "Backup"));
+        this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty(serverLimits.AllowedAwsRegions, targetOperation) : new glacierSettings(dto.GlacierSettings, serverLimits.AllowedAwsRegions, targetOperation));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty("Backup") : new ftpSettings(dto.FtpSettings, "Backup"));
         this.isServerWide(isServerWide);
         

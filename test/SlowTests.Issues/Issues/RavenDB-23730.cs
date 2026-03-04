@@ -224,9 +224,12 @@ namespace SlowTests.Issues
                 session.Advanced.Revisions.ForceRevisionCreationFor(id: user1.Id);
                 await session.SaveChangesAsync();
 
+                var doc = await session.LoadAsync<User>(user1.Id);
+                var cv = session.Advanced.GetChangeVectorFor(doc);
+
                 var revisions3 = await GetRevisionsCvs(session, user1.Id);
                 Assert.Equal(1, revisions3.Count);
-                Assert.Equal(revisions.First(), revisions3.First());
+                Assert.Equal(cv, revisions3.First());
             }
         }
 

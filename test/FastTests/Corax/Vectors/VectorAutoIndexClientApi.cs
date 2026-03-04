@@ -90,7 +90,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Binary, VectorEmbeddingType.Binary),
             embedding(VectorQuantizer.ToInt1([1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0])), isExact: isExact), isExact);
 
-    [RavenTheory(RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(true)]
     [InlineData(false)]
     public void TextToSinglesTest(bool isExact) => AutoIndexingTestingBase(
@@ -99,7 +99,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         vectorWhere: docs => docs.VectorSearch(field => field.WithText(x => x.Text),
             value => value.ByText("test"), isExact: isExact), isExact);
 
-    [RavenTheory(RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(true)]
     [InlineData(false)]
     public void TextToInt8Test(bool isExact) => AutoIndexingTestingBase(
@@ -108,7 +108,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         vectorWhere: docs => docs.VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Int8),
             value => value.ByText("test"), isExact: isExact), isExact);
 
-    [RavenTheory(RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(true)]
     [InlineData(false)]
     public void TextToInt1Test(bool isExact) => AutoIndexingTestingBase(
@@ -135,7 +135,7 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         Assert.Equal(rql, baseQuery.ToString());
     }
 
-    [RavenFact(RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public void NonExistingFieldDoesntEndWithNre()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

@@ -8,7 +8,7 @@ import { setupWizardConstants, setupWizardGA4Prefixes } from "components/setupWi
 import { HrHeader } from "components/common/HrHeader";
 import classNames from "classnames";
 import { useEffect, useMemo } from "react";
-import { getFullDomain, getLicenseType } from "components/setupWizard/utils/setupWizardUtils";
+import { getFullDomain, getLicenseType, sanitizeCommonName } from "components/setupWizard/utils/setupWizardUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useServices } from "hooks/useServices";
@@ -331,7 +331,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
     const defaultCertificatePathFileName = useMemo(() => {
         switch (securityOption) {
             case "ownCertificate":
-                return `cluster.server.certificate.${selfSignedCertificateStep.cns[0]}.pfx`; // For own certificates, we use the first Common Name (CN) as the main identifier
+                return sanitizeCommonName(`cluster.server.certificate.${selfSignedCertificateStep.cns[0]}.pfx`); // For own certificates, we use the first Common Name (CN) as the main identifier
             case "letsEncrypt":
                 return `cluster.server.certificate.${getFullDomain(domainStep)}.pfx`;
             default:

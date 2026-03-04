@@ -71,6 +71,8 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
+using Jint;
+using Raven.Server.Documents.AI;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.SchemaValidation;
@@ -2294,12 +2296,19 @@ namespace Raven.Server.Documents
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
 
-            internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
+            internal Action<Engine> ActionToCallDuringScriptRunnerCreation;
+
+            public void CallDuringScriptRunnerCreation(Action<Engine> action)
+            {
+                ActionToCallDuringScriptRunnerCreation = action;
+            }
+
+            internal Func<Task, Task<bool>> Subscription_ActionToCallDuringWaitForChangedDocuments;
             internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
             internal Action<ConcurrentSet<SubscriptionConnection>> ConcurrentSubscription_ActionToCallDuringWaitForSubscribe;
             internal Action Subscription_ActionToCallDuringWaitForAck;
 
-            internal IDisposable CallDuringWaitForChangedDocuments(Action action)
+            internal IDisposable CallDuringWaitForChangedDocuments(Func<Task, Task<bool>> action)
             {
                 Subscription_ActionToCallDuringWaitForChangedDocuments = action;
 

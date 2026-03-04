@@ -57,14 +57,14 @@ select new
         Assert.Equal(IndexDefinitionCompareDifferences.None, cmp);
     }
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(VectorEmbeddingType.Binary, 0.7f)]
     [InlineData(VectorEmbeddingType.Int8, 0.82f)]
     [InlineData(VectorEmbeddingType.Single, 0.75f)]
     public async Task CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity)
     => await CanCreateVectorIndexBase<TextVectorIndex>(vectorEmbeddingType, similarity);
     
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(VectorEmbeddingType.Binary, 0.7f)]
     [InlineData(VectorEmbeddingType.Int8, 0.82f)]
     [InlineData(VectorEmbeddingType.Single, 0.75f)]
@@ -229,16 +229,16 @@ select new
         public object Vector { get; set; }
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void EmbeddingTextSourceTest() => StaticIndexApi<EmbeddingTextSource>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void EmbeddingTextSourceTestJs() => StaticIndexApi<EmbeddingTextSourceJs>();
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void MultiEmbeddingTextIndexTest() => StaticIndexApi<MultiEmbeddingTextIndex>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void MultiEmbeddingTextIndexTestJs() => StaticIndexApi<MultiEmbeddingTextIndexJs>();
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]

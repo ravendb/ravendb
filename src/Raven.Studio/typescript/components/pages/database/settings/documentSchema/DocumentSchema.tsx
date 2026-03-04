@@ -57,6 +57,8 @@ import { ValidationSchemaViewSheetPanel } from "components/pages/database/settin
 import { ScriptSyntaxHelp } from "components/pages/database/settings/documentSchema/partials/ScriptSyntaxHelp";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import classNames from "classnames";
+import { StickyHeader } from "components/common/StickyHeader";
 
 const ajv = new Ajv({
     allErrors: true,
@@ -97,53 +99,54 @@ export default function DocumentSchema() {
                         icon="document-schema"
                         licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
                     />
-                    {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
+                    <StickyHeader>
+                        <DocumentSchemaSelectActions />
 
-                    <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
-                        {hasAnyValidator && (
-                            <DocumentSchemaFilter
-                                selectedCollections={selectedCollections}
-                                setSelectedCollections={handleOnSelectCollection}
-                                collectionOptions={options}
-                                selectedStatuses={selectedStatuses}
-                                setSelectedStatuses={setSelectedStatuses}
-                                schemasCount={filteredValidators.length}
-                                isLoading={asyncLoadValidators.loading}
-                            />
-                        )}
-
-                        <div className="mt-4">
-                            <HrHeader
-                                count={filteredValidators.length}
-                                right={
-                                    hasDatabaseAdminAccess && (
-                                        <ConditionalPopover
-                                            conditions={{
-                                                isActive: !hasSchemaValidation,
-                                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                                            }}
-                                        >
-                                            <Button
-                                                size="xs"
-                                                variant="info"
-                                                className="rounded-pill"
-                                                onClick={handleAddNew}
-                                                disabled={!hasSchemaValidation}
-                                                title="Click to add a new schema for a collection"
-                                            >
-                                                <Icon icon="plus" />
-                                                Add new
-                                            </Button>
-                                        </ConditionalPopover>
-                                    )
-                                }
-                            >
-                                <Icon icon="documents" />
-                                <span>Collection specific document schemas</span>
-                                <PopoverWithHoverWrapper message="Define and manage JSON Schemas for each collection">
-                                    <Icon icon="info-new" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </HrHeader>
+                        <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
+                            {hasAnyValidator && (
+                                <DocumentSchemaFilter
+                                    selectedCollections={selectedCollections}
+                                    setSelectedCollections={handleOnSelectCollection}
+                                    collectionOptions={options}
+                                    selectedStatuses={selectedStatuses}
+                                    setSelectedStatuses={setSelectedStatuses}
+                                    schemasCount={filteredValidators.length}
+                                    isLoading={asyncLoadValidators.loading}
+                                />
+                            )}
+                        </div>
+                    </StickyHeader>
+                    <div className="mt-4">
+                        <HrHeader
+                            count={filteredValidators.length}
+                            right={
+                                <ConditionalPopover
+                                    conditions={{
+                                        isActive: !hasSchemaValidation,
+                                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                    }}
+                                >
+                                    <Button
+                                        size="xs"
+                                        variant="info"
+                                        className="rounded-pill"
+                                        onClick={handleAddNew}
+                                        disabled={!hasSchemaValidation || !hasDatabaseAdminAccess}
+                                        title="Click to add a new schema for a collection"
+                                    >
+                                        <Icon icon="plus" />
+                                        Add new
+                                    </Button>
+                                </ConditionalPopover>
+                            }
+                        >
+                            <Icon icon="documents" />
+                            <span>Collection specific document schemas</span>
+                            <PopoverWithHoverWrapper message="Define and manage JSON Schemas for each collection">
+                                <Icon icon="info-new" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </HrHeader>
+                        <div className={classNames(!hasSchemaValidation && "item-disabled pe-none")}>
                             <DocumentSchemaBody
                                 filteredValidators={filteredValidators}
                                 asyncLoadValidators={asyncLoadValidators}

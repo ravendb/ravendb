@@ -9,7 +9,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_23524(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task VectorSearchWillNotOverrideTheAlreadyCalculatedScore()
     {
         const string spaghetti = "spaghetti";

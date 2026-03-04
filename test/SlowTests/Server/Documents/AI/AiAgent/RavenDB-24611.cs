@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.Contains("'orders/1-A' doesn't exists", ex.InnerException?.Message);
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Concurrency_When_Resuming_Same_Conversation(Options options, GenAiConfiguration config)
         {
@@ -162,8 +162,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var starter = store.AI.Conversation(agentId, "chats/", creationOptions: null);
             starter.OnUnhandledAction += args => Task.CompletedTask;
             starter.SetUserPrompt(
-                "Please use ProductSearch to find the top 5 cheeses, " +
-                "then use RecentOrder to fetch my last 10 orders and answer.");
+                "Please use ProductSearch Query Tool to find the top5 cheeses, " +
+                "then use RecentOrder Query Tool to fetch my last10 orders and answer.");
             var firstRun = await starter.RunAsync<OutputSchema>(CancellationToken.None);
             Assert.Equal(AiConversationResult.ActionRequired, firstRun.Status);
 
@@ -174,9 +174,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotNull(staleCv);
 
             var resume1 = store.AI.Conversation(agentId, starter.Id, creationOptions: null, staleCv);
-            resume1.AddActionResponse(
-                actions[0].ToolId,
-                new { });
+            resume1.AddActionResponse(actions[0].ToolId, GetToolResult(actions[0].Name));
             resume1.OnUnhandledAction += args => Task.CompletedTask;
             var afterFirst = await resume1.RunAsync<OutputSchema>(CancellationToken.None);
 
@@ -188,18 +186,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var resume2 = store.AI.Conversation(agentId, starter.Id, creationOptions: null, staleCv);
             resume2.OnUnhandledAction += args => Task.CompletedTask;
 
-            resume2.AddActionResponse(
-                actions[1].ToolId,
-                new { });
+            resume2.AddActionResponse(actions[1].ToolId, GetToolResult(actions[1].Name));
 
             await Assert.ThrowsAsync<ConcurrencyException>(
                 () => resume2.RunAsync<OutputSchema>(CancellationToken.None));
 
             Assert.NotNull(resume2.ChangeVector);
 
-            resume2.AddActionResponse(
-                actions[1].ToolId,
-                new { });
+            resume2.AddActionResponse(actions[1].ToolId, GetToolResult(actions[1].Name));
             var finalResult = await resume2.RunAsync<OutputSchema>(CancellationToken.None);
             Assert.Equal(AiConversationResult.Done, finalResult.Status);
             Assert.NotNull(finalResult.Answer);
@@ -298,6 +292,41 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Path = originalOptions?.Path, // keep any custom path from the framework
                 ModifyDatabaseRecord = originalOptions?.ModifyDatabaseRecord,
             });
+        }
+
+        private static object GetToolResult(string toolName)
+        {
+            return toolName switch
+            {
+                "ProductSearch" => new
+                {
+                    Products = new[]
+                    {
+                        new { Id = "products/cheddar-1", Name = "Cheddar", Score =0.98 },
+                        new { Id = "products/gouda-1", Name = "Gouda", Score =0.95 },
+                        new { Id = "products/brie-1", Name = "Brie", Score =0.93 },
+                        new { Id = "products/parmesan-1", Name = "Parmesan", Score =0.91 },
+                        new { Id = "products/blue-1", Name = "Blue cheese", Score =0.89 }
+                    }
+                },
+                "RecentOrder" => new
+                {
+                    Orders = new[]
+                    {
+                        new { Id = "orders/1-A", OrderedAt = "2025-01-10T12:00:00Z", Lines = new[] { new { ProductId = "products/brie-1", Name = "Brie", Quantity =1 } } },
+                        new { Id = "orders/2-A", OrderedAt = "2025-01-09T11:00:00Z", Lines = new[] { new { ProductId = "products/cheddar-1", Name = "Cheddar", Quantity =2 } } },
+                        new { Id = "orders/3-A", OrderedAt = "2025-01-08T09:30:00Z", Lines = new[] { new { ProductId = "products/gouda-1", Name = "Gouda", Quantity =1 } } },
+                        new { Id = "orders/4-A", OrderedAt = "2025-01-07T18:15:00Z", Lines = new[] { new { ProductId = "products/parmesan-1", Name = "Parmesan", Quantity =1 } } },
+                        new { Id = "orders/5-A", OrderedAt = "2025-01-06T20:05:00Z", Lines = new[] { new { ProductId = "products/blue-1", Name = "Blue cheese", Quantity =1 } } },
+                        new { Id = "orders/6-A", OrderedAt = "2025-01-05T14:45:00Z", Lines = new[] { new { ProductId = "products/cheddar-1", Name = "Cheddar", Quantity =1 } } },
+                        new { Id = "orders/7-A", OrderedAt = "2025-01-04T08:10:00Z", Lines = new[] { new { ProductId = "products/gouda-1", Name = "Gouda", Quantity =3 } } },
+                        new { Id = "orders/8-A", OrderedAt = "2025-01-03T16:25:00Z", Lines = new[] { new { ProductId = "products/brie-1", Name = "Brie", Quantity =2 } } },
+                        new { Id = "orders/9-A", OrderedAt = "2025-01-02T10:00:00Z", Lines = new[] { new { ProductId = "products/parmesan-1", Name = "Parmesan", Quantity =1 } } },
+                        new { Id = "orders/10-A", OrderedAt = "2025-01-01T13:35:00Z", Lines = new[] { new { ProductId = "products/blue-1", Name = "Blue cheese", Quantity =2 } } }
+                    }
+                },
+                _ => new { }
+            };
         }
     }
 }

@@ -439,11 +439,17 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
     );
 }
 
-function NodeDetailsPanelView({ index, control }: { index: number; control: Control<SetupWizardFormData> }) {
-    const nodeData = useWatch({
+interface NodeDetailsPanelViewProps {
+    index: number;
+    control: Control<SetupWizardFormData>;
+}
+
+function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
+    const setupWizardData = useWatch({
         control,
-        name: `nodeAddressStep.nodes.${index}`,
     });
+
+    const nodeData = setupWizardData.nodeAddressStep.nodes[index];
 
     const localIpPortAddress = `${nodeData.ipAddress[0].ipAddress}:${nodeData.httpPort}`;
     return (
@@ -495,7 +501,9 @@ function NodeDetailsPanelView({ index, control }: { index: number; control: Cont
             <RichPanelDetailItem>
                 <div className="d-flex flex-column">
                     <span className="hstack">
-                        <span className="md-label mb-0">HTTPS port</span>
+                        <span className="md-label mb-0">
+                            {setupWizardData.securityStep.securityOption === "none" ? "HTTP" : "HTTPS"} port
+                        </span>
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
@@ -691,12 +699,11 @@ function NodeDetailsPanelEdit({
                     <Col md={colWidth}>
                         <FormGroup>
                             <FormLabel className="d-flex">
-                                HTTPS port
+                                {securityOption === "none" ? "HTTP" : "HTTPS"} port
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the private HTTPS port used by clients and browsers.
-                                                By default, this value is set to 443."
+                                            description={`Defines the private ${securityOption === "none" ? "HTTP" : "HTTPS"} port used by clients and browsers. By default, this value is set to ${securityOption === "none" ? "8080" : "443"}.`}
                                             docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
                                         />
                                     }

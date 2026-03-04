@@ -131,7 +131,7 @@ public class RavenDB_23446(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
     
-    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Indexes | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanConvertTextualVectorFieldToStaticField()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

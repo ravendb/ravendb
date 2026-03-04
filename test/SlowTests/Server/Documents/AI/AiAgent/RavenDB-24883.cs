@@ -48,10 +48,10 @@ public class RavenDB_24883 : RavenTestBase
         Assert.Null(run.Answer);
         Assert.True(recentOrderCalled);
         
-        chat.AddActionResponse(toolId, "done");
+        chat.AddActionResponse(toolId, "my recent orders: Pizza, Burger");
         recentOrderCalled = false;  
         run = await chat.RunAsync<object>();
-        Assert.Equal(run.Status, AiConversationResult.Done);
+        Assert.Equal(AiConversationResult.Done, run.Status);
         Assert.NotNull(run.Answer);
         Assert.False(recentOrderCalled);
         

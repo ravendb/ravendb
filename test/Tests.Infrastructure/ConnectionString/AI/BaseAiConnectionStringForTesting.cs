@@ -114,7 +114,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
         try
         {
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
             {
                 return TryConnect(out logger, cts.Token);
             }

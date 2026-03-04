@@ -8,7 +8,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_23960(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task DisabledTaskDoesntImpactCreationOfOtherTasks(Options options)
     {

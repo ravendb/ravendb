@@ -49,12 +49,15 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public bool Disabled { get; set; }
 
-        public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
+        public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<T> existingConfiguration = null)
         {
             if (validateConnection && Initialized == false)
                 throw new InvalidOperationException("ETL configuration must be initialized");
 
             errors = new List<string>();
+
+            if (existingConfiguration != null && existingConfiguration.Name != Name)
+                errors.Add($"Changing {nameof(Name)} of ETL is not supported.");
 
             if (validateName && string.IsNullOrEmpty(Name))
                 errors.Add($"{nameof(Name)} of ETL configuration cannot be empty");

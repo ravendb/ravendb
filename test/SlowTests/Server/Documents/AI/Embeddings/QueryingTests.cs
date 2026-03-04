@@ -17,7 +17,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanGenerateRqlFromLinq(Options options)
     {
@@ -37,7 +37,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanGenerateEmbeddingsForQuerying(Options options)
     {
@@ -90,7 +90,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanFetchEmbeddingFromCache(Options options)
     {
@@ -133,7 +133,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task DoesIncorrectTaskNameInQueryThrow(Options options)
     {
@@ -184,7 +184,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanGenerateEmbeddingsWhenQueryingStaticIndex(Options options)
     {
@@ -235,7 +235,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanChunkValueInQuery(Options options)
     {
@@ -282,7 +282,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanSearchByMultipleVectorsByTexts(Options options)
     {
@@ -346,7 +346,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task CanSearchByMultipleVectorsByTextsInParallel(Options options)
     {

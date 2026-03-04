@@ -18,22 +18,40 @@ interface AboutViewProps {
     defaultOpen?: "licensing" | (string & NonNullable<unknown>) | string[];
 }
 
-interface AboutViewHeadingProps {
+interface AboutViewHeadingBaseProps {
     title: string;
-    icon: IconName;
     licenseBadgeText?: LicenseBadgeText;
     iconAddon?: IconName;
     marginBottom?: number;
     className?: string;
 }
 
+interface AboutViewHeadingWithIcon {
+    icon: IconName;
+    backUrl?: never;
+}
+
+interface AboutViewHeadingWithBackUrl {
+    icon?: never;
+    backUrl: string;
+}
+
+export type AboutViewHeadingProps = AboutViewHeadingBaseProps &
+    (AboutViewHeadingWithIcon | AboutViewHeadingWithBackUrl);
+
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, iconAddon, licenseBadgeText, marginBottom, className } = props;
+    const { title, icon, iconAddon, licenseBadgeText, marginBottom, className, backUrl } = props;
 
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`, className)}>
-            <Icon icon={icon} addon={iconAddon} /> {title}{" "}
-            {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
+            {backUrl ? (
+                <a href={backUrl} className="link-muted no-decor hover-filter me-1">
+                    <Icon icon="arrow-thin-left" margin="m-0" />
+                </a>
+            ) : (
+                icon && <Icon icon={icon} addon={iconAddon} />
+            )}
+            {title} {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
         </h2>
     );
 };

@@ -111,6 +111,24 @@ export default function BackupSourceAmazonS3() {
             <Row className="mt-2">
                 <Col lg="3">
                     <FormLabel className="col-form-label">
+                        Session token
+                        <br />
+                        <small>(optional)</small>
+                    </FormLabel>
+                </Col>
+                <Col>
+                    <FormInput
+                        control={control}
+                        name="sourceStep.sourceData.amazonS3.sessionToken"
+                        placeholder="Enter session token"
+                        type="password"
+                        passwordPreview
+                    />
+                </Col>
+            </Row>
+            <Row className="mt-2">
+                <Col lg="3">
+                    <FormLabel className="col-form-label">
                         Aws Region
                         <br />
                         {isUseCustomHost && <small>(optional)</small>}
@@ -198,7 +216,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 AwsRegionName: amazonS3Data.awsRegion,
                 BucketName: amazonS3Data.bucketName,
                 RemoteFolderName: amazonS3Data.remoteFolderName,
-                AwsSessionToken: "",
+                AwsSessionToken: amazonS3Data.sessionToken,
                 CustomServerUrl: amazonS3Data.isUseCustomHost ? amazonS3Data.customHost : null,
                 ForcePathStyle: amazonS3Data.isUseCustomHost && amazonS3Data.isForcePathStyle,
                 Disabled: false,
@@ -211,6 +229,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     }, [
         amazonS3Data.accessKey,
         amazonS3Data.secretKey,
+        amazonS3Data.sessionToken,
         amazonS3Data.awsRegion,
         amazonS3Data.bucketName,
         amazonS3Data.remoteFolderName,
