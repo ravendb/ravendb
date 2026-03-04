@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
-            OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude, field.RoundFactor);
+            OrderByDistance($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor);
         }
 
         /// <inheritdoc />
@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
-            OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt, field.RoundFactor);
+            OrderByDistance($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor);
         }
 
         /// <inheritdoc />
@@ -134,7 +134,7 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
 
-            OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude, field.RoundFactor);
+            OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor);
         }
 
         public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
 
-            OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt, field.RoundFactor);
+            OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor);
         }
 
         public void OrderByDistanceDescending(string fieldName, string shapeWkt)
