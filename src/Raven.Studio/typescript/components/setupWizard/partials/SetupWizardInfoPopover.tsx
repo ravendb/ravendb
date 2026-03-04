@@ -1,5 +1,4 @@
 import React from "react";
-import { useRavenLink } from "hooks/useRavenLink";
 import { Icon } from "components/common/Icon";
 
 interface PopoverMessageProps {
