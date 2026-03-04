@@ -85,6 +85,21 @@ public class AiAgentParameter : IDynamicJson
     }
 
     /// <summary>
+    /// Initializes a new agent parameter and controls whether its value should be sent to the LLM.
+    /// Use this overload when you need to explicitly hide sensitive values (e.g. userId/tenant/company) from the model.
+    /// </summary>
+    /// <inheritdoc cref="AiAgentParameter(string, string, bool, AiAgentParameterPolicy)" />
+    /// <param name="type">
+    /// Specifies the expected <see cref="ValueType"/> for this parameter.
+    /// When set to a concrete value, the agent validates the provided value against it;
+    /// <see cref="ValueType.Default"/> disables type validation (backward compatibility).
+    /// </param>
+    public AiAgentParameter(string name, string description, bool sendToModel, AiAgentParameterPolicy policy, ValueType type) : this(name, description, sendToModel, policy)
+    {
+        Type = type;
+    }
+
+    /// <summary>
     /// Defines whether the parameter is included in the data sent to the model
     /// </summary>
     public bool? SendToModel { get; set; }
@@ -112,6 +127,21 @@ public class AiAgentParameter : IDynamicJson
     /// </remarks>
     public AiAgentParameterPolicy Policy { get; set; } = AiAgentParameterPolicy.Default;
 
+    /// <summary>
+    /// Specifies the expected JSON value type for this parameter.
+    /// </summary>
+    /// <remarks>
+    /// When set to a specific <see cref="ValueType"/>, the agent validates that
+    /// the provided value matches the declared type before execution.
+    /// 
+    /// If set to <see cref="ValueType.Default"/>, no type validation is performed
+    /// (for backward compatibility with existing agents).
+    /// 
+    /// For array types (e.g. <see cref="ValueType.ArrayOfString"/>),
+    /// all items in the array must be of the declared element type.
+    /// </remarks>
+    public ValueType Type { get; set; } = ValueType.Default;
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
@@ -119,7 +149,8 @@ public class AiAgentParameter : IDynamicJson
             [nameof(Name)] = Name,
             [nameof(Description)] = Description,
             [nameof(SendToModel)] = SendToModel,
-            [nameof(Policy)] = Policy
+            [nameof(Policy)] = Policy,
+            [nameof(Type)] = Type,
         };
     }
 
@@ -128,5 +159,17 @@ public class AiAgentParameter : IDynamicJson
     {
         Default = 0,
         ForbidModelGeneration = 1
+    }
+
+    public enum ValueType
+    {
+        Default, // Don't care - for backward compatibility
+        String,
+        Number,
+        Boolean,
+        ArrayOfString,
+        ArrayOfNumber,
+        ArrayOfBoolean,
+        Null
     }
 }

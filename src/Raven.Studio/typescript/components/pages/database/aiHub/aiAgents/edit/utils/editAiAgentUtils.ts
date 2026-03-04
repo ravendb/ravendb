@@ -45,7 +45,8 @@ function mapFromDto(
                 name: x.Name,
                 description: x.Description,
                 isSendToModel: x.SendToModel ?? true,
-                Policy: x.Policy ?? "Default",
+                policy: x.Policy ?? "Default",
+                type: x.Type ?? "Default",
             })) ?? [],
         queries:
             dto.Queries?.map((x) => ({
@@ -115,7 +116,8 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Name: x.name,
                 Description: x.description,
                 SendToModel: x.isSendToModel,
-                Policy: x.Policy,
+                Policy: x.policy,
+                Type: x.type,
             })) ?? [],
         Queries:
             formData.queries?.map((x) => ({

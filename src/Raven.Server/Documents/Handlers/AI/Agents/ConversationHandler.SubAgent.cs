@@ -8,6 +8,7 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Extensions;
@@ -209,6 +210,126 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     "The existing ActionCall does not match the newly attempted ActionCall insertion.\n" +
                     "If this mismatch is valid, ensure higher-level logic prevents conflicting ActionCalls with the same ToolId."
                 );
+            }
+        }
+
+        public DynamicJsonValue GetSubAgentTool(JsonOperationContext context, AiAgentConfiguration configuration, AiAgentToolSubAgent subAgent)
+        {
+            AiAgentConfiguration subAgentConfiguration = GetAiAgentConfiguration(subAgent.Identifier);
+            var parameters = new Dictionary<string, ParameterDefinition>();
+
+            // We only add what the sub-agent has that the root agent doesn't have
+            // the mutual params will be added to the request when we create it
+            foreach (var parameter in subAgentConfiguration.Parameters ?? [])
+            {
+                var parentParam = configuration.Parameters?.FirstOrDefault(p => p.Name == parameter.Name);
+                if (parentParam != null)
+                {
+                    // same name exists
+
+                    if (parentParam.Type != parameter.Type)
+                    {
+                        // type conflict
+                        throw new MissingAiAgentParameterException(
+                            $"Parameter '{parameter.Name}' has mismatched types between parent and sub-agent. " +
+                            $"Parent type: '{parentParam.Type}', Sub-agent type: '{parameter.Type}'. " +
+                            "Both must declare the same ValueType.");
+                    }
+
+                    // parent has this parameter with matching type
+                    continue;
+                }
+
+                if (parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration) == false)
+                {
+                    // the parent doesn't have this parameter BUT it's allowed to be generated -> we add it to the tool schema
+                    parameters[parameter.Name] = new ParameterDefinition(parameter.Description, parameter.Type);
+                    continue;
+                }
+
+                throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing from the parent scope." +
+                                                           " To allow the root agent to generate this value dynamically, " +
+                                                           $"unset the '{nameof(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration)}' " +
+                                                           "flag in the sub-agent parameter policy.");
+            }
+
+            parameters[ConversationDocument.SubAgentUserPromptKey] = new ParameterDefinition("A natural language prompt instructions for the sub-agent to do its work", AiAgentParameter.ValueType.String);
+            var paramsSchema = GetSchemaForSubAgentTool(context, parameters);
+            var description = new StringBuilder(subAgent.Description).AppendLine();
+            subAgentConfiguration.AppendCapabilities(description);
+            return ConversationDocument.GetTool(context, subAgent.Identifier, description.ToString(), paramsSchema);
+        }
+
+        private static string GetSchemaForSubAgentTool(JsonOperationContext context, Dictionary<string, ParameterDefinition> parameters)
+        {
+            var properties = new DynamicJsonValue();
+            var required = new DynamicJsonArray();
+
+            foreach (var (name, value) in parameters)
+            {
+                var property = new DynamicJsonValue
+                {
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = value.Description
+                };
+
+                switch (value.Type)
+                {
+                    case AiAgentParameter.ValueType.Default:
+                    case AiAgentParameter.ValueType.String:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeString;
+                        break;
+
+                    case AiAgentParameter.ValueType.Number:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeNumber;
+                        break;
+
+                    case AiAgentParameter.ValueType.Boolean:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeBoolean;
+                        break;
+
+                    case AiAgentParameter.ValueType.Null:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeNull;
+                        break;
+
+                    case AiAgentParameter.ValueType.ArrayOfString:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeArray;
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Items] = new DynamicJsonValue { [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeString };
+                        break;
+
+                    case AiAgentParameter.ValueType.ArrayOfNumber:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeArray;
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Items] = new DynamicJsonValue { [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeNumber };
+                        break;
+
+                    case AiAgentParameter.ValueType.ArrayOfBoolean:
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeArray;
+                        property[ChatCompletionClient.Constants.JsonSchemaFields.Items] = new DynamicJsonValue { [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeBoolean };
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unsupported ValueType: {value.Type}");
+                }
+                properties[name] = property;
+                required.Add(name);
+            }
+
+            return context.ReadObject(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeObject,
+                [ChatCompletionClient.Constants.JsonSchemaFields.Properties] = properties,
+                [ChatCompletionClient.Constants.JsonSchemaFields.Required] = required
+            }, "tool/parameters").ToString();
+        }
+
+        private readonly struct ParameterDefinition
+        {
+            public string Description { get; }
+            public AiAgentParameter.ValueType Type { get; }
+
+            public ParameterDefinition(string description, AiAgentParameter.ValueType type)
+            {
+                Description = description;
+                Type = type;
             }
         }
 

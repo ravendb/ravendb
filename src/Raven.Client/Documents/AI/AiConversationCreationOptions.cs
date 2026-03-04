@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
@@ -16,6 +17,8 @@ public class AiConversationCreationOptions : IDynamicJson
     }
     public AiConversationCreationOptions AddParameter(string name, object value)
     {
+        if (value is not string && value is IEnumerable ie)
+            value = new DynamicJsonArray(ie);
         Parameters ??= new Dictionary<string, object>();
         Parameters.Add(name, value);
         return this;

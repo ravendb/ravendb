@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;

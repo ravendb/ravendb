@@ -327,40 +327,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
         foreach (var subAgent in configuration.SubAgents ?? [])
         {
-            AiAgentConfiguration subAgentConfiguration = handler.GetAiAgentConfiguration(subAgent.Identifier);
-            var parameters = new Dictionary<string, string>();
-
-            // We only add what the sub-agent has that the root agent doesn't have
-            // the mutual params will be added to the request when we create it
-            foreach (var parameter in subAgentConfiguration.Parameters ?? [])
-            {
-                if (configuration.Parameters?.Any(p => p.Name == parameter.Name) == true)
-                {
-                    // parents has this parameter -> we copy its value from the parent later -> when we create the request to the sub-agent
-                    continue;
-                }
-
-                if (parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration) == false)
-                {
-                    // the parent doesn't have this parameter BUT it's allowed to be generated -> we add it to the tool schema
-                    parameters[parameter.Name] = parameter.Description;
-                    continue;
-                }
-
-                throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing from the parent scope." + 
-                                                           " To allow the root agent to generate this value dynamically, " +
-                                                           $"unset the '{nameof(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration)}' " +
-                                                           "flag in the sub-agent parameter policy.");
-            }
-
-            var argsSampleObject = DynamicJsonValue.Convert(parameters);
-
-            argsSampleObject[SubAgentUserPromptKey] = "A natural language prompt instructions for the sub-agent to do its work";
-            using var args = context.ReadObject(argsSampleObject, "args");
-            string paramsSchema = ChatCompletionClient.GetSchemaForTool(null, args.ToString());
-            var description = new StringBuilder(subAgent.Description).AppendLine();
-            subAgentConfiguration.AppendCapabilities(description);
-            var tool = GetTool(context, subAgent.Identifier, description.ToString(), paramsSchema);
+            var tool = handler.GetSubAgentTool(context, configuration, subAgent);
             tools.Add(context.ReadObject(tool, "tool"));
         }
 
@@ -375,7 +342,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }
     }
 
-    private static DynamicJsonValue GetTool(JsonOperationContext context, string name, string description, string paramsSchema)
+    public static DynamicJsonValue GetTool(JsonOperationContext context, string name, string description, string paramsSchema)
     {
         var tool = new DynamicJsonValue
         {

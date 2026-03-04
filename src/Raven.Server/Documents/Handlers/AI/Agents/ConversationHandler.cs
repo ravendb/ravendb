@@ -85,6 +85,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
             }
 
+            ValidateParameterValues(_request.Parameters);
             _document = new ConversationDocument(agentId, _request.Parameters);
             _document.Id = await GetDocumentIdAsync();
 
@@ -125,6 +126,145 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             }
         }
     }
+
+    private void ValidateParameterValues(BlittableJsonReaderObject requestParameters)
+    {
+        // Validate that the provided parameter values match the expected types in the configuration.
+
+        if (_configuration.Parameters == null || requestParameters == null)
+            return;
+
+        foreach (var configParam in _configuration.Parameters)
+        {
+            if (requestParameters.TryGetMember(configParam.Name, out object value) == false)
+                continue;
+
+            var expectedType = configParam.Type;
+
+            if (expectedType == AiAgentParameter.ValueType.Default)
+                continue;
+
+            if (value is BlittableJsonReaderArray { Length: 0 })
+            {
+                if (expectedType is not (AiAgentParameter.ValueType.ArrayOfString or 
+                                            AiAgentParameter.ValueType.ArrayOfBoolean or 
+                                            AiAgentParameter.ValueType.ArrayOfNumber))
+                    throw new InvalidCastException(
+                        $"Parameter '{configParam.Name}' has invalid type. " +
+                        $"Expected: {expectedType}, " +
+                        $"Actual: Array (Empty), " +
+                        $"Value: {value}");
+
+                continue;
+            }
+
+            if (GetValueType(value, out var actualType, out var unsupportedType) == false)
+                throw new InvalidCastException(
+                    $"Parameter '{configParam.Name}' has unsupported type. " +
+                    $"Actual: {unsupportedType}");
+
+            if (actualType != expectedType)
+                throw new InvalidCastException(
+                    $"Parameter '{configParam.Name}' has invalid type. " +
+                    $"Expected: {expectedType}, " +
+                    $"Actual: {actualType}, " +
+                    $"Value: {value}");
+        }
+    }
+
+    private static bool GetValueType(object value, out AiAgentParameter.ValueType type, out string unsupportedType)
+    {
+        type = default;
+        unsupportedType = null;
+
+        switch (value)
+        {
+            case null:
+                type = AiAgentParameter.ValueType.Null;
+                return true;
+            case string:
+            case LazyStringValue:
+            case LazyCompressedStringValue:
+                type = AiAgentParameter.ValueType.String;
+                return true;
+
+            case int:
+            case long:
+            case float:
+            case double:
+            case decimal:
+            case LazyNumberValue:
+            case byte:
+            case short:
+            case sbyte:
+            case ushort:
+            case uint:
+            case ulong:
+                type = AiAgentParameter.ValueType.Number;
+                return true;
+
+            case bool:
+                type = AiAgentParameter.ValueType.Boolean;
+                return true;
+
+            case BlittableJsonReaderArray array:
+                bool first = true;
+                var elementType = AiAgentParameter.ValueType.Default;
+
+                // make sure all elements have the same type
+                // make sure all elements have a valid type
+                foreach (var element in array)
+                {
+                    if (GetValueType(element, out var curType, out var elementUnsupportedType) == false)
+                    {
+                        unsupportedType = $"Array contains an element of unsupported type '{elementUnsupportedType}'.";
+                        return false;
+                    }
+
+                    if (curType is AiAgentParameter.ValueType.ArrayOfBoolean or AiAgentParameter.ValueType.ArrayOfNumber or AiAgentParameter.ValueType.ArrayOfString)
+                    {
+                        unsupportedType = "Array of arrays.";
+                        return false;
+                    }
+
+                    if (first)
+                    {
+                        first = false;
+                        elementType = curType;
+                        continue;
+                    }
+
+                    if (elementType != curType)
+                    {
+                        unsupportedType = $"Array of mixed element types: '{elementType}' and '{curType}'.";
+                        return false;
+                    }
+                }
+
+                type = elementType switch
+                {
+                    AiAgentParameter.ValueType.String => AiAgentParameter.ValueType.ArrayOfString,
+                    AiAgentParameter.ValueType.Number => AiAgentParameter.ValueType.ArrayOfNumber,
+                    AiAgentParameter.ValueType.Boolean => AiAgentParameter.ValueType.ArrayOfBoolean,
+                    _ => default
+                };
+
+                if (type == default)
+                {
+                    unsupportedType = $"Array of unsupported element type '{elementType}'.";
+                    return false;
+                }
+
+                return true;
+            case BlittableJsonReaderObject:
+                unsupportedType = "Object";
+                return false;
+            default:
+                unsupportedType = value.GetType().Name;
+                return false;
+        }
+    }
+
 
     private ChatCompletionClient _client;
 
