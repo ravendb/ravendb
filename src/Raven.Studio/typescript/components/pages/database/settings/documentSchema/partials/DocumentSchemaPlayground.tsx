@@ -104,7 +104,6 @@ function DocumentSchemaPlaygroundBody() {
             <AboutViewHeading
                 marginBottom={4}
                 title="Document Schema Playground"
-                isNested
                 backUrl={appUrl.forDocumentSchema(databaseName)}
                 licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
             />
