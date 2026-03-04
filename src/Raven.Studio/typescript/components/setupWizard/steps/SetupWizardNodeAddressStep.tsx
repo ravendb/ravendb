@@ -42,7 +42,6 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { setupWizardConstants, setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
 import useBoolean from "hooks/useBoolean";
 import { SetupWizardInfoPopover } from "components/setupWizard/partials/SetupWizardInfoPopover";
-import { setupWizardFormDefaultValues } from "components/setupWizard/utils/setupWizardFormDefaultValues";
 import { components, OptionProps, SingleValueProps } from "react-select";
 import Badge from "react-bootstrap/Badge";
 
@@ -135,6 +134,8 @@ export function SetupWizardNodeAddressStep() {
             });
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useRevalidatePersistedNodesOnEntry();
 
     return (
         <div>
@@ -914,7 +915,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const nodeData = getValues("nodeAddressStep.nodes");
 
     const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
-    const isMaxClusterNodes = maxClusterSize === nodeData?.length;
+    const isMaxClusterNodes = maxClusterSize <= nodeData?.length;
 
     return (
         <div
@@ -1185,6 +1186,10 @@ export function SetupWizardNodeAddressStepFooter() {
     const { reportEvent } = useEventsCollector();
 
     const nodeData = getValues("nodeAddressStep.nodes");
+    const licenseKeyStep = getValues("licenseKeyStep");
+
+    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const exceedsLicenseLimit = nodeData?.length > maxClusterSize;
 
     const isEditing = nodeData?.some((node) => node.isEditing);
 
@@ -1314,8 +1319,9 @@ export function SetupWizardNodeAddressStepFooter() {
                 setValue("currentStep", "Security");
                 break;
         }
-        setValue("nodeAddressStep", setupWizardFormDefaultValues["nodeAddressStep"]);
     };
+
+    const isContinueDisabled = isEditing || exceedsLicenseLimit;
 
     return (
         <div className="hstack justify-content-between">
@@ -1323,16 +1329,70 @@ export function SetupWizardNodeAddressStepFooter() {
                 <Icon icon="arrow-left" /> Back
             </Button>
             <ConditionalPopover
-                conditions={{
-                    isActive: isEditing,
-                    message: "You can't proceed if you have unsaved nodes. Save your changes first.",
-                }}
+                conditions={[
+                    {
+                        isActive: exceedsLicenseLimit,
+                        message: <LicenseLimitExceededMessage />,
+                    },
+                    {
+                        isActive: isEditing && !exceedsLicenseLimit,
+                        message: "You can't proceed if you have unsaved nodes. Save your changes first.",
+                    },
+                ]}
             >
-                <Button disabled={isEditing} variant="primary" className="rounded-pill" onClick={handleContinue}>
+                <Button
+                    disabled={isContinueDisabled}
+                    variant="primary"
+                    className="rounded-pill"
+                    onClick={handleContinue}
+                >
                     Continue <Icon icon="arrow-right" margin="m-0" />
                 </Button>
             </ConditionalPopover>
         </div>
+    );
+}
+
+function useRevalidatePersistedNodesOnEntry() {
+    const { setValue, getValues } = useFormContext<SetupWizardFormData>();
+
+    useEffect(() => {
+        const nodes = getValues("nodeAddressStep.nodes");
+
+        nodes.forEach((_, index) => {
+            setValue(`nodeAddressStep.nodes.${index}.isEditing`, true, {
+                shouldValidate: true,
+            });
+        });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+function LicenseLimitExceededMessage() {
+    const { getValues } = useFormContext<SetupWizardFormData>();
+
+    const nodeData = getValues("nodeAddressStep.nodes");
+    const licenseKeyStep = getValues("licenseKeyStep");
+
+    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const currentNodeCount = nodeData?.length;
+
+    return (
+        <>
+            <p className="mb-0">
+                Your license allows maximum <strong>{maxClusterSize}</strong> node(s), but you have configured{" "}
+                <strong>{currentNodeCount}</strong> nodes.
+            </p>
+            <p className="mb-0">
+                Remove <strong>{currentNodeCount - maxClusterSize}</strong> node(s) or upgrade your license to continue.
+            </p>
+            <hr className="my-2" />
+            <span className="md-label">
+                <Icon icon="link" /> See{" "}
+                <a href="https://ravendb.net/buy" target="_blank">
+                    licenses comparison <Icon icon="newtab" />
+                </a>
+            </span>
+        </>
     );
 }
 
