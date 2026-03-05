@@ -90,11 +90,11 @@ public class AiAgentParameter : IDynamicJson
     /// </summary>
     /// <inheritdoc cref="AiAgentParameter(string, string, bool, AiAgentParameterPolicy)" />
     /// <param name="type">
-    /// Specifies the expected <see cref="ValueType"/> for this parameter.
+    /// Specifies the expected <see cref="AiAgentParameterValueType"/> for this parameter.
     /// When set to a concrete value, the agent validates the provided value against it;
-    /// <see cref="ValueType.Default"/> disables type validation (backward compatibility).
+    /// <see cref="AiAgentParameterValueType.Default"/> disables type validation (backward compatibility).
     /// </param>
-    public AiAgentParameter(string name, string description, bool sendToModel, AiAgentParameterPolicy policy, ValueType type) : this(name, description, sendToModel, policy)
+    public AiAgentParameter(string name, string description, bool sendToModel, AiAgentParameterPolicy policy, AiAgentParameterValueType type) : this(name, description, sendToModel, policy)
     {
         Type = type;
     }
@@ -131,16 +131,16 @@ public class AiAgentParameter : IDynamicJson
     /// Specifies the expected JSON value type for this parameter.
     /// </summary>
     /// <remarks>
-    /// When set to a specific <see cref="ValueType"/>, the agent validates that
+    /// When set to a specific <see cref="AiAgentParameterValueType"/>, the agent validates that
     /// the provided value matches the declared type before execution.
     /// 
-    /// If set to <see cref="ValueType.Default"/>, no type validation is performed
+    /// If set to <see cref="AiAgentParameterValueType.Default"/>, no type validation is performed
     /// (for backward compatibility with existing agents).
     /// 
-    /// For array types (e.g. <see cref="ValueType.ArrayOfString"/>),
+    /// For array types (e.g. <see cref="AiAgentParameterValueType.ArrayOfString"/>),
     /// all items in the array must be of the declared element type.
     /// </remarks>
-    public ValueType Type { get; set; } = ValueType.Default;
+    public AiAgentParameterValueType Type { get; set; } = AiAgentParameterValueType.Default;
 
     public DynamicJsonValue ToJson()
     {
@@ -160,16 +160,16 @@ public class AiAgentParameter : IDynamicJson
         Default = 0,
         ForbidModelGeneration = 1
     }
+}
 
-    public enum ValueType
-    {
-        Default, // Don't care - for backward compatibility
-        String,
-        Number,
-        Boolean,
-        ArrayOfString,
-        ArrayOfNumber,
-        ArrayOfBoolean,
-        Null
-    }
+public enum AiAgentParameterValueType
+{
+    Default, // Don't care - for backward compatibility
+    String,
+    Number,
+    Boolean,
+    ArrayOfString,
+    ArrayOfNumber,
+    ArrayOfBoolean,
+    Null
 }

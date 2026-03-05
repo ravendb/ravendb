@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                                                            "flag in the sub-agent parameter policy.");
             }
 
-            parameters[ConversationDocument.SubAgentUserPromptKey] = new ParameterDefinition("A natural language prompt instructions for the sub-agent to do its work", AiAgentParameter.ValueType.String);
+            parameters[ConversationDocument.SubAgentUserPromptKey] = new ParameterDefinition("A natural language prompt instructions for the sub-agent to do its work", AiAgentParameterValueType.String);
             var paramsSchema = GetSchemaForSubAgentTool(context, parameters);
             var description = new StringBuilder(subAgent.Description).AppendLine();
             subAgentConfiguration.AppendCapabilities(description);
@@ -274,34 +274,34 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                 switch (value.Type)
                 {
-                    case AiAgentParameter.ValueType.Default:
-                    case AiAgentParameter.ValueType.String:
+                    case AiAgentParameterValueType.Default:
+                    case AiAgentParameterValueType.String:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeString;
                         break;
 
-                    case AiAgentParameter.ValueType.Number:
+                    case AiAgentParameterValueType.Number:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeNumber;
                         break;
 
-                    case AiAgentParameter.ValueType.Boolean:
+                    case AiAgentParameterValueType.Boolean:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeBoolean;
                         break;
 
-                    case AiAgentParameter.ValueType.Null:
+                    case AiAgentParameterValueType.Null:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeNull;
                         break;
 
-                    case AiAgentParameter.ValueType.ArrayOfString:
+                    case AiAgentParameterValueType.ArrayOfString:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeArray;
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Items] = new DynamicJsonValue { [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeString };
                         break;
 
-                    case AiAgentParameter.ValueType.ArrayOfNumber:
+                    case AiAgentParameterValueType.ArrayOfNumber:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeArray;
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Items] = new DynamicJsonValue { [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeNumber };
                         break;
 
-                    case AiAgentParameter.ValueType.ArrayOfBoolean:
+                    case AiAgentParameterValueType.ArrayOfBoolean:
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeArray;
                         property[ChatCompletionClient.Constants.JsonSchemaFields.Items] = new DynamicJsonValue { [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeBoolean };
                         break;
@@ -324,9 +324,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private readonly struct ParameterDefinition
         {
             public string Description { get; }
-            public AiAgentParameter.ValueType Type { get; }
+            public AiAgentParameterValueType Type { get; }
 
-            public ParameterDefinition(string description, AiAgentParameter.ValueType type)
+            public ParameterDefinition(string description, AiAgentParameterValueType type)
             {
                 Description = description;
                 Type = type;

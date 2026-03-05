@@ -49,8 +49,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     }
                 }
             };
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("maxBudgetNis", "Max budget (NIS)") { Type = AiAgentParameter.ValueType.Number });
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("minRamGb", "Min RAM (GB)") { Type = AiAgentParameter.ValueType.Number });
+            productsSearchAgent.Parameters.Add(new AiAgentParameter("maxBudgetNis", "Max budget (NIS)") { Type = AiAgentParameterValueType.Number });
+            productsSearchAgent.Parameters.Add(new AiAgentParameter("minRamGb", "Min RAM (GB)") { Type = AiAgentParameterValueType.Number });
             var productsSearchId = (await store.AI.CreateAgentAsync(productsSearchAgent, OutputSchema.Instance)).Identifier;
 
             var chat = store.AI.Conversation(
@@ -89,9 +89,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 config.ConnectionStringName,
                 "You are a product search agent!"
             );
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("stringParam", "some param") { Type = AiAgentParameter.ValueType.String });
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("numberParam", "some param") { Type = AiAgentParameter.ValueType.Number });
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("booleanParam", "some param") { Type = AiAgentParameter.ValueType.Boolean });
+            productsSearchAgent.Parameters.Add(new AiAgentParameter("stringParam", "some param") { Type = AiAgentParameterValueType.String });
+            productsSearchAgent.Parameters.Add(new AiAgentParameter("numberParam", "some param") { Type = AiAgentParameterValueType.Number });
+            productsSearchAgent.Parameters.Add(new AiAgentParameter("booleanParam", "some param") { Type = AiAgentParameterValueType.Boolean });
             var productsSearchId = (await store.AI.CreateAgentAsync(productsSearchAgent, OutputSchema.Instance)).Identifier;
 
             var creationOptions = new AiConversationCreationOptions().AddParameter("stringParam", "abc")
@@ -143,7 +143,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 config.ConnectionStringName,
                 "You are a product search agent!"
             );
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("arrParam", "some param") { Type = AiAgentParameter.ValueType.ArrayOfNumber });
+            productsSearchAgent.Parameters.Add(new AiAgentParameter("arrParam", "some param") { Type = AiAgentParameterValueType.ArrayOfNumber });
             var productsSearchId = (await store.AI.CreateAgentAsync(productsSearchAgent, OutputSchema.Instance)).Identifier;
 
             var creationOptions = new AiConversationCreationOptions().AddParameter("arrParam", new int[] { 1, 2, 3 }); // shouldn't throw
@@ -233,11 +233,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             };
             productsSearchAgent.Parameters.Add(new AiAgentParameter("maxBudgetNis", "Max budget (NIS)")
             {
-                Type = AiAgentParameter.ValueType.Number
+                Type = AiAgentParameterValueType.Number
             });
             productsSearchAgent.Parameters.Add(new AiAgentParameter("minRamGb", "Min RAM (GB)")
             {
-                Type = AiAgentParameter.ValueType.Number
+                Type = AiAgentParameterValueType.Number
             });
             var productsSearchId = (await store.AI.CreateAgentAsync(productsSearchAgent, OutputSchema.Instance)).Identifier;
 
@@ -304,15 +304,15 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             };
             productsSearchAgent.Parameters.Add(new AiAgentParameter("maxBudgetNis", "Max budget (NIS)")
             {
-                Type = AiAgentParameter.ValueType.Number
+                Type = AiAgentParameterValueType.Number
             });
             productsSearchAgent.Parameters.Add(new AiAgentParameter("minRamGb", "Min RAM (GB)")
             {
-                Type = AiAgentParameter.ValueType.Number
+                Type = AiAgentParameterValueType.Number
             });
             productsSearchAgent.Parameters.Add(new AiAgentParameter("customerId", "Customer Id")
             {
-                Type = AiAgentParameter.ValueType.Number
+                Type = AiAgentParameterValueType.Number
             });
             var productsSearchId = (await store.AI.CreateAgentAsync(productsSearchAgent, OutputSchema.Instance)).Identifier;
 
@@ -331,7 +331,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             };
             root.Parameters.Add(new AiAgentParameter("customerId", "Customer Id")
             {
-                Type = AiAgentParameter.ValueType.String
+                Type = AiAgentParameterValueType.String
             });
 
             var rootId = (await store.AI.CreateAgentAsync(root, OutputSchema.Instance)).Identifier;

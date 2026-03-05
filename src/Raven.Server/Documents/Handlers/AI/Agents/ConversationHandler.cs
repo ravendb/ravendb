@@ -141,14 +141,14 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
             var expectedType = configParam.Type;
 
-            if (expectedType == AiAgentParameter.ValueType.Default)
+            if (expectedType == AiAgentParameterValueType.Default)
                 continue;
 
             if (value is BlittableJsonReaderArray { Length: 0 })
             {
-                if (expectedType is not (AiAgentParameter.ValueType.ArrayOfString or 
-                                            AiAgentParameter.ValueType.ArrayOfBoolean or 
-                                            AiAgentParameter.ValueType.ArrayOfNumber))
+                if (expectedType is not (AiAgentParameterValueType.ArrayOfString or 
+                                            AiAgentParameterValueType.ArrayOfBoolean or 
+                                            AiAgentParameterValueType.ArrayOfNumber))
                     throw new InvalidCastException(
                         $"Parameter '{configParam.Name}' has invalid type. " +
                         $"Expected: {expectedType}, " +
@@ -172,7 +172,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private static bool GetValueType(object value, out AiAgentParameter.ValueType type, out string unsupportedType)
+    private static bool GetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
     {
         type = default;
         unsupportedType = null;
@@ -180,12 +180,12 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         switch (value)
         {
             case null:
-                type = AiAgentParameter.ValueType.Null;
+                type = AiAgentParameterValueType.Null;
                 return true;
             case string:
             case LazyStringValue:
             case LazyCompressedStringValue:
-                type = AiAgentParameter.ValueType.String;
+                type = AiAgentParameterValueType.String;
                 return true;
 
             case int:
@@ -200,16 +200,16 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             case ushort:
             case uint:
             case ulong:
-                type = AiAgentParameter.ValueType.Number;
+                type = AiAgentParameterValueType.Number;
                 return true;
 
             case bool:
-                type = AiAgentParameter.ValueType.Boolean;
+                type = AiAgentParameterValueType.Boolean;
                 return true;
 
             case BlittableJsonReaderArray array:
                 bool first = true;
-                var elementType = AiAgentParameter.ValueType.Default;
+                var elementType = AiAgentParameterValueType.Default;
 
                 // make sure all elements have the same type
                 // make sure all elements have a valid type
@@ -221,7 +221,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         return false;
                     }
 
-                    if (curType is AiAgentParameter.ValueType.ArrayOfBoolean or AiAgentParameter.ValueType.ArrayOfNumber or AiAgentParameter.ValueType.ArrayOfString)
+                    if (curType is AiAgentParameterValueType.ArrayOfBoolean or AiAgentParameterValueType.ArrayOfNumber or AiAgentParameterValueType.ArrayOfString)
                     {
                         unsupportedType = "Array of arrays.";
                         return false;
@@ -243,9 +243,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 type = elementType switch
                 {
-                    AiAgentParameter.ValueType.String => AiAgentParameter.ValueType.ArrayOfString,
-                    AiAgentParameter.ValueType.Number => AiAgentParameter.ValueType.ArrayOfNumber,
-                    AiAgentParameter.ValueType.Boolean => AiAgentParameter.ValueType.ArrayOfBoolean,
+                    AiAgentParameterValueType.String => AiAgentParameterValueType.ArrayOfString,
+                    AiAgentParameterValueType.Number => AiAgentParameterValueType.ArrayOfNumber,
+                    AiAgentParameterValueType.Boolean => AiAgentParameterValueType.ArrayOfBoolean,
                     _ => default
                 };
 
