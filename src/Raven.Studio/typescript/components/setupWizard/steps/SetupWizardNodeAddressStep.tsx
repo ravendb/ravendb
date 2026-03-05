@@ -916,7 +916,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const nodeData = getValues("nodeAddressStep.nodes");
 
     const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
-    const isMaxClusterNodes = maxClusterSize <= nodeData?.length;
+    const isMaxClusterNodes = nodeData?.length >= maxClusterSize;
 
     return (
         <div
@@ -1190,7 +1190,7 @@ export function SetupWizardNodeAddressStepFooter() {
     const licenseKeyStep = getValues("licenseKeyStep");
 
     const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
-    const exceedsLicenseLimit = nodeData?.length > maxClusterSize;
+    const hasExceededLicenseLimit = nodeData?.length > maxClusterSize;
 
     const isEditing = nodeData?.some((node) => node.isEditing);
 
@@ -1322,7 +1322,7 @@ export function SetupWizardNodeAddressStepFooter() {
         }
     };
 
-    const isContinueDisabled = isEditing || exceedsLicenseLimit || nodeData.length === 0;
+    const isContinueDisabled = isEditing || hasExceededLicenseLimit || nodeData.length === 0;
 
     return (
         <div className="hstack justify-content-between">
@@ -1332,11 +1332,11 @@ export function SetupWizardNodeAddressStepFooter() {
             <ConditionalPopover
                 conditions={[
                     {
-                        isActive: exceedsLicenseLimit,
+                        isActive: hasExceededLicenseLimit,
                         message: <LicenseLimitExceededMessage />,
                     },
                     {
-                        isActive: isEditing && !exceedsLicenseLimit,
+                        isActive: isEditing && !hasExceededLicenseLimit,
                         message: "You can't proceed if you have unsaved nodes. Save your changes first.",
                     },
                 ]}
