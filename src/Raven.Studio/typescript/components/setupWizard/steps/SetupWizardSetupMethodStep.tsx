@@ -26,13 +26,13 @@ export function SetupWizardSetupMethodStep() {
 
     return (
         <div>
+            <h2 className="mb-1">Choose your setup method</h2>
             <p className="mb-4 text-muted">
                 This wizard will guide you through setting up your RavenDB server.
                 <br />
                 You can set up a new cluster, create a configuration package for external setup, or continue with an
                 existing setup package.
             </p>
-            <h2 className="mb-1">Choose your setup method</h2>
             <div className="mt-4">
                 <h5 className="mb-1">I&apos;m starting a new cluster setup:</h5>
                 <SetupWizardClickableCard
