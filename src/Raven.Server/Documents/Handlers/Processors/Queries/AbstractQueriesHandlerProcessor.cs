@@ -40,14 +40,14 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
 
     protected abstract RavenConfiguration Configuration { get; }
 
-    internal RequestTimeTracker CreateRequestTimeTracker()
+    protected RequestTimeTracker CreateRequestTimeTracker()
     {
         var tracker = new RequestTimeTracker(HttpContext, Logger, NotificationCenter, Configuration, "Query");
         RegisterForDisposal(tracker);
         return tracker;
     }
 
-    internal OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery()
+    protected OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationTokenForQuery()
     {
         var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery();
         RegisterForDisposal(token);
@@ -62,7 +62,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         return ReadIndexQueryForPost(context, tracker, addSpatialProperties);
     }
     
-    internal async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    protected async ValueTask<IndexQueryServerSide> ReadIndexQueryForPost(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         Debug.Assert(QueryMethod != HttpMethod.Get);
         var readJsonTask = context.ReadForMemoryAsync(_stream, "index/query");
@@ -89,7 +89,7 @@ internal abstract class AbstractQueriesHandlerProcessor<TRequestHandler, TOperat
         
     }
     
-    internal IndexQueryServerSide ReadIndexQueryForGet(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
+    protected IndexQueryServerSide ReadIndexQueryForGet(JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties)
     {
         Debug.Assert(QueryMethod == HttpMethod.Get);
         return IndexQueryServerSide.Create(_httpContext, _start, _pageSize, context, tracker, addSpatialProperties);
