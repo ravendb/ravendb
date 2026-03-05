@@ -51,11 +51,11 @@ export default function AiAssistantConsentStatusChecker({
                     {consentStatus.data === "ConsentRequired" && (
                         <div>
                             To use our built-in AI features, such as <i>AI Assistant</i>, you need to provide consent.
-                            If you do not accept, the feature will remain unavailable until you do.
-                            <div className="hstack justify-content-end mt-2">
+                            <br />
+                            The feature will remain unavailable until accepted.
+                            <div className="hstack justify-content-end mt-3">
                                 <Button variant="primary" className="rounded-pill" onClick={toggleEulaOpen}>
                                     Review the consent
-                                    <Icon icon="open-modal" margin="ms-1" />
                                 </Button>
                             </div>
                         </div>

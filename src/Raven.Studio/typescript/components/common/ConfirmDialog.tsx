@@ -56,7 +56,7 @@ export function ConfirmDialogProvider({ children }: PropsWithChildren) {
                         )}
                         <div className="text-center lead">{title}</div>
                     </Modal.Header>
-                    <Modal.Body className="vstack pt-0 gap-3">{message}</Modal.Body>
+                    <Modal.Body className="vstack gap-3">{message}</Modal.Body>
                     <Modal.Footer>
                         <Button variant="link" onClick={onCancel} className="link-muted">
                             Cancel

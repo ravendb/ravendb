@@ -3,7 +3,7 @@
 @use "Content/scss/colors";
 
 .chatbot-header {
-    :not(.dropdown-menu) > .btn {
+    :not(.dropdown-menu) > .btn-link {
         display: flex;
         justify-content: center;
         align-items: center;
