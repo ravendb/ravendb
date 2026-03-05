@@ -554,6 +554,7 @@ export class DatabasesStubs {
                     ModelType: "TextEmbeddings",
                     GoogleSettings: {
                         ApiKey: "some-api-key",
+                        Endpoint: "https://generativelanguage.googleapis.com",
                         Model: "some-model",
                         AiVersion: "V1",
                     },
@@ -572,6 +573,7 @@ export class DatabasesStubs {
                     ModelType: "Chat",
                     GoogleSettings: {
                         ApiKey: "some-api-key",
+                        Endpoint: "https://generativelanguage.googleapis.com",
                         Model: "some-model",
                         AiVersion: "V1",
                     },

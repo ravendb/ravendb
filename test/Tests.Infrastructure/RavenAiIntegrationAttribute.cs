@@ -138,6 +138,9 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
 
         if (aiIntegration.HasFlag(RavenAiIntegration.vLLM))
             yield return GenAiVllmConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.Google))
+            yield return GenAiGoogleConnectorForTesting.Instance;
     }
 
     public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);

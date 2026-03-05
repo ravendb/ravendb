@@ -388,7 +388,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }, "system/summary/final/msg"));
 
         var usage = new AiUsage();
-        var tools = ConversationDocument.GenerateTools(context, configuration, _persistedAttachmentsNames);
+        var tools = client.GenerateTools(context, configuration, _persistedAttachmentsNames);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
         var result = await client.CompleteAsync(context, request, usage, token);
 

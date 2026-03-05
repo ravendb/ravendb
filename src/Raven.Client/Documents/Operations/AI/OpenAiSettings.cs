@@ -22,7 +22,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     private static readonly Uri OpenAiBaseUri = new Uri("https://api.openai.com/");
     public override Uri GetBaseEndpointUri()
     {
-        var uri = base.GetBaseEndpointUri();
+        var uri = string.IsNullOrEmpty(Endpoint) ? OpenAiBaseUri : base.GetBaseEndpointUri();
         var uriBuilder = new UriBuilder(uri);
 
         if (uri.Equals(OpenAiBaseUri))

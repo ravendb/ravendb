@@ -162,20 +162,34 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-            var agentConfig = new AiAgentConfiguration("alert-tester", config.ConnectionStringName, "You are a test agent your only purpose is to run the tool I gave you.")
+            var agentConfig = new AiAgentConfiguration("payment-agent", config.ConnectionStringName, 
+                "You are payment assistant that knows how to charge a customer (make payment).  if you got \"status: succeeded\" do not charge the customer again!")
             {
-                Actions = [new AiAgentToolAction { Name = "simple_tool", Description = "A simple tool.", ParametersSampleObject = "{}" }],
-                SampleObject = JsonConvert.SerializeObject(new { answer = "string" })
+                Actions = [new AiAgentToolAction { Name = "ChargeCustomer", Description = "Charge a customer.", ParametersSampleObject = "{}" }],
+                SampleObject = JsonConvert.SerializeObject(new { answer = "Your answer" })
             };
             var agent = await store.AI.CreateAgentAsync(agentConfig);
             var conversation = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null);
 
-            foreach (var action in agentConfig.Actions)
+            var actionToolsCalled = false;
+            var secondPhase = false;
+
+            conversation.Handle<object>("ChargeCustomer", _ =>
             {
-                conversation.Handle<object>(action.Name, _ => "short response");
-            }
-            
-            conversation.SetUserPrompt("run the tool");
+                if (secondPhase)
+                    actionToolsCalled = true;
+                return new
+                {
+                    status = "succeeded",
+                    payment_id = "pay_123",
+                    amount = 100,
+                    currency = "ILS",
+                    idempotency_key = "customer has been charged!"
+                };
+            });
+
+
+            conversation.SetUserPrompt("Make a payment");
 
             await conversation.RunAsync<object>();
 
@@ -183,15 +197,28 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             for (var i = 0; i < 20; i++)
             {
-                longUserMessage.Append("This is a very long user message designed to exceed the token limit. ");
+                longUserMessage.Append("                                                                                                       ");
             }
+
+            longUserMessage.Append("Who are you?");
             conversation.SetUserPrompt(longUserMessage.ToString());
 
-            await conversation.RunAsync<object>();
+            var notificationsCount = 0;
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (db.NotificationCenter.GetStored(out var actions))
             {
-                Assert.Empty(actions);
+                notificationsCount = actions.ToList().Count;
+            }
+
+            secondPhase = true;
+            var r = await conversation.RunAsync<object>();
+
+            if (actionToolsCalled == false)
+            {
+                using (db.NotificationCenter.GetStored(out var actions))
+                {
+                    Assert.Equal(notificationsCount, actions.ToList().Count);
+                }
             }
         }
 

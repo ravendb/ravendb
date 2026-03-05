@@ -159,6 +159,15 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
             new AiConversationCreationOptions().AddParameter("company", "companies/90-A"),
             string.Empty);
 
+        chat.Handle(RecentOrder, (object query) =>
+        {
+            return "done";
+        });
+        chat.Handle(ProductSearch, (object query) =>
+        {
+            return "done";
+        });
+
         chat.SetUserPrompt("hi");
         var run = await chat.RunAsync<Sample>();
         Assert.Equal(run.Status, AiConversationResult.Done);

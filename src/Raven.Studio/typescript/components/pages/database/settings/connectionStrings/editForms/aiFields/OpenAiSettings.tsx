@@ -59,7 +59,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 ConnectorType: "OpenAi",
                 OpenAiSettings: {
                     ApiKey: apiKey,
-                    Endpoint: endpoint || "https://api.openai.com/v1/",
+                    Endpoint: endpoint,
                     OrganizationId: organizationId,
                     ProjectId: projectId,
                 },
@@ -94,7 +94,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             </div>
             <div className="mb-2">
                 <FormLabel>
-                    Endpoint
+                    Endpoint <OptionalLabel />
                     <PopoverWithHoverWrapper message="The endpoint for generating responses using OpenAI or any OpenAI-compatible provider.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>

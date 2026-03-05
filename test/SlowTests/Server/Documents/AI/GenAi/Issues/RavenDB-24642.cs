@@ -70,7 +70,7 @@ ai.genContext({}).withPng(img1);
         config.UpdateScript = @"this.ImageDescriptions = $output.ImageDescriptions;";
         config.GenAiTransformation = new GenAiTransformation { Script = withNullAttachments ? PngScript : PngScriptWithoutNull };
 
-        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+        var taskName = (await store.Maintenance.SendAsync(new AddGenAiOperation(config))).Identifier;
 
         var marker = new ImageDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
         var markerArr = new ImageDescription[] { marker };
@@ -116,7 +116,7 @@ ai.genContext({}).withPng(img1);
         }
 
         // Update/delete - Assert hashes
-        await AssertHashes<Item>(store, "items/1", "items/2", "image.png", () => new MemoryStream(Convert.FromBase64String(StarPngBase64)), withNullAttachments);
+        await AssertHashes<Item>(store, "items/1", "items/2", "image.png", taskName, () => new MemoryStream(Convert.FromBase64String(StarPngBase64)), withNullAttachments);
     }
 
     private record Summary(string Category, decimal TotalSpent, int TransactionCount, string Notes);
@@ -207,7 +207,7 @@ ai.genContext({
         config.UpdateScript = @"this.Summary = $output.Summary;";
         config.GenAiTransformation = new GenAiTransformation { Script = withNullAttachments ? Script : ScriptWithoutNull };
 
-        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+        var taskName = (await store.Maintenance.SendAsync(new AddGenAiOperation(config))).Identifier;
 
         var marker = new Summary("None", 0, 0, "None" + Guid.NewGuid());
         var markerArray = new Summary[] { marker };
@@ -253,7 +253,7 @@ ai.genContext({
         }
 
         // Update/delete - Assert hashes
-        await AssertHashes<Item>(store, "Transaction/1", "Transaction/2", "transactions.csv", () => new MemoryStream(Csv2.ToArray()), withNullAttachments);
+        await AssertHashes<Item>(store, "Transaction/1", "Transaction/2", "transactions.csv", taskName, () => new MemoryStream(Csv2.ToArray()), withNullAttachments);
     }
 
     public record Doc(FileDescription[] FileDescriptions = null);
@@ -385,7 +385,7 @@ for(const comment of this.Comments)
 }"
         };
 
-        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+        var taskName = (await store.Maintenance.SendAsync(new AddGenAiOperation(config))).Identifier;
 
         var etl = Etl.WaitForEtlToComplete(store);
 
@@ -422,7 +422,7 @@ for(const comment of this.Comments)
             Assert.Equal(marker, comments[2].AuthorDescription);
         }
 
-        var hashes = (await GetHashes<Post>(store, "Post/1")).ToList();
+        var hashes = (await GetHashes<Post>(store, "Post/1", taskName)).ToList();
         Assert.Equal(2, hashes.Count);
 
         // Changing attachment
@@ -438,7 +438,7 @@ for(const comment of this.Comments)
 
         await WaitForAssertionAsync(async () =>
         {
-            var hashesAfterChange = (await GetHashes<Post>(store, "Post/1")).ToList();
+            var hashesAfterChange = (await GetHashes<Post>(store, "Post/1", taskName)).ToList();
             Assert.Equal(2, hashesAfterChange.Count);
             Assert.Equal(hashes[0], hashesAfterChange[0]);
             Assert.NotEqual(hashes[1], hashesAfterChange[1]);
@@ -455,7 +455,7 @@ for(const comment of this.Comments)
 
         await WaitForAssertionAsync(async () =>
         {
-            var hashesAfterDelete = (await GetHashes<Post>(store, "Post/1")).ToList();
+            var hashesAfterDelete = (await GetHashes<Post>(store, "Post/1", taskName)).ToList();
             Assert.Equal(1, hashesAfterDelete.Count);
             Assert.Equal(hashes[0], hashesAfterDelete[0]);
         });
@@ -466,13 +466,14 @@ for(const comment of this.Comments)
         string docId1,
         string docId2,
         string fileName,
+        string taskName,
         Func<MemoryStream> fileStreamFactory,
         bool withNullAttachments)
     {
         // Update/delete - Assert hashes
 
-        var oldHash1 = await GetHash<T>(store, docId1); // doc1 - attachment exist (Heart)
-        var oldHash2 = await GetHash<T>(store, docId2); // doc2 - attachment doesn't exist
+        var oldHash1 = await GetHash<T>(store, docId1, taskName); // doc1 - attachment exist (Heart)
+        var oldHash2 = await GetHash<T>(store, docId2, taskName); // doc2 - attachment doesn't exist
         Assert.NotNull(oldHash1);
         if (withNullAttachments)
             Assert.NotNull(oldHash2);
@@ -496,8 +497,8 @@ for(const comment of this.Comments)
         var hash2 = string.Empty;
         await WaitForAssertionAsync(async () =>
         {
-            hash1 = await GetHash<T>(store, docId1); // doc1 - attachment exist (Star)
-            hash2 = await GetHash<T>(store, docId2); // doc2 - attachment exist (Star)
+            hash1 = await GetHash<T>(store, docId1, taskName); // doc1 - attachment exist (Star)
+            hash2 = await GetHash<T>(store, docId2, taskName); // doc2 - attachment exist (Star)
             Assert.NotNull(hash1);
             Assert.NotNull(hash2);
             Assert.NotEqual(oldHash1, hash1);
@@ -516,7 +517,7 @@ for(const comment of this.Comments)
 
         await WaitForAssertionAsync(async () =>
         {
-            var newHash1 = await GetHash<T>(store, docId1);
+            var newHash1 = await GetHash<T>(store, docId1, taskName);
         if (withNullAttachments)
             Assert.NotEqual(hash1, newHash1); // doc1 - hash of 'non-existed image.png'
         else
@@ -524,7 +525,7 @@ for(const comment of this.Comments)
         });
     }
 
-    private static async Task<string> GetHash<T>(DocumentStore store, string id)
+    private static async Task<string> GetHash<T>(DocumentStore store, string id, string genAiTaskName)
     {
         using (var session = store.OpenAsyncSession())
         {
@@ -532,7 +533,7 @@ for(const comment of this.Comments)
             var metadata = session.Advanced.GetMetadataFor(doc);
             if (metadata.TryGetValue(Constants.Documents.Metadata.GenAiHashes, out object hashesSectionObj) &&
                 hashesSectionObj is MetadataAsDictionary hashesSection &&
-                hashesSection.TryGetValue("openai-aiintegrationtask", out object hashesObj)
+                hashesSection.TryGetValue(genAiTaskName, out object hashesObj)
                 && hashesObj is IEnumerable<object> hashesArr && hashesArr.First() is string hash)
             {
                 return hash;
@@ -542,7 +543,7 @@ for(const comment of this.Comments)
         }
     }
 
-    private static async Task<IEnumerable<string>> GetHashes<T>(DocumentStore store, string id)
+    private static async Task<IEnumerable<string>> GetHashes<T>(DocumentStore store, string id, string genAiTaskName)
     {
         using (var session = store.OpenAsyncSession())
         {
@@ -550,7 +551,7 @@ for(const comment of this.Comments)
             var metadata = session.Advanced.GetMetadataFor(doc);
             if (metadata.TryGetValue(Constants.Documents.Metadata.GenAiHashes, out object hashesSectionObj) &&
                 hashesSectionObj is MetadataAsDictionary hashesSection &&
-                hashesSection.TryGetValue("openai-aiintegrationtask", out object hashesObj)
+                hashesSection.TryGetValue(genAiTaskName, out object hashesObj)
                 && hashesObj is IEnumerable<object> hashesArr)
             {
                 return hashesArr.Select(o => o as string);

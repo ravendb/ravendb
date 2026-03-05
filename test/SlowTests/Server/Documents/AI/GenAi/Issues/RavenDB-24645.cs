@@ -187,7 +187,11 @@ ai.genContext({})
             Assert.False(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));
+            if (config.Connection.OpenAiSettings != null)
+                Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));
+
+            if (config.Connection.GoogleSettings != null)
+                Assert.True(ValidateErrorNotification(db, "Unable to process input image"));
         }
 
         private static Stream GetEmbeddedImgStream(string format)

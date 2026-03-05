@@ -27,6 +27,9 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 
         if (string.IsNullOrWhiteSpace(DeploymentName))
             errors.Add($"Value for `{nameof(DeploymentName)}` field cannot be empty.");
+
+        if (string.IsNullOrWhiteSpace(Endpoint))
+            errors.Add($"Value of `{nameof(Endpoint)}` field cannot be empty.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

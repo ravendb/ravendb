@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -41,7 +41,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
     }
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults_WithTools(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

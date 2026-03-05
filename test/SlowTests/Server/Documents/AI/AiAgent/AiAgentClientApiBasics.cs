@@ -48,7 +48,6 @@ public class AiAgentClientApiBasics : RavenTestBase
     public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config, bool sendSchema)
     {
         using var store = GetDocumentStore(options);
-
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         using var session = store.OpenAsyncSession();

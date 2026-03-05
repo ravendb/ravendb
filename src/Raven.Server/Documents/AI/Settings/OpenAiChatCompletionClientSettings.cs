@@ -31,15 +31,21 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
         var error = OpenAiErrorHolder.Deserializer(content).error;
 
         var errorType = ErrorType.Unknown;
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        switch (response.StatusCode)
         {
-            errorType = error.type switch
-            {
-                "insufficient_quota" => ErrorType.InsufficientQuota,
-                "requests" => ErrorType.TooManyRequests,
-                "tokens" => ErrorType.TooManyTokens,
-                _ => ErrorType.Other429
-            };
+            case HttpStatusCode.BadRequest:
+                if (error.code == "context_length_exceeded" && error.type == "invalid_request_error")
+                    errorType = ErrorType.TooManyTokens;
+                break;
+            case HttpStatusCode.TooManyRequests:
+                errorType = error.type switch
+                {
+                    "insufficient_quota" => ErrorType.InsufficientQuota,
+                    "requests" => ErrorType.TooManyRequests,
+                    "tokens" => ErrorType.TooManyTokens,
+                    _ => ErrorType.Other429
+                };
+                break;
         }
 
         return new AiError
@@ -60,5 +66,6 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
     {
         public string type { get; set; }
         public string message { get; set; }
+        public string code { get; set; }
     }
 }

@@ -228,6 +228,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Model: connection.googleSettings.model,
                       AiVersion: connection.googleSettings.aiVersion,
                       Dimensions: mapDimensionsToDto(connection),
+                      Endpoint: connection.googleSettings.endpoint,
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
