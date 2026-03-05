@@ -307,21 +307,21 @@ const CollectionSchemaRichPanel = ({
 
     const handleEditSchema = async (data: DocumentSchemaFormData) => {
         const updatedItem = documentSchemaUtils.mapToDocumentSchemaValidatorConfigDto(data);
-        dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedItem }));
-        toggleEditingSchema();
         const next = [...validatorsAll.filter((v) => v.Name !== validator.Name), updatedItem];
         await asyncSaveValidators(next);
+        dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedItem }));
+        toggleEditingSchema();
     };
 
     const handleBulkStatusToggle = async (disabled: boolean) => {
         try {
             setTogglingStatus();
             const updatedValidator = { ...validator, Disabled: disabled };
+            const next = [...validatorsAll.filter((v) => v.Name !== validator.Name), updatedValidator];
+            await asyncSaveValidators(next);
             dispatch(
                 documentSchemaActions.validatorEdited({ originalName: validator.Name, validator: updatedValidator })
             );
-            const next = [...validatorsAll.filter((v) => v.Name !== validator.Name), updatedValidator];
-            await asyncSaveValidators(next);
         } finally {
             unsetTogglingStatus();
         }

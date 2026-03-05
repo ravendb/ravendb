@@ -55,13 +55,13 @@ export default function DocumentSchemaDeleteModal({
     const isBulk = namesToDelete.length > 1;
 
     const onDelete = async () => {
+        const next = validatorsAll.filter((v) => !namesToDelete.includes(v.Name));
+        await asyncSaveValidators.execute(next);
         if (isBulk) {
             dispatch(documentSchemaActions.selectedValidatorsDeleted());
         } else if (namesToDelete.length === 1) {
             dispatch(documentSchemaActions.validatorDeleted(namesToDelete[0]));
         }
-        const next = validatorsAll.filter((v) => !namesToDelete.includes(v.Name));
-        await asyncSaveValidators.execute(next);
         onHide();
     };
 
