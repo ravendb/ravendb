@@ -1,42 +1,24 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Server.Utils;
-using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Tests.Infrastructure.XunitExtensions;
 
-public class RavenTraitDiscoverer : ITraitDiscoverer
+public static class RavenTraitHelper
 {
-    private static Array AllTestCategories;
+    private static readonly Array AllTestCategories = Enum.GetValues(typeof(RavenTestCategory));
 
-    public RavenTraitDiscoverer()
+    public static IReadOnlyCollection<KeyValuePair<string, string>> GetTraitsFor(RavenTestCategory category)
     {
-        AllTestCategories = Enum.GetValues(typeof(RavenTestCategory));
-    }
-
-    /// <inheritdoc />
-    public virtual IEnumerable<KeyValuePair<string, string>> GetTraits(IAttributeInfo traitAttribute)
-    {
-        var list = traitAttribute.GetConstructorArguments()
-            .Where(x => x is RavenTestCategory)
-            .Cast<RavenTestCategory>()
-            .ToList();
-
-        foreach (var category in GetFlags(list[0]))
-            yield return new KeyValuePair<string, string>("Category", category.GetDescription());
-    }
-
-    private static IEnumerable<RavenTestCategory> GetFlags(RavenTestCategory category)
-    {
+        var list = new List<KeyValuePair<string, string>>();
         foreach (RavenTestCategory value in AllTestCategories)
         {
             if (value == RavenTestCategory.None)
                 continue;
 
             if (category.HasFlag(value))
-                yield return value;
+                list.Add(new KeyValuePair<string, string>("Category", value.GetDescription()));
         }
+        return list;
     }
 }

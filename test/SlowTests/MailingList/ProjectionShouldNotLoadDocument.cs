@@ -7,7 +7,6 @@ using Raven.Client.Extensions;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {

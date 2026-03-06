@@ -12,7 +12,6 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Compaction;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Compaction
 {

@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 #pragma warning disable 1998
 #pragma warning disable 4014
 

@@ -17,7 +17,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {

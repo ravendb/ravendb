@@ -34,7 +34,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
@@ -1329,7 +1328,7 @@ namespace Tests.Infrastructure
         }
 
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             foreach (var disposable in _toDispose)
                 disposable.Dispose();
@@ -1343,7 +1342,7 @@ namespace Tests.Infrastructure
                     ServersForDisposal.Add(server);
             }
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
 
         public class GetAllReplicationItemsOperation : IMaintenanceOperation<GetAllReplicationItemsOperation.Result>

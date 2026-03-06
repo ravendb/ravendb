@@ -1,10 +1,12 @@
-﻿using Xunit;
+using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildFactAttribute : FactAttribute
+    public class NightlyBuildFactAttribute : FactAttribute, Xunit.v3.IFactAttribute
     {
-        public override string Skip
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
+        public new string Skip
         {
             get
             {

@@ -4,7 +4,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

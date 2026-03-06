@@ -11,7 +11,6 @@ using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron.Recovery;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tools.Issues
 {

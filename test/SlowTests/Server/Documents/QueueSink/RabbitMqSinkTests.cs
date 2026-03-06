@@ -13,7 +13,6 @@ using Raven.Server.Documents.QueueSink;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.QueueSink;
 

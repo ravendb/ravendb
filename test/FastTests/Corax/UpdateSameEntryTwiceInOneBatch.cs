@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
-using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -331,11 +331,11 @@ namespace FastTests.Corax
 
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             _bsc.Dispose();
             _analyzers.Dispose();
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

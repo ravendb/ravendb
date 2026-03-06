@@ -1,10 +1,10 @@
-﻿
+
 using System.IO.Compression;
 using System.Threading.Tasks;
 using FastTests;
 using Tests.Infrastructure;
-using xRetry;
-using Xunit.Abstractions;
+using xRetry.v3;
+using Xunit;
 
 namespace SlowTests.Client
 {
@@ -18,7 +18,7 @@ namespace SlowTests.Client
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Simple_Bulk_Insert_With_Ssl(RavenTestBase.Options options)
         {
-            using (var x = new FastTests.Client.BulkInserts(Output))
+            await using (var x = new FastTests.Client.BulkInserts(Output))
             {
                 await x.Simple_Bulk_Insert(options, useSsl: true, compressionLevel: CompressionLevel.NoCompression);
             }

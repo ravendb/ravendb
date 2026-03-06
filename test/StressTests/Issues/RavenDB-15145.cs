@@ -7,7 +7,6 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {

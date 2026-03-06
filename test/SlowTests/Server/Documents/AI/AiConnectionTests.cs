@@ -15,7 +15,6 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI
 {

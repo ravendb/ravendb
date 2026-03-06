@@ -13,7 +13,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Cluster
 {

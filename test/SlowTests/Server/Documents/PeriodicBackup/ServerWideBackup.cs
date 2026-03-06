@@ -20,7 +20,6 @@ using Sparrow.Json;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {

@@ -17,7 +17,6 @@ using Tests.Infrastructure.Entities;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Employee = Orders.Employee;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {

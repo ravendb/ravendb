@@ -13,7 +13,6 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

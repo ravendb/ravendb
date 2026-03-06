@@ -4,7 +4,6 @@ using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues;
 

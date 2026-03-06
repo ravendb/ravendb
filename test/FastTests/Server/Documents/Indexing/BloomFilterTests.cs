@@ -4,7 +4,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Threading;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing

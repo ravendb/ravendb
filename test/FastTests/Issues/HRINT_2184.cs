@@ -7,7 +7,6 @@ using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Tests.Infrastructure.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

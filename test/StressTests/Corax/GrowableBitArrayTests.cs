@@ -6,7 +6,6 @@ using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Corax;
 

@@ -3,7 +3,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
@@ -21,12 +20,11 @@ namespace SlowTests.MailingList
 
             var indexDefinition = technologySummaryIndex.CreateIndexDefinition();
 
-            Assert.Equal(
+            RavenTestHelper.AssertEqualRespectingNewLines(
                 @"docs.Technologies.Where(technology => !Id(technology).EndsWith(""/published"")).Select(technology => new {
     TechnologyId = Id(technology),
     DrugId = technology.Drug.Id
-})".Replace("\r\n", Environment.NewLine),
-                indexDefinition.Maps.First());
+})", indexDefinition.Maps.First());
         }
 
         private class TechnologySummary_Index : AbstractIndexCreationTask<Technology, TechnologySummary>

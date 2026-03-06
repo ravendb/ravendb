@@ -26,7 +26,6 @@ using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Blittable
 {

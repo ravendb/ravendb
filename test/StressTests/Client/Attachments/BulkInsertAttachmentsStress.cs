@@ -3,7 +3,6 @@ using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
@@ -17,7 +16,7 @@ namespace StressTests.Client.Attachments
         [InlineData(100, 32 * 1024 * 1024)]
         public async Task StoreManyAttachmentsStress(int count, int size)
         {
-            using (var test = new BulkInsertAttachments(Output))
+            await using (var test = new BulkInsertAttachments(Output))
             {
                 await test.StoreManyAttachments(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single), count, size);
             }
@@ -28,7 +27,7 @@ namespace StressTests.Client.Attachments
         [InlineData(1000, 100, 64 * 1024)]
         public async Task StoreManyAttachmentsAndDocsStress(int count, int attachments, int size)
         {
-            using (var test = new BulkInsertAttachments(Output))
+            await using (var test = new BulkInsertAttachments(Output))
             {
                 await test.StoreManyAttachmentsAndDocs(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single), count, attachments, size);
             }

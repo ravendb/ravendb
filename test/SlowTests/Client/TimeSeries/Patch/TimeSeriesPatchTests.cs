@@ -11,7 +11,6 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
 
 namespace SlowTests.Client.TimeSeries.Patch

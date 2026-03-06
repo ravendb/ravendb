@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

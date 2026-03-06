@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -8,7 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Issues
 {

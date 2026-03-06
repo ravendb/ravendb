@@ -5,7 +5,6 @@ using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException.ViolationOnType;
 
 namespace SlowTests.Issues

@@ -12,7 +12,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -105,9 +104,9 @@ namespace SlowTests.Issues
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
             IOExtensions.DeleteFile(_fileName);
         }
 

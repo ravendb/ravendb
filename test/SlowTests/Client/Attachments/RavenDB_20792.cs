@@ -1,9 +1,9 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Client.Attachments
 {

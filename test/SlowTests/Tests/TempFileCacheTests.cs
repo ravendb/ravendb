@@ -5,7 +5,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Util.Settings;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests
 {

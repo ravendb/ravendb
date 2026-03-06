@@ -29,7 +29,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
@@ -127,9 +126,9 @@ CREATE TABLE [dbo].[Orders]
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
 
             using (var con = new SqlConnection())
             {

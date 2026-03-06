@@ -3,7 +3,6 @@ using System.Threading;
 using Raven.Server.Utils.Stats;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Utils;
 

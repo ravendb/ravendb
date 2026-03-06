@@ -3,7 +3,6 @@ using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {

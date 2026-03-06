@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Indexing;
 using Corax.Mappings;
@@ -13,7 +14,6 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 
@@ -92,10 +92,10 @@ public class RavenDB_21689 : StorageTest
     }
 
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
         _bsc?.Dispose();
         _fieldsMapping?.Dispose();
-        base.Dispose();
+        await base.DisposeAsync();
     }
 }

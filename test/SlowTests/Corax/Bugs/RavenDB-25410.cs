@@ -12,7 +12,6 @@ using Sparrow;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax.Bugs;
 

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Raven.Server.Monitoring.Snmp;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues;
 

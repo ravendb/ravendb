@@ -37,7 +37,6 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 #pragma warning disable CS0618 // Type or member is obsolete
 
 namespace SlowTests.Cluster

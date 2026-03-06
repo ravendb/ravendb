@@ -1,7 +1,6 @@
 using FastTests;
 using Raven.Server.Web;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Utils

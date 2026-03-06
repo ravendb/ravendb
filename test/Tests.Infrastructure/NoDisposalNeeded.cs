@@ -1,5 +1,5 @@
 ﻿using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests
 {

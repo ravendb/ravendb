@@ -5,7 +5,6 @@ using FastTests;
 using SlowTests.Server.Replication;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
@@ -20,7 +19,7 @@ namespace StressTests.Issues
         {
             await Parallel.ForEachAsync(Enumerable.Range(0, 3), RavenTestHelper.DefaultParallelOptions, async (_, __) =>
             {
-                using (var store = new ReplicationTombstoneTests(Output))
+                await using (var store = new ReplicationTombstoneTests(Output))
                 {
                     await store.Two_tombstones_should_replicate_in_master_master(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single)).WaitAsync(TimeSpan.FromMinutes(10));
                 }

@@ -15,7 +15,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -42,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.TimeSeries | RavenTestCategory.Cluster)]
         public async Task RavenEtlWithTimeSeries_WhenEtlNodeTryToProcessTimeSeriesWithoutDocAndTheEtlMovesToAnotherNodeBeforeTheDocProcessed()
         {
-            string connectionStringName = Context.MethodName;
+            string connectionStringName = (TestContext.Current?.TestMethod as Xunit.v3.IXunitTestMethod)?.Method?.Name ?? nameof(RavenEtlWithTimeSeries_WhenEtlNodeTryToProcessTimeSeriesWithoutDocAndTheEtlMovesToAnotherNodeBeforeTheDocProcessed);
 
             var time = new DateTime(2020, 04, 27);
             const string timeSeriesName = "Heartrate";

@@ -6,7 +6,6 @@ using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Client

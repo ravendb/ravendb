@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
-using Xunit.Abstractions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Tests.Infrastructure;
 

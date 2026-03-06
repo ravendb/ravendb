@@ -17,7 +17,6 @@ using Raven.Server.Config;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {

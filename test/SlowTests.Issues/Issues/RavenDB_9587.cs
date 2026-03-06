@@ -7,7 +7,6 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Server.Documents.Queries.Timings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

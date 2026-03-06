@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Facets;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Facets
 {

@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Issues
 {

@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {

@@ -6,7 +6,6 @@ using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Xunit;
 using Voron.Impl.FreeSpace;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {

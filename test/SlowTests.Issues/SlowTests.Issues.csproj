@@ -6,7 +6,7 @@
     <AssemblyName>SlowTests.Issues</AssemblyName>
     <PackageId>SlowTests.Issues</PackageId>
     <RootNamespace>SlowTests</RootNamespace>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <OutputType>Exe</OutputType>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
@@ -106,7 +106,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />

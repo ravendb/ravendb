@@ -12,7 +12,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 using static FastTests.Client.Indexing.PeopleUtil;

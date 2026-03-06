@@ -5,7 +5,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Highlighting;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 using Xunit;
 

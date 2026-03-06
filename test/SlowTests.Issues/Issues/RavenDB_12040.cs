@@ -6,7 +6,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

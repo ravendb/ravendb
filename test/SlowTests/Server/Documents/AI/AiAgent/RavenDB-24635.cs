@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,7 +7,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Server.Documents.AI.AiAgent
 {

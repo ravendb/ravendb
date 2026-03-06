@@ -6,7 +6,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron;
 

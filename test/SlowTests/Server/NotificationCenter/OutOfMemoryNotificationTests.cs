@@ -11,7 +11,6 @@ using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.NotificationCenter
 {

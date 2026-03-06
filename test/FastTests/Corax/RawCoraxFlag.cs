@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Analyzers;
 using Corax.Mappings;
@@ -17,7 +18,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using Assert = Xunit.Assert;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
@@ -268,10 +268,10 @@ public class RawCoraxFlag : StorageTest
         return builder.Build();
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
         _bsc.Dispose();
         _analyzers.Dispose();
-        base.Dispose();
+        await base.DisposeAsync();
     }
 }

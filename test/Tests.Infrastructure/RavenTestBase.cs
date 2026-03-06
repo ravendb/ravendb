@@ -36,9 +36,8 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
-using XunitLogger;
+using Xunit.v3;
 
 namespace FastTests
 {
@@ -257,7 +256,7 @@ namespace FastTests
                     options.ModifyDatabaseRecord?.Invoke(doc);
                     var sharded = doc.IsSharded;
 
-                    var isCompressionTest = IsRavenTestCategoryTest(Context, RavenTestCategory.Compression);
+                    var isCompressionTest = IsRavenTestCategoryTest(TestContext.Current, RavenTestCategory.Compression);
 
                     if (doc.DocumentsCompression != null && isCompressionTest == false)
                     {
@@ -328,9 +327,9 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
-                        CheckForMissingAttachmentsAndThrowIfNeeded(store, Context, name, serverToUse, caller);
+                        CheckForMissingAttachmentsAndThrowIfNeeded(store, TestContext.Current, name, serverToUse, caller);
 
-                        var realException = Context.GetException();
+                        var realException = TestContext.Current?.TestState?.GetException();
                         try
                         {
                             if (CreatedStores.TryRemove(store) == false)
@@ -380,19 +379,19 @@ namespace FastTests
             }
         }
 
-        public static bool IsRavenTestCategoryTest(Context context, RavenTestCategory flags)
+        public static bool IsRavenTestCategoryTest(ITestContext context, RavenTestCategory flags)
         {
             try
             {
-                var testMethod = context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+                var testMethod = (context?.TestMethod as Xunit.v3.IXunitTestMethod)?.Method;
                 if (testMethod == null)
                     return false;
 
-                var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
+                var ravenFactAttribute = testMethod.GetCustomAttribute<RavenFactAttribute>();
                 if (ravenFactAttribute != null)
                     return (ravenFactAttribute.Category & flags) != 0;
 
-                var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
+                var ravenTheoryAttribute = testMethod.GetCustomAttribute<RavenTheoryAttribute>();
                 if (ravenTheoryAttribute != null)
                     return (ravenTheoryAttribute.Category & flags) != 0;
 
@@ -400,7 +399,7 @@ namespace FastTests
             }
             catch
             {
-                // if we can't determine if it's a compression test, we assume it's not 
+                // if we can't determine if it's a compression test, we assume it's not
                 return false;
             }
         }
@@ -411,7 +410,7 @@ namespace FastTests
             "Can_push_via_filtered_replication" //TODO: remove when RavenDB-24415 is fixed
         ];
 
-        private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, Context context, string name, RavenServer serverToUse, string caller)
+        private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, ITestContext context, string name, RavenServer serverToUse, string caller)
         {
             if (IsRavenTestCategoryTest(context, RavenTestCategory.Attachments | RavenTestCategory.Replication) == false)
                 return;

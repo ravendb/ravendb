@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using NetTopologySuite.Utilities;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
@@ -6,8 +6,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 using Assert = Xunit.Assert;
+using Xunit;
 
 namespace FastTests.Blittable;
 

@@ -18,7 +18,7 @@ public static class Program
 {
     static Program()
     {
-        XunitLogging.RedirectStreams = false;
+        // XunitLogging removed in xUnit v3 migration
     }
 
     public static async Task Main(string[] args)
@@ -34,7 +34,7 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new CRUD(testOutputHelper))
+                await using (var test = new CRUD(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     test.CRUD_Operations(RavenTestBase.Options.ForMode(RavenDatabaseMode.Single), true);

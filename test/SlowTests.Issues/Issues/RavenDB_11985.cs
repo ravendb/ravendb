@@ -10,7 +10,6 @@ using Tests.Infrastructure;
 using Xunit;
 using static SlowTests.Issues.RavenDB_11985.Building;
 using static SlowTests.Issues.RavenDB_11985.UsersIndexWithStoredArray;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {    

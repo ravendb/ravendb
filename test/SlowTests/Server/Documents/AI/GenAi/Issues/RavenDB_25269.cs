@@ -12,7 +12,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {

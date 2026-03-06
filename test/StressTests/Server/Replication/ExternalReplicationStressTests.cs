@@ -11,7 +11,6 @@ using Raven.Tests.Core.Utils.Entities;
 using StressTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Replication
 {

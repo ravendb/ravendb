@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

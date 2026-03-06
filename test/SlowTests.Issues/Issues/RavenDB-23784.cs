@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 using System.Linq;
 using Corax.Pipeline;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Raven.Server.Documents.Queries.Parser;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

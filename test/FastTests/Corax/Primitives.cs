@@ -5,7 +5,6 @@ using Corax.Querying.Matches.Meta;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax
 {

@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {

@@ -30,7 +30,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments
 {

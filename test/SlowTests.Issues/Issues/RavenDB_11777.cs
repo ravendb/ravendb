@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

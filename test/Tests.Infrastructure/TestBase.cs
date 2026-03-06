@@ -46,8 +46,7 @@ using Sparrow.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
-using Xunit.Abstractions;
-using XunitLogger;
+using Xunit;
 
 namespace FastTests
 {
@@ -736,15 +735,13 @@ namespace FastTests
 
         protected abstract void Dispose(ExceptionAggregator exceptionAggregator);
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             GC.SuppressFinalize(this);
 
-            base.Dispose();
-
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
-            var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
+            var testOutcomeAnalyzer = new TestOutcomeAnalyzer(TestContext.Current?.TestState);
             var shouldSaveDebugPackage = testOutcomeAnalyzer.ShouldSaveDebugPackage();
 
             exceptionAggregator.Execute(() =>
@@ -755,11 +752,11 @@ namespace FastTests
 
             Dispose(exceptionAggregator);
 
-            DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator, Context);
+            DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator);
 
             if (_localServer != null && _localServer != _globalServer)
             {
-                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator, Context);
+                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator);
 
                 exceptionAggregator.Execute(() =>
                 {
@@ -773,7 +770,7 @@ namespace FastTests
                 var serverForDisposal = ServersForDisposal[i];
 
                 if (i == 0)
-                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator, Context);
+                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator);
 
                 exceptionAggregator.Execute(() => DisposeServer(serverForDisposal, _disposeTimeout));
             }
@@ -782,7 +779,7 @@ namespace FastTests
             var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
             var connections = properties.GetActiveTcpConnectionsSafely() ?? Array.Empty<TcpConnectionInformation>();
 
-            var sb = new StringBuilder($"TCP Connections '{Context.UniqueTestName}' ({connections.Length}): {Environment.NewLine}");
+            var sb = new StringBuilder($"TCP Connections '{TestContext.Current?.Test?.UniqueID}' ({connections.Length}): {Environment.NewLine}");
             var groupedConnections = connections.GroupBy(x => x.State).Select(x => new { State = x.Key, Count = x.Count() }).OrderByDescending(x => x.Count);
             foreach (var group in groupedConnections)
             {
@@ -800,9 +797,11 @@ namespace FastTests
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
 
             exceptionAggregator.ThrowIfNeeded();
+
+            await base.DisposeAsync();
         }
 
-        private static void DownloadAndSaveDebugPackage(bool shouldSaveDebugPackage, RavenServer server, ExceptionAggregator exceptionAggregator, Context context)
+        private static void DownloadAndSaveDebugPackage(bool shouldSaveDebugPackage, RavenServer server, ExceptionAggregator exceptionAggregator)
         {
             if (shouldSaveDebugPackage == false)
                 return;
@@ -810,7 +809,7 @@ namespace FastTests
             if (server == null || server.Disposed)
                 return;
 
-            exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(server, context));
+            exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(server, TestContext.Current));
         }
 
         internal void SetServerDisposeTimeout(int timeout)

@@ -1,7 +1,7 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Issues;
 

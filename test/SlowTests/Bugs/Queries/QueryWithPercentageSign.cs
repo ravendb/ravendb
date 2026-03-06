@@ -1,9 +1,9 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
+using Xunit;
 
 namespace SlowTests.Bugs.Queries
 {

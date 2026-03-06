@@ -6,7 +6,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 using static FastTests.Voron.Tables.RavenDB_17760;
 
 namespace FastTests.Voron.Tables

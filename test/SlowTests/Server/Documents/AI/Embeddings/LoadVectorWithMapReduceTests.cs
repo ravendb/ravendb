@@ -7,7 +7,6 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 

@@ -4,9 +4,8 @@ using System.Threading;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
-using xRetry;
+using xRetry.v3;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

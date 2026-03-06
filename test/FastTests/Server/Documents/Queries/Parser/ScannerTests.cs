@@ -2,7 +2,6 @@
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 using Raven.Server.Documents.Queries.Parser;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Parser

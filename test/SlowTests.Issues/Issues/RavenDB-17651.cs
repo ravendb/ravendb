@@ -4,7 +4,6 @@ using Orders;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Issues

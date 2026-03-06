@@ -1,6 +1,6 @@
-﻿using Tests.Infrastructure;
+using Tests.Infrastructure;
 using Voron;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Voron.Storage
 {

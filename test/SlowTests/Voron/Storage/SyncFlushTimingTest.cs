@@ -10,7 +10,6 @@ using Xunit;
 using TimeoutException = System.TimeoutException;
 using LockTaskResponsible = Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.LockTaskResponsible;
 using SyncOperation = Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.SyncOperation;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {

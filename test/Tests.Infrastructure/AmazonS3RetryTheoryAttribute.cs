@@ -1,13 +1,15 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
-using xRetry;
+using xRetry.v3;
 
 namespace Tests.Infrastructure
 {
-    public class AmazonS3RetryTheoryAttribute : RetryTheoryAttribute
+    public class AmazonS3RetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFactAttribute
     {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
         private const string S3CredentialEnvironmentVariable = "S3_CREDENTIAL";
 
         private static readonly S3Settings _s3Settings;
@@ -37,12 +39,12 @@ namespace Tests.Infrastructure
             }
         }
 
-        public AmazonS3RetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+        public AmazonS3RetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
+            : base(maxRetries, delayBetweenRetriesMs)
         {
         }
 
-        public override string Skip
+        public new string Skip
         {
             get
             {

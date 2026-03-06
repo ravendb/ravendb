@@ -2,7 +2,6 @@
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
@@ -298,9 +297,9 @@ namespace FastTests.Sparrow
                 var buffer = new UnmanagedWriteBuffer(context, context.GetMemory(DefaultBufferSize));
                 buffer.Dispose();
 #if DEBUG
-                Assert.Throws(typeof(ObjectDisposedException), () => buffer.WriteByte(10));
+                Assert.Throws<ObjectDisposedException>( () => buffer.WriteByte(10));
 #else
-                Assert.Throws(typeof(NullReferenceException), () => buffer.WriteByte(10));
+                Assert.Throws<NullReferenceException>( () => buffer.WriteByte(10));
 #endif
 
             }
@@ -316,9 +315,9 @@ namespace FastTests.Sparrow
 
 
 #if DEBUG
-                Assert.Throws(typeof(ObjectDisposedException), () => buffer.Write(AllocationsBatch, 0, AllocationsBatch.Length));
+                Assert.Throws<ObjectDisposedException>( () => buffer.Write(AllocationsBatch, 0, AllocationsBatch.Length));
 #else
-                Assert.Throws(typeof(NullReferenceException), () => buffer.Write(AllocationsBatch, 0, AllocationsBatch.Length));
+                Assert.Throws<NullReferenceException>( () => buffer.Write(AllocationsBatch, 0, AllocationsBatch.Length));
 #endif
             }
         }

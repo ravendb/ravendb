@@ -3,7 +3,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Highlighting;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries
 {

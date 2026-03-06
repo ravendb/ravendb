@@ -1,9 +1,9 @@
 ﻿﻿using System.IO;
+using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
@@ -88,10 +88,10 @@ namespace SlowTests.Voron.Storage
                 Directory.Delete(DataDir, true);
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             DeleteDataDir();
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

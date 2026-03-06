@@ -12,7 +12,6 @@ using Raven.Server.ServerWide;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {

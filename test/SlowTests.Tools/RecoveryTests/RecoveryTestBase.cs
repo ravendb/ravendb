@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
@@ -10,7 +10,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Sparrow.Logging;
 using Voron.Recovery;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Tools.RecoveryTests
 {

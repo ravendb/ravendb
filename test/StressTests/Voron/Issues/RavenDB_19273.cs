@@ -6,7 +6,6 @@ using Tests.Infrastructure;
 using Voron.Global;
 using Voron.Impl.Journal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Voron.Issues;
 

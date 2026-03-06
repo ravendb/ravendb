@@ -7,7 +7,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.SchemaValidation;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.SchemaValidation;
 

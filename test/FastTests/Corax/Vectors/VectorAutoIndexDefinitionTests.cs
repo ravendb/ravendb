@@ -6,7 +6,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Vectors;
 

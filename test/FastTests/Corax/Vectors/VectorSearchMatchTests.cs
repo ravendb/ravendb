@@ -9,7 +9,6 @@ using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Vectors;
 

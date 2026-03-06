@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 #if DEBUG

@@ -1,7 +1,6 @@
 using Voron;
 using Xunit;
 using Assert = Xunit.Assert;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.LeafsCompression

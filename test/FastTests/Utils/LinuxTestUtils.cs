@@ -8,13 +8,6 @@ namespace FastTests.Utils
 {
     public static class LinuxTestUtils
     {
-        public static string Dos2Unix(string str)
-        {
-            if (RunningOnPosix)
-                return str.Replace("\r\n", "\n");
-            return str;
-        }
-
         public static AbstractPager GetNewPager(StorageEnvironmentOptions options, string dataDir, string filename)
         {
             // tests on windows 64bits or linux 64bits only

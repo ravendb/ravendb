@@ -19,7 +19,6 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Commands;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi;
 

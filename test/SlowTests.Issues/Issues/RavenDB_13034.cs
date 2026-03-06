@@ -1,7 +1,6 @@
 using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
-using Xunit.Abstractions;
 
 using Tests.Infrastructure;
 namespace SlowTests.Issues

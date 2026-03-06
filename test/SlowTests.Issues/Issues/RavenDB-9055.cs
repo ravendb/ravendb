@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Constants = Raven.Client.Constants;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

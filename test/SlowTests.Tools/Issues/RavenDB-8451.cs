@@ -15,7 +15,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Recovery;
 using Xunit;
-using Xunit.Abstractions;
 using static Raven.Server.Documents.Schemas.Attachments;
 
 namespace SlowTests.Tools.Issues

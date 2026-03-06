@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent
 {

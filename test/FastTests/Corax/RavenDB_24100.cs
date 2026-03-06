@@ -5,7 +5,6 @@ using Sparrow.Binary;
 using Tests.Infrastructure;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 

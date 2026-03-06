@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Operations.Replication;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Replication
 {

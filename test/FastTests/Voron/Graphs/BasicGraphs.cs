@@ -12,7 +12,6 @@ using Voron;
 using Voron.Data.Graphs;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 using Random = System.Random;
 using VectorEmbeddingType = Voron.Data.Graphs.VectorEmbeddingType;
 using VectorOptions = Raven.Client.Documents.Indexes.Vector.VectorOptions;

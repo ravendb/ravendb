@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.MailingList
 {

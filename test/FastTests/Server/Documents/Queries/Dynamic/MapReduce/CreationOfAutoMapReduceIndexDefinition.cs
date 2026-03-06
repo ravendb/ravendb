@@ -7,7 +7,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Parser;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce

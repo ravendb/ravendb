@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Logging;
@@ -6,7 +6,7 @@ using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Blittable
 {

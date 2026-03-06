@@ -2,7 +2,6 @@ using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Voron.Global;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Journal
 {

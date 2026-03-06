@@ -10,7 +10,6 @@ using Sparrow.Server.Debugging;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Tests.Infrastructure;
 
@@ -73,39 +72,32 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
     {
     }
 
-    public virtual Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
-        return ConcurrentTestsSemaphore.WaitAsync()
-            .ContinueWith(x =>
-            {
-                if (WriteToFile)
-                {
-                    lock (Locker)
-                    {
-                        File.AppendAllText(FileName, $"[{SystemTime.UtcNow}] Running: '{Context.UniqueTestName}'.{Environment.NewLine}");
-                    }
-                }
+        await ConcurrentTestsSemaphore.WaitAsync();
 
-                return _concurrentTestsSemaphoreTaken.Raise();
-            });
+        if (WriteToFile)
+        {
+            lock (Locker)
+            {
+                File.AppendAllText(FileName, $"[{SystemTime.UtcNow}] Running: '{TestContext.Current?.Test?.UniqueID}'.{Environment.NewLine}");
+            }
+        }
+
+        _concurrentTestsSemaphoreTaken.Raise();
     }
 
-    public Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         if (WriteToFile)
         {
             lock (Locker)
             {
-                File.AppendAllText(FileName, $"[{SystemTime.UtcNow}] Finished: '{Context.UniqueTestName}'.{Environment.NewLine}");
+                File.AppendAllText(FileName, $"[{SystemTime.UtcNow}] Finished: '{TestContext.Current?.Test?.UniqueID}'.{Environment.NewLine}");
             }
         }
 
-        return Task.CompletedTask;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
+        await base.DisposeAsync();
 
         if (_concurrentTestsSemaphoreTaken.Lower())
             ConcurrentTestsSemaphore.Release();

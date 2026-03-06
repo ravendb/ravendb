@@ -6,7 +6,6 @@ using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -84,13 +83,13 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -110,13 +109,13 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -136,13 +135,13 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -162,13 +161,13 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -188,13 +187,13 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -214,13 +213,13 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Strings"": [
     ""A"",
     ""B"",
     ""C""
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -240,7 +239,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -252,7 +251,7 @@ namespace SlowTests.Issues
       ""Baz"": ""C""
     }
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -272,7 +271,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -284,7 +283,7 @@ namespace SlowTests.Issues
       ""Baz"": ""C""
     }
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -304,7 +303,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -316,7 +315,7 @@ namespace SlowTests.Issues
       ""Baz"": ""C""
     }
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -336,7 +335,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -348,7 +347,7 @@ namespace SlowTests.Issues
       ""Baz"": ""C""
     }
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -368,7 +367,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -380,7 +379,7 @@ namespace SlowTests.Issues
       ""Baz"": ""C""
     }
   ]
-}"), doc);
+}", doc);
                 }
             }
         }
@@ -400,7 +399,7 @@ namespace SlowTests.Issues
                 {
                     var doc = GetJsonString(commands, "foos/1");
 
-                    Assert.Equal(LinuxTestUtils.Dos2Unix(@"{
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"{
   ""Bars"": [
     {
       ""Baz"": ""A""
@@ -412,7 +411,7 @@ namespace SlowTests.Issues
       ""Baz"": ""C""
     }
   ]
-}"), doc);
+}", doc);
                 }
             }
         }

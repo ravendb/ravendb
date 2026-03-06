@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Server.Replication
 {

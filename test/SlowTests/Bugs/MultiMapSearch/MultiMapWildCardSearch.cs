@@ -6,7 +6,6 @@ using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiMapSearch
 {

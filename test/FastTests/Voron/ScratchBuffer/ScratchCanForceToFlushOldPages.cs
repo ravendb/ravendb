@@ -1,7 +1,6 @@
 using Tests.Infrastructure;
 using Xunit;
 using Voron;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.ScratchBuffer
 {

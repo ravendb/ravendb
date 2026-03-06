@@ -7,7 +7,6 @@ using Sparrow.Logging;
 using Voron;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

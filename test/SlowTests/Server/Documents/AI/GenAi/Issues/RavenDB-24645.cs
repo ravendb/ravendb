@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Task = System.Threading.Tasks.Task;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues

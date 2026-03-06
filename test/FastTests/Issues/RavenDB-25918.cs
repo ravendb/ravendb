@@ -3,7 +3,6 @@ using System.Linq;
 using Raven.Server.NotificationCenter.Notifications;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues;
 

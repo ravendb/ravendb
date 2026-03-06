@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

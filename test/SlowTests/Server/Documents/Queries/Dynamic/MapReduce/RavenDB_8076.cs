@@ -4,7 +4,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {

@@ -1,6 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using FastTests;
+using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
@@ -21,8 +25,9 @@ public class RavenExplicitDataAttribute : RavenDataAttributeBase
         SearchEngineMode = searchEngine;
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
+        var result = new List<ITheoryDataRow>();
         foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
         {
             foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
@@ -40,10 +45,11 @@ public class RavenExplicitDataAttribute : RavenDataAttributeBase
                     for (var i = 1; i < array.Length; i++)
                         array[i] = Data[i - 1];
 
-                    yield return array;
+                    result.Add(new TheoryDataRow(array));
                 }
             }
         }
+        return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
     }
 }
 

@@ -3,7 +3,6 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests
 {

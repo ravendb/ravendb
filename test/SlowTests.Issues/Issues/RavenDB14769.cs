@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

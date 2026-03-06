@@ -5,7 +5,6 @@ using Raven.Client.Documents.Session;
 using Xunit;
 using FastTests;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Rusty
 {

@@ -6,7 +6,6 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing

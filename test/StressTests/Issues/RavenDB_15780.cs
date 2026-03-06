@@ -5,7 +5,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {

@@ -183,11 +183,25 @@ namespace Tests.Infrastructure
             }
         }
 
+        public static void AssertSetEqualsRespectingNewLines(HashSet<string> set1, HashSet<string> set2)
+        {
+            var convertedSet1 = set1.Select(ConvertRespectingNewLines).ToHashSet();
+            var convertedSet2 = set2.Select(ConvertRespectingNewLines).ToHashSet();
+            Assert.True(convertedSet1.SetEquals(convertedSet2));
+        }
+
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
             var convertedExpected = ConvertRespectingNewLines(expected);
             var convertedActual = ConvertRespectingNewLines(actual);
             Assert.Equal(convertedExpected, convertedActual);
+        }
+
+        public static void AssertNotEqualRespectingNewLines(string expected, string actual)
+        {
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
+            Assert.NotEqual(convertedExpected, convertedActual);
         }
 
         public static void AssertStartsWithRespectingNewLines(string expected, string actual)

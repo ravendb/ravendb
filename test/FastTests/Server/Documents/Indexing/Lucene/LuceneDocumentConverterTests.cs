@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -21,7 +22,6 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
-using Xunit.Abstractions;
 using Document = Raven.Server.Documents.Document;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Tests.Infrastructure;
@@ -486,7 +486,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             };
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             foreach (var docReader in _docs)
             {
@@ -495,7 +495,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             _ctx.Dispose();
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
 
         public class FakeIndex : Index

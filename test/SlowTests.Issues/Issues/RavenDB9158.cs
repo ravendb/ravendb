@@ -2,7 +2,6 @@
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -72,7 +71,7 @@ namespace SlowTests.Issues
 
                     // should throw concurrency exception
                     // since we want to compare against changeVector
-                    Assert.Throws(typeof(Raven.Client.Exceptions.ConcurrencyException), () =>
+                    Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>( () =>
                     {
                         session.Store(user, changeVector, id);
                         session.SaveChanges();
@@ -144,7 +143,7 @@ namespace SlowTests.Issues
 
                     // should throw concurrency exception
                     // since we want to compare against changeVector
-                    Assert.Throws(typeof(Raven.Client.Exceptions.ConcurrencyException), () =>
+                    Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>( () =>
                     {
                         session.Store(user, changeVector, id);
                         session.SaveChanges();

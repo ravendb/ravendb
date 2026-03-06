@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
-using Xunit.Sdk;
-using XunitLogger;
+using Xunit;
 
 namespace Tests.Infrastructure.Utils
 {
@@ -17,56 +16,25 @@ namespace Tests.Infrastructure.Utils
             new Regex(@"Waited for \S* but the command was not applied in this time.", RegexOptions.Compiled)
         };
 
-        private readonly Context _context;
+        private readonly TestResultState _testState;
 
-        public TestOutcomeAnalyzer(Context context)
+        public TestOutcomeAnalyzer(TestResultState testState)
         {
-            _context = context;
+            _testState = testState;
         }
 
-        public Exception Exception
-        {
-            get
-            {
-                try
-                {
-                    //the TestException getter sometimes throws exceptions itself
-                    return _context.TestException;
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
-            }
-        }
+        public Exception Exception => _testState.GetException();
 
-        public bool Failed => Exception != null;
+        public bool Failed => _testState?.ExceptionMessages?.Length > 0;
 
-        public bool FailedOnAssertion => Exception is XunitException;
+        public bool FailedOnAssertion =>
+            _testState?.ExceptionTypes?.Length > 0 &&
+            _testState.ExceptionTypes[0] != null &&
+            _testState.ExceptionTypes[0].StartsWith("Xunit");
 
         public bool ShouldSaveDebugPackage()
         {
             return false;
-
-            /*
-            var exception = Exception;
-
-            if (exception == null)
-                return false;
-
-            if (NightlyBuildTheoryAttribute.IsNightlyBuild)
-                return true;
-            
-            if (exception is RavenException == false)
-                return false;
-
-            var innerException = exception.InnerException;
-
-            if (innerException == null)
-                return false;
-
-            return TimeoutExceptionMessageRegexes.Any(r => r.IsMatch(innerException.Message));
-            */
         }
     }
 }

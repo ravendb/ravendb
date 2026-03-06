@@ -11,7 +11,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl.Compaction;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Compaction
 {

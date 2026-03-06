@@ -27,7 +27,6 @@ using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

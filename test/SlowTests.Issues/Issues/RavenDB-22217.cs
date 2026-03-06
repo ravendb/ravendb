@@ -7,7 +7,6 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 public class RavenDB_22217 : RavenTestBase

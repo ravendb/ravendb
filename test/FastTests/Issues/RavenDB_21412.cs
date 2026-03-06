@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace FastTests.Issues;

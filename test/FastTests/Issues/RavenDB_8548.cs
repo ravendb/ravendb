@@ -3,7 +3,6 @@ using Raven.Server.Config;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

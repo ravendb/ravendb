@@ -9,7 +9,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Indexing
 {

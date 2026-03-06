@@ -2,7 +2,6 @@ using System;
 using Voron;
 using Voron.Impl;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs

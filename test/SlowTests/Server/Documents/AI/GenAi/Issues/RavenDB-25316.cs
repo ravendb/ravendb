@@ -9,7 +9,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {

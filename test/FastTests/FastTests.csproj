@@ -5,7 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>FastTests</AssemblyName>
     <PackageId>FastTests</PackageId>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <OutputType>Exe</OutputType>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
@@ -86,7 +86,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\RavenDB_17185\memInfo.txt" />

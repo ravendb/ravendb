@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
@@ -9,7 +9,7 @@ using Raven.Server.Routing;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Issues
 {

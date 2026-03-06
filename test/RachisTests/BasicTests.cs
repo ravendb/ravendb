@@ -10,7 +10,6 @@ using Sparrow.Server;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace RachisTests
 {

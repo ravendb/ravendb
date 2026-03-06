@@ -3,7 +3,7 @@ using System.IO;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
 using Voron;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Voron.CompactTrees
 {

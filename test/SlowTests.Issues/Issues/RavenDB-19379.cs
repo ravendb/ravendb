@@ -10,7 +10,6 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using TimeUnit = Raven.Server.Config.Settings.TimeUnit;
 
 namespace SlowTests.Issues

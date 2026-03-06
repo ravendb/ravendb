@@ -16,7 +16,6 @@ using Sparrow;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static SlowTests.Client.TimeSeries.Issues.RavenDB_15020;
 
 namespace SlowTests.Client.TimeSeries.Query

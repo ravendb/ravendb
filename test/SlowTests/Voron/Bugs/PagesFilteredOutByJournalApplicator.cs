@@ -3,7 +3,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Debugging;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {

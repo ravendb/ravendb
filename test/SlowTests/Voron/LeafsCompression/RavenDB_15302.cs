@@ -2,7 +2,6 @@
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Voron.LeafsCompression

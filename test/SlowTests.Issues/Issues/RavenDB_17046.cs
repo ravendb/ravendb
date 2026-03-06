@@ -4,7 +4,6 @@ using Orders;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Raven.Client.Documents.Session;
 
 namespace SlowTests.Issues

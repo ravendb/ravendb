@@ -9,7 +9,6 @@ using Raven.Server.Documents.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {

@@ -2,7 +2,6 @@
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

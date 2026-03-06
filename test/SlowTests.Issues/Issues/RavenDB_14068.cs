@@ -14,7 +14,6 @@ using Raven.Server.Documents.Expiration;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

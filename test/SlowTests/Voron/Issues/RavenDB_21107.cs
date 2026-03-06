@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -11,10 +11,10 @@ using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Voron.Data.Tables;
-using Xunit.Abstractions;
 using Raven.Client.Documents;
 using SlowTests.Core.Utils.Entities;
 using Assert = Xunit.Assert;
+using Xunit;
 
 namespace SlowTests.Voron.Issues;
 

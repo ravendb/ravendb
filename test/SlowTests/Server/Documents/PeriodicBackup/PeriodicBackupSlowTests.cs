@@ -54,7 +54,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 using Constants = Raven.Client.Constants;
 
 namespace SlowTests.Server.Documents.PeriodicBackup

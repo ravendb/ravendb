@@ -19,7 +19,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Binary;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Issues;
 

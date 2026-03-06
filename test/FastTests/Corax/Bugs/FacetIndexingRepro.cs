@@ -13,7 +13,6 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Impl;
 using Xunit;
-using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;

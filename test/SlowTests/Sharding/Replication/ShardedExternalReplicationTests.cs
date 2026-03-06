@@ -30,7 +30,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Replication
 {

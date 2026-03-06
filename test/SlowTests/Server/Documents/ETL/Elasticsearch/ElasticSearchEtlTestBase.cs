@@ -14,7 +14,6 @@ using Sparrow.Server;
 using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {
@@ -133,8 +132,9 @@ loadToOrders" + IndexSuffix + @"(orderData);";
                 Exception inner;
 
                 response.TryGetOriginalException(out var exception);
-                if (Context.TestException != null)
-                    inner = new AggregateException(exception, Context.TestException);
+                var testExceptionMessages = TestContext.Current?.TestState?.ExceptionMessages;
+                if (testExceptionMessages is { Length: > 0 })
+                    inner = new AggregateException(exception, new Exception(string.Join(Environment.NewLine, testExceptionMessages)));
                 else
                     inner = exception;
 

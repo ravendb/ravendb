@@ -32,7 +32,6 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -167,7 +166,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         [RavenFact(RavenTestCategory.Etl)]
         public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow()
         {
-            XunitLogging.EnableExceptionCapture();
+            // XunitLogging.EnableExceptionCapture() removed - xUnit v3 has built-in exception capture via TestContext
             const string script = @"
 loadToUsers(this);
 

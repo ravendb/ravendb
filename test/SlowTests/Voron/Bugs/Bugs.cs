@@ -7,7 +7,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {

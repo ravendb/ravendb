@@ -3,7 +3,6 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.QueueSink;
 

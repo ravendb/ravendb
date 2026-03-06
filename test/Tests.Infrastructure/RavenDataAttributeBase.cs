@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Raven.Client.Util;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
 public abstract class RavenDataAttributeBase : DataAttribute
 {
+    public override bool SupportsDiscoveryEnumeration() => false;
+
     internal static readonly bool Is32Bit = RuntimeInformation.ProcessArchitecture == Architecture.X86;
     internal const string ShardingSkipMessage = "RavenDB-19879: Skip Sharded database tests on x86 architecture.";
 

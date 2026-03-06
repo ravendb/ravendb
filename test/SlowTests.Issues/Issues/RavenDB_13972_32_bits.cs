@@ -4,7 +4,6 @@ using Raven.Server.Config;
 using Raven.Server.Utils.Enumerators;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

@@ -21,7 +21,6 @@ using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.ETL.Olap
 {

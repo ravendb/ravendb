@@ -13,7 +13,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Timings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues;
 
@@ -526,7 +525,7 @@ filter Name = 'Frank'")
         Insert(store, GetDatabaseItems(), options.DatabaseMode);
         {
             using var session = store.OpenSession();
-            Assert.Throws(typeof(InvalidOperationException), () =>
+            Assert.Throws<InvalidOperationException>( () =>
             {
                 session.Query<Employee>().Filter(f => f.Active == true).Intersect().Filter(f => f.Name == "test").ToList();
             });
@@ -686,7 +685,7 @@ filter Name = 'Frank'")
             {
                 var q = session.Query<BlogPost, BlogIndex>().Filter(p => p.Tags.Contains("news"));
 
-                Assert.Throws(typeof(InvalidQueryException), () => q.AggregateUsing("facets/BlogFacets").Execute());
+                Assert.Throws<InvalidQueryException>( () => q.AggregateUsing("facets/BlogFacets").Execute());
             }
         }
     }

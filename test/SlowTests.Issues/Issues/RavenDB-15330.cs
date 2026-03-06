@@ -5,7 +5,6 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 public class RavenDB_15330 : ClusterTestBase

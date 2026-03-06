@@ -25,7 +25,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using Size = Sparrow.Size;
 
 namespace SlowTests.Server.Documents.Expiration

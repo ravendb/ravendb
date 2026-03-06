@@ -4,7 +4,6 @@ using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

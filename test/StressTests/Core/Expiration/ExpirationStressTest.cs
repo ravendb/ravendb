@@ -2,7 +2,6 @@
 using SlowTests.Server.Documents.Expiration;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Core.Expiration
 {
@@ -17,7 +16,7 @@ namespace StressTests.Core.Expiration
         [InlineData(10000)]
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
-            using (var expiration = new ExpirationTests(Output))
+            await using (var expiration = new ExpirationTests(Output))
             {
                 await expiration.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(false, count);
             }

@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Xunit;
-using Xunit.Abstractions;
+#pragma warning disable xUnit1051
 
 namespace BenchmarkTests
 {

@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
@@ -46,12 +45,12 @@ namespace SlowTests.MailingList
             {
                 new Index().Execute(store);
                 var indexDefinition = store.Maintenance.Send(new GetIndexOperation("Index"));
-                Assert.Equal(@"docs.Items.Select(item => new {
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Items.Select(item => new {
     Query = new object[] {
         item.Age,
         item.Name
     }
-})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
+})", indexDefinition.Maps.First());
             }
         }
     }

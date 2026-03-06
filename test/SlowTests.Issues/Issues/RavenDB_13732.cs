@@ -10,7 +10,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
 

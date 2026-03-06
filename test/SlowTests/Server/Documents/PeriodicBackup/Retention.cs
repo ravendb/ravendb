@@ -16,7 +16,6 @@ using SlowTests.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Voron.Util.Settings;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {

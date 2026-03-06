@@ -17,7 +17,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 // ReSharper disable ExplicitCallerInfoArgument

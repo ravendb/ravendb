@@ -14,7 +14,6 @@ using SlowTests.Server.Documents.ETL.Olap;
 using SlowTests.Server.Documents.ETL.SQL;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments
 {

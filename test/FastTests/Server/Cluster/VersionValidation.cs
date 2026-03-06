@@ -5,7 +5,6 @@ using System.Reflection;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Cluster

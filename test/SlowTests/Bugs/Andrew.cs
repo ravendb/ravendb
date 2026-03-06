@@ -7,7 +7,6 @@ using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
 using Task = System.Threading.Tasks.Task;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {

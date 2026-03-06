@@ -8,7 +8,6 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Backups
 {

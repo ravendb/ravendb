@@ -6,7 +6,6 @@ using Voron.Impl.Compaction;
 using Voron.Util.Conversion;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

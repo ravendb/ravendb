@@ -9,7 +9,6 @@ using Raven.Client.Http;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
 
 namespace FastTests.Client;

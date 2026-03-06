@@ -18,7 +18,6 @@ using Raven.Server.Documents.ETL.Stats;
 using SlowTests.Server.Documents.Attachments;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi;
 

@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

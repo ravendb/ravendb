@@ -19,7 +19,6 @@ using Raven.Server.Documents.ETL;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {

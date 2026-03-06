@@ -9,7 +9,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
 

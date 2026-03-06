@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Voron.Issues;
 

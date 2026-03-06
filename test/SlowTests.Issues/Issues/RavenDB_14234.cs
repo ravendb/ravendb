@@ -4,7 +4,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

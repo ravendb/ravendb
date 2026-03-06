@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 #pragma warning disable CS0618 // Type or member is obsolete
 
 namespace FastTests.Client
@@ -12,6 +11,7 @@ namespace FastTests.Client
         public TrackingModeTests(ITestOutputHelper output) : base(output)
         {
         }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public void NoTracking_CanBeSetMultipleTimes_WithoutThrowingMisleadingError()
         {

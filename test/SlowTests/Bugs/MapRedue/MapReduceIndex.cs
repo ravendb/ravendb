@@ -11,7 +11,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MapRedue
 {

@@ -140,11 +140,13 @@
     <PackageVersion Include="System.Threading.Channels" Version="10.0.4" />
     <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
     <PackageVersion Include="TypeScripter" Version="0.5.4" />
-    <PackageVersion Include="xRetry" Version="1.9.0" />
+    <PackageVersion Include="xRetry.v3" Version="1.0.0-rc3" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.utility" Version="2.9.3" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.assert" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.runner.utility" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="XunitLogger" Version="4.0.991" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.7" />
   </ItemGroup>

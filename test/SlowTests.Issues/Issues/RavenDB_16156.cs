@@ -1,9 +1,9 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Issues
 {

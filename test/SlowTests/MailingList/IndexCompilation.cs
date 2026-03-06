@@ -8,7 +8,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.MailingList

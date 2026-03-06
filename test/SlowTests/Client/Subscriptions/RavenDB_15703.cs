@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Client.Subscriptions
 {

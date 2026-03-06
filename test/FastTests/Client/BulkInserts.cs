@@ -17,9 +17,8 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
-using xRetry;
+using xRetry.v3;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Client
 {

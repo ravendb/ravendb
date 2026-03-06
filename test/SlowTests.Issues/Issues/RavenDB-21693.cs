@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static SlowTests.Issues.RavenDB_19033;
 
 namespace SlowTests.Issues

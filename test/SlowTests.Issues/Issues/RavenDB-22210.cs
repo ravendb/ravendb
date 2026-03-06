@@ -8,7 +8,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using System.Security.Cryptography;
 
 namespace SlowTests.Issues;

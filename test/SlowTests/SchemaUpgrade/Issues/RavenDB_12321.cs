@@ -6,7 +6,6 @@ using Raven.Server.Config.Settings;
 using Tests.Infrastructure;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.SchemaUpgrade.Issues
 {

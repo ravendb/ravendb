@@ -1,11 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Util;
 using Tests.Infrastructure.ConnectionString.AI;
+using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
@@ -43,8 +47,9 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
         Data = data;
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
+        var result = new List<ITheoryDataRow>();
         foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
         {
             foreach (var aiConnectionStringForTesting in GetAiConnectionStringsSingleton(IntegrationType))
@@ -57,19 +62,20 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
                         SetSkipValueIfNoRequiredEnvVariablesDefined(aiConnectionStringForTesting);
                         SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting);
                     }
-                    
+
                     var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();
 
                     if (Data == null || Data.Length == 0)
                     {
-                        yield return [options, aiIntegrationConfiguration];
+                        result.Add(new TheoryDataRow(options, aiIntegrationConfiguration));
                         continue;
                     }
 
-                    yield return new object[] { options, aiIntegrationConfiguration }.Concat(Data).ToArray();
+                    result.Add(new TheoryDataRow(new object[] { options, aiIntegrationConfiguration }.Concat(Data).ToArray()));
                 }
             }
         }
+        return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
     }
 
     private DisposableAction ResetSkipReason(string skip) => new(() => Skip = skip);
@@ -84,7 +90,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
 
         Skip = ShardingSkipMessage;
     }
-    
+
     private void SetSkipValueIfNoRequiredEnvVariablesDefined(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
     {
         if (RavenTestHelper.IsRunningOnCI)
@@ -92,7 +98,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
 
         if (aiConnectorForTesting.MissingRequiredEnvVariables(out var envVar) is false)
             return;
-        
+
         Skip = $"The environment variable {envVar} is required for {aiConnectorForTesting.AiConnectorType}, but was not set.";
     }
 
@@ -180,4 +186,3 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
 
     public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);
 }
-

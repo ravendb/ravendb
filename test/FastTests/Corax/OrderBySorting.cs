@@ -10,7 +10,6 @@ using FastTests.Voron;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
-using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
 using IndexSearcher = Corax.Querying.IndexSearcher;

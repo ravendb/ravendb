@@ -20,7 +20,6 @@ using Raven.Server.Config;
 using Raven.Server.Utils;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {

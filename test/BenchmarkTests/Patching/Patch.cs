@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
+#pragma warning disable xUnit1051
 
 namespace BenchmarkTests.Patching
 {

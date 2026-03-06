@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Querying;
 using Corax.Mappings;
@@ -9,7 +10,6 @@ using FastTests.Voron;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
-using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
 using IndexSearcher = Corax.Querying.IndexSearcher;
@@ -260,11 +260,11 @@ namespace FastTests.Corax
             public T Content { get; set; }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             _bsc.Dispose();
             _analyzers.Dispose();
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

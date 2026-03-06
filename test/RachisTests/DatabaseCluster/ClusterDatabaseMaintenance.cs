@@ -32,7 +32,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace RachisTests.DatabaseCluster

@@ -11,7 +11,6 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Cluster
 {

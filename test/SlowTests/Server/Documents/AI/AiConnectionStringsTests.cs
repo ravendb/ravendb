@@ -10,7 +10,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 #pragma warning disable SKEXP0001
 
 namespace SlowTests.Server.Documents.AI;

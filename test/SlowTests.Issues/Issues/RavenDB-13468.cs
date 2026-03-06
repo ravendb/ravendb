@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Storage.Schema.Updates.Documents;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

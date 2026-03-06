@@ -1,8 +1,8 @@
-﻿using SlowTests.Utils;
+﻿using System.Threading.Tasks;
+using SlowTests.Utils;
 using SlowTests.Voron;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Voron
 {
@@ -15,9 +15,9 @@ namespace StressTests.Voron
         [NightlyBuildTheory]
         [InlineDataWithRandomSeed(94000)]
         [InlineDataWithRandomSeed(300000)]
-        public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
+        public async Task CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
         {
-            using (var test = new LargeFixedSizeTrees(Output))
+            await using (var test = new LargeFixedSizeTrees(Output))
             {
                 test.CanDeleteRange_TryToFindABranchNextToLeaf(count, seed);
             }
@@ -28,9 +28,9 @@ namespace StressTests.Voron
         [InlineDataWithRandomSeed(2000000)]
         [InlineData(2000000, 1877749431)]// reproduced a bug, do not remove
         [InlineData(2000000, 1432104715)]// reproduced a bug, do not remove
-        public void CanDeleteRange_RandomRanges(int count, int seed)
+        public async Task CanDeleteRange_RandomRanges(int count, int seed)
         {
-            using (var test = new LargeFixedSizeTrees(Output))
+            await using (var test = new LargeFixedSizeTrees(Output))
             {
                 test.CanDeleteRange_RandomRanges(count, seed);
             }
@@ -38,9 +38,9 @@ namespace StressTests.Voron
 
         [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(300000)]
-        public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
+        public async Task CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
-            using (var test = new LargeFixedSizeTrees(Output))
+            await using (var test = new LargeFixedSizeTrees(Output))
             {
                 test.CanDeleteRange_RandomRanges_WithGaps(count, seed);
             }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -10,8 +11,8 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
-using Xunit.Abstractions;
 using Constants = Voron.Global.Constants;
+using Xunit;
 
 namespace FastTests.Voron
 {
@@ -97,9 +98,9 @@ namespace FastTests.Voron
             return new MemoryStream(Encoding.UTF8.GetBytes(val));
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
 
             var aggregator = new ExceptionAggregator("Could not dispose Storage test.");
 

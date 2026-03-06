@@ -37,20 +37,17 @@ using Voron;
 using Voron.Data;
 using Voron.Exceptions;
 using Xunit;
-using Xunit.Abstractions;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure
 {
     [Trait("Category", "Rachis")]
-    public class RachisConsensusTestBase : XunitLoggingBase, IDisposable
+    public class RachisConsensusTestBase : IDisposable
     {
+        protected ITestOutputHelper Output { get; }
+
         static unsafe RachisConsensusTestBase()
         {
-            XunitLogging.RedirectStreams = false;
-            XunitLogging.Init();
-            XunitLogging.EnableExceptionCapture();
-
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
             RachisStateMachine.EnableDebugLongCommit = true;
@@ -59,8 +56,9 @@ namespace Tests.Infrastructure
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
         }
 
-        public RachisConsensusTestBase(ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(output, sourceFile)
+        public RachisConsensusTestBase(ITestOutputHelper output, [CallerFilePath] string sourceFile = "")
         {
+            Output = output;
             Log = RavenLogManager.Instance.GetLoggerForCluster(GetType());
         }
 
@@ -462,9 +460,8 @@ namespace Tests.Infrastructure
         private readonly Random _random = new Random();
         private long _count;
 
-        public override void Dispose()
+        public virtual void Dispose()
         {
-            base.Dispose();
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
@@ -529,7 +526,7 @@ namespace Tests.Infrastructure
                     leader?.SetStateOf(index, tcs => { tcs.TrySetException(new RachisApplyException("Cannot execute command, wrong format")); });
                     return;
                 }
-                
+
                 Unsafe.SkipInit(out ValueReader reader);
 
                 switch (type)

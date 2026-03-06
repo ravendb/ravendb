@@ -12,7 +12,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {

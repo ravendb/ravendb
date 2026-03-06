@@ -7,7 +7,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Tests.Infrastructure;
 using Xunit;
 using Enumerable = System.Linq.Enumerable;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Stacey
 {

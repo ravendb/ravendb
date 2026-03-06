@@ -10,7 +10,6 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static SlowTests.Client.TimeSeries.Session.TimeSeriesTypedSessionTests;
 
 namespace SlowTests.Client.TimeSeries.Issues

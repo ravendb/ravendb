@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Sharding.Issues;
 

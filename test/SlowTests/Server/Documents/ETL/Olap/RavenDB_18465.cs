@@ -13,7 +13,6 @@ using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Order = Tests.Infrastructure.Entities.Order;
 
 namespace SlowTests.Server.Documents.ETL.Olap

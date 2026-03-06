@@ -1,10 +1,10 @@
 using System;
+using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Backups
 {
@@ -65,9 +65,9 @@ namespace FastTests.Voron.Backups
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
             _incrementalBackupTestUtils.Dispose();
         }
     }

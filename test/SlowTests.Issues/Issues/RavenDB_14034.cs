@@ -8,7 +8,6 @@ using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using User = Raven.Tests.Core.Utils.Entities.User;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

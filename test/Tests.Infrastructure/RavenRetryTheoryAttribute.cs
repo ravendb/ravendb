@@ -1,16 +1,19 @@
-﻿using System;
-using xRetry;
-using Xunit.Sdk;
+using System;
+using System.Collections.Generic;
+using xRetry.v3;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
-[TraitDiscoverer("Tests.Infrastructure.XunitExtensions.RavenTraitDiscoverer", "Tests.Infrastructure")]
-public class RavenRetryTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
+
+public class RavenRetryTheoryAttribute : RetryTheoryAttribute, ITraitAttribute, Xunit.v3.IFactAttribute
 {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
     private string _skip;
     private readonly RavenTestCategory _category;
-    public RavenRetryTheoryAttribute(RavenTestCategory category, int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-    : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+    public RavenRetryTheoryAttribute(RavenTestCategory category, int maxRetries = 3, int delayBetweenRetriesMs = 0)
+    : base(maxRetries, delayBetweenRetriesMs)
     {
         _category = category;
     }
@@ -25,7 +28,10 @@ public class RavenRetryTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
 
     public RavenServiceRequirement Requires { get; set; } = RavenServiceRequirement.None;
 
-    public override string Skip
+    public IReadOnlyCollection<KeyValuePair<string, string>> GetTraits() =>
+        XunitExtensions.RavenTraitHelper.GetTraitsFor(_category);
+
+    public new string Skip
     {
         get
         {

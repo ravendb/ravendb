@@ -2,7 +2,6 @@ using Raven.Server.Documents;
 using Voron;
 using Voron.Data.RawData;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs

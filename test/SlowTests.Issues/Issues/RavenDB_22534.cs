@@ -12,7 +12,6 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

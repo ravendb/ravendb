@@ -6,7 +6,6 @@ using Raven.Server;
 using Raven.Server.NotificationCenter.Handlers;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

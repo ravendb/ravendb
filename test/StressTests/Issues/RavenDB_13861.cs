@@ -10,7 +10,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {

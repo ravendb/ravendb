@@ -11,7 +11,6 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using Sparrow.Threading;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;

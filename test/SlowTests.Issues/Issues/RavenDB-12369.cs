@@ -8,7 +8,6 @@ using Tests.Infrastructure;
 using Xunit;
 using Order = Tests.Infrastructure.Entities.Order;
 using OrderLine = Tests.Infrastructure.Entities.OrderLine;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

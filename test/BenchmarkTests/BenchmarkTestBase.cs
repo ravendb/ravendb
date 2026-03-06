@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -15,7 +15,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace BenchmarkTests
 {

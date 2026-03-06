@@ -9,7 +9,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

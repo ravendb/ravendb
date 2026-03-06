@@ -32,7 +32,6 @@ using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure

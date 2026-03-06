@@ -15,7 +15,6 @@ using Voron;
 using Voron.Impl.Paging;
 using Xunit;
 using Voron.Global;
-using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {

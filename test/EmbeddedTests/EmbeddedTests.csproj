@@ -4,7 +4,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>EmbeddedTests</AssemblyName>
     <PackageId>EmbeddedTests</PackageId>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <OutputType>Exe</OutputType>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GenerateRequiresPreviewFeaturesAttribute>False</GenerateRequiresPreviewFeaturesAttribute>
@@ -15,6 +15,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
     <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <DefineConstants>$(DefineConstants);RUN_NPGSQL_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
@@ -40,7 +43,7 @@
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="Npgsql" VersionOverride="5.0.18" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>

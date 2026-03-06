@@ -35,7 +35,9 @@ namespace EmbeddedTests
                 using (var ms = File.Create(fileName))
                 using (var s = new GZipStream(ms, CompressionMode.Compress))
                 {
+#pragma warning disable xUnit1051
                     await bjro.WriteJsonToAsync(s);
+#pragma warning restore xUnit1051
                 }
 
                 using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
@@ -86,7 +88,9 @@ namespace EmbeddedTests
                 using (var ms = new MemoryStream())
                 using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
+#pragma warning disable xUnit1051
                     await bjro.WriteJsonToAsync(zipStream);
+#pragma warning restore xUnit1051
                     zipStream.Flush();
                     ms.Position = 0;
 

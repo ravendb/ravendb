@@ -4,7 +4,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {

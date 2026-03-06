@@ -1,5 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Tests.Infrastructure
 {

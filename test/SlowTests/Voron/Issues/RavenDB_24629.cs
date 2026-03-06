@@ -1,9 +1,9 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Voron.Issues;
 

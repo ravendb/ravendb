@@ -11,7 +11,6 @@ using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Utils;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

@@ -4,7 +4,6 @@ using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {

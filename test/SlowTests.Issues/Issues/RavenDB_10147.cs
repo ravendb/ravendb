@@ -6,7 +6,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

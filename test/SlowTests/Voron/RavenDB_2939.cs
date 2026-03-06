@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests.Voron;
 using FastTests.Voron.Backups;
 using Tests.Infrastructure;
@@ -8,7 +9,6 @@ using Voron.Global;
 using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
@@ -58,9 +58,9 @@ namespace SlowTests.Voron
             Assert.Equal("The first incremental backup creation failed because the first journal file " + StorageEnvironmentOptions.JournalName(0) + " was not found. Did you turn on the incremental backup feature after initializing the storage? In order to create backups incrementally the storage must be created with IncrementalBackupEnabled option set to 'true'.", exception.Message);
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
             _incrementalBackupTestUtils.Dispose();
         }
 

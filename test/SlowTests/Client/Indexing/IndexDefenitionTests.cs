@@ -8,7 +8,6 @@ using Raven.Client.Documents.Linq;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
 // ReSharper disable CSharp14OverloadResolutionWithSpanBreakingChange
 

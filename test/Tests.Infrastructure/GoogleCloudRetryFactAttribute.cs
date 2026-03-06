@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Operations.Backups;
-using xRetry;
+using xRetry.v3;
 
 namespace Tests.Infrastructure
 {
@@ -21,8 +21,8 @@ namespace Tests.Infrastructure
             };
         }
 
-        public GoogleCloudRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-            : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+        public GoogleCloudRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
+            : base(maxRetries, delayBetweenRetriesMs)
         {
             if (RavenTestHelper.SkipIntegrationTests)
             {

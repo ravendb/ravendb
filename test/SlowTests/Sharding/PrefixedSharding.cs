@@ -24,7 +24,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using BucketStats = Raven.Server.Documents.Sharding.BucketStats;
 
 namespace SlowTests.Sharding;

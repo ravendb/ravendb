@@ -28,7 +28,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Constants = Raven.Client.Constants;
 
 namespace SlowTests.Server.Replication

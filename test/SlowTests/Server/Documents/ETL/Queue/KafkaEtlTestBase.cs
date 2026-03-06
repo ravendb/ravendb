@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Raven.Client.Documents;
@@ -8,7 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
@@ -124,9 +125,9 @@ loadToOrders" + TopicSuffix + @"(orderData);
         }
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        base.Dispose();
+        await base.DisposeAsync();
         CleanupTopic();
     }
 }

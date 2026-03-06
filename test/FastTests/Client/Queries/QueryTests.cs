@@ -6,7 +6,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Client.Queries

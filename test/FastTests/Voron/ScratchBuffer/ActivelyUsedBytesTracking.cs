@@ -3,7 +3,6 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.ScratchBuffer

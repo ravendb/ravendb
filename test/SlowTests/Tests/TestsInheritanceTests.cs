@@ -8,7 +8,6 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Web;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests
 {
@@ -27,7 +26,7 @@ namespace SlowTests.Tests
             var types = from assembly in GetAssemblies(typeof(TestsInheritanceTests).Assembly)
                         from test in GetAssemblyTypes(assembly)
                         where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
-                        where typeof(IDisposable).IsAssignableFrom(test) == false
+                        where typeof(IAsyncDisposable).IsAssignableFrom(test) == false
                         select test;
 
             var array = types.ToArray();

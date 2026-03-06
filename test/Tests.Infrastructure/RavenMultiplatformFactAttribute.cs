@@ -47,8 +47,10 @@ public enum RavenIntrinsics
     Vector512 = 1 << 10
 }
 
-public class RavenMultiplatformFactAttribute : RavenFactAttribute
+public class RavenMultiplatformFactAttribute : RavenFactAttribute, Xunit.v3.IFactAttribute
 {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
     private static readonly bool ForceUsing32BitsPager;
 
     private readonly RavenPlatform _platform;
@@ -86,7 +88,7 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         _intrinsics = intrinsics;
     }
 
-    public override string Skip
+    public new string Skip
     {
         get
         {

@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 

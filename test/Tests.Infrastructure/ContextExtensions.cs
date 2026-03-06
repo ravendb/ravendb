@@ -1,26 +1,18 @@
-﻿using System;
-using System.Reflection;
-using XunitLogger;
+using System;
+using Xunit;
 
 namespace Tests.Infrastructure
 {
     public static class ContextExtensions
     {
-        private static readonly FieldInfo _exceptionField;
-
-        static ContextExtensions()
+        public static Exception GetException(this TestResultState state)
         {
-            _exceptionField = typeof(Context).GetField("Exception", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            if (_exceptionField == null)
-                throw new InvalidOperationException("Could not extract exception field info from context");
-        }
-
-        public static Exception GetException(this Context context)
-        {
-            if (context == null)
+            if (state == null || state.ExceptionMessages == null || state.ExceptionMessages.Length == 0)
                 return null;
 
-            return _exceptionField.GetValue(context) as Exception;
+            var exceptionType = state.ExceptionTypes?.Length > 0 ? state.ExceptionTypes[0] : "Exception";
+            var message = string.Join(Environment.NewLine, state.ExceptionMessages);
+            return new Exception($"[{exceptionType}] {message}");
         }
     }
 }

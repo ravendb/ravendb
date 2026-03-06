@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.Util

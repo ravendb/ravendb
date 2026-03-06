@@ -14,7 +14,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
@@ -526,9 +525,9 @@ namespace Tests.Infrastructure
             return files;
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
 
             var s3Settings = _isCustom ? CustomS3RetryFactAttribute.S3Settings : AmazonS3RetryFactAttribute.S3Settings;
             if (s3Settings == null)

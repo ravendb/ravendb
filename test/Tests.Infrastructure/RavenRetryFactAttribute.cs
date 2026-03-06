@@ -1,19 +1,24 @@
-﻿using System;
-using xRetry;
-using Xunit.Sdk;
+using System;
+using System.Collections.Generic;
+using xRetry.v3;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
-[TraitDiscoverer("Tests.Infrastructure.XunitExtensions.RavenTraitDiscoverer", "Tests.Infrastructure")]
-public class RavenRetryFactAttribute : RetryFactAttribute, ITraitAttribute
+public class RavenRetryFactAttribute : RetryFactAttribute, ITraitAttribute, Xunit.v3.IFactAttribute
 {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
     private string _skip;
     private readonly RavenTestCategory _category;
-    public RavenRetryFactAttribute(RavenTestCategory category, int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-    : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+    public RavenRetryFactAttribute(RavenTestCategory category, int maxRetries = 3, int delayBetweenRetriesMs = 0)
+    : base(maxRetries, delayBetweenRetriesMs)
     {
         _category = category;
     }
+
+    public IReadOnlyCollection<KeyValuePair<string, string>> GetTraits() =>
+        XunitExtensions.RavenTraitHelper.GetTraitsFor(_category);
 
     public bool LicenseRequired { get; set; }
 
@@ -58,7 +63,7 @@ public class RavenRetryFactAttribute : RetryFactAttribute, ITraitAttribute
         set => Requires = value ? Requires | RavenServiceRequirement.MongoDB : Requires & ~RavenServiceRequirement.MongoDB;
     }
 
-    public override string Skip
+    public new string Skip
     {
         get
         {

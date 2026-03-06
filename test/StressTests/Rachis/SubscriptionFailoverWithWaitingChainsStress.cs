@@ -25,8 +25,8 @@ using Sparrow.Collections;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace StressTests.Rachis
 {
@@ -78,13 +78,15 @@ namespace StressTests.Rachis
             public int DBGroupSize { get; }
             public bool ShouldTrapRevivedNodesIntoCandidate { get; }
 
-            public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+            public override bool SupportsDiscoveryEnumeration() => true;
+
+            public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
             {
-                yield return new object[]{
-                    SubscriptionsChainSize,
-                    ClusterSize,
-                    DBGroupSize,
-                    ShouldTrapRevivedNodesIntoCandidate};
+                var result = new List<ITheoryDataRow>
+                {
+                    new TheoryDataRow(SubscriptionsChainSize, ClusterSize, DBGroupSize, ShouldTrapRevivedNodesIntoCandidate)
+                };
+                return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
             }
         }
 

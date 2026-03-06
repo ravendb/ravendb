@@ -17,7 +17,6 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Indexing.TimeSeries
 {

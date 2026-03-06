@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -23,7 +22,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
+                    var json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 90,
@@ -37,11 +36,11 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2011-12-12T08:47:44.1643945-05:00',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"));
+}");
 
                     commands.Put("test/1", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
-                    json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
+                    json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
@@ -55,7 +54,7 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2012-02-28T16:05:19.3609910',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"));
+}");
 
                     commands.Put("test/2", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
@@ -65,14 +64,14 @@ namespace SlowTests.MailingList
                                                 {
                                                     Name = "test",
                                                     Maps = {
-                                                        LinuxTestUtils.Dos2Unix(@"docs.ClickAllocations
+                                                        @"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = Id(doc), Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
-") },
+" },
                                                     Reduce =
-                                                        LinuxTestUtils.Dos2Unix(@"results
+                                                        @"results
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
-    .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})")
+    .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})"
                                                 }}));
 
                 Indexes.WaitForIndexing(store);
@@ -87,7 +86,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
+                    var json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 90,
@@ -101,11 +100,11 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2011-12-12T08:47:44.1643945-05:00',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"));
+}");
 
                     commands.Put("test/1", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
 
-                    json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
+                    json = commands.ParseJson(@"{
   '$type': 'Domain.Model.Clicks.ClickAllocation, Domain',
   'AccountId': 'accounts/4',
   'Quantity': 20,
@@ -119,7 +118,7 @@ namespace SlowTests.MailingList
   'LastSavedDate': '2012-02-28T16:05:19.3609910',
   'LastSavedUser': 'NLWEB$/NETLABELS (NLWEB)',
   'SourceId': '00000000-0000-0000-0000-000000000000'
-}"));
+}");
 
                     commands.Put("test/2", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
@@ -129,14 +128,14 @@ namespace SlowTests.MailingList
                                                 {
                                                     Name = "test",
                                                     Maps = {
-                                                        LinuxTestUtils.Dos2Unix(@"docs.ClickAllocations
+                                                        @"docs.ClickAllocations
     .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = Id(doc), Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
-") },
+" },
                                                     Reduce =
-                                                        LinuxTestUtils.Dos2Unix(@"results
+                                                        @"results
     .GroupBy(result => result.AccountId)
     .Select(a => new {a = a, clickAllocation = a.OrderByDescending(x => x.Date).FirstOrDefault()})
-    .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})")
+    .Select(__h__TransparentIdentifier0 => new {AccountId = __h__TransparentIdentifier0.clickAllocation.AccountId, Date = __h__TransparentIdentifier0.clickAllocation.Date, Id = __h__TransparentIdentifier0.clickAllocation.Id, Key = __h__TransparentIdentifier0.clickAllocation.Key, LastSavedDate = __h__TransparentIdentifier0.clickAllocation.LastSavedDate, LastSavedUser = __h__TransparentIdentifier0.clickAllocation.LastSavedUser, OrderNumber = __h__TransparentIdentifier0.clickAllocation.OrderNumber, PurchaseDate = __h__TransparentIdentifier0.clickAllocation.PurchaseDate, PurchaseOrderNumber = __h__TransparentIdentifier0.clickAllocation.PurchaseOrderNumber, Quantity = __h__TransparentIdentifier0.clickAllocation.Quantity, ReorderQuantity = __h__TransparentIdentifier0.clickAllocation.ReorderQuantity, Type = __h__TransparentIdentifier0.clickAllocation.Type})"
                                                 }}));
 
                 Indexes.WaitForIndexing(store);

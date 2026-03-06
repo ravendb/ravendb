@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

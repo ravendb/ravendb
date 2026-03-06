@@ -7,7 +7,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

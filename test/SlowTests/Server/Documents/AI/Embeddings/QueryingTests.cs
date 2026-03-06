@@ -11,7 +11,6 @@ using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 

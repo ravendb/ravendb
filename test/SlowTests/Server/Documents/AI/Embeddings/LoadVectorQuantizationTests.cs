@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Queries.Timings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,7 +7,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Issues
 {

@@ -16,7 +16,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.Map
@@ -661,7 +660,7 @@ include highlight(Name, 18, 2)
             return _documentDatabase.IndexStore.GetIndex(name);
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             try
             {
@@ -669,7 +668,7 @@ include highlight(Name, 18, 2)
             }
             finally
             {
-                base.Dispose();
+                await base.DisposeAsync();
             }
         }
     }

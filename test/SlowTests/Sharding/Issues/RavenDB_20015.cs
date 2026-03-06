@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues
 {

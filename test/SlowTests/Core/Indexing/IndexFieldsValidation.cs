@@ -5,7 +5,6 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Indexing
 {

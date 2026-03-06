@@ -371,7 +371,8 @@ namespace FastTests
                         if (_src == null)
                             return;
 
-                        if (_parent.Context.TestException == null || _parent.Context.TestOutput == null)
+                        var testContext = TestContext.Current;
+                        if (testContext?.TestState?.ExceptionMessages?.Length == 0 || testContext?.TestOutputHelper == null)
                             return;
 
                         var notifications = GetEtlErrorNotifications(_src).Result;
@@ -379,7 +380,7 @@ namespace FastTests
                             return;
 
                         string message = string.Join(",\n", notifications);
-                        _parent.Context.TestOutput.WriteLine(message);
+                        testContext.TestOutputHelper.WriteLine(message);
                     }
                 }
                 catch

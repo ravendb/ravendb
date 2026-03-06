@@ -2,7 +2,6 @@
 using System.Linq;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
