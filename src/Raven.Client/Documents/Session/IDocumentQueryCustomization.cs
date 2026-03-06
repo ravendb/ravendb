@@ -47,6 +47,12 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization NoCaching();
 
         /// <summary>
+        ///     Sets a user-defined tag on the query request.
+        /// </summary>
+        /// <param name="tag">User-defined query tag.</param>
+        IDocumentQueryCustomization WithTag(string tag);
+
+        /// <summary>
         ///     Disables tracking of query results.
         ///     Any changes made to them will be ignored by RavenDB.
         ///     Usage of this option will prevent holding query results in memory.

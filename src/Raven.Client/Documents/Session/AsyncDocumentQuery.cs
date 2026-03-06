@@ -575,6 +575,20 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WithTag(string tag)
+        {
+            WithTag(tag);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.WithTag(string tag)
+        {
+            WithTag(tag);
+            return this;
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
@@ -1140,6 +1154,7 @@ namespace Raven.Client.Documents.Session
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
+                QueryTag = QueryTag,
                 ProjectionBehavior = queryData?.ProjectionBehavior ?? ProjectionBehavior,
                 QueryTimings = QueryTimings,
                 Explanations = Explanations,

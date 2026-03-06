@@ -113,6 +113,8 @@ namespace Raven.Client.Documents.Queries
 
         public T QueryParameters { get; set; }
 
+        public string Tag { get; set; }
+
         public ProjectionBehavior? ProjectionBehavior { get; set; }
 
         /// <summary>

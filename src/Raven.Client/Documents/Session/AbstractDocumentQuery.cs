@@ -146,6 +146,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected bool DisableCaching;
 
+        protected string QueryTag;
+
         protected ProjectionBehavior? ProjectionBehavior;
 
         public bool IsDistinct => SelectTokens.First?.Value is DistinctToken;
@@ -355,6 +357,14 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("The parameter " + name + " was already added");
 
             QueryParameters[name] = value;
+        }
+
+        public void WithTag(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                throw new ArgumentException("Query tag cannot be null or whitespace.", nameof(tag));
+
+            QueryTag = tag;
         }
 
         /// <inheritdoc cref="IDocumentQuery{T}.GroupBy(string,string[])"/>
@@ -1274,6 +1284,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching,
+                Tag = QueryTag,
                 ProjectionBehavior = ProjectionBehavior,
                 SkipStatistics = QueryStats.RequestedByUser == false
             };

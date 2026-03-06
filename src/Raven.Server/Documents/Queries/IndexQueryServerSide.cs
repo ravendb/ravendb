@@ -174,6 +174,7 @@ namespace Raven.Server.Documents.Queries
 
                     SetupTimings(result);
                     SetupPagingFromQueryMetadata();
+                    SetupTag(result, httpContext);
                     SetupTracker(result, tracker);
                     SetupClientVersion(result, httpContext);
 
@@ -186,6 +187,7 @@ namespace Raven.Server.Documents.Queries
 
                 SetupTimings(result);
                 SetupPagingFromQueryMetadata();
+                SetupTag(result, httpContext);
                 SetupTracker(result, tracker);
                 SetupClientVersion(result, httpContext);
 
@@ -289,6 +291,7 @@ namespace Raven.Server.Documents.Queries
 
                 SetupTimings(result);
                 SetupPagingFromQueryMetadata();
+                SetupTag(result, httpContext);
                 SetupTracker(result, tracker);
                 SetupClientVersion(result, httpContext);
 
@@ -349,6 +352,15 @@ namespace Raven.Server.Documents.Queries
                 tracker.Query = indexQuery.Query;
                 tracker.QueryParameters = indexQuery.QueryParameters;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetupTag(IndexQueryServerSide indexQuery, HttpContext httpContext)
+        {
+            if (httpContext.Request.Query.TryGetValue("tag", out var tag) == false || string.IsNullOrWhiteSpace(tag[0]))
+                return;
+
+            indexQuery.Tag = tag[0];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
