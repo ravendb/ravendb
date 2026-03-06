@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
@@ -26,13 +27,18 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            return new GetRequest
+            var request = new GetRequest
             {
                 Url = "/queries",
                 Method = HttpMethod.Post,
                 Query = $"?queryHash={_indexQuery.GetQueryHash(ctx, _session.Conventions, _session.JsonSerializer)}",
                 Content = new IndexQueryContent(_session.Conventions, _indexQuery)
             };
+
+            if (string.IsNullOrWhiteSpace(_indexQuery.Tag) == false)
+                request.Query += $"&tag={Uri.EscapeDataString(_indexQuery.Tag)}";
+
+            return request;
         }
 
         public object Result { get; private set; }
