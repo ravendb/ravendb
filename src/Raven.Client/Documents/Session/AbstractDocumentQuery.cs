@@ -359,6 +359,10 @@ namespace Raven.Client.Documents.Session
             QueryParameters[name] = value;
         }
 
+        /// <summary>
+        /// Sets a user-defined tag on the query request.
+        /// </summary>
+        /// <param name="tag">User-defined query tag.</param>
         public void WithTag(string tag)
         {
             if (string.IsNullOrWhiteSpace(tag))

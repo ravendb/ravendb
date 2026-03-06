@@ -48,6 +48,7 @@ public interface IQueryBase<T, out TSelf>
     /// <summary>
     ///     Sets a user-defined tag on the query request.
     /// </summary>
+    /// <param name="tag">User-defined query tag.</param>
     TSelf WithTag(string tag);
 
     /// <summary>
