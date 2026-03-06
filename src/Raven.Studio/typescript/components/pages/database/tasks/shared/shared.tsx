@@ -31,7 +31,6 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { CounterBadge } from "components/common/CounterBadge";
 import IconName from "../../../../../../typings/server/icons";
 import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
@@ -393,22 +392,14 @@ interface OngoingTasksCategory {
     tasks: TaskItemProps[];
 }
 
-interface GetDisableReasonProps {
-    hasAccess: boolean;
-    customReason?: string;
-    hasSharding?: boolean;
-}
-
 export function useNewOngoingTasks() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const isSharded = db.isSharded;
     const [tasks] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
 
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
-    const isEnterpriseOrDeveloper = useAppSelector(licenseSelectors.isEnterpriseOrDeveloper);
+    const license = useAppSelector(licenseSelectors.licenseInfo);
+    const isProfessionalOrAbove = license.isAtLeast("Professional");
 
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
     const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
@@ -457,18 +448,6 @@ export function useNewOngoingTasks() {
         return `${limitReachedReason} has reached the maximum number of subscriptions allowed per ${limitReachedReason.toLowerCase()}.`;
     };
 
-    const getTaskDisableReason = ({ hasAccess, customReason, hasSharding }: GetDisableReasonProps) => {
-        if (!hasAccess) {
-            return "You don't have permission to create this task";
-        }
-
-        if (!hasSharding && isSharded) {
-            return "Not supported in sharded databases";
-        }
-
-        return customReason ?? null;
-    };
-
     const ongoingTasks: OngoingTasksCategory[] = [
         {
             categoryName: "Replication",
@@ -482,15 +461,10 @@ export function useNewOngoingTasks() {
                     variant: "Replication",
                     target: "ExternalReplication",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !isProfessionalOrAbove,
+                    showLicenseBadge: !hasExternalReplication,
                     link: forCurrentDatabase.editExternalReplicationTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        hasSharding: true,
-                        customReason: !hasExternalReplication
-                            ? "Your license doesn't include External Replication"
-                            : null,
-                    }),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Replication Hub",
@@ -500,12 +474,9 @@ export function useNewOngoingTasks() {
                     variant: "Replication",
                     licenseBadge: "Enterprise",
                     target: "ReplicationHub",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasReplicationHub,
                     link: forCurrentDatabase.editReplicationHubTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasReplicationHub ? "Your license doesn't include Replication Hub" : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Replication Sink",
@@ -515,12 +486,9 @@ export function useNewOngoingTasks() {
                     variant: "Replication",
                     target: "ReplicationSink",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !isProfessionalOrAbove,
+                    showLicenseBadge: !hasReplicationSink,
                     link: forCurrentDatabase.editReplicationSinkTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasReplicationSink ? "Your license doesn't include Replication Sink" : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
@@ -534,14 +502,11 @@ export function useNewOngoingTasks() {
                     iconName: "periodic-backup",
                     variant: "Backups",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !isProfessionalOrAbove,
+                    showLicenseBadge: !hasPeriodicBackups,
                     target: "PeriodicBackup",
                     link: forCurrentDatabase.editPeriodicBackupTask("OngoingTasks", false)(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        hasSharding: true,
-                        customReason: !hasPeriodicBackups ? "Your license doesn't include Periodic Backup" : null,
-                    }),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
@@ -551,16 +516,14 @@ export function useNewOngoingTasks() {
             tasks: [
                 {
                     title: "Subscription",
-                    disableReason: getTaskDisableReason({
-                        hasAccess: true,
-                        customReason: getSubscriptionLimitReason(),
-                        hasSharding: true,
-                    }),
                     description: "Send batches of documents that match a pre-defined query to a client for processing.",
                     iconName: "subscriptions",
                     variant: "Subscriptions",
                     target: "Subscription",
                     link: forCurrentDatabase.editSubscriptionTaskUrl(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseReadWrite",
+                    customDisabledReason: getSubscriptionLimitReason(),
                     counterBadge: isProfessionalOrAbove ? null : (
                         <CounterBadge
                             count={tasks.subscriptions.length}
@@ -583,13 +546,10 @@ export function useNewOngoingTasks() {
                     variant: "ETL",
                     target: "RavenETL",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !isProfessionalOrAbove,
+                    showLicenseBadge: !hasRavenDbEtl,
                     link: forCurrentDatabase.editRavenEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        hasSharding: true,
-                        customReason: !hasRavenDbEtl ? "Your license doesn't include RavenDB ETL" : null,
-                    }),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Elasticsearch ETL",
@@ -599,13 +559,10 @@ export function useNewOngoingTasks() {
                     variant: "ETL",
                     target: "ElasticSearchETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasElasticSearchEtl,
                     link: forCurrentDatabase.editElasticSearchEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        hasSharding: true,
-                        customReason: !hasElasticSearchEtl ? "Your license doesn't include Elasticsearch ETL" : null,
-                    }),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Kafka ETL",
@@ -614,12 +571,9 @@ export function useNewOngoingTasks() {
                     variant: "ETL",
                     target: "KafkaETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasKafkaEtl,
                     link: forCurrentDatabase.editKafkaEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasKafkaEtl ? "Your license doesn't include Kafka ETL" : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "SQL ETL",
@@ -629,13 +583,10 @@ export function useNewOngoingTasks() {
                     variant: "ETL",
                     target: "SqlETL",
                     licenseBadge: "Professional +",
-                    showLicenseBadge: !isProfessionalOrAbove,
+                    showLicenseBadge: !hasSqlEtl,
                     link: forCurrentDatabase.editSqlEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        hasSharding: true,
-                        customReason: !hasSqlEtl ? "Your license doesn't include SQL ETL" : null,
-                    }),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "OLAP ETL",
@@ -646,12 +597,9 @@ export function useNewOngoingTasks() {
                     target: "OlapETL",
                     link: forCurrentDatabase.editOlapEtlTaskUrl(),
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        hasSharding: true,
-                        customReason: !hasOlapEtl ? "Your license doesn't include OLAP ETL" : null,
-                    }),
+                    showLicenseBadge: !hasOlapEtl,
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "RabbitMQ ETL",
@@ -661,12 +609,9 @@ export function useNewOngoingTasks() {
                     variant: "ETL",
                     target: "RabbitMqETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasRabbitMqEtl,
                     link: forCurrentDatabase.editRabbitMqEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasRabbitMqEtl ? "Your license doesn't include RabbitMQ ETL" : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Azure Queue Storage ETL",
@@ -676,14 +621,9 @@ export function useNewOngoingTasks() {
                     variant: "ETL",
                     target: "AzureQueueStorageETL",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasAzureQueueStorageEtl,
                     link: forCurrentDatabase.editAzureQueueStorageEtlTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasAzureQueueStorageEtl
-                            ? "Your license doesn't include Azure Queue Storage ETL"
-                            : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
@@ -699,12 +639,9 @@ export function useNewOngoingTasks() {
                     variant: "Sink",
                     target: "KafkaSink",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasKafkaSink,
                     link: forCurrentDatabase.editKafkaSinkTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasKafkaSink ? "Your license doesn't include Kafka Sink" : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "RabbitMQ Sink",
@@ -714,12 +651,9 @@ export function useNewOngoingTasks() {
                     target: "RabbitMqSink",
                     variant: "Sink",
                     licenseBadge: "Enterprise",
-                    showLicenseBadge: !isEnterpriseOrDeveloper,
+                    showLicenseBadge: !hasRabbitMqSink,
                     link: forCurrentDatabase.editRabbitMqSinkTaskUrl(),
-                    disableReason: getTaskDisableReason({
-                        hasAccess: hasDatabaseAdminAccess,
-                        customReason: !hasRabbitMqSink ? "Your license doesn't include RabbitMQ Sink" : null,
-                    }),
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
