@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _resultsSet = true;
 
-            if (_session.NoTracking)
+            if (_session.TrackingMode == TrackingMode.NoTracking)
             {
                 _results = result;
                 return;
@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session.Operations
             var i = 0;
             T[] finalResults;
 
-            if (_session.NoTracking)
+            if (_session.TrackingMode == TrackingMode.NoTracking)
             {
                 if (_resultsSet == false)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");

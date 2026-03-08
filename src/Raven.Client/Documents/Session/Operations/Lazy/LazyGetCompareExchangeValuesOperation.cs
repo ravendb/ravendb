@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
             if (response.Result != null)
             {
-                if (_clusterSession._session.NoTracking)
+                if (_clusterSession._session.TrackingMode == TrackingMode.NoTracking)
                 {
                     var result = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
                     foreach (var kvp in CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValues((BlittableJsonReaderObject)response.Result, materializeMetadata: false, _conventions))
@@ -137,7 +137,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out var notTrackedKeys);
-            Debug.Assert(_clusterSession._session.NoTracking || notTrackedKeys == null, "notTrackedKeys == null");
+            Debug.Assert(_clusterSession._session.TrackingMode == TrackingMode.NoTracking || notTrackedKeys == null, "notTrackedKeys == null");
         }
     }
 }

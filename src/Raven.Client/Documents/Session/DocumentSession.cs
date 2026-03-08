@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                if (NoTracking)
+                if (TrackingMode == TrackingMode.NoTracking)
                     throw new InvalidOperationException($"Cannot execute '{nameof(SaveChanges)}' when entity tracking is disabled in session.");
 
                 RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);

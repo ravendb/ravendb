@@ -211,7 +211,6 @@ namespace Raven.Client.Documents.Session
         protected internal readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary =
             new Dictionary<(string, CommandType, string), ICommandData>();
 
-        public readonly bool NoTracking;
         public readonly TrackingMode TrackingMode;
 
         internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
@@ -240,7 +239,6 @@ namespace Raven.Client.Documents.Session
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
 
-            NoTracking = options.TrackingMode == TrackingMode.NoTracking;
             TrackingMode = options.TrackingMode;
 
             TrackedEntities = new TrackedEntitiesHolder(options.TrackingMode);
@@ -489,12 +487,12 @@ more responsive application.
         /// <returns></returns>
         private object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
-            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: NoTracking);
+            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: TrackingMode == TrackingMode.NoTracking);
         }
 
         internal void RegisterExternalLoadedIntoTheSession(DocumentInfo info)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             if (DocumentsById.TryGetValue(info.Id, out var existing))
@@ -526,7 +524,7 @@ more responsive application.
         /// <returns></returns>
         private object TrackEntity(Type entityType, string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
         {
-            noTracking = NoTracking || noTracking; // if noTracking is session-wide then we want to override the passed argument
+            noTracking = TrackingMode == TrackingMode.NoTracking || noTracking; // if noTracking is session-wide then we want to override the passed argument
 
             if (string.IsNullOrEmpty(id))
             {
@@ -703,7 +701,7 @@ more responsive application.
 
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
 
             if (entity == null)
@@ -1498,7 +1496,7 @@ more responsive application.
 
         public void RegisterMissing(string id)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             _knownMissingIds.Add(id);
@@ -1506,7 +1504,7 @@ more responsive application.
 
         public void RegisterMissing(IEnumerable<string> ids)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             _knownMissingIds.UnionWith(ids);
@@ -1514,7 +1512,7 @@ more responsive application.
 
         internal void RegisterIncludes(BlittableJsonReaderObject includes, bool registerMissingIds = false)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             if (includes == null)
@@ -1544,7 +1542,7 @@ more responsive application.
 
         internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             if (revisionIncludes == null)
@@ -1576,7 +1574,7 @@ more responsive application.
 
         public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             if (includePaths == null || includePaths.Count == 0)
@@ -1612,7 +1610,7 @@ more responsive application.
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] ids, string[] countersToInclude, bool gotAll)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             if (resultCounters == null || resultCounters.Count == 0)
@@ -1637,7 +1635,7 @@ more responsive application.
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude)
         {
-            if (NoTracking)
+            if (TrackingMode == TrackingMode.NoTracking)
                 return;
 
             if (resultCounters == null || resultCounters.Count == 0)
@@ -1797,7 +1795,7 @@ more responsive application.
 
         internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries)
         {
-            if (NoTracking || resultTimeSeries == null)
+            if (TrackingMode == TrackingMode.NoTracking || resultTimeSeries == null)
                 return;
 
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -2353,10 +2351,10 @@ more responsive application.
                 documentInfo.ChangeVector = (LazyStringValue)changeVector;
             }
 
-            if (documentInfo.Entity != null && NoTracking == false)
+            if (documentInfo.Entity != null && TrackingMode != TrackingMode.NoTracking)
                 JsonConverter.RemoveFromMissing(documentInfo.Entity);
 
-            documentInfo.Entity = JsonConverter.FromBlittable<T>(ref document, documentInfo.Id, NoTracking == false);
+            documentInfo.Entity = JsonConverter.FromBlittable<T>(ref document, documentInfo.Id, TrackingMode != TrackingMode.NoTracking);
             documentInfo.Document = document;
 
             var type = entity.GetType();
@@ -2658,7 +2656,7 @@ more responsive application.
 
         internal void AssertNoIncludesInNonTrackingSession()
         {
-            if (NoTracking == false)
+            if (TrackingMode != TrackingMode.NoTracking)
                 return;
 
             throw new InvalidOperationException(

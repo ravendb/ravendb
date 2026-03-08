@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session
 
                 cache.Values[counter] = value;
 
-                if (Session.NoTracking == false)
+                if (Session.TrackingMode != TrackingMode.NoTracking)
                     Session.CountersByDocId[DocId] = cache;
 
                 return value;
@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Session
                     break;
                 }
 
-                if (Session.NoTracking == false)
+                if (Session.TrackingMode != TrackingMode.NoTracking)
                     Session.CountersByDocId[DocId] = cache;
 
                 return result;
@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Session
 
                 cache.GotAll = true;
 
-                if (Session.NoTracking == false)
+                if (Session.TrackingMode != TrackingMode.NoTracking)
                     Session.CountersByDocId[DocId] = cache;
 
                 return cache.Values;

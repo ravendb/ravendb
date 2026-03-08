@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Session
             if (rangeResult == null)
                 return null;
 
-            if (Session.NoTracking == false)
+            if (Session.TrackingMode != TrackingMode.NoTracking)
             {
                 HandleIncludes(rangeResult);
 
@@ -286,7 +286,7 @@ namespace Raven.Client.Documents.Session
             var mergedValues = MergeRangesWithResults(from, to, ranges, fromRangeIndex, toRangeIndex,
                 resultFromServer: details.Values[Name], out var resultToUser);
 
-            if (Session.NoTracking == false)
+            if (Session.TrackingMode != TrackingMode.NoTracking)
             {
                 from = details.Values[Name].Min(ts => ts.From);
                 to = details.Values[Name].Max(ts => ts.To);

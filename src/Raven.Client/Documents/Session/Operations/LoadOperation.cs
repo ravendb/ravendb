@@ -144,7 +144,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public T GetDocument<T>()
         {
-            if (_session.NoTracking)
+            if (_session.TrackingMode == TrackingMode.NoTracking)
             {
                 if (_resultsSet == false && _ids.Length > 0)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocument)}' before operation execution.");
@@ -184,7 +184,7 @@ namespace Raven.Client.Documents.Session.Operations
         public Dictionary<string, T> GetDocuments<T>()
         {
             var finalResults = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
-            if (_session.NoTracking)
+            if (_session.TrackingMode == TrackingMode.NoTracking)
             {
                 if (_resultsSet == false && _ids.Length > 0)
                     throw new InvalidOperationException($"Cannot execute '{nameof(GetDocuments)}' before operation execution.");
@@ -220,7 +220,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _resultsSet = true;
 
-            if (_session.NoTracking)
+            if (_session.TrackingMode == TrackingMode.NoTracking)
             {
                 _results = result;
                 return;

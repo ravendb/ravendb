@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Disable tracking for all entities in the session<br/>
         /// </summary>
-        /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.NoTracking"/></remarks>
+        /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.TrackingMode"/></remarks>
         [Obsolete("SessionOptions.NoTracking is obsolete and will be removed in the next major version. Please use " +
                   nameof(SessionOptions) + "." + nameof(TrackingMode) + " instead. " +
                   "See: https://ravendb.net/docs/article-page/latest/csharp/client-api/session/options#notracking")]

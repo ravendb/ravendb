@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             {
                 var value = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValue((BlittableJsonReaderObject)response.Result, materializeMetadata: false, _conventions);
 
-                if (_clusterSession._session.NoTracking)
+                if (_clusterSession._session.TrackingMode == TrackingMode.NoTracking)
                 {
                     if (value == null)
                     {
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 _clusterSession.RegisterMissingCompareExchangeValue(_key);
 
             Result = _clusterSession.GetCompareExchangeValueFromSessionInternal<T>(_key, out var notTracked);
-            Debug.Assert(_clusterSession._session.NoTracking || notTracked == false, "notTracked == false");
+            Debug.Assert(_clusterSession._session.TrackingMode == TrackingMode.NoTracking || notTracked == false, "notTracked == false");
         }
     }
 }
