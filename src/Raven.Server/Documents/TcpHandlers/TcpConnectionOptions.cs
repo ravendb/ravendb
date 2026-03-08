@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             var databaseContext = DatabaseContext;
             if (databaseContext != null)
-                sb.Append($" for database '{databaseContext.DatabaseName}'");
+                sb.Append($" for sharded database '{databaseContext.DatabaseName}'");
 
             return sb.ToString();
         }
