@@ -397,7 +397,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task WillFindUpdatedEmbeddingValues(Options options)
     {
@@ -439,7 +439,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task MultiVectorSearchMinOnDuplicates(Options options)
     {

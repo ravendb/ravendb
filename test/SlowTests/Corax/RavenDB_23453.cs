@@ -18,7 +18,7 @@ namespace SlowTests.Corax;
 
 public class RavenDB_23453_Integration(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [InlineData(true, true)]
     [InlineData(true, false)]
     [InlineData(false, true)]
@@ -103,7 +103,7 @@ public class RavenDB_23453_Integration(ITestOutputHelper output) : RavenTestBase
     }
 
 
-    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Querying | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     [InlineDataWithRandomSeed(true, true)]
     [InlineDataWithRandomSeed(true, false)]
     [InlineDataWithRandomSeed(false, true)]
