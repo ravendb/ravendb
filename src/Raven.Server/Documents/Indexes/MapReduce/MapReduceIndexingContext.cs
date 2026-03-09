@@ -41,6 +41,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             DocumentMapEntries = null;
             MapPhaseTree = null;
             ReducePhaseTree = null;
+            ResultsStoreTypes = null;
             ProcessedDocEtags.Clear();
             ProcessedTombstoneEtags.Clear();
             ProcessedTimeSeriesDeletedRangeEtags.Clear();
