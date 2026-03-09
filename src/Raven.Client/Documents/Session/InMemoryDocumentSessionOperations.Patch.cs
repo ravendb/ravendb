@@ -189,7 +189,7 @@ namespace Raven.Client.Documents.Session
             var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false
-                && HasDictionaryIndexer(pathScript) == false)
+                && HasDictionaryIndexer(pathScript) == false && IsSimplePropertyPath(pathScript))
             {
                 var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
                 var jpd = new JsonPatchDocument();
@@ -546,6 +546,13 @@ namespace Raven.Client.Documents.Session
         private static bool HasDictionaryIndexer(string jsPath)
         {
             return jsPath.Contains("[\"") || jsPath.Contains("['");
+        }
+
+        private static bool IsSimplePropertyPath(string jsPath)
+        {
+            // Paths containing function calls (e.g. LINQ .Where().FirstOrDefault() compiled to .filter()())
+            // cannot be converted to JSON Pointer and must use the JavaScript patch path.
+            return jsPath.Contains("(") == false;
         }
 
         private bool HasExistingJavaScriptPatch(string id)
