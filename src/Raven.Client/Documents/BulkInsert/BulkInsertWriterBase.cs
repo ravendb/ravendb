@@ -126,11 +126,12 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         return WriteToStreamAsync(src, dst, _memoryBuffer);
     }
 
-    protected Task WriteToRequestStreamAsync(Stream src)
+    protected async Task WriteToRequestStreamAsync(Stream src)
     {
-        return WriteToStreamAsync(src, _requestBodyStream, _memoryBuffer);
+        await _asyncWrite.ConfigureAwait(false);
+        await WriteToStreamAsync(src, _requestBodyStream, _memoryBuffer).ConfigureAwait(false);
     }
-
+    
     private async Task WriteToStreamAsync(Stream src, Stream dst, JsonOperationContext.MemoryBuffer buffer, bool forceDstFlush = false)
     {
         src.Seek(0, SeekOrigin.Begin);

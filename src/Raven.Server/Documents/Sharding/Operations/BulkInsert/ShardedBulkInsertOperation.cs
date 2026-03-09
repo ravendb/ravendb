@@ -77,17 +77,18 @@ internal sealed class ShardedBulkInsertOperation : BulkInsertOperationBase<Shard
         await ExecuteBeforeStore();
 
         int shardNumber = _databaseContext.GetShardNumberFor(_context, id);
+        var shardWriter = _writers[shardNumber];
 
-        await _writers[shardNumber].WriteStreamAsync(command.Stream);
+        await shardWriter.WriteStreamAsync(command.Stream);
 
         if (command.AttachmentStream.Stream != null)
         {
-            await _writers[shardNumber].FlushIfNeeded(force: true);
-            await _writers[shardNumber].WriteStreamDirectlyToRequestAsync(command.AttachmentStream.Stream);
+            await shardWriter.FlushIfNeeded(force: true);
+            await shardWriter.WriteStreamDirectlyToRequestAsync(command.AttachmentStream.Stream);
         }
         else
         {
-            await _writers[shardNumber].FlushIfNeeded();
+            await shardWriter.FlushIfNeeded();
         }
     }
 
