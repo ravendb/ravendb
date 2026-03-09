@@ -38,7 +38,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
     protected ConversationDocument _document;
     private string _conversationId;
-    private RequestBody _request;
+    protected RequestBody _request;
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
