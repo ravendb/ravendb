@@ -188,14 +188,19 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
-            if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false)
+            if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false
+                && HasDictionaryIndexer(pathScript) == false)
             {
                 var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
                 var jpd = new JsonPatchDocument();
 
                 object valueToUse = value;
-                if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
-                    valueToUse = Convert.ToInt32(value);
+                if (value is Enum)
+                {
+                    valueToUse = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching
+                        ? Convert.ToInt32(value)
+                        : value.ToString();
+                }
 
                 jpd.Replace(jsonPointer, valueToUse);
 
@@ -281,8 +286,12 @@ namespace Raven.Client.Documents.Session
                             var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
                             var jpd = new JsonPatchDocument();
 
-                            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && dictValue is Enum)
-                                dictValue = Convert.ToInt32(dictValue);
+                            if (dictValue is Enum)
+                            {
+                                dictValue = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching
+                                    ? Convert.ToInt32(dictValue)
+                                    : dictValue.ToString();
+                            }
 
                             jpd.Add($"{jsonPointer}/{escapedKey}", dictValue);
 
@@ -491,6 +500,8 @@ namespace Raven.Client.Documents.Session
                         sb.Append('/');
                         break;
                     case ']':
+                    case '"':
+                    case '\'':
                         break;
                     case '~':
                         sb.Append("~0");
@@ -547,6 +558,11 @@ namespace Raven.Client.Documents.Session
             return true;
         }
 
+        private static bool HasDictionaryIndexer(string jsPath)
+        {
+            return jsPath.Contains("[\"") || jsPath.Contains("['");
+        }
+
         private bool HasExistingJavaScriptPatch(string id)
         {
             return DeferredCommandsDictionary.ContainsKey((id, CommandType.PATCH, null));
@@ -571,8 +587,12 @@ namespace Raven.Client.Documents.Session
                         foreach (var val in values)
                         {
                             object valueToUse = val;
-                            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && val is Enum)
-                                valueToUse = Convert.ToInt32(val);
+                            if (val is Enum)
+                            {
+                                valueToUse = DocumentStore.Conventions.SaveEnumsAsIntegersForPatching
+                                    ? Convert.ToInt32(val)
+                                    : val.ToString();
+                            }
                             jpd.Add($"{jsonPointer}/-", valueToUse);
                         }
                         break;
