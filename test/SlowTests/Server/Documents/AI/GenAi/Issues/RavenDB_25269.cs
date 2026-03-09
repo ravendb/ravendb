@@ -101,7 +101,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;
 
                     // run update phase *manually* (in test mode the update phase goes through a different code path than regular GenAI flow)
                     var req = new PatchRequest(config.UpdateScript, PatchRequestType.GenAi);
-                    var cmd = new GenAiBatchPatchCommand(context, result.Results, req, config.Identifier, RavenLogManager.Instance.GetLoggerForDatabase<RavenDB_25269>(database), new EtlProcessStatistics(), new GenAiStatsScope(new EtlRunStats()));
+                    var cmd = new GenAiBatchPatchCommand(result.Results, req, config.Identifier, RavenLogManager.Instance.GetLoggerForDatabase<RavenDB_25269>(database), new EtlProcessStatistics(), new GenAiStatsScope(new EtlRunStats()));
 
                     // should not throw NRE even if the document was deleted
                     await database.TxMerger.Enqueue(cmd);

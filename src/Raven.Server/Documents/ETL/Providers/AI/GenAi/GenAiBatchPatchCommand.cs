@@ -23,9 +23,8 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
     private readonly RavenLogger _logger;
     private readonly EtlProcessStatistics _statistics;
     private readonly GenAiStatsScope _scope;
-    private readonly DocumentDatabase _database;
 
-    public GenAiBatchPatchCommand(DocumentsOperationContext context,
+    public GenAiBatchPatchCommand(
         List<GenAiResultItem> items,
         PatchRequest patchRequest,
         string taskIdentifier,
@@ -42,10 +41,6 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
         if (string.IsNullOrEmpty(taskIdentifier))
             throw new ArgumentException(nameof(taskIdentifier));
         _taskIdentifier = taskIdentifier;
-
-        if (context == null)
-            throw new ArgumentNullException(nameof(context));
-        _database = context.DocumentDatabase;
     }
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -54,7 +49,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
         using (var statsScope = _scope.For(GenAiOperations.ApplyUpdateScript))
         {
-            using (_database.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
+            using (context.DocumentDatabase.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
             {
                 foreach (var item in _items)
                 {
@@ -222,7 +217,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
     private Document GetCurrentDocument(DocumentsOperationContext context, string id)
     {
-        var originalDocument = _database.DocumentsStorage.Get(context, id);
+        var originalDocument = context.DocumentDatabase.DocumentsStorage.Get(context, id);
 
         if (originalDocument != null)
         {

@@ -106,6 +106,12 @@ var ai = new AI();
         _stats = stats.For(EtlOperations.Transform, start: false);
     }
 
+    public override void Dispose()
+    {
+        Context.CloseTransaction();
+        base.Dispose();
+    }
+
     public override void Initialize(bool debugMode)
     {
         _configurationPartialHash = GetInitialHash(_configuration);
