@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Text;
 using Lambda2Js;
+using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
@@ -186,13 +188,30 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
-            var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
-            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+            if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false)
             {
-                valueToUse = Convert.ToInt32(value);
+                var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
+                var jpd = new JsonPatchDocument();
+
+                object valueToUse = value;
+                if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+                    valueToUse = Convert.ToInt32(value);
+
+                jpd.Replace(jsonPointer, valueToUse);
+
+                if (TryMergeJsonPatches(id, jpd) == false)
+                    Defer(new JsonPatchCommandData(id, jpd));
+
+                return;
             }
 
-            var patchRequest = new PatchRequest { Script = $"this.{pathScript} = args.val_{_valsCount};", Values = { [$"val_{_valsCount}"] = valueToUse } };
+            var valueForJs = AddTypeNameToValueIfNeeded(path.Body.Type, value);
+            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
+            {
+                valueForJs = Convert.ToInt32(value);
+            }
+
+            var patchRequest = new PatchRequest { Script = $"this.{pathScript} = args.val_{_valsCount};", Values = { [$"val_{_valsCount}"] = valueForJs } };
 
             _valsCount++;
 
@@ -213,6 +232,9 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
+            if (HasExistingJavaScriptPatch(id) == false && TryCreateArrayJsonPatch(id, path, arrayAdder))
+                return;
+
             var extension = new JavascriptConversionExtensions.CustomMethods
             {
                 Suffix = _customCount++,
@@ -244,6 +266,48 @@ namespace Raven.Client.Documents.Session
             {
                 ThrowUnsupportedExpression(dictionaryAdder);
                 return; // never hit
+            }
+
+            if (HasExistingJavaScriptPatch(id) == false)
+            {
+                switch (call.Method.Name)
+                {
+                    case nameof(JavaScriptDictionary<TKey, TValue>.Add):
+                    {
+                        var (dictKey, dictValue) = GetKeyAndValue<TKey, TValue>(call);
+                        if (ShouldUseJsonPatch(typeof(TValue), dictValue))
+                        {
+                            var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
+                            var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
+                            var jpd = new JsonPatchDocument();
+
+                            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && dictValue is Enum)
+                                dictValue = Convert.ToInt32(dictValue);
+
+                            jpd.Add($"{jsonPointer}/{escapedKey}", dictValue);
+
+                            if (TryMergeJsonPatches(id, jpd) == false)
+                                Defer(new JsonPatchCommandData(id, jpd));
+
+                            return;
+                        }
+
+                        break;
+                    }
+                    case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
+                    {
+                        var dictKey = GetKey(call);
+                        var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
+                        var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
+                        var jpd = new JsonPatchDocument();
+                        jpd.Remove($"{jsonPointer}/{escapedKey}");
+
+                        if (TryMergeJsonPatches(id, jpd) == false)
+                            Defer(new JsonPatchCommandData(id, jpd));
+
+                        return;
+                    }
+                }
             }
 
             var patchRequest = new PatchRequest();
@@ -410,6 +474,176 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(key), "Dictionary key cannot be null");
 
             return JavascriptConversionExtensions.ToJsStringLiteral(key.ToString());
+        }
+
+        private static string ConvertJavaScriptPathToJsonPointer(string jsPath)
+        {
+            var sb = new StringBuilder("/");
+            for (int i = 0; i < jsPath.Length; i++)
+            {
+                char c = jsPath[i];
+                switch (c)
+                {
+                    case '.':
+                        sb.Append('/');
+                        break;
+                    case '[':
+                        sb.Append('/');
+                        break;
+                    case ']':
+                        break;
+                    case '~':
+                        sb.Append("~0");
+                        break;
+                    case '/':
+                        sb.Append("~1");
+                        break;
+                    default:
+                        sb.Append(c);
+                        break;
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        private static string EscapeJsonPointerSegment(string segment)
+        {
+            return segment.Replace("~", "~0").Replace("/", "~1");
+        }
+
+        private static bool ShouldUseJsonPatch(Type propertyType, object value)
+        {
+            if (value == null)
+                return true;
+
+            var typeOfValue = value.GetType();
+
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            if (value is DateOnly or TimeOnly)
+                return false;
+#endif
+
+            if (propertyType != typeOfValue && typeOfValue.IsClass)
+                return false;
+
+            return true;
+        }
+
+        private bool TryMergeJsonPatches(string id, JsonPatchDocument patch)
+        {
+            if (DeferredCommandsDictionary.TryGetValue((id, CommandType.JsonPatch, null), out ICommandData command) == false)
+                return false;
+
+            DeferredCommands.Remove(command);
+
+            var oldPatch = (JsonPatchCommandData)command;
+            foreach (var op in patch.Operations)
+            {
+                oldPatch.JsonPatch.Operations.Add(op);
+            }
+
+            Defer(oldPatch);
+            return true;
+        }
+
+        private bool HasExistingJavaScriptPatch(string id)
+        {
+            return DeferredCommandsDictionary.ContainsKey((id, CommandType.PATCH, null));
+        }
+
+        private bool TryCreateArrayJsonPatch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
+            Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
+        {
+            var operations = new List<(string MethodName, List<object> Values)>();
+            if (CollectArrayOperations(arrayAdder.Body, operations) == false)
+                return false;
+
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
+            var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
+            var jpd = new JsonPatchDocument();
+
+            foreach (var (methodName, values) in operations)
+            {
+                switch (methodName)
+                {
+                    case nameof(JavaScriptArray<U>.Add):
+                        foreach (var val in values)
+                        {
+                            object valueToUse = val;
+                            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && val is Enum)
+                                valueToUse = Convert.ToInt32(val);
+                            jpd.Add($"{jsonPointer}/-", valueToUse);
+                        }
+                        break;
+                    case nameof(JavaScriptArray<U>.RemoveAt):
+                        jpd.Remove($"{jsonPointer}/{values[0]}");
+                        break;
+                    default:
+                        return false;
+                }
+            }
+
+            if (TryMergeJsonPatches(id, jpd) == false)
+                Defer(new JsonPatchCommandData(id, jpd));
+
+            return true;
+        }
+
+        private static bool CollectArrayOperations(Expression expression, List<(string MethodName, List<object> Values)> operations)
+        {
+            if (expression is UnaryExpression unary)
+                expression = unary.Operand;
+
+            if (expression is not MethodCallExpression mce)
+                return false;
+
+            // Handle chaining: the Object of the method call may itself be a method call
+            if (mce.Object is MethodCallExpression innerCall)
+            {
+                if (CollectArrayOperations(innerCall, operations) == false)
+                    return false;
+            }
+
+            var methodName = mce.Method.Name;
+
+            if (methodName == nameof(JavaScriptArray<object>.RemoveAll))
+                return false;
+
+            var values = new List<object>();
+            foreach (var arg in mce.Arguments)
+            {
+                if (arg.Type.IsArray)
+                {
+                    if (arg is NewArrayExpression newArray)
+                    {
+                        foreach (var element in newArray.Expressions)
+                        {
+                            if (LinqPathProvider.GetValueFromExpressionWithoutConversion(element, out var val) == false)
+                                return false;
+                            values.Add(val);
+                        }
+                    }
+                    else if (LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out var arrayValue) && arrayValue is Array array)
+                    {
+                        foreach (var item in array)
+                            values.Add(item);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out var val) == false)
+                        return false;
+                    values.Add(val);
+                }
+            }
+
+            operations.Add((methodName, values));
+            return true;
         }
     }
 }
