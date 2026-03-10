@@ -412,6 +412,20 @@ namespace Raven.Client.Documents.Linq
                             value = CmpXchg.Value((string)args[0]);
                             return true;
                         }
+
+                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
+                            mce.Method.Name == nameof(RavenQuery.Now))
+                        {
+                            value = NowMethodCall.Instance;
+                            return true;
+                        }
+
+                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
+                            mce.Method.Name == nameof(RavenQuery.Today))
+                        {
+                            value = TodayMethodCall.Instance;
+                            return true;
+                        }
                     }
                     value = Expression.Lambda(expression).Compile().DynamicInvoke();
                     return true;
@@ -594,6 +608,16 @@ namespace Raven.Client.Documents.Linq
         public static bool IsCompareExchangeCall(MethodCallExpression mce)
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.CmpXchg);
+        }
+
+        public static bool IsNowCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Now);
+        }
+
+        public static bool IsTodayCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Today);
         }
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)

@@ -221,6 +221,28 @@ namespace Raven.Client.Documents.Queries
         }
 
         /// <summary>
+        /// Returns the current UTC date and time on the server. Translates to the <c>now()</c> RQL function.
+        /// Can be used in LINQ queries, DocumentQuery, and AsyncDocumentQuery for time-based filtering.
+        /// </summary>
+        /// <returns>The current UTC date and time.</returns>
+        /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>
+        public static DateTime Now()
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        /// <summary>
+        /// Returns the start of the current UTC day (midnight) on the server. Translates to the <c>today()</c> RQL function.
+        /// Can be used in LINQ queries, DocumentQuery, and AsyncDocumentQuery for date-based filtering.
+        /// </summary>
+        /// <returns>The start of the current UTC day.</returns>
+        /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>
+        public static DateTime Today()
+        {
+            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
+        }
+
+        /// <summary>
         /// Includes a related document path in the query for loading. This method is for server-side LINQ query translation only.
         /// </summary>
         /// <typeparam name="T">The type of the document.</typeparam>

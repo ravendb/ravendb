@@ -672,6 +672,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     token = WhereToken.Create(op, whereParams.FieldName, null,
                         new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
                 }
+                else if (type == typeof(NowMethodCall))
+                {
+                    token = WhereToken.Create(op, whereParams.FieldName, null,
+                        new WhereToken.WhereOptions(WhereToken.MethodsType.Now, args, mc.AccessPath, whereParams.Exact));
+                }
+                else if (type == typeof(TodayMethodCall))
+                {
+                    token = WhereToken.Create(op, whereParams.FieldName, null,
+                        new WhereToken.WhereOptions(WhereToken.MethodsType.Today, args, mc.AccessPath, whereParams.Exact));
+                }
                 else
                 {
                     throw new ArgumentException($"Unknown method {type}");
@@ -853,6 +863,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.GreaterThan, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "*"
                 : TransformValue(new WhereParams
@@ -876,6 +890,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.GreaterThanOrEqual, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "*"
                 : TransformValue(new WhereParams
@@ -899,6 +917,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.LessThan, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "NULL"
                 : TransformValue(new WhereParams
@@ -922,6 +944,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.LessThanOrEqual, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "NULL"
                 : TransformValue(new WhereParams
