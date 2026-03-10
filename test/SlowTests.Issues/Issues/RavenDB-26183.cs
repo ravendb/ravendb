@@ -640,4 +640,57 @@ public class RavenDB_26183 : RavenTestBase
             }
         }
     }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Linq_Now_WorksInFilterClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<Employee>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Filter(e => e.HiredAt <= RavenQuery.Now());
+
+                var employees = query.ToList();
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void DocumentQuery_Now_WorksInFilterClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced
+                    .DocumentQuery<Employee>()
+                    .Filter(f => f.LessThanOrEqual("HiredAt", Time.Now))
+                    .WaitForNonStaleResults();
+
+                var employees = query.ToList();
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
 }
