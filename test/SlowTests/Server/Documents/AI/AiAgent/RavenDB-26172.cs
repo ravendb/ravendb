@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -8,7 +7,6 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,7 +42,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     }
                 }
             };
-            ordersAgent.Parameters.Add(new AiAgentParameter("date", "date", sendToModel: false) { Type = AiAgentParameterValueType.DateTime });
+            ordersAgent.Parameters.Add(new AiAgentParameter("date", "date", sendToModel: false) { Type = AiAgentParameterValueType.String });
             var ordersAgentId = (await store.AI.CreateAgentAsync(ordersAgent, OutputSchema.Instance)).Identifier;
             
             var chat = store.AI.Conversation(
@@ -67,16 +65,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 .AddParameter("date", new DateTime(2026, 3, 7)).ToList();
 
             Assert.Equal(results.Count, r.Answer.OrdersIds.Count);
-
-            var chat2 = store.AI.Conversation(
-                ordersAgentId,
-                "Chats/2",
-                new AiConversationCreationOptions().AddParameter("date", "fdgdshg")
-            );
-            chat2.SetUserPrompt(
-                "Show me the orders."
-            );
-            await Assert.ThrowsAsync<AiException>(() => chat2.RunAsync<OutputSchema>());
         }
 
         private static async Task SeedOrders(IDocumentStore store)

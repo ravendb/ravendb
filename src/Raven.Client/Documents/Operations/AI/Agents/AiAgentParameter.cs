@@ -171,6 +171,5 @@ public enum AiAgentParameterValueType
     ArrayOfString,
     ArrayOfNumber,
     ArrayOfBoolean,
-    DateTime,
     Null
 }
