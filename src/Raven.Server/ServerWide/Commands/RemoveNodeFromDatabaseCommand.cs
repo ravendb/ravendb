@@ -55,20 +55,26 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public string UpdateShardedDatabaseRecord(DatabaseRecord record, int shardNumber, long etag)
+        public void UpdateShardedDatabaseRecord(DatabaseRecord record, int shardNumber, long etag)
         {
+            var deletionStatus = DeletionInProgressStatus.No;
+            record.DeletionInProgress?.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, shardNumber), out deletionStatus);
+            if (deletionStatus == DeletionInProgressStatus.No)
+                return;
+
             record.Sharding.Shards[shardNumber].RemoveFromTopology(NodeTag);
             record.DeletionInProgress?.Remove(DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, shardNumber));
 
             if (DatabaseId == null)
-                return null;
+                return;
 
-            if (record.UnusedDatabaseIds == null)
-                record.UnusedDatabaseIds = new HashSet<string>();
+            if (deletionStatus == DeletionInProgressStatus.HardDelete)
+            {
+                if (record.UnusedDatabaseIds == null)
+                    record.UnusedDatabaseIds = new HashSet<string>();
 
-            record.UnusedDatabaseIds.Add(DatabaseId);
-
-            return null;
+                record.UnusedDatabaseIds.Add(DatabaseId);
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)
