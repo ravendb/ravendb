@@ -416,14 +416,14 @@ namespace Raven.Client.Documents.Linq
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.Now))
                         {
-                            value = NowMethodCall.Instance;
+                            value = DateTimeMethodCall.Now;
                             return true;
                         }
 
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.Today))
                         {
-                            value = TodayMethodCall.Instance;
+                            value = DateTimeMethodCall.Today;
                             return true;
                         }
                     }

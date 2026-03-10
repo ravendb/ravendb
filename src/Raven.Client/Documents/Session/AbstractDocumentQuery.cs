@@ -672,15 +672,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     token = WhereToken.Create(op, whereParams.FieldName, null,
                         new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
                 }
-                else if (type == typeof(NowMethodCall))
+                else if (mc is DateTimeMethodCall dtmc)
                 {
                     token = WhereToken.Create(op, whereParams.FieldName, null,
-                        new WhereToken.WhereOptions(WhereToken.MethodsType.Now, args, mc.AccessPath, whereParams.Exact));
-                }
-                else if (type == typeof(TodayMethodCall))
-                {
-                    token = WhereToken.Create(op, whereParams.FieldName, null,
-                        new WhereToken.WhereOptions(WhereToken.MethodsType.Today, args, mc.AccessPath, whereParams.Exact));
+                        new WhereToken.WhereOptions(dtmc.MethodType, args, mc.AccessPath, whereParams.Exact));
                 }
                 else
                 {
