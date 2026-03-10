@@ -230,6 +230,8 @@ function execute(doc, args){
 
         public bool HasOrderByRandom;
 
+        public bool HasTemporalFunction;
+
         public DateTime CreatedAt;
 
         public DateTime LastQueriedAt;
@@ -2202,6 +2204,10 @@ function execute(doc, args){
                                 throw new InvalidQueryException($"Method cmpxchg() expects value token as second argument, got {rme.Arguments[0]} type", QueryText, parameters);
 
                             _metadata.HasCmpXchg = true;
+                            break;
+                        case MethodType.Now:
+                        case MethodType.Today:
+                            _metadata.HasTemporalFunction = true;
                             break;
                     }
                 }

@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = result.Instance;
             queryContext.WithIndex(index);
 
-            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
+            if (query.Metadata.HasOrderByRandom == false && query.Metadata.HasTemporalFunction == false && existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag(queryContext, query.Metadata);
                 if (etag == existingResultEtag)

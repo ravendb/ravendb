@@ -140,6 +140,12 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "revisions", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Revisions;
 
+            if (string.Equals(methodName, "now", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Now;
+
+            if (string.Equals(methodName, "today", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Today;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

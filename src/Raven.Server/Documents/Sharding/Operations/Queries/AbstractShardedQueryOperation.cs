@@ -38,7 +38,7 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
         QueryCommands = queryCommands ?? throw new ArgumentNullException(nameof(queryCommands));
         Context = context ?? throw new ArgumentNullException(nameof(context));
         _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
-        ExpectedEtag = metadata.HasOrderByRandom == false ? expectedEtag : null;
+        ExpectedEtag = metadata.HasOrderByRandom == false && metadata.HasTemporalFunction == false ? expectedEtag : null;
         
         HadActiveMigrationsBeforeQueryStarted = requestHandler.DatabaseContext.DatabaseRecord.Sharding.HasActiveMigrations();
     }

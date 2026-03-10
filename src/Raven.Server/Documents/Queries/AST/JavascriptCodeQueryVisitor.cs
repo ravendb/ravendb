@@ -104,6 +104,18 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitMethod(MethodExpression expr)
         {
+            if (expr.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase))
+            {
+                _sb.Append("new Date().toISOString()");
+                return;
+            }
+
+            if (expr.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase))
+            {
+                _sb.Append("new Date(new Date().setHours(0,0,0,0)).toISOString()");
+                return;
+            }
+
             if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase))
             {
                 if (expr.Arguments.Count != 2)
