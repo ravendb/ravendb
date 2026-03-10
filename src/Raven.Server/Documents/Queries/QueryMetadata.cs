@@ -232,6 +232,8 @@ function execute(doc, args){
 
         public bool HasTemporalFunction;
 
+        public bool HasNonDeterministicFunction => HasOrderByRandom || HasTemporalFunction;
+
         public DateTime CreatedAt;
 
         public DateTime LastQueriedAt;

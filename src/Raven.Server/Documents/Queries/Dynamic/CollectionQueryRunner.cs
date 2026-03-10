@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             FillCountOfResultsAndIndexEtag(result, query.Metadata, queryContext);
 
-            if (query.Metadata.HasOrderByRandom == false && query.Metadata.HasTemporalFunction == false && existingResultEtag.HasValue)
+            if (query.Metadata.HasNonDeterministicFunction == false && existingResultEtag.HasValue)
             {
                 if (result.ResultEtag == existingResultEtag)
                     return DocumentQueryResult.NotModifiedResult;

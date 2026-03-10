@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries
 
             queryContext.WithIndex(index);
 
-            if (query.Metadata.HasOrderByRandom == false && query.Metadata.HasTemporalFunction == false && existingResultEtag.HasValue)
+            if (query.Metadata.HasNonDeterministicFunction == false && existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag(queryContext, query.Metadata);
                 if (etag == existingResultEtag)

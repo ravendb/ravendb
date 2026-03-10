@@ -106,13 +106,19 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (expr.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase))
             {
+                if (expr.Arguments.Count != 0)
+                    throw new InvalidOperationException("now() expects zero arguments");
+
                 _sb.Append("new Date().toISOString()");
                 return;
             }
 
             if (expr.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase))
             {
-                _sb.Append("new Date(new Date().setHours(0,0,0,0)).toISOString()");
+                if (expr.Arguments.Count != 0)
+                    throw new InvalidOperationException("today() expects zero arguments");
+
+                _sb.Append("new Date(new Date().setUTCHours(0,0,0,0)).toISOString()");
                 return;
             }
 

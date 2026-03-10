@@ -400,31 +400,26 @@ namespace Raven.Client.Documents.Linq
                     {
                         if (TryUnwrapImplicitOperatorIfNeeded(expression, out var newExpression))
                             return GetValueFromExpressionWithoutConversion(newExpression, out value);
-
-                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
-                            mce.Method.Name == nameof(RavenQuery.CmpXchg))
+                        
+                        if (mce.Method.DeclaringType == typeof(RavenQuery))
                         {
-                            if (TryGetMethodArguments(mce, out var args) == false)
+                            switch (mce.Method.Name)
                             {
-                                value = null;
-                                return false;
+                                case nameof(RavenQuery.CmpXchg):
+                                    if (TryGetMethodArguments(mce, out var args) == false)
+                                    {
+                                        value = null;
+                                        return false;
+                                    }
+                                    value = CmpXchg.Value((string)args[0]);
+                                    return true;
+                                case nameof(RavenQuery.Now):
+                                    value = Time.Now;
+                                    return true;
+                                case nameof(RavenQuery.Today):
+                                    value = Time.Today;
+                                    return true;
                             }
-                            value = CmpXchg.Value((string)args[0]);
-                            return true;
-                        }
-
-                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
-                            mce.Method.Name == nameof(RavenQuery.Now))
-                        {
-                            value = Time.Now;
-                            return true;
-                        }
-
-                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
-                            mce.Method.Name == nameof(RavenQuery.Today))
-                        {
-                            value = Time.Today;
-                            return true;
                         }
                     }
                     value = Expression.Lambda(expression).Compile().DynamicInvoke();
