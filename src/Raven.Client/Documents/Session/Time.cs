@@ -7,21 +7,21 @@ namespace Raven.Client.Documents.Session
     /// Represents temporal RQL function calls: <c>now()</c> and <c>today()</c>.
     /// Use <see cref="Now"/> for the current UTC date and time, or <see cref="Today"/> for the start of the current UTC day (midnight).
     /// </summary>
-    public sealed class DateTimeMethodCall : MethodCall
+    public sealed class Time : MethodCall
     {
         /// <summary>
         /// Represents the <c>now()</c> RQL function. Returns the current UTC date and time on the server at query execution time.
         /// </summary>
-        public static readonly DateTimeMethodCall Now = new DateTimeMethodCall(WhereToken.MethodsType.Now);
+        public static readonly Time Now = new Time(WhereToken.MethodsType.Now);
 
         /// <summary>
         /// Represents the <c>today()</c> RQL function. Returns the start of the current UTC day (midnight) on the server at query execution time.
         /// </summary>
-        public static readonly DateTimeMethodCall Today = new DateTimeMethodCall(WhereToken.MethodsType.Today);
+        public static readonly Time Today = new Time(WhereToken.MethodsType.Today);
 
         public WhereToken.MethodsType MethodType { get; }
 
-        private DateTimeMethodCall(WhereToken.MethodsType methodType)
+        private Time(WhereToken.MethodsType methodType)
         {
             MethodType = methodType;
             Args = Array.Empty<object>();
