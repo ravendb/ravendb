@@ -18,7 +18,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     {
     }
 
-    private const string ProductSearch = nameof(ProductSearch);
+    internal const string ProductSearch = nameof(ProductSearch);
     internal const string RecentOrder = nameof(RecentOrder);
     private class Sample
     {
