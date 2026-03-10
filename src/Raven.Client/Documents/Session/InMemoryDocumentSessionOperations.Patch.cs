@@ -539,7 +539,7 @@ namespace Raven.Client.Documents.Session
                 return false;
 #endif
 
-            if (propertyType != typeOfValue && typeOfValue.IsClass)
+            if (typeOfValue.IsClass && typeOfValue != typeof(string))
                 return false;
 
             return true;
@@ -596,6 +596,9 @@ namespace Raven.Client.Documents.Session
                     case nameof(JavaScriptArray<U>.Add):
                         foreach (var val in values)
                         {
+                            if (ShouldUseJsonPatch(typeof(U), val) == false)
+                                return false;
+
                             jpd.Add($"{jsonPointer}/-", ConvertValueForJsonPatch(val));
                         }
                         break;
