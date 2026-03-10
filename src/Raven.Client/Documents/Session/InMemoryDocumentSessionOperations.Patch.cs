@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Text;
 using Lambda2Js;
 using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Commands.Batches;
@@ -186,14 +185,10 @@ namespace Raven.Client.Documents.Session
 
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
-
             if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false
-                && HasDictionaryIndexer(pathScript) == false && IsSimplePropertyPath(pathScript))
+                && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
-                var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
                 var jpd = new JsonPatchDocument();
-
                 jpd.Replace(jsonPointer, ConvertValueForJsonPatch(value));
 
                 if (TryMergeJsonPatches(id, jpd) == false)
@@ -202,6 +197,7 @@ namespace Raven.Client.Documents.Session
                 return;
             }
 
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var valueForJs = AddTypeNameToValueIfNeeded(path.Body.Type, value);
             if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
             {
@@ -257,15 +253,13 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
-            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
-
             if (!(dictionaryAdder.Body is MethodCallExpression call))
             {
                 ThrowUnsupportedExpression(dictionaryAdder);
                 return; // never hit
             }
 
-            if (HasExistingJavaScriptPatch(id) == false)
+            if (HasExistingJavaScriptPatch(id) == false && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 switch (call.Method.Name)
                 {
@@ -274,7 +268,6 @@ namespace Raven.Client.Documents.Session
                         var (dictKey, dictValue) = GetKeyAndValue<TKey, TValue>(call);
                         if (ShouldUseJsonPatch(typeof(TValue), dictValue))
                         {
-                            var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
                             var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
                             var jpd = new JsonPatchDocument();
 
@@ -291,7 +284,6 @@ namespace Raven.Client.Documents.Session
                     case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
                     {
                         var dictKey = GetKey(call);
-                        var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
                         var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
                         var jpd = new JsonPatchDocument();
                         jpd.Remove($"{jsonPointer}/{escapedKey}");
@@ -304,6 +296,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
 
+            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var patchRequest = new PatchRequest();
             object key;
             switch (call.Method.Name)
@@ -470,42 +463,68 @@ namespace Raven.Client.Documents.Session
             return JavascriptConversionExtensions.ToJsStringLiteral(key.ToString());
         }
 
-        private static string ConvertJavaScriptPathToJsonPointer(string jsPath)
-        {
-            var sb = new StringBuilder("/");
-            for (int i = 0; i < jsPath.Length; i++)
-            {
-                char c = jsPath[i];
-                switch (c)
-                {
-                    case '.':
-                        sb.Append('/');
-                        break;
-                    case '[':
-                        sb.Append('/');
-                        break;
-                    case ']':
-                    case '"':
-                    case '\'':
-                        break;
-                    case '~':
-                        sb.Append("~0");
-                        break;
-                    case '/':
-                        sb.Append("~1");
-                        break;
-                    default:
-                        sb.Append(c);
-                        break;
-                }
-            }
-
-            return sb.ToString();
-        }
-
         private static string EscapeJsonPointerSegment(string segment)
         {
             return segment.Replace("~", "~0").Replace("/", "~1");
+        }
+
+        private bool TryBuildJsonPointer(Expression body, out string jsonPointer)
+        {
+            jsonPointer = null;
+            var segments = new List<string>();
+            var current = body;
+
+            while (current != null)
+            {
+                switch (current)
+                {
+                    case ParameterExpression:
+                        // reached the root parameter (x =>), done
+                        current = null;
+                        break;
+
+                    case MemberExpression member:
+                        var name = Conventions.GetConvertedPropertyNameFor(member.Member);
+                        segments.Add(EscapeJsonPointerSegment(name));
+                        current = member.Expression;
+                        break;
+
+                    case BinaryExpression { NodeType: ExpressionType.ArrayIndex } arrayIndex:
+                        if (arrayIndex.Right is ConstantExpression indexConst && indexConst.Value is int idx)
+                        {
+                            segments.Add(idx.ToString());
+                            current = arrayIndex.Left;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                        break;
+
+                    case MethodCallExpression call when call.Method.Name == "get_Item" && call.Arguments.Count == 1:
+                        if (call.Arguments[0] is ConstantExpression itemConst && itemConst.Value is int itemIdx)
+                        {
+                            segments.Add(itemIdx.ToString());
+                            current = call.Object;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                        break;
+
+                    case UnaryExpression unary:
+                        current = unary.Operand;
+                        break;
+
+                    default:
+                        return false;
+                }
+            }
+
+            segments.Reverse();
+            jsonPointer = "/" + string.Join("/", segments);
+            return true;
         }
 
         private static bool ShouldUseJsonPatch(Type propertyType, object value)
@@ -543,18 +562,6 @@ namespace Raven.Client.Documents.Session
             return true;
         }
 
-        private static bool HasDictionaryIndexer(string jsPath)
-        {
-            return jsPath.Contains("[\"") || jsPath.Contains("['");
-        }
-
-        private static bool IsSimplePropertyPath(string jsPath)
-        {
-            // Paths containing function calls (e.g. LINQ .Where().FirstOrDefault() compiled to .filter()())
-            // cannot be converted to JSON Pointer and must use the JavaScript patch path.
-            return jsPath.Contains("(") == false;
-        }
-
         private bool HasExistingJavaScriptPatch(string id)
         {
             return DeferredCommandsDictionary.ContainsKey((id, CommandType.PATCH, null));
@@ -577,8 +584,9 @@ namespace Raven.Client.Documents.Session
             if (CollectArrayOperations(arrayAdder.Body, operations) == false)
                 return false;
 
-            var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
-            var jsonPointer = ConvertJavaScriptPathToJsonPointer(pathScript);
+            if (TryBuildJsonPointer(path.Body, out var jsonPointer) == false)
+                return false;
+
             var jpd = new JsonPatchDocument();
 
             foreach (var (methodName, values) in operations)
