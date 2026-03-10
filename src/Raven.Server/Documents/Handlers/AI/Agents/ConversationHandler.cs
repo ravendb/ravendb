@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -139,37 +140,78 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             if (requestParameters.TryGetMember(configParam.Name, out object value) == false)
                 continue;
 
-            var expectedType = configParam.Type;
+            ValidateSingleParameterValue(configParam, value);
+        }
+    }
 
-            if (expectedType == AiAgentParameterValueType.Default)
-                continue;
+    private static void ValidateSingleParameterValue(AiAgentParameter configParam, object value)
+    {
+        var expectedType = configParam.Type;
 
-            if (value is BlittableJsonReaderArray { Length: 0 })
-            {
-                if (expectedType is not (AiAgentParameterValueType.ArrayOfString or 
-                                            AiAgentParameterValueType.ArrayOfBoolean or 
-                                            AiAgentParameterValueType.ArrayOfNumber))
-                    throw new InvalidCastException(
-                        $"Parameter '{configParam.Name}' has invalid type. " +
-                        $"Expected: {expectedType}, " +
-                        $"Actual: Array (Empty), " +
-                        $"Value: {value}");
+        if (expectedType == AiAgentParameterValueType.Default)
+            return;
 
-                continue;
-            }
-
-            if (GetValueType(value, out var actualType, out var unsupportedType) == false)
-                throw new InvalidCastException(
-                    $"Parameter '{configParam.Name}' has unsupported type. " +
-                    $"Actual: {unsupportedType}");
-
-            if (actualType != expectedType)
+        if (value is BlittableJsonReaderArray { Length: 0 })
+        {
+            if (expectedType is not (AiAgentParameterValueType.ArrayOfString or 
+                AiAgentParameterValueType.ArrayOfBoolean or 
+                AiAgentParameterValueType.ArrayOfNumber))
                 throw new InvalidCastException(
                     $"Parameter '{configParam.Name}' has invalid type. " +
                     $"Expected: {expectedType}, " +
-                    $"Actual: {actualType}, " +
+                    $"Actual: Array (Empty), " +
                     $"Value: {value}");
+
+            return;
         }
+
+        AiAgentParameterValueType actualType;
+        string unsupportedType;
+
+        if (expectedType == AiAgentParameterValueType.DateTime)
+        {
+            if (GetValueType(value, out actualType, out unsupportedType) == false)
+                ThrowUnsupportedType();
+
+            if (actualType is not (AiAgentParameterValueType.DateTime or AiAgentParameterValueType.String))
+                ThrowMismatchType();
+
+            if (actualType == AiAgentParameterValueType.String && DateTime.TryParseExact(
+                    value.ToString(),
+                    "yyyy-MM-ddTHH:mm:ss.fffffff",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out _) == false)
+            {
+                ThrowMismatchType();
+            }
+            return;
+        }
+
+        if (GetValueType(value, out actualType, out unsupportedType) == false) 
+            ThrowUnsupportedType();
+
+        if (actualType != expectedType) 
+            ThrowMismatchType();
+
+        return;
+
+        void ThrowMismatchType()
+        {
+            throw new InvalidCastException(
+                $"Parameter '{configParam.Name}' has invalid type. " +
+                $"Expected: {expectedType}, " +
+                $"Actual: {actualType}, " +
+                $"Value: {value}");
+        }
+
+        void ThrowUnsupportedType()
+        {
+            throw new InvalidCastException(
+                $"Parameter '{configParam.Name}' has unsupported type. " +
+                $"Actual: {unsupportedType}");
+        }
+
     }
 
     private static bool GetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
@@ -205,6 +247,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
             case bool:
                 type = AiAgentParameterValueType.Boolean;
+                return true;
+
+            case DateTime:
+                type = AiAgentParameterValueType.DateTime;
                 return true;
 
             case BlittableJsonReaderArray array:
