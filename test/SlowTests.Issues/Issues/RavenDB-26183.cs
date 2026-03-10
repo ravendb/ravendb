@@ -1,11 +1,14 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -690,6 +693,80 @@ public class RavenDB_26183 : RavenTestBase
 
                 var employees = query.ToList();
                 Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task Now_ShouldNotReturnNotModified(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var query = new IndexQuery
+                {
+                    Query = "FROM Employees WHERE HiredAt <= now()",
+                    WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
+                };
+
+                var command = new QueryCommand((InMemoryDocumentSessionOperations)session, query);
+                await session.Advanced.RequestExecutor.ExecuteAsync(command, context);
+
+                Assert.Equal(1, command.Result.Results.Length);
+
+                var command2 = new QueryCommand((InMemoryDocumentSessionOperations)session, query);
+                await session.Advanced.RequestExecutor.ExecuteAsync(command2, context);
+
+                Assert.NotEqual(HttpStatusCode.NotModified, command2.StatusCode);
+                Assert.NotEqual(-1, command2.Result.DurationInMs);
+                Assert.Equal(1, command2.Result.Results.Length);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task Today_ShouldNotReturnNotModified(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var query = new IndexQuery
+                {
+                    Query = "FROM Employees WHERE HiredAt < today()",
+                    WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
+                };
+
+                var command = new QueryCommand((InMemoryDocumentSessionOperations)session, query);
+                await session.Advanced.RequestExecutor.ExecuteAsync(command, context);
+
+                Assert.Equal(1, command.Result.Results.Length);
+
+                var command2 = new QueryCommand((InMemoryDocumentSessionOperations)session, query);
+                await session.Advanced.RequestExecutor.ExecuteAsync(command2, context);
+
+                Assert.NotEqual(HttpStatusCode.NotModified, command2.StatusCode);
+                Assert.NotEqual(-1, command2.Result.DurationInMs);
+                Assert.Equal(1, command2.Result.Results.Length);
             }
         }
     }
