@@ -214,7 +214,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
-                    Parameters = item.ContextOutput.Context,
+                    Parameters = item.ContextOutput.Context.CloneOnTheSameContext(), // we need that to be a root blittable, so we can use the concurrent read method
                     CreationOptions = new AiConversationCreationOptions
                     {
                         ExpirationInSec = Configuration.ExpirationInSec

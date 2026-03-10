@@ -1084,12 +1084,19 @@ namespace Sparrow.Json
             // we have to provide external context that will be used for that purpose during the read action
             // note that we don't copy the blittable data but still read from the original pointer
 
+            AssertRootObject();
             AssertContextNotDisposed(externalContext);
             
             return new BlittableJsonReaderObject(_mem, _size, externalContext)
             {
                 NoCache = NoCache
             };
+        }
+
+        private void AssertRootObject()
+        {
+            if (_isRoot == false)
+                throw new InvalidOperationException("This method can be called only on a root blittable");
         }
 
         public void BlittableValidation()
