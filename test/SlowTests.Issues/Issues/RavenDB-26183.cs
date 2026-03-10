@@ -132,6 +132,7 @@ public class RavenDB_26183 : RavenTestBase
         {
             using (var session = store.OpenSession())
             {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) });
                 session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
                 session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
                 session.SaveChanges();
@@ -140,13 +141,11 @@ public class RavenDB_26183 : RavenTestBase
             using (var session = store.OpenSession())
             {
                 var employees = session.Advanced
-                    .RawQuery<Employee>("from Employees where HiredAt >= TODAY()")
+                    .RawQuery<Employee>("from Employees where HiredAt < TODAY()")
                     .WaitForNonStaleResults()
                     .ToList();
 
-                // today() returns start of today (UTC midnight), so a future date passes the filter
-                // and today's date (which is >= midnight) also passes
-                Assert.True(employees.Count >= 1);
+                Assert.Equal(2, employees.Count);
             }
         }
     }
