@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using FastTests;
 using Orders;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -37,6 +39,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Name, "Updated");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -67,6 +73,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Address.City, "NewCity");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -93,6 +103,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Name, null);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -118,6 +132,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, int>("users/1", u => u.Age, 30);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -144,6 +162,11 @@ namespace SlowTests.Issues
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Name, "Updated");
                     session.Advanced.Patch<UserWithTags, int>("users/1", u => u.Age, 30);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+                    Assert.Equal(1, sessionOps.DeferredCommandsCount);
+
                     session.SaveChanges();
                 }
 
@@ -171,6 +194,9 @@ namespace SlowTests.Issues
                 {
                     var user = session.Load<UserWithTags>("users/1");
                     session.Advanced.Patch(user, u => u.Name, "Updated");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
 
                     var cv = session.Advanced.GetChangeVectorFor(user);
 
@@ -206,6 +232,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.Add("c"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -232,6 +262,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.Add("b", "c"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -259,6 +293,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.RemoveAt(1));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -286,6 +324,11 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Tags, tags => tags.RemoveAll(t => t == "b"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -319,6 +362,10 @@ namespace SlowTests.Issues
                     session.Advanced.Patch<UserWithTags, string, string>("users/1",
                         u => u.Settings,
                         d => d.Add("lang", "en"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -356,6 +403,10 @@ namespace SlowTests.Issues
                     session.Advanced.Patch<UserWithTags, string, string>("users/1",
                         u => u.Settings,
                         d => d.Remove("lang"));
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -385,6 +436,11 @@ namespace SlowTests.Issues
                     session.Advanced.Increment<UserWithTags, int>("users/1", u => u.Age, 5);
                     // Patch should fall back to JavaScript and merge
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Name, "Updated");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
@@ -414,6 +470,12 @@ namespace SlowTests.Issues
                     session.Advanced.Patch<UserWithTags, string>("users/1", u => u.Name, "Updated");
                     // Increment creates a separate JavaScript patch command
                     session.Advanced.Increment<UserWithTags, int>("users/1", u => u.Age, 5);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.Equal(2, sessionOps.DeferredCommandsCount);
+
                     session.SaveChanges();
                 }
 
@@ -441,6 +503,10 @@ namespace SlowTests.Issues
                 {
                     var user = session.Load<UserWithTags>("users/1");
                     session.Advanced.Patch(user, u => u.Name, "Updated");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
 
                     Assert.Equal("Updated", user.Name);
@@ -462,6 +528,11 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.Increment<UserWithTags, int>("users/1", u => u.Age, 5);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+                    Assert.False(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
                     session.SaveChanges();
                 }
 
