@@ -13,7 +13,7 @@ public class GenAiTransformation
     public string Script { get; set; }
 
     /// <summary>
-    /// Validates that the script calls <c>ai.genContext(ctx)</c>.
+    /// Validates that the script calls <c>ai.genContext</c>.
     /// </summary>
     /// <param name="error">Receives an explanatory error message when the script is invalid.</param>
     /// <returns><c>true</c> if the script is valid; otherwise, <c>false</c>.</returns>

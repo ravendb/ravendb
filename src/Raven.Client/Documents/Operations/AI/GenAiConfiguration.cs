@@ -49,16 +49,22 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     public GenAiTransformation GenAiTransformation { get; set; }
 
     /// <summary>
-    /// prompt template sent to the model.
+    /// The prompt template sent to the model.
     /// </summary>
     public string Prompt { get; set; }
 
     //TODO: Make this JSON objects? 
-    /// <summary> The JSON schema for the model output. Either this or <see cref="SampleObject"/> must be provided.</summary>
+    /// <summary>
+    /// The JSON schema for the model output. Either this or <see cref="SampleObject"/> must be provided.
+    /// </summary>
     public string JsonSchema { get; set; }
-    /// <summary>A sample object demonstrating the expected output shape. Either this or <see cref="JsonSchema"/> must be provided.</summary>
+    /// <summary>
+    /// A sample object demonstrating the expected output shape. Either this or <see cref="JsonSchema"/> must be provided.
+    /// </summary>
     public string SampleObject { get; set; }
-    /// <summary>JavaScript update function that applies results back to documents.</summary>
+    /// <summary>
+    /// JavaScript update function that applies results back to documents.
+    /// </summary>
     public string UpdateScript { get; set; }
 
     /// <summary>

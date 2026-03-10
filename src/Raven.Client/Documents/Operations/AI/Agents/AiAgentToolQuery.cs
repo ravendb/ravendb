@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         public AiAgentToolQueryOptions Options { get; set; }
 
         /// <summary>
-        /// Serializes this tool action to JSON structure.
+        /// Serializes this query tool to a JSON structure.
         /// </summary>
         public DynamicJsonValue ToJson()
         {

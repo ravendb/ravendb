@@ -43,8 +43,8 @@ public class AddEmbeddingsGenerationOperation(EmbeddingsGenerationConfiguration 
             {
                 Method = HttpMethod.Put,
                 Content = new BlittableJsonContent(
-            async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx))
-            .ConfigureAwait(false), _conventions)
+                    async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx))
+                        .ConfigureAwait(false), _conventions)
             };
 
             return request;

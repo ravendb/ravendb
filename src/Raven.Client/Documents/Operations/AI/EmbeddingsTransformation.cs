@@ -33,7 +33,6 @@ public class EmbeddingsTransformation
     /// <summary>
     /// Validates that the script contains at least one call to <c>embeddings.generate</c>.
     /// </summary>
-    /// <returns><c>true</c> if the script appears to generate embeddings; otherwise, <c>false</c>.</returns>
     private void ValidateScript(List<string> errors)
     {
         var match = EmbeddingsGenerateRegex.Match(Script);

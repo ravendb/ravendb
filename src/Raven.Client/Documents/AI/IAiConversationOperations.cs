@@ -281,15 +281,15 @@ public interface IAiConversationOperations
 /// </summary>
 public enum AiHandleErrorStrategy
 {
- /// <summary>
- /// Convert the error to a textual message and send it back to the model as the tool response.
- /// </summary>
- SendErrorsToModel,
+    /// <summary>
+    /// Convert the error to a textual message and send it back to the model as the tool response.
+    /// </summary>
+    SendErrorsToModel,
 
- /// <summary>
- /// Throw the exception immediately to the caller instead of sending it to the model.
- /// </summary>
- RaiseImmediately
+    /// <summary>
+    /// Throw the exception immediately to the caller instead of sending it to the model.
+    /// </summary>
+    RaiseImmediately
 }
 
 /// <summary>
@@ -310,7 +310,8 @@ public class UnhandledActionEventArgs
     public IAiConversationOperations Sender { get; private set; }
 
     /// <summary>
-    /// The action (tool call) requested by the AI model that requires handling.    /// </summary>
+    /// The action (tool call) requested by the AI model that requires handling.
+    /// </summary>
     public AiAgentActionRequest Action { get; private set; }
 
     /// <summary>

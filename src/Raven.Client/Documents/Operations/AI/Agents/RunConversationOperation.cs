@@ -39,7 +39,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     /// </summary>
     /// <param name="agentId">The agent identifier to route this conversation to.</param>
     /// <param name="conversationId">The conversation document ID used to maintain state.</param>
-    /// <param name="userPrompt">The user’s prompt to send to the model.</param>
+    /// <param name="userPrompt">The user's prompt to send to the model.</param>
     /// <param name="actionResponses">Optional responses for tool action requests from a previous step.</param>
     /// <param name="options">Creation options including conversation expiration and tool parameters.</param>
     /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
