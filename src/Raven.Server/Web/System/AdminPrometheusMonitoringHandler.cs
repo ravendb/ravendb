@@ -11,7 +11,6 @@ using Raven.Server.Documents;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Utils.Monitoring;
 using Sparrow;
 using Sparrow.LowMemory;
@@ -152,7 +151,7 @@ namespace Raven.Server.Web.System
                     // gc
                     if (includeGc)
                     {
-                        WriteGcMetrics(writer, Server.MetricCacher);
+                        WriteGcMetrics(writer, serverMetrics.Gc);
                     }
 
                     // network
@@ -204,50 +203,30 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void WriteGcMetrics(StreamWriter writer, MetricCacher metricCacher)
+        private void WriteGcMetrics(StreamWriter writer, GcMetrics gcMetrics)
         {
-            WriteGcMetricsForKind(writer, metricCacher, GCKind.Any, MetricCacher.Keys.Server.GcAny);
-        }
+            var tags = SerializeTags(new Dictionary<string, string> { { "gckind", "any" } });
 
-        private void WriteGcMetricsForKind(StreamWriter writer, MetricCacher metricCacher, GCKind gcKind, string cacheKey)
-        {
-
-            var info = metricCacher.GetValue<GCMemoryInfo>(cacheKey);
-            var tags = SerializeTags(new Dictionary<string, string> { { nameof(GCKind).ToLower(), gcKind.ToString().ToLower() } });
-
-            // HELP strings for the GC metrics below are based on the official .NET API documentation for System.GCMemoryInfo (property descriptions),
-            // lightly adapted to match our Prometheus help style
+            // HELP strings for the GC metrics below are based on the official .NET API documentation for System.GCMemoryInfo
+            // property descriptions, lightly adapted to match our Prometheus help style.
             // https://learn.microsoft.com/en-us/dotnet/api/system.gcmemoryinfo
-            WriteGaugeWithHelp(writer, "Index of the last garbage collection", "gc_index", info.Index, tags);
-            WriteGaugeWithHelp(writer, "Generation collected by the last garbage collection", "gc_generation", info.Generation, tags);
-            WriteGaugeWithHelp(writer, "Whether the last garbage collection was compacting (1 = true, 0 = false)", "gc_compacted", info.Compacted ? 1 : 0, tags);
-            WriteGaugeWithHelp(writer, "Whether the last garbage collection was concurrent (1 = true, 0 = false)", "gc_concurrent", info.Concurrent ? 1 : 0, tags);
-            WriteGaugeWithHelp(writer, "Number of objects pending finalization observed during the last garbage collection", "gc_finalization_pending_count", info.FinalizationPendingCount, tags);
-            WriteGaugeWithHelp(writer, "Heap fragmentation in MB after the last garbage collection", "gc_fragmented_mb", BytesToMb(info.FragmentedBytes), tags);
-            WriteGaugeWithHelp(writer, "Total GC heap size in MB after the last garbage collection", "gc_heap_size_mb", BytesToMb(info.HeapSizeBytes), tags);
-            WriteGaugeWithHelp(writer, "High memory load threshold in MB at the time of the last garbage collection", "gc_high_memory_load_threshold_mb", BytesToMb(info.HighMemoryLoadThresholdBytes), tags);
-            WriteGaugeWithHelp(writer, "Memory load in MB at the time of the last garbage collection", "gc_memory_load_mb", BytesToMb(info.MemoryLoadBytes), tags);
-            WriteGaugeWithHelp(writer, "First GC pause duration in seconds recorded during the last garbage collection", "gc_pause_durations1_seconds", GetPauseSeconds(info, 0), tags);
-            WriteGaugeWithHelp(writer, "Second GC pause duration in seconds recorded during the last garbage collection", "gc_pause_durations2_seconds", GetPauseSeconds(info, 1), tags);
-            WriteGaugeWithHelp(writer, "Percentage of time spent paused for GC since the previous collection", "gc_pause_time_percentage", info.PauseTimePercentage, tags);
-            WriteGaugeWithHelp(writer, "Number of pinned objects observed during the last garbage collection", "gc_pinned_objects_count", info.PinnedObjectsCount, tags);
-            WriteGaugeWithHelp(writer, "Memory promoted during the last garbage collection in MB", "gc_promoted_mb", BytesToMb(info.PromotedBytes), tags);
-            WriteGaugeWithHelp(writer, "Total available memory for the GC in MB at the time of the last garbage collection", "gc_total_available_memory_mb", BytesToMb(info.TotalAvailableMemoryBytes), tags);
-            WriteGaugeWithHelp(writer, "Total committed managed heap size in MB after the last garbage collection", "gc_total_committed_mb", BytesToMb(info.TotalCommittedBytes), tags);
-        }
 
-        private static long BytesToMb(long bytes)
-        {
-            return new Size(bytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        }
-
-        private static double? GetPauseSeconds(GCMemoryInfo info, int index)
-        {
-            var pauses = info.PauseDurations;
-            if (pauses.IsEmpty || pauses.Length <= index)
-                return null;
-
-            return pauses[index].TotalSeconds;
+            WriteGaugeWithHelp(writer, "Index of the last garbage collection.", "gc_index", gcMetrics.Index, tags);
+            WriteGaugeWithHelp(writer, "Generation collected by the last garbage collection.", "gc_generation", gcMetrics.Generation, tags);
+            WriteGaugeWithHelp(writer, "Whether the last garbage collection was compacting (1 = true, 0 = false).", "gc_compacted", gcMetrics.Compacted ? 1 : 0, tags);
+            WriteGaugeWithHelp(writer, "Whether the last garbage collection was concurrent (1 = true, 0 = false).", "gc_concurrent", gcMetrics.Concurrent ? 1 : 0, tags);
+            WriteGaugeWithHelp(writer, "Number of objects pending finalization observed during the last garbage collection.", "gc_finalization_pending_count", gcMetrics.FinalizationPendingCount, tags);
+            WriteGaugeWithHelp(writer, "Heap fragmentation in MB after the last garbage collection.", "gc_fragmented_mb", gcMetrics.FragmentedInMb, tags);
+            WriteGaugeWithHelp(writer, "Total GC heap size in MB after the last garbage collection.", "gc_heap_size_mb", gcMetrics.HeapSizeInMb, tags);
+            WriteGaugeWithHelp(writer, "High memory load threshold in MB at the time of the last garbage collection.", "gc_high_memory_load_threshold_mb", gcMetrics.HighMemoryLoadThresholdInMb, tags);
+            WriteGaugeWithHelp(writer, "Memory load in MB at the time of the last garbage collection.", "gc_memory_load_mb", gcMetrics.MemoryLoadInMb, tags);
+            WriteGaugeWithHelp(writer, "First GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_1_seconds", gcMetrics.PauseDurations1InSec, tags);
+            WriteGaugeWithHelp(writer, "Second GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_2_seconds", gcMetrics.PauseDurations2InSec, tags);
+            WriteGaugeWithHelp(writer, "Percentage of time spent paused for GC since the previous collection.", "gc_pause_time_percentage", gcMetrics.PauseTimePercentage, tags);
+            WriteGaugeWithHelp(writer, "Number of pinned objects observed during the last garbage collection.", "gc_pinned_objects_count", gcMetrics.PinnedObjectsCount, tags);
+            WriteGaugeWithHelp(writer, "Memory promoted during the last garbage collection in MB.", "gc_promoted_mb", gcMetrics.PromotedInMb, tags);
+            WriteGaugeWithHelp(writer, "Total available memory for the GC in MB at the time of the last garbage collection.", "gc_total_available_memory_mb", gcMetrics.TotalAvailableMemoryInMb, tags);
+            WriteGaugeWithHelp(writer, "Total committed managed heap size in MB after the last garbage collection.", "gc_total_committed_mb", gcMetrics.TotalCommittedInMb, tags);
         }
 
         private static double KiloBytesToBytes(long? input)

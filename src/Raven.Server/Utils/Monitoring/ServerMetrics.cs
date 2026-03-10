@@ -15,6 +15,7 @@ namespace Raven.Server.Utils.Monitoring
         public BackupMetrics Backup { get; set; }
         public CpuMetrics Cpu { get; set; }
         public MemoryMetrics Memory { get; set; }
+        public GcMetrics Gc { get; set; }
         public DiskMetrics Disk { get; set; }
         public LicenseMetrics License { get; set; }
         public NetworkMetrics Network { get; set; }
@@ -34,6 +35,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Backup)] = Backup.ToJson(),
                 [nameof(Cpu)] = Cpu.ToJson(),
                 [nameof(Memory)] = Memory.ToJson(),
+                [nameof(Gc)] = Gc.ToJson(),
                 [nameof(Disk)] = Disk.ToJson(),
                 [nameof(License)] = License.ToJson(),
                 [nameof(Network)] = Network.ToJson(),
@@ -134,6 +136,48 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(AvailableMemoryForProcessingInMb)] = AvailableMemoryForProcessingInMb,
                 [nameof(ManagedMemoryInBytes)] = ManagedMemoryInBytes,
                 [nameof(UnmanagedMemoryInBytes)] = UnmanagedMemoryInBytes
+            };
+        }
+    }
+    public sealed class GcMetrics
+    {
+        public long Index { get; set; }
+        public int Generation { get; set; }
+        public bool Compacted { get; set; }
+        public bool Concurrent { get; set; }
+        public long FinalizationPendingCount { get; set; }
+        public long FragmentedInMb { get; set; }
+        public long HeapSizeInMb { get; set; }
+        public long HighMemoryLoadThresholdInMb { get; set; }
+        public long MemoryLoadInMb { get; set; }
+        public double? PauseDurations1InSec { get; set; }
+        public double? PauseDurations2InSec { get; set; }
+        public double PauseTimePercentage { get; set; }
+        public long PinnedObjectsCount { get; set; }
+        public long PromotedInMb { get; set; }
+        public long TotalAvailableMemoryInMb { get; set; }
+        public long TotalCommittedInMb { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Index)] = Index,
+                [nameof(Generation)] = Generation,
+                [nameof(Compacted)] = Compacted,
+                [nameof(Concurrent)] = Concurrent,
+                [nameof(FinalizationPendingCount)] = FinalizationPendingCount,
+                [nameof(FragmentedInMb)] = FragmentedInMb,
+                [nameof(HeapSizeInMb)] = HeapSizeInMb,
+                [nameof(HighMemoryLoadThresholdInMb)] = HighMemoryLoadThresholdInMb,
+                [nameof(MemoryLoadInMb)] = MemoryLoadInMb,
+                [nameof(PauseDurations1InSec)] = PauseDurations1InSec,
+                [nameof(PauseDurations2InSec)] = PauseDurations2InSec,
+                [nameof(PauseTimePercentage)] = PauseTimePercentage,
+                [nameof(PinnedObjectsCount)] = PinnedObjectsCount,
+                [nameof(PromotedInMb)] = PromotedInMb,
+                [nameof(TotalAvailableMemoryInMb)] = TotalAvailableMemoryInMb,
+                [nameof(TotalCommittedInMb)] = TotalCommittedInMb
             };
         }
     }

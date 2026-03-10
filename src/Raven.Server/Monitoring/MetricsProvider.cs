@@ -49,6 +49,7 @@ public sealed class MetricsProvider
         result.Backup = GetBackupMetrics();
         result.Cpu = GetCpuMetrics();
         result.Memory = GetMemoryMetrics();
+        result.Gc = GetGcMetrics();
         result.Network = GetNetworkMetrics();
         result.License = GetLicenseMetrics();
         result.Disk = GetDiskMetrics();
@@ -161,6 +162,41 @@ public sealed class MetricsProvider
         result.UnmanagedMemoryInBytes = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
 
         return result;
+    }
+
+    private GcMetrics GetGcMetrics()
+    {
+        var result = new GcMetrics();
+
+        var info = _server.MetricCacher.GetValue<GCMemoryInfo>(MetricCacher.Keys.Server.GcAny);
+
+        result.Index = info.Index;
+        result.Generation = info.Generation;
+        result.Compacted = info.Compacted;
+        result.Concurrent = info.Concurrent;
+        result.FinalizationPendingCount = info.FinalizationPendingCount;
+        result.FragmentedInMb = new Size(info.FragmentedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.HeapSizeInMb = new Size(info.HeapSizeBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.HighMemoryLoadThresholdInMb = new Size(info.HighMemoryLoadThresholdBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.MemoryLoadInMb = new Size(info.MemoryLoadBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.PauseDurations1InSec = GetPauseSeconds(info, 0);
+        result.PauseDurations2InSec = GetPauseSeconds(info, 1);
+        result.PauseTimePercentage = info.PauseTimePercentage;
+        result.PinnedObjectsCount = info.PinnedObjectsCount;
+        result.PromotedInMb = new Size(info.PromotedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.TotalAvailableMemoryInMb = new Size(info.TotalAvailableMemoryBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.TotalCommittedInMb = new Size(info.TotalCommittedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+
+        return result;
+    }
+
+    private static double? GetPauseSeconds(GCMemoryInfo info, int index)
+    {
+        var pauses = info.PauseDurations;
+        if (pauses.IsEmpty || pauses.Length <= index)
+            return null;
+
+        return pauses[index].TotalSeconds;
     }
 
     private LicenseMetrics GetLicenseMetrics()
