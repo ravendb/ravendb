@@ -588,4 +588,56 @@ public class RavenDB_26183 : RavenTestBase
             }
         }
     }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WorksInFilterClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees filter HiredAt <= now()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Today_WorksInFilterClause(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees filter HiredAt < today()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
 }
