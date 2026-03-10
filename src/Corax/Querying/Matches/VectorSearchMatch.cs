@@ -39,6 +39,7 @@ public struct VectorSearchMatch : IQueryMatch
     
     // Voron VectorSearch Retriever
     private Hnsw.VectorSearchRetriever _vectorSearchRetriever;
+    private ContextBoundNativeList<long> _nodesIdsToScan;
     private bool _vectorRetrieverInitialized;
     
     private bool _resultsPersisted;
@@ -126,6 +127,8 @@ public struct VectorSearchMatch : IQueryMatch
                 _filterResults?.Dispose();
                 return;
             }
+            
+            _nodesIdsToScan = nodesIdsToScan;
         }
         
         
@@ -347,6 +350,8 @@ public struct VectorSearchMatch : IQueryMatch
 
     private void Dispose()
     {
+        if (_scanningQuery)
+            _nodesIdsToScan.Dispose();
         _filterResults?.Dispose();
         _vectorSearchRetriever.Dispose();
         _vectorToSearch.Dispose();

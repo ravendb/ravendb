@@ -40,7 +40,6 @@ public partial class Hnsw
                 _searchState._candidatesQ.Clear();
                 _searchState._nearestEdgesQ.Clear();
                 _candidates.Dispose();
-                _nodesToScan?.Dispose();
             }
 
             public IEnumerable<bool> Search()

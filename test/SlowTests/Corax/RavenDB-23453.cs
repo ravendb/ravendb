@@ -272,6 +272,7 @@ public class RavenDB_23453(ITestOutputHelper output) : StorageTest(output)
     [InlineDataWithRandomSeed(true, false)]
     [InlineDataWithRandomSeed(false, true)]
     [InlineDataWithRandomSeed(true, true)]
+    [InlineData(true, true, 1045861081)]
     [InlineDataWithRandomSeed(false, false, Skip = "Too small set")]
     public void FilterQueryAndWithMethodMultiVectorSearch(bool shouldScan, bool isExact, int seed)
     {

@@ -37,6 +37,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     // Voron VectorSearch Retriever
     private Hnsw.VectorSearchRetriever[] _vectorsRetrievers;
+    private ContextBoundNativeList<long> _nodesIdsToScan;
     private bool _vectorRetrieverInitialized;
 
     private bool _resultsPersisted;
@@ -91,14 +92,13 @@ public struct MultiVectorSearchMatch : IQueryMatch
         }
 
         _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold, _numberOfCandidates);
-        ContextBoundNativeList<long> nodesIdsToScan = default;
         if (_scanningQuery)
         {
-            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults!.Value, out nodesIdsToScan);
+            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults!.Value, out _nodesIdsToScan);
             if (hasNodes == false)
             {
                 _isEmpty = true;
-                nodesIdsToScan.Dispose();
+                _nodesIdsToScan.Dispose();
                 _filterResults?.Dispose();
                 foreach (var vector in _vectorsToSearch)
                     vector.Dispose();
@@ -114,7 +114,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
             var vector = _vectorsToSearch[i].GetEmbeddingMemory();
             _vectorsRetrievers[i] = (_isExact) switch
             {
-                _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, nodesIdsToScan),
+
+                _ when _scanningQuery => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, false, _nodesIdsToScan),
                 true => Hnsw.ExactNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
                 false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(llt,  _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)), 
                 false => Hnsw.ApproximateNearest(llt, _metadata.FieldName, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
@@ -178,6 +179,9 @@ public struct MultiVectorSearchMatch : IQueryMatch
             vectorSearcher.Dispose();
             _vectorsToSearch[i].Dispose();
         }
+
+        if (_scanningQuery)
+            _nodesIdsToScan.Dispose();
 
         // Min on distances is Max on score.
         var uniqueCount = Sorting.SortAndMinOnDuplicates(_matches.Results, _distances.Results);
