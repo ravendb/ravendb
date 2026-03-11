@@ -33,6 +33,24 @@ namespace Raven.Server.Documents.Queries;
 
 public static class QueryBuilderHelper
 {
+    [ThreadStatic]
+    private static DateTime? _queryTime;
+
+    /// <summary>
+    /// Creates a scope that captures DateTime.UtcNow once, ensuring all now()/today() calls
+    /// within the same query execution resolve to the same timestamp.
+    /// </summary>
+    internal static QueryTimeScope CreateQueryTimeScope() => new();
+
+    internal static DateTime GetQueryTime() => _queryTime ?? DateTime.UtcNow;
+
+    internal sealed class QueryTimeScope : IDisposable
+    {
+        public QueryTimeScope() => _queryTime = DateTime.UtcNow;
+
+        public void Dispose() => _queryTime = null;
+    }
+
     internal const int ScoreId = -1;
 
     internal static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
@@ -624,12 +642,12 @@ public static class QueryBuilderHelper
             case MethodType.Now:
                 if (method.Arguments is { Count: > 0 })
                     throw new InvalidQueryException("Method now() expects zero arguments.", query.QueryText, parameters);
-                return new ValueExpression(DateTime.UtcNow.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+                return new ValueExpression(GetQueryTime().GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
 
             case MethodType.Today:
                 if (method.Arguments is { Count: > 0 })
                     throw new InvalidQueryException("Method today() expects zero arguments.", query.QueryText, parameters);
-                return new ValueExpression(DateTime.UtcNow.Date.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+                return new ValueExpression(GetQueryTime().Date.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
         }
 
         throw new ArgumentException($"Unknown method {method.Name}");

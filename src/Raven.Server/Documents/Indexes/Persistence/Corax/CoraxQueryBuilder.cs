@@ -179,6 +179,7 @@ public static partial class CoraxQueryBuilder
     internal static IQueryMatch BuildQuery(Parameters builderParameters, out OrderMetadata[] sortMetadata)
     {
         using (CultureHelper.EnsureInvariantCulture())
+        using (QueryBuilderHelper.CreateQueryTimeScope())
         {
             IQueryMatch coraxQuery;
             var metadata = builderParameters.Query.Metadata;

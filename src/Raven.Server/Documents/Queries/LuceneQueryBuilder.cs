@@ -51,6 +51,7 @@ namespace Raven.Server.Documents.Queries
             Index index, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, List<string> buildSteps = null)
         {
             using (CultureHelper.EnsureInvariantCulture())
+            using (QueryBuilderHelper.CreateQueryTimeScope())
             {
                 var luceneQuery = ToLuceneQuery(serverContext, context, metadata.Query, whereExpression, metadata, index, parameters, analyzer, factories,
                     buildSteps: buildSteps);
@@ -592,12 +593,12 @@ namespace Raven.Server.Documents.Queries
                 case MethodType.Now:
                     if (method.Arguments is { Count: > 0 })
                         throw new InvalidQueryException("Method now() expects zero arguments.", query.QueryText, parameters);
-                    return new ValueExpression(DateTime.UtcNow.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+                    return new ValueExpression(QueryBuilderHelper.GetQueryTime().GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
 
                 case MethodType.Today:
                     if (method.Arguments is { Count: > 0 })
                         throw new InvalidQueryException("Method today() expects zero arguments.", query.QueryText, parameters);
-                    return new ValueExpression(DateTime.UtcNow.Date.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+                    return new ValueExpression(QueryBuilderHelper.GetQueryTime().Date.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
             }
 
             throw new ArgumentException($"Unknown method {method.Name}");
