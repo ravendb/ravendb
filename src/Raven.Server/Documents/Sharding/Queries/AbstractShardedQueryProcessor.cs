@@ -39,7 +39,9 @@ namespace Raven.Server.Documents.Sharding.Queries;
 
 public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombinedResult> where TCommand : RavenCommand<TResult>
 {
-    const string LimitToken = "__raven_limit";
+    private const string LimitToken = "__raven_limit";
+    private const string NowToken = "__raven_now";
+    private const string TodayToken = "__raven_today";
 
     private Dictionary<int, BlittableJsonReaderObject> _queryTemplates;
     private Dictionary<int, TCommand> _commands;
@@ -444,16 +446,36 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         {
             // In sharded queries, each shard resolves now()/today() independently, which can lead to
             // slightly different values across shards. We resolve them once on the orchestrator and
-            // replace the function calls with concrete values to ensure consistency.
-            var now = DateTime.UtcNow;
-            var nowValue = now.GetDefaultRavenFormat(isUtc: true);
-            var todayValue = now.Date.GetDefaultRavenFormat(isUtc: true);
+            // replace the function calls with query parameters to ensure consistency.
+            var usedFunctions = TemporalFunction.None;
 
             if (clone.Where != null)
-                clone.Where = ReplaceTemporalFunctions(clone.Where, nowValue, todayValue);
+                clone.Where = ReplaceTemporalFunctions(clone.Where, ref usedFunctions);
 
             if (clone.Filter != null)
-                clone.Filter = ReplaceTemporalFunctions(clone.Filter, nowValue, todayValue);
+                clone.Filter = ReplaceTemporalFunctions(clone.Filter, ref usedFunctions);
+
+            if (usedFunctions != TemporalFunction.None)
+            {
+                var now = DateTime.UtcNow;
+
+                DynamicJsonValue modifiedArgs;
+                if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
+                {
+                    modifiedArgs = new DynamicJsonValue(args);
+                    args.Modifications = modifiedArgs;
+                }
+                else
+                {
+                    modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
+                }
+
+                if (usedFunctions.HasFlag(TemporalFunction.Now))
+                    modifiedArgs[NowToken] = now.GetDefaultRavenFormat(isUtc: true);
+
+                if (usedFunctions.HasFlag(TemporalFunction.Today))
+                    modifiedArgs[TodayToken] = now.Date.GetDefaultRavenFormat(isUtc: true);
+            }
         }
 
         modifications[nameof(IndexQuery.Query)] = clone.ToString();
@@ -474,19 +496,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    private static QueryExpression ReplaceTemporalFunctions(QueryExpression expr, string nowValue, string todayValue)
+    private static QueryExpression ReplaceTemporalFunctions(QueryExpression expr, ref TemporalFunction usedFunctions)
     {
         switch (expr)
         {
             case MethodExpression me when me.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase):
-                return new ValueExpression(nowValue, ValueTokenType.String);
+                usedFunctions |= TemporalFunction.Now;
+                return new ValueExpression(NowToken, ValueTokenType.Parameter);
 
             case MethodExpression me when me.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase):
-                return new ValueExpression(todayValue, ValueTokenType.String);
+                usedFunctions |= TemporalFunction.Today;
+                return new ValueExpression(TodayToken, ValueTokenType.Parameter);
 
             case BinaryExpression be:
-                var newLeft = ReplaceTemporalFunctions(be.Left, nowValue, todayValue);
-                var newRight = ReplaceTemporalFunctions(be.Right, nowValue, todayValue);
+                var newLeft = ReplaceTemporalFunctions(be.Left, ref usedFunctions);
+                var newRight = ReplaceTemporalFunctions(be.Right, ref usedFunctions);
 
                 if (ReferenceEquals(newLeft, be.Left) && ReferenceEquals(newRight, be.Right))
                     return be;
@@ -494,7 +518,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 return new BinaryExpression(newLeft, newRight, be.Operator) { Parenthesis = be.Parenthesis };
 
             case NegatedExpression ne:
-                var newInner = ReplaceTemporalFunctions(ne.Expression, nowValue, todayValue);
+                var newInner = ReplaceTemporalFunctions(ne.Expression, ref usedFunctions);
 
                 if (ReferenceEquals(newInner, ne.Expression))
                     return ne;
@@ -507,7 +531,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
                 foreach (var arg in me.Arguments)
                 {
-                    var newArg = ReplaceTemporalFunctions(arg, nowValue, todayValue);
+                    var newArg = ReplaceTemporalFunctions(arg, ref usedFunctions);
                     if (ReferenceEquals(newArg, arg) == false)
                         changed = true;
                     newArgs.Add(newArg);
@@ -524,7 +548,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
                 foreach (var val in ie.Values)
                 {
-                    var newVal = ReplaceTemporalFunctions(val, nowValue, todayValue);
+                    var newVal = ReplaceTemporalFunctions(val, ref usedFunctions);
                     if (ReferenceEquals(newVal, val) == false)
                         valuesChanged = true;
                     newValues.Add(newVal);
@@ -967,6 +991,14 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         UpdateOrderByFieldsInMapReduce = 1 << 5,
         UseCachedOrderByFieldsInMapReduce = 1 << 6,
         RewriteTemporalFunctions = 1 << 7
+    }
+
+    [Flags]
+    private enum TemporalFunction
+    {
+        None = 0,
+        Now = 1 << 0,
+        Today = 1 << 1
     }
 
     protected enum QueryType
