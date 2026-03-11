@@ -12,7 +12,7 @@ using Voron.Data.BTrees;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public sealed class CollectionOfBloomFilters : IDisposable
+    public sealed class CollectionOfBloomFilters
     {
         private const string BloomFiltersTreeName = "BloomFilters";
 
@@ -308,10 +308,6 @@ namespace Raven.Server.Documents.Indexes
                 filter.Flush();
         }
 
-        public void Dispose()
-        {
-        }
-
         public sealed class BloomFilter32 : BloomFilter
         {
             public const int PtrSize = 32 * 1024;
@@ -338,7 +334,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract unsafe class BloomFilter : IDisposable
+        public abstract unsafe class BloomFilter
         {
             private const long K = 10;
 
@@ -574,10 +570,6 @@ namespace Raven.Server.Documents.Indexes
                     return; // avoid re-throwing it
 
                 _tree.Delete(_keySlice);
-            }
-
-            public void Dispose()
-            {
             }
 
             private sealed class Partition
