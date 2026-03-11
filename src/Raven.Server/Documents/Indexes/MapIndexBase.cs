@@ -35,6 +35,9 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
+            if (SearchEngineType != SearchEngineType.Lucene)
+                return null;
+
             var mode = DocumentDatabase.Is32Bits
                 ? CollectionOfBloomFilters.Mode.X86
                 : CollectionOfBloomFilters.Mode.X64;
