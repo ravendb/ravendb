@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -729,6 +730,137 @@ public class RavenDB_26183 : RavenTestBase
                 Assert.NotEqual(HttpStatusCode.NotModified, command2.StatusCode);
                 Assert.NotEqual(-1, command2.Result.DurationInMs);
                 Assert.Equal(1, command2.Result.Results.Length);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void Sharded_Now_ReturnsConsistentResultsAcrossShards(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var config = Sharding.GetShardingConfiguration(store);
+            var ids = new List<string>();
+
+            // place one past and one future employee on each of the 3 shards
+            for (int shard = 0; shard < 3; shard++)
+            {
+                var pastId = Sharding.GetRandomIdForShard(config, shard);
+                var futureId = Sharding.GetRandomIdForShard(config, shard);
+
+                ids.Add(pastId);
+                ids.Add(futureId);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) }, pastId);
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) }, futureId);
+                    session.SaveChanges();
+                }
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var past = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(3, past.Count);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var future = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt > now()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(3, future.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void Sharded_Today_ReturnsConsistentResultsAcrossShards(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var config = Sharding.GetShardingConfiguration(store);
+
+            // place one old and one future employee on each of the 3 shards
+            for (int shard = 0; shard < 3; shard++)
+            {
+                var oldId = Sharding.GetRandomIdForShard(config, shard);
+                var futureId = Sharding.GetRandomIdForShard(config, shard);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) }, oldId);
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) }, futureId);
+                    session.SaveChanges();
+                }
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var past = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt < today()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(3, past.Count);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var future = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt >= today()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(3, future.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void Sharded_Now_And_Today_InSameQuery(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var config = Sharding.GetShardingConfiguration(store);
+
+            // place employees on different shards with varying dates
+            for (int shard = 0; shard < 3; shard++)
+            {
+                var matchId = Sharding.GetRandomIdForShard(config, shard);
+                var tooOldId = Sharding.GetRandomIdForShard(config, shard);
+                var tooNewId = Sharding.GetRandomIdForShard(config, shard);
+
+                using (var session = store.OpenSession())
+                {
+                    // matches: hired today or later but before now
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) }, matchId);
+                    // too old: hired before today
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) }, tooOldId);
+                    // too new: hired in the future
+                    session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) }, tooNewId);
+                    session.SaveChanges();
+                }
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt >= today() and HiredAt <= now()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(3, employees.Count);
             }
         }
     }
