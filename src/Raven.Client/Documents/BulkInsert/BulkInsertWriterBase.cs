@@ -61,6 +61,13 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 
                         await WriteToStreamAsync(_currentWriteStream, _requestBodyStream, _memoryBuffer).ConfigureAwait(false);
                         await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+
+                        // Must dispose the compression stream (e.g. GZipStream) to write
+                        // final compression footer bytes. Without this, the compressed
+                        // data is incomplete and the server cannot decompress it.
+                        // On .NET Framework, GZipStream.Flush() is a no-op, so Dispose
+                        // is the only way to finalize the compressed stream.
+                        DisposeRequestStream();
                     }
                 }
                 finally
