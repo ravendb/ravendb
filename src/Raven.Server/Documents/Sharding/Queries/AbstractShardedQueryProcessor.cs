@@ -460,7 +460,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 var now = DateTime.UtcNow;
 
                 DynamicJsonValue modifiedArgs;
-                if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
+                if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args) && args != null)
                 {
                     modifiedArgs = new DynamicJsonValue(args);
                     args.Modifications = modifiedArgs;
