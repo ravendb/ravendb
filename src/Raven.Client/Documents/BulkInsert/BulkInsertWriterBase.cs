@@ -25,6 +25,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     private JsonOperationContext.MemoryBuffer _memoryBuffer;
     private JsonOperationContext.MemoryBuffer _backgroundMemoryBuffer;
     private bool _isInitialWrite = true;
+    private bool _isCompressionEnabled;
+
     internal DateTime LastFlushToStream { get; private set; }
 
     private Stream _requestBodyStream;
@@ -67,7 +69,13 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
                         // data is incomplete and the server cannot decompress it.
                         // On .NET Framework, GZipStream.Flush() is a no-op, so Dispose
                         // is the only way to finalize the compressed stream.
-                        DisposeRequestStream();
+                        // Only dispose when compression is enabled — the compression
+                        // streams are created with leaveOpen: true, so this finalizes
+                        // the compressor without closing the underlying HTTP stream.
+                        // Without compression, _requestBodyStream IS the HTTP stream,
+                        // and disposing it would cause an ObjectDisposedException.
+                        if (_isCompressionEnabled)
+                            DisposeRequestStream();
                     }
                 }
                 finally
@@ -166,6 +174,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 
         if (compressionLevel != CompressionLevel.NoCompression)
         {
+            _isCompressionEnabled = true;
+
             switch (compressionAlgorithm)
             {
                 case HttpCompressionAlgorithm.Gzip:
