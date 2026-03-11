@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            foreach (Document document in context.DocumentDatabase.DocumentsStorage.GetDocuments(context, _trackedEntities.Keys, start: 0, take: int.MaxValue, DocumentFields.Id | DocumentFields.ChangeVector))
+            foreach (Document document in context.DocumentDatabase.DocumentsStorage.GetDocuments(context, _trackedEntities.Keys, start: 0, take: int.MaxValue, DocumentFields.Id | DocumentFields.ChangeVector, returnNonExists: true))
             {
                 var expected = _trackedEntities[document.Id];
                 if (expected == null)
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
         public static Dictionary<string, string> Parse(BlittableJsonReaderObject trackedEntities)
         {
-            var dic = new Dictionary<string, string>();
+            var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var key in trackedEntities.GetPropertyNames())
             {

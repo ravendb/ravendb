@@ -807,7 +807,6 @@ namespace Raven.Server.Documents.Handlers.Batches
             FromEtl,
 
             JsonPatch,
-            BatchTrackChanges,
             TrackedEntities
             // other properties are ignore (for legacy support)
 
@@ -943,12 +942,6 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 9:
                     if ("JsonPatch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.JsonPatch;
-
-                    return CommandPropertyName.NoSuchProperty;
-
-                case 18:
-                    if ("BatchTrackChanges"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.BatchTrackChanges;
 
                     return CommandPropertyName.NoSuchProperty;
 

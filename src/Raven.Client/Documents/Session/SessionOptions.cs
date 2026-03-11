@@ -81,20 +81,31 @@ namespace Raven.Client.Documents.Session
             get => TrackingMode == TrackingMode.NoTracking;
             set
             {
-                if (value)
-                    TrackingMode = TrackingMode.NoTracking;
+                if (TrackingModeWasSet)
+                    throw new InvalidOperationException($"{nameof(NoTracking)} cannot be set when {nameof(TrackingMode)} was set. Please use {nameof(TrackingMode)} instead of {nameof(NoTracking)}.");
+
+                TrackingMode = value ? TrackingMode.NoTracking : TrackingMode.Default;
+                NoTrackingWasSet = true;
             }
         }
+
+        internal bool NoTrackingWasSet { get; set; }
+        internal bool TrackingModeWasSet { get; set; }
 
         /// <summary>
         /// Enable tracking mode in the session<br/>
         /// </summary>
-        /// <remarks>For more details visit: <inheritdoc cref="Session.TrackingMode"/></remarks>
+        /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.TrackingMode"/></remarks>
         public TrackingMode TrackingMode
         {
             get;
             set
             {
+                if (NoTrackingWasSet)
+                    throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set when {nameof(NoTracking)} was set. Please use {nameof(TrackingMode)} instead of {nameof(NoTracking)}.");
+
+                TrackingModeWasSet = true;
+
                 if (value == TrackingMode.TrackAllEntities)
                 {
                     if (TransactionMode == TransactionMode.ClusterWide)
@@ -118,7 +129,17 @@ namespace Raven.Client.Documents.Session
         /// Each <see cref="TransactionMode"/> offers a different isolation and consistency guarantees
         /// </summary>
         /// <remarks>For more details: <inheritdoc cref="DocumentationUrls.Session.Transactions.TransactionSupport"/></remarks>
-        public TransactionMode TransactionMode { get; set; }
+        public TransactionMode TransactionMode
+        {
+            get;
+            set
+            {
+                if (TrackingMode == TrackingMode.TrackAllEntities)
+                    throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set to {nameof(TrackingMode.TrackAllEntities)} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
+
+                field = value;
+            }
+        }
 
         /// <summary>
         ///EXPERT: Disable automatic atomic writes with cluster write transactions. If set to 'true',

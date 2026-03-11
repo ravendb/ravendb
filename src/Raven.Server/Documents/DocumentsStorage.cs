@@ -903,7 +903,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document>  GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -912,7 +912,7 @@ namespace Raven.Server.Documents
                 // id must be lowercased
                 if (table.ReadByKey(id, out TableValueReader reader) == false)
                     continue;
-                
+
                 if (start > 0)
                 {
                     start--;
@@ -926,16 +926,37 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, DocumentFields fields = DocumentFields.All)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, DocumentFields fields = DocumentFields.All, bool returnNonExists = false)
         {
-            var listOfIds = new List<Slice>();
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             foreach (var id in ids)
             {
-                Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice slice);
-                listOfIds.Add(slice);
-            }
+                using (Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice lowerId))
+                {
+                    // id must be lowercased
+                    if (table.ReadByKey(lowerId, out TableValueReader reader) == false)
+                    {
+                        if (returnNonExists == false)
+                            continue;
 
-            return GetDocuments(context, listOfIds, start, take, fields);
+                        yield return new Document()
+                        {
+                            Id = context.GetLazyString(id)
+                        };
+                    }
+
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+
+                    if (take-- <= 0)
+                        continue; // we need to calculate totalCount correctly
+
+                    yield return TableValueToDocument(context, ref reader, fields);
+                }
+            }
         }
 
         public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take)

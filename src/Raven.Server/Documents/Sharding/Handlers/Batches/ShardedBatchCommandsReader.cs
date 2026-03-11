@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Batches;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

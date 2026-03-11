@@ -2386,5 +2386,181 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityLoadedButThenWasDeletedInBackgroundSession(Options options)
+        {
+            ShouldThrowConcurrencyException_WhenTrackedEntityLoadedButThenWasDeletedInternal(options, deleteById: false);
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityLoadedButThenWasDeletedByIdInBackgroundSession(Options options)
+        {
+            ShouldThrowConcurrencyException_WhenTrackedEntityLoadedButThenWasDeletedInternal(options, deleteById: true);
+        }
+
+        private void ShouldThrowConcurrencyException_WhenTrackedEntityLoadedButThenWasDeletedInternal(Options options, bool deleteById)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                       {
+                           TrackingMode = TrackingMode.TrackAllEntities,
+                       }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+                    //session.Delete("employees/1-A");
+                    // delete / delete by id (both here and in background)
+
+                    var expected = session.Advanced.GetChangeVectorFor(jerry);
+                    using (var s = store.OpenSession())
+                    {
+                        if (deleteById == false)
+                        {
+                            var j = s.Load<Employee>("employees/1-A");
+                            s.Delete(j);
+                        }
+                        else
+                        {
+                            s.Delete("employees/1-A");
+                        }
+
+                        s.SaveChanges();
+                    }
+
+                    // this should throw concurrency exception for jerry
+                    var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
+                    Assert.Equal("employees/1-A", e.Id);
+                    Assert.Null(e.ActualChangeVector);
+                    Assert.Equal(expected, e.ExpectedChangeVector);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                       {
+                           TrackingMode = TrackingMode.TrackAllEntities
+                       }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Null(j);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityLoadedButThenWasDeletedInBackgroundSession2(Options options, bool deleteById, bool deleteByIdInBackgroundSession)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    string expected = null;
+                    if (deleteByIdInBackgroundSession == false)
+                    {
+                        var jerry = session.Load<Employee>("employees/1-A");
+                        expected = session.Advanced.GetChangeVectorFor(jerry);
+
+                        session.Delete(jerry);
+                    }
+                    else
+                    {
+                        session.Delete("employees/1-A");
+                    }
+
+                    using (var s = store.OpenSession())
+                    {
+                        if (deleteById == false)
+                        {
+                            var j = s.Load<Employee>("employees/1-A");
+                            s.Delete(j);
+                        }
+                        else
+                        {
+                            s.Delete("employees/1-A");
+                        }
+
+                        s.SaveChanges();
+                    }
+
+                    if (deleteByIdInBackgroundSession == false)
+                    {
+                        // this should throw concurrency exception for jerry since it was tracked in session when deleted
+                        var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
+                        Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
+                        Assert.Equal("employees/1-A", e.Id);
+                        Assert.Null(e.ActualChangeVector);
+                        Assert.Equal(expected, e.ExpectedChangeVector);
+                    }
+                    else
+                    {
+                        // this should not throw concurrency exception for jerry
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Null(j);
+                }
+            }
+        }
     }
 }
