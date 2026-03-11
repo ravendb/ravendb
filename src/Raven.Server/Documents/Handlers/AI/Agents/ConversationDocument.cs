@@ -155,8 +155,9 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         var sb = new StringBuilder("AI Agent Parameters:\n");
         foreach (var parameter in parameters)
         {
-            var value = Parameters[parameter.Name];
-            sb.AppendLine($"{parameter.Name} = {value?.ToString() ?? "null"}");
+            var value = ConversationHandler.GetAiConversationParameterValue(parameter.Name, Parameters[parameter.Name]);
+            if (value.SendToModel)
+                sb.AppendLine($"{parameter.Name} = {value.Value.ToString()}");
         }
 
         return sb.ToString();

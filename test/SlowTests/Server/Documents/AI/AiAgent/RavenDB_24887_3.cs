@@ -638,7 +638,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
 
         using (var session = store.OpenAsyncSession())
         {
-            var doc1 = await session.LoadAsync<Chat>("chats/1/movies-agent-1/Vsy3aOyNusK5fwwmHq4j4kuYQgrH1whMJWuce86epm8=");
+            var doc1 = (await session.Advanced.LoadStartingWithAsync<Chat>("chats/1/movies-agent-1/")).Single(d => d.Id.Contains("/recommendation-agent") == false);
             var toolCallsAnswers1 = doc1.Messages.Where(m => m.Role == "tool").ToList();
             Assert.True(toolCallsAnswers1.Any(a => a.Content is string content && content.Contains($"Failed to communicate with the agent '{userAgentId}'")));
 
@@ -656,6 +656,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
 
     private class Chat
     {
+        public string Id { get; set; }
         public List<Message> Messages { get; set; }
     }
 

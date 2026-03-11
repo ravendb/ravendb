@@ -172,6 +172,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             if (requestParameters.TryGetMember(configParam.Name, out object value) == false)
                 continue;
 
+            value = GetAiConversationParameterValue(configParam.Name, value).Value;
             var expectedType = configParam.Type;
 
             if (expectedType == AiAgentParameterValueType.Default)
@@ -297,6 +298,45 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 return false;
         }
     }
+
+    public static AiConversationParameterValue GetAiConversationParameterValue(string paramName, object paramValue)
+    {
+        var sendToModel = true; // At the conversation level
+        var realValue = paramValue;
+        if (paramValue is BlittableJsonReaderObject obj)
+        {
+            // Backward compatibility:
+            // * Old payload format:
+            // {
+            //     "maxBudgetNis": 3500
+            // }
+            // * New payload format:
+            // {
+            //     "maxBudgetNis": {
+            //         "value": 3500,
+            //         "sendToModel": true
+            //     }
+            // }
+            // If the parameter is not an object with a "value" field, we assume it's the old format and use the value directly.
+
+            if (obj.TryGetMember("Value", out realValue) == false)
+            {
+                // Should never reach here - Object parameters are not supported
+                throw new InvalidCastException(
+                    $"Parameter '{paramName}' has unsupported type. " +
+                    $"Actual: Object");
+            }
+            if (obj.TryGet("SendToModel", out sendToModel) == false)
+                sendToModel = true; //default
+        }
+
+        return new AiConversationParameterValue
+        {
+            Value = realValue,
+            SendToModel = sendToModel
+        };
+    }
+
 
 
     private ChatCompletionClient _client;
@@ -610,7 +650,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             // Important: we *override* any parameter from the model with the user provided values
             // to ensure the safety & security of this feature. Model cannot override those values, period.
             parameters.GetPropertyByIndex(i, ref prop);
-            args.Modifications[prop.Name] = prop.Value;
+            args.Modifications[prop.Name] = GetAiConversationParameterValue(prop.Name, prop.Value).Value;
         }
 
         return context.ReadObject(args, "args");
