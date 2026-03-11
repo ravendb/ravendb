@@ -31,6 +31,7 @@ using Raven.Server.ServerWide.Sharding;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Extensions;
 using Sparrow.Utils;
 using Voron;
 
@@ -439,6 +440,22 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
+        if (queryChanges.HasFlag(QueryChanges.RewriteTemporalFunctions))
+        {
+            // In sharded queries, each shard resolves now()/today() independently, which can lead to
+            // slightly different values across shards. We resolve them once on the orchestrator and
+            // replace the function calls with concrete values to ensure consistency.
+            var now = DateTime.UtcNow;
+            var nowValue = now.GetDefaultRavenFormat(isUtc: true);
+            var todayValue = now.Date.GetDefaultRavenFormat(isUtc: true);
+
+            if (clone.Where != null)
+                clone.Where = ReplaceTemporalFunctions(clone.Where, nowValue, todayValue);
+
+            if (clone.Filter != null)
+                clone.Filter = ReplaceTemporalFunctions(clone.Filter, nowValue, todayValue);
+        }
+
         modifications[nameof(IndexQuery.Query)] = clone.ToString();
 
         queryTemplate.Modifications = modifications;
@@ -454,6 +471,72 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             modifications.Remove(nameof(IndexQueryServerSide.PageSize));
 
             queryChanges &= ~QueryChanges.RewriteForPaging;
+        }
+    }
+
+    private static QueryExpression ReplaceTemporalFunctions(QueryExpression expr, string nowValue, string todayValue)
+    {
+        switch (expr)
+        {
+            case MethodExpression me when me.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase):
+                return new ValueExpression(nowValue, ValueTokenType.String);
+
+            case MethodExpression me when me.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase):
+                return new ValueExpression(todayValue, ValueTokenType.String);
+
+            case BinaryExpression be:
+                var newLeft = ReplaceTemporalFunctions(be.Left, nowValue, todayValue);
+                var newRight = ReplaceTemporalFunctions(be.Right, nowValue, todayValue);
+
+                if (ReferenceEquals(newLeft, be.Left) && ReferenceEquals(newRight, be.Right))
+                    return be;
+
+                return new BinaryExpression(newLeft, newRight, be.Operator) { Parenthesis = be.Parenthesis };
+
+            case NegatedExpression ne:
+                var newInner = ReplaceTemporalFunctions(ne.Expression, nowValue, todayValue);
+
+                if (ReferenceEquals(newInner, ne.Expression))
+                    return ne;
+
+                return new NegatedExpression(newInner);
+
+            case MethodExpression me:
+                var changed = false;
+                var newArgs = new List<QueryExpression>(me.Arguments.Count);
+
+                foreach (var arg in me.Arguments)
+                {
+                    var newArg = ReplaceTemporalFunctions(arg, nowValue, todayValue);
+                    if (ReferenceEquals(newArg, arg) == false)
+                        changed = true;
+                    newArgs.Add(newArg);
+                }
+
+                if (changed == false)
+                    return me;
+
+                return new MethodExpression(me.Name, newArgs);
+
+            case InExpression ie:
+                var valuesChanged = false;
+                var newValues = new List<QueryExpression>(ie.Values.Count);
+
+                foreach (var val in ie.Values)
+                {
+                    var newVal = ReplaceTemporalFunctions(val, nowValue, todayValue);
+                    if (ReferenceEquals(newVal, val) == false)
+                        valuesChanged = true;
+                    newValues.Add(newVal);
+                }
+
+                if (valuesChanged == false)
+                    return ie;
+
+                return new InExpression(ie.Source, newValues, ie.All);
+
+            default:
+                return expr;
         }
     }
 
@@ -582,6 +665,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 }
             }
         }
+
+        if (indexQuery.Metadata.HasTemporalFunction)
+            queryChanges |= QueryChanges.RewriteTemporalFunctions;
 
         return queryChanges;
     }
@@ -879,7 +965,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         RewriteForFilterInMapReduce = 1 << 3,
         RewriteForLimitWithOrderByInMapReduce = 1 << 4,
         UpdateOrderByFieldsInMapReduce = 1 << 5,
-        UseCachedOrderByFieldsInMapReduce = 1 << 6
+        UseCachedOrderByFieldsInMapReduce = 1 << 6,
+        RewriteTemporalFunctions = 1 << 7
     }
 
     protected enum QueryType
