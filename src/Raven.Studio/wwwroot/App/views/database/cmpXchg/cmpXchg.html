@@ -21,14 +21,9 @@
                     <input class="form-control" placeholder="Filter keys that start with..." data-bind="textInput: filter" />
                 </div>
                 <div class="flex-separator"></div>
-<!-- The following hard-coded link is a temporary fix until HRINT-4455 is fixed-->
                 <small title="Go to the Compare Exchange documentation">
-                    <a target="_blank" href="https://docs.ravendb.net/compare-exchange/overview"><i class="icon-link"></i>Compare Exchange tutorial</a>
+                    <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/BD857S/' + clientVersion() }"><i class="icon-link"></i>Compare Exchange tutorial</a>
                 </small>
-<!-- TODO: revert back to this code once issue HRINT-4455 is fixed, and apply a new hash... -->
-<!--                <small title="Go to the Compare Exchange documentation">-->
-<!--                    <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/2BGJN2/' + clientVersion() }"><i class="icon-link"></i>Compare Exchange tutorial</a>-->
-<!--                </small>-->
             </div>
         </div>
         <div class="flex-window-scroll margin-top">
