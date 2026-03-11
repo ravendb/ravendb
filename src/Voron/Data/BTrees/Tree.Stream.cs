@@ -232,12 +232,12 @@ namespace Voron.Data.BTrees
                 return ReadStream(str);
         }
 
-        public VoronStream ReadStream(Slice key)
+        public VoronStream ReadStream(Slice key, bool releaseTransactionOnDispose = false)
         {
             var pieces = ReadTreeChunks(key, out var tree);
             if (pieces == null)
                 return null;
-            return new VoronStream(tree.Name, pieces, _llt);
+            return new VoronStream(tree.Name, pieces, _llt, releaseTransactionOnDispose);
         }
 
         public ChunkDetails[] ReadTreeChunks(Slice key, out FixedSizeTree tree)

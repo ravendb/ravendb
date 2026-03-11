@@ -29,15 +29,16 @@ namespace Voron.Data
             return Name.ToString();
         }
 
-        public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
+        public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt, bool releaseTransactionOnDispose)
         {
             Name = name;
-
             _chunksDetails = chunksDetails;
             _chunksOffsets = new long[_chunksDetails.Length];
 
             _index = 0;
-            _llt = llt;
+
+            SetLowLevelTransaction(llt, releaseTransactionOnDispose);
+            
             _encrypted = _llt.Environment.Options.Encryption.IsEnabled && _llt.Transaction.IsWriteTransaction == false;
             _lastPage = default(Page);
             _position = 0;
@@ -50,6 +51,24 @@ namespace Voron.Data
             }
         }
 
+        private void SetLowLevelTransaction(LowLevelTransaction llt, bool releaseTransactionOnDispose)
+        {
+            _llt = llt;
+
+            if (releaseTransactionOnDispose)
+            {
+                _llt.Transaction.LowLevelTransaction.OnDispose += _ =>
+                {
+                    // Lucene caches VoronStream instances (via SegmentReader) per thread, so they can outlive
+                    // the transaction that created them. Nulling _llt here allows the GC to collect the
+                    // disposed LowLevelTransaction and its associated structures (page positions, journal
+                    // references, etc.), which can be substantial depending on the indexing batch size.
+                    // When the stream is reused, UpdateCurrentTransaction will set a fresh transaction.
+                    _llt = null;
+                };
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateCurrentTransaction(Transaction tx)
         {
@@ -58,7 +77,7 @@ namespace Voron.Data
                 if (_llt == tx.LowLevelTransaction)
                     return;
 
-                _llt = tx.LowLevelTransaction;
+                SetLowLevelTransaction(tx.LowLevelTransaction, releaseTransactionOnDispose: true);
                 _lastPage = default(Page);
                 return;
             }

@@ -49,7 +49,7 @@ namespace Raven.Server.Indexing
                             // we don't dispose here explicitly, the fileName needs to be
                             // alive as long as the transaction is
                             Slice.From(transaction.Allocator, name, out Slice fileName);
-                            return new VoronStream(fileName, details, transaction.LowLevelTransaction);
+                            return new VoronStream(fileName, details, transaction.LowLevelTransaction, releaseTransactionOnDispose: true);
                         }
                     }
                 }
@@ -61,7 +61,7 @@ namespace Raven.Server.Indexing
 
             using (Slice.From(transaction.Allocator, name, out Slice fileName))
             {
-                var stream = fileTree.ReadStream(fileName);
+                var stream = fileTree.ReadStream(fileName, releaseTransactionOnDispose: true);
                 if (stream == null)
                     throw new FileNotFoundException("Could not find index input", name);
 
