@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
@@ -45,7 +46,16 @@ namespace Raven.Server.Documents.Indexes
             if (_filters == null || _filters.Consumed == false)
                 _filters = CollectionOfBloomFilters.Load(mode, indexContext);
 
-            return _filters;
+            return new DisposableAction(() =>
+            {
+                // If the filters are not consumed, they hold a reference to a Tree which holds 
+                // a reference to a LowLevelTransaction. We must release that reference when the 
+                // transaction ends to avoid keeping the LowLevelTransaction alive (e.g. when the 
+                // index is idle or disabled). We always reload _filters at the start of each transaction anyway.
+                // When consumed, the filters were created with tree: null, so no transaction reference is held.
+                if (_filters.Consumed == false)
+                    _filters = null;
+            });
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
