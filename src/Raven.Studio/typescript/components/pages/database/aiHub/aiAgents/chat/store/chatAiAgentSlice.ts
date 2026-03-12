@@ -167,7 +167,7 @@ const runChat = createAsyncThunk(
         const result = await services.aiAgentService.runAiAgent(
             databaseName,
             {
-                UserPrompt: getUserPrompt(toolCallParameters?.length ?? 0, formValues.prompts),
+                UserPrompt: createUserPromptDto(toolCallParameters?.length ?? 0, formValues.prompts),
                 ArtificialActions: [],
                 ActionResponses: toolCallParameters?.map((x) => ({
                     ToolId: x.id,
@@ -175,10 +175,7 @@ const runChat = createAsyncThunk(
                 })),
                 AttachmentCommands: null,
                 CreationOptions: {
-                    Parameters:
-                        conversationId == null
-                            ? Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value]))
-                            : null,
+                    Parameters: createParametersDto(conversationId, formValues.parameters),
                     ExpirationInSec:
                         (isDocumentExpirationEnabled || formValues.isEnableDocumentExpiration) &&
                         formValues.isDocumentExpireInCustomizeEnabled
@@ -190,13 +187,14 @@ const runChat = createAsyncThunk(
             conversationId != null ? conversationId : formValues.persistenceConversationIdPrefix,
             changeVector
         );
+
         dispatch(chatAiAgentActions.activePromptIndexSet(0));
         dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
         await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();
     }
 );
 
-function getUserPrompt(
+function createUserPromptDto(
     toolCallParametersCount: number,
     prompts: ChatAiAgentFormData["prompts"]
 ): RunAiAgentRequestDto["UserPrompt"] {
@@ -213,6 +211,25 @@ function getUserPrompt(
     }
 
     return prompts[0].text;
+}
+
+function createParametersDto(
+    conversationId: string,
+    formParameters: ChatAiAgentFormData["parameters"]
+): Record<string, Raven.Client.Documents.AI.AiConversationParameter> {
+    if (conversationId) {
+        return null;
+    }
+
+    return Object.fromEntries(
+        formParameters.map((x) => [
+            x.name,
+            {
+                Value: x.value,
+                SendToModel: true,
+            },
+        ])
+    );
 }
 
 const getIsDocumentExpirationEnabled = createAsyncThunk(
