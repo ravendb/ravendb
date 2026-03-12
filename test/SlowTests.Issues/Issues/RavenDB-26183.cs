@@ -334,7 +334,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .WhereLessThanOrEqual("HiredAt", Time.Now)
+                    .WhereLessThanOrEqual("HiredAt", RavenDocumentQuery.Now())
                     .WaitForNonStaleResults();
 
                 Assert.Equal("from 'Employees' where HiredAt <= now()", query.ToString());
@@ -362,7 +362,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .WhereGreaterThanOrEqual("HiredAt", Time.Now)
+                    .WhereGreaterThanOrEqual("HiredAt", RavenDocumentQuery.Now())
                     .WaitForNonStaleResults();
 
                 Assert.Equal("from 'Employees' where HiredAt >= now()", query.ToString());
@@ -391,7 +391,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .WhereLessThan("HiredAt", Time.Today)
+                    .WhereLessThan("HiredAt", RavenDocumentQuery.Today())
                     .WaitForNonStaleResults();
 
                 Assert.Equal("from 'Employees' where HiredAt < today()", query.ToString());
@@ -419,7 +419,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .WhereGreaterThanOrEqual("HiredAt", Time.Today)
+                    .WhereGreaterThanOrEqual("HiredAt", RavenDocumentQuery.Today())
                     .WaitForNonStaleResults();
 
                 Assert.Equal("from 'Employees' where HiredAt >= today()", query.ToString());
@@ -448,7 +448,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .AsyncDocumentQuery<Employee>()
-                    .WhereLessThanOrEqual("HiredAt", Time.Now)
+                    .WhereLessThanOrEqual("HiredAt", RavenDocumentQuery.Now())
                     .WaitForNonStaleResults();
 
                 Assert.Equal("from 'Employees' where HiredAt <= now()", query.ToString());
@@ -476,7 +476,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .AsyncDocumentQuery<Employee>()
-                    .WhereGreaterThanOrEqual("HiredAt", Time.Today)
+                    .WhereGreaterThanOrEqual("HiredAt", RavenDocumentQuery.Today())
                     .WaitForNonStaleResults();
 
                 Assert.Equal("from 'Employees' where HiredAt >= today()", query.ToString());
@@ -497,7 +497,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .WhereEquals("HiredAt", Time.Now);
+                    .WhereEquals("HiredAt", RavenDocumentQuery.Now());
 
                 Assert.Equal("from 'Employees' where HiredAt = now()", query.ToString());
             }
@@ -514,7 +514,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .WhereEquals("HiredAt", Time.Today);
+                    .WhereEquals("HiredAt", RavenDocumentQuery.Today());
 
                 Assert.Equal("from 'Employees' where HiredAt = today()", query.ToString());
             }
@@ -566,27 +566,27 @@ public class RavenDB_26183 : RavenTestBase
             using (var session = store.OpenSession())
             {
                 var queryGt = session.Advanced.DocumentQuery<Employee>()
-                    .WhereGreaterThan("HiredAt", Time.Now);
+                    .WhereGreaterThan("HiredAt", RavenDocumentQuery.Now());
                 Assert.Equal("from 'Employees' where HiredAt > now()", queryGt.ToString());
 
                 var queryGte = session.Advanced.DocumentQuery<Employee>()
-                    .WhereGreaterThanOrEqual("HiredAt", Time.Now);
+                    .WhereGreaterThanOrEqual("HiredAt", RavenDocumentQuery.Now());
                 Assert.Equal("from 'Employees' where HiredAt >= now()", queryGte.ToString());
 
                 var queryLt = session.Advanced.DocumentQuery<Employee>()
-                    .WhereLessThan("HiredAt", Time.Now);
+                    .WhereLessThan("HiredAt", RavenDocumentQuery.Now());
                 Assert.Equal("from 'Employees' where HiredAt < now()", queryLt.ToString());
 
                 var queryLte = session.Advanced.DocumentQuery<Employee>()
-                    .WhereLessThanOrEqual("HiredAt", Time.Now);
+                    .WhereLessThanOrEqual("HiredAt", RavenDocumentQuery.Now());
                 Assert.Equal("from 'Employees' where HiredAt <= now()", queryLte.ToString());
 
                 var queryEq = session.Advanced.DocumentQuery<Employee>()
-                    .WhereEquals("HiredAt", Time.Now);
+                    .WhereEquals("HiredAt", RavenDocumentQuery.Now());
                 Assert.Equal("from 'Employees' where HiredAt = now()", queryEq.ToString());
 
                 var queryNeq = session.Advanced.DocumentQuery<Employee>()
-                    .WhereNotEquals("HiredAt", Time.Now);
+                    .WhereNotEquals("HiredAt", RavenDocumentQuery.Now());
                 Assert.Equal("from 'Employees' where HiredAt != now()", queryNeq.ToString());
             }
         }
@@ -688,7 +688,7 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var query = session.Advanced
                     .DocumentQuery<Employee>()
-                    .Filter(f => f.LessThanOrEqual("HiredAt", Time.Now))
+                    .Filter(f => f.LessThanOrEqual("HiredAt", RavenDocumentQuery.Now()))
                     .WaitForNonStaleResults();
 
                 var employees = query.ToList();
