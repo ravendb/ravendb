@@ -36,7 +36,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
             if (document == null)
             {
-                throw new InvalidOperationException($"Cannot apply json patch because the document {_id} does not exist");
+                _patchResult = new JsonPatchResult { Status = PatchStatus.DocumentDoesNotExist };
+                return 1;
             }
 
             try
