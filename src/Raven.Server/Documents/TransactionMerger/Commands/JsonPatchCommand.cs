@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not Raven.Client.Exceptions.SchemaValidation.SchemaValidationException)
             {
                 throw new InvalidOperationException($"An error occurred while trying to apply json patch operation to document {_id}.", ex);
             }
