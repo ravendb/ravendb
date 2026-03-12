@@ -15,6 +15,7 @@ using Voron;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -462,16 +463,26 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
         private ByteStringContext _allocator;
+        private long _nullTermContainerId;
+        private long _nonExistingTermContainerId;
+        private bool _nullFirst;
+
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
 
         public void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
         {
             _comparerId = comparerId;
-            _reader = match._searcher.TermsReaderFor(match._orderMetadata[_comparerId].Field.FieldName);
-            _dictionaryId = match._searcher.GetDictionaryIdFor(match._orderMetadata[_comparerId].Field.FieldName);
-            _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata[_comparerId].Field.FieldName);
+            var fieldName = match._orderMetadata[_comparerId].Field.FieldName;
+            _reader = match._searcher.TermsReaderFor(fieldName);
+            _dictionaryId = match._searcher.GetDictionaryIdFor(fieldName);
+            _lookup = match._searcher.EntriesToTermsReader(fieldName);
             _batchResults = batchResults;
             _allocator = match._searcher.Allocator;
+            _nullFirst = match._nullFirst;
+            if (match._searcher.TryGetPostingListForNull(fieldName, out _, out _nullTermContainerId) == false)
+                _nullTermContainerId = SortingHelpers.InvalidTermId;
+            if (match._searcher.TryGetPostingListForNonExisting(fieldName, out _, out _nonExistingTermContainerId) == false)
+                _nonExistingTermContainerId = SortingHelpers.InvalidTermId;
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
@@ -487,6 +498,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
 
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, _nonExistingTermContainerId, _nullTermContainerId, long.MinValue);
             Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
             var documents = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchTermIds.Length; i++)
@@ -495,14 +507,27 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var heapCapacity = match._take == -1 ? batchResults.Length : Math.Min(match._take, batchResults.Length);
             using var _ = _allocator.Allocate(heapCapacity, out Span<ByteString> terms);
             var secondaryComparers = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
-            var heapSorter = HeapSorterBuilder.BuildCompoundAlphanumericalSorter(documents.Slice(0, heapCapacity), terms, _allocator, orderMetadata[0].Ascending == false, secondaryComparers);
-           
-            for (int i = 0; i < batchTermIds.Length; i++)
-                heapSorter.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
+            var heapSorter = HeapSorterBuilder.BuildCompoundAlphanumericalSorter(documents.Slice(0, heapCapacity), terms, _allocator, orderMetadata[0].Ascending == false, secondaryComparers, match._nullFirst);
 
-            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer);
+            ContextBoundNativeList<int> nullIndexes = default;
+            for (int i = 0; i < batchTermIds.Length; i++)
+            {
+                var term = batchTerms[i];
+                if (term.Address == null)
+                {
+                    if (nullIndexes.HasContext == false)
+                        nullIndexes = new ContextBoundNativeList<int>(_allocator);
+                    nullIndexes.Add(i);
+                    continue;
+                }
+                heapSorter.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
+            }
+
+            heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer, nullIndexes);
+            
+            nullIndexes.Dispose();
         }
-        
+
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
             throw new NotSupportedException($"Method `{nameof(Compare)} for `{nameof(UnmanagedSpan)}` should never be used.");
@@ -510,6 +535,34 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         public int Compare(int x, int y)
         {
+            if (_lookup == null)
+                return 0;
+
+            Span<long> buffer = [_batchResults[x], _batchResults[y], -1, -1];
+            var swap = buffer[0] > buffer[1];
+            if (swap) 
+                buffer[..2].Reverse();
+            _lookup.GetFor(buffer[..2], buffer[2..], long.MinValue);
+            
+            if (swap) 
+                buffer[2..].Reverse();
+            
+            if (buffer[2] == _nullTermContainerId || buffer[2] == _nonExistingTermContainerId)
+                buffer[2] = long.MinValue;
+            if (buffer[3] == _nullTermContainerId || buffer[3] == _nonExistingTermContainerId)
+                buffer[3] = long.MinValue;
+
+            var xIsNull = buffer[2] == long.MinValue;
+            var yIsNull = buffer[3] == long.MinValue;
+
+            if (xIsNull || yIsNull)
+            {
+                if (xIsNull && yIsNull) return 0;
+                return _nullFirst 
+                    ? (xIsNull ? -1 : 1) 
+                    : (xIsNull ? 1 : -1);
+            }
+
             _reader.GetDecodedTermsByIds(_dictionaryId, _batchResults[x], out var xTerm, _batchResults[y], out var yTerm);
             return AlphanumericalComparer.Instance.Compare(xTerm, yTerm);
         }

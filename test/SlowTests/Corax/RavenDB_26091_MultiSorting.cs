@@ -15,353 +15,320 @@ namespace SlowTests.Corax;
 
 public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingString(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = fieldFirst
-            ? await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.Name)
-                .OrderBy(x => x.ToIgnore)
-                .ToListAsync()
-            : await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.ToIgnore)
-                .OrderBy(x => x.Name)
-                .ToListAsync();
+        IAsyncDocumentQuery<Document> query = isAutoIndex
+            ? session.Advanced.AsyncDocumentQuery<Document>()
+            : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>();
 
-        Assert.Equal(4, queryResults.Count);
-
-        if (nullFirst)
+        query = query.WhereExists(x => x.Id);
+        if (fieldFirst)
         {
-            Assert.Null(queryResults[0].Name);
-            Assert.Null(queryResults[1].Name);
-            Assert.Equal("a", queryResults[2].Name);
-            Assert.Equal("b", queryResults[3].Name);
+            query = isAscending ? query.OrderBy(x => x.Name) : query.OrderByDescending(x => x.Name);
+            query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
-            Assert.Equal("a", queryResults[0].Name);
-            Assert.Equal("b", queryResults[1].Name);
-            Assert.Null(queryResults[2].Name);
-            Assert.Null(queryResults[3].Name);
+            query = query.OrderBy(x => x.ToIgnore);
+            query = isAscending ? query.OrderBy(x => x.Name) : query.OrderByDescending(x => x.Name);
+        }
+        var queryResults = await query.ToListAsync();
+
+        Assert.Equal(4, queryResults.Count);
+
+        switch (IsAscending: isAscending, NullFirst: nullFirst)
+        {
+            case (IsAscending: true, NullFirst: true):
+                Assert.Null(queryResults[0].Name);
+                Assert.Null(queryResults[1].Name);
+                Assert.Equal("a", queryResults[2].Name);
+                Assert.Equal("b", queryResults[3].Name);
+                break;
+            case (IsAscending: false, NullFirst: true):
+                Assert.Equal("b", queryResults[0].Name);
+                Assert.Equal("a", queryResults[1].Name);
+                Assert.Null(queryResults[2].Name);
+                Assert.Null(queryResults[3].Name);
+                break;
+            case (IsAscending: true, NullFirst: false):
+                Assert.Equal("a", queryResults[0].Name);
+                Assert.Equal("b", queryResults[1].Name);
+                Assert.Null(queryResults[2].Name);
+                Assert.Null(queryResults[3].Name);
+                break;
+            case (IsAscending: false, NullFirst: false):
+                Assert.Null(queryResults[0].Name);
+                Assert.Null(queryResults[1].Name);
+                Assert.Equal("b", queryResults[2].Name);
+                Assert.Equal("a", queryResults[3].Name);
+                break;
         }
     }
 
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingInt(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = fieldFirst
-            ? await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.IntValue, OrderingType.Long)
-                .OrderBy(x => x.ToIgnore)
-                .ToListAsync()
-            : await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.ToIgnore)
-                .OrderBy(x => x.IntValue, OrderingType.Long)
-                .ToListAsync();
+        IAsyncDocumentQuery<Document> query = isAutoIndex
+            ? session.Advanced.AsyncDocumentQuery<Document>()
+            : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>();
 
-        Assert.Equal(4, queryResults.Count);
-
-        if (nullFirst)
+        query = query.WhereExists(x => x.Id);
+        if (fieldFirst)
         {
-            Assert.Null(queryResults[0].IntValue);
-            Assert.Null(queryResults[1].IntValue);
-            Assert.Equal(1, queryResults[2].IntValue);
-            Assert.Equal(2, queryResults[3].IntValue);
+            query = isAscending ? query.OrderBy(x => x.IntValue, OrderingType.Long) : query.OrderByDescending(x => x.IntValue, OrderingType.Long);
+            query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
-            Assert.Equal(1, queryResults[0].IntValue);
-            Assert.Equal(2, queryResults[1].IntValue);
-            Assert.Null(queryResults[2].IntValue);
-            Assert.Null(queryResults[3].IntValue);
+            query = query.OrderBy(x => x.ToIgnore);
+            query = isAscending ? query.OrderBy(x => x.IntValue, OrderingType.Long) : query.OrderByDescending(x => x.IntValue, OrderingType.Long);
+        }
+        var queryResults = await query.ToListAsync();
+
+        Assert.Equal(4, queryResults.Count);
+
+        switch (IsAscending: isAscending, NullFirst: nullFirst)
+        {
+            case (IsAscending: true, NullFirst: true):
+                Assert.Null(queryResults[0].IntValue);
+                Assert.Null(queryResults[1].IntValue);
+                Assert.Equal(1, queryResults[2].IntValue);
+                Assert.Equal(2, queryResults[3].IntValue);
+                break;
+            case (IsAscending: false, NullFirst: true):
+                Assert.Equal(2, queryResults[0].IntValue);
+                Assert.Equal(1, queryResults[1].IntValue);
+                Assert.Null(queryResults[2].IntValue);
+                Assert.Null(queryResults[3].IntValue);
+                break;
+            case (IsAscending: true, NullFirst: false):
+                Assert.Equal(1, queryResults[0].IntValue);
+                Assert.Equal(2, queryResults[1].IntValue);
+                Assert.Null(queryResults[2].IntValue);
+                Assert.Null(queryResults[3].IntValue);
+                break;
+            case (IsAscending: false, NullFirst: false):
+                Assert.Null(queryResults[0].IntValue);
+                Assert.Null(queryResults[1].IntValue);
+                Assert.Equal(2, queryResults[2].IntValue);
+                Assert.Equal(1, queryResults[3].IntValue);
+                break;
         }
     }
 
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDouble(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = fieldFirst
-            ? await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.DoubleValue, OrderingType.Double)
-                .OrderBy(x => x.ToIgnore)
-                .ToListAsync()
-            : await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.ToIgnore)
-                .OrderBy(x => x.DoubleValue, OrderingType.Double)
-                .ToListAsync();
+        IAsyncDocumentQuery<Document> query = isAutoIndex
+            ? session.Advanced.AsyncDocumentQuery<Document>()
+            : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>();
 
-        Assert.Equal(4, queryResults.Count);
-
-        if (nullFirst)
+        query = query.WhereExists(x => x.Id);
+        if (fieldFirst)
         {
-            Assert.Null(queryResults[0].DoubleValue);
-            Assert.Null(queryResults[1].DoubleValue);
-            Assert.Equal(1, queryResults[2].DoubleValue);
-            Assert.Equal(2, queryResults[3].DoubleValue);
+            query = isAscending ? query.OrderBy(x => x.DoubleValue, OrderingType.Double) : query.OrderByDescending(x => x.DoubleValue, OrderingType.Double);
+            query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
-            Assert.Equal(1, queryResults[0].DoubleValue);
-            Assert.Equal(2, queryResults[1].DoubleValue);
-            Assert.Null(queryResults[2].DoubleValue);
-            Assert.Null(queryResults[3].DoubleValue);
+            query = query.OrderBy(x => x.ToIgnore);
+            query = isAscending ? query.OrderBy(x => x.DoubleValue, OrderingType.Double) : query.OrderByDescending(x => x.DoubleValue, OrderingType.Double);
+        }
+        var queryResults = await query.ToListAsync();
+
+        Assert.Equal(4, queryResults.Count);
+
+        switch (IsAscending: isAscending, NullFirst: nullFirst)
+        {
+            case (IsAscending: true, NullFirst: true):
+                Assert.Null(queryResults[0].DoubleValue);
+                Assert.Null(queryResults[1].DoubleValue);
+                Assert.Equal(1, queryResults[2].DoubleValue);
+                Assert.Equal(2, queryResults[3].DoubleValue);
+                break;
+            case (IsAscending: false, NullFirst: true):
+                Assert.Equal(2, queryResults[0].DoubleValue);
+                Assert.Equal(1, queryResults[1].DoubleValue);
+                Assert.Null(queryResults[2].DoubleValue);
+                Assert.Null(queryResults[3].DoubleValue);
+                break;
+            case (IsAscending: true, NullFirst: false):
+                Assert.Equal(1, queryResults[0].DoubleValue);
+                Assert.Equal(2, queryResults[1].DoubleValue);
+                Assert.Null(queryResults[2].DoubleValue);
+                Assert.Null(queryResults[3].DoubleValue);
+                break;
+            case (IsAscending: false, NullFirst: false):
+                Assert.Null(queryResults[0].DoubleValue);
+                Assert.Null(queryResults[1].DoubleValue);
+                Assert.Equal(2, queryResults[2].DoubleValue);
+                Assert.Equal(1, queryResults[3].DoubleValue);
+                break;
         }
     }
 
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingStringDescendingBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingAlphaNumeric(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
         using var session = store.OpenAsyncSession();
 
-        var queryResults = fieldFirst
-            ? await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderByDescending(x => x.Name)
-                .OrderBy(x => x.ToIgnore)
-                .ToListAsync()
-            : await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.ToIgnore)
-                .OrderByDescending(x => x.Name)
-                .ToListAsync();
+        IAsyncDocumentQuery<Document> query = isAutoIndex
+            ? session.Advanced.AsyncDocumentQuery<Document>()
+            : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>();
 
-        Assert.Equal(4, queryResults.Count);
-
-        if (nullFirst)
+        query = query.WhereExists(x => x.Id);
+        if (fieldFirst)
         {
-            Assert.Equal("b", queryResults[0].Name);
-            Assert.Equal("a", queryResults[1].Name);
-            Assert.Null(queryResults[2].Name);
-            Assert.Null(queryResults[3].Name);
+            query = isAscending ? query.OrderBy(x => x.Name, OrderingType.AlphaNumeric) : query.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric);
+            query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
-            Assert.Null(queryResults[0].Name);
-            Assert.Null(queryResults[1].Name);
-            Assert.Equal("b", queryResults[2].Name);
-            Assert.Equal("a", queryResults[3].Name);
+            query = query.OrderBy(x => x.ToIgnore);
+            query = isAscending ? query.OrderBy(x => x.Name, OrderingType.AlphaNumeric) : query.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric);
         }
-    }
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingIntDescendingBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
-    {
-        using var store = await CreateDocumentsAndIndexes(options, nullFirst);
-        using var session = store.OpenAsyncSession();
-
-        var queryResults = fieldFirst
-            ? await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderByDescending(x => x.IntValue, OrderingType.Long)
-                .OrderBy(x => x.ToIgnore)
-                .ToListAsync()
-            : await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.ToIgnore)
-                .OrderByDescending(x => x.IntValue, OrderingType.Long)
-                .ToListAsync();
+        var queryResults = await query.ToListAsync();
 
         Assert.Equal(4, queryResults.Count);
 
-        if (nullFirst)
+        switch (IsAscending: isAscending, NullFirst: nullFirst)
         {
-            Assert.Equal(2, queryResults[0].IntValue);
-            Assert.Equal(1, queryResults[1].IntValue);
-            Assert.Null(queryResults[2].IntValue);
-            Assert.Null(queryResults[3].IntValue);
-        }
-        else
-        {
-            Assert.Null(queryResults[0].IntValue);
-            Assert.Null(queryResults[1].IntValue);
-            Assert.Equal(2, queryResults[2].IntValue);
-            Assert.Equal(1, queryResults[3].IntValue);
-        }
-    }
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingAutoIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document>());
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingStaticIndex(Options options, bool nullFirst, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(options, nullFirst, fieldFirst, session => session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>());
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDoubleDescendingBase(Options options, bool nullFirst, bool fieldFirst, Func<IAsyncDocumentSession, IAsyncDocumentQuery<Document>> queryCreator)
-    {
-        using var store = await CreateDocumentsAndIndexes(options, nullFirst);
-        using var session = store.OpenAsyncSession();
-
-        var queryResults = fieldFirst
-            ? await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderByDescending(x => x.DoubleValue, OrderingType.Double)
-                .OrderBy(x => x.ToIgnore)
-                .ToListAsync()
-            : await queryCreator(session)
-                .WhereExists(x => x.Id)
-                .OrderBy(x => x.ToIgnore)
-                .OrderByDescending(x => x.DoubleValue, OrderingType.Double)
-                .ToListAsync();
-
-        Assert.Equal(4, queryResults.Count);
-
-        if (nullFirst)
-        {
-            Assert.Equal(2, queryResults[0].DoubleValue);
-            Assert.Equal(1, queryResults[1].DoubleValue);
-            Assert.Null(queryResults[2].DoubleValue);
-            Assert.Null(queryResults[3].DoubleValue);
-        }
-        else
-        {
-            Assert.Null(queryResults[0].DoubleValue);
-            Assert.Null(queryResults[1].DoubleValue);
-            Assert.Equal(2, queryResults[2].DoubleValue);
-            Assert.Equal(1, queryResults[3].DoubleValue);
+            case (IsAscending: true, NullFirst: true):
+                Assert.Null(queryResults[0].Name);
+                Assert.Null(queryResults[1].Name);
+                Assert.Equal("a", queryResults[2].Name);
+                Assert.Equal("b", queryResults[3].Name);
+                break;
+            case (IsAscending: false, NullFirst: true):
+                Assert.Equal("b", queryResults[0].Name);
+                Assert.Equal("a", queryResults[1].Name);
+                Assert.Null(queryResults[2].Name);
+                Assert.Null(queryResults[3].Name);
+                break;
+            case (IsAscending: true, NullFirst: false):
+                Assert.Equal("a", queryResults[0].Name);
+                Assert.Equal("b", queryResults[1].Name);
+                Assert.Null(queryResults[2].Name);
+                Assert.Null(queryResults[3].Name);
+                break;
+            case (IsAscending: false, NullFirst: false):
+                Assert.Null(queryResults[0].Name);
+                Assert.Null(queryResults[1].Name);
+                Assert.Equal("b", queryResults[2].Name);
+                Assert.Equal("a", queryResults[3].Name);
+                break;
         }
     }
 
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialAutoIndex(Options options, bool nullFirst, bool ascending, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(options, nullFirst, autoIndex: true, ascending, fieldFirst);
-
-    [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
-    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialStaticIndex(Options options, bool nullFirst, bool ascending, bool fieldFirst) => await
-        CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(options, nullFirst, autoIndex: false, ascending, fieldFirst);
-
-    private async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatialBase(Options options, bool nullFirst, bool autoIndex, bool ascending, bool fieldFirst)
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatial(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
-        using var store = await CreateDocumentsAndIndexes(options, nullFirst, autoIndex);
+        using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex);
         using var session = store.OpenAsyncSession();
 
-        var orderClause = ascending ? "" : " desc";
+        var orderClause = isAscending ? "" : " desc";
         string rql;
 
         if (fieldFirst)
         {
-            rql = autoIndex
+            rql = isAutoIndex
                 ? $"from Documents where exists(ToIgnore) order by spatial.distance(spatial.point(Location.Latitude, Location.Longitude), spatial.point(0,0)){orderClause}, ToIgnore"
                 : $"from index '{new DocumentIndex().IndexName}' where exists(ToIgnore) order by spatial.distance(Location, spatial.point(0,0)){orderClause}, ToIgnore";
         }
         else
         {
-            rql = autoIndex
+            rql = isAutoIndex
                 ? $"from Documents where exists(ToIgnore) order by ToIgnore, spatial.distance(spatial.point(Location.Latitude, Location.Longitude), spatial.point(0,0)){orderClause}"
                 : $"from index '{new DocumentIndex().IndexName}' where exists(ToIgnore) order by ToIgnore, spatial.distance(Location, spatial.point(0,0)){orderClause}";
         }
@@ -370,9 +337,9 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
 
         Assert.Equal(4, queryResults.Count);
 
-        switch (ascending, nullFirst)
+        switch (IsAscending: isAscending, NullFirst: nullFirst)
         {
-            case (ascending: true, nullFirst: true):
+            case (IsAscending: true, NullFirst: true):
                 Assert.Null(queryResults[0].Location);
                 Assert.Null(queryResults[1].Location);
                 Assert.Equal(expected: 10, actual: queryResults[2].Location.Latitude);
@@ -381,7 +348,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
                 Assert.Equal(expected: 20, actual: queryResults[3].Location.Longitude);
                 break;
 
-            case (ascending: true, nullFirst: false):
+            case (IsAscending: true, NullFirst: false):
                 Assert.Equal(expected: 10, actual: queryResults[0].Location.Latitude);
                 Assert.Equal(expected: 10, actual: queryResults[0].Location.Longitude);
                 Assert.Equal(expected: 20, actual: queryResults[1].Location.Latitude);
@@ -390,7 +357,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
                 Assert.Null(queryResults[3].Location);
                 break;
 
-            case (ascending: false, nullFirst: true):
+            case (IsAscending: false, NullFirst: true):
                 Assert.Equal(expected: 20, actual: queryResults[0].Location.Latitude);
                 Assert.Equal(expected: 20, actual: queryResults[0].Location.Longitude);
                 Assert.Equal(expected: 10, actual: queryResults[1].Location.Latitude);
@@ -399,7 +366,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
                 Assert.Null(queryResults[3].Location);
                 break;
 
-            case (ascending: false, nullFirst: false):
+            case (IsAscending: false, NullFirst: false):
                 Assert.Null(queryResults[0].Location);
                 Assert.Null(queryResults[1].Location);
                 Assert.Equal(expected: 20, actual: queryResults[2].Location.Latitude);

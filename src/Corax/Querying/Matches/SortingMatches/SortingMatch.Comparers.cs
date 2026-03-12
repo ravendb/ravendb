@@ -15,6 +15,7 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -438,6 +439,8 @@ unsafe partial struct SortingMatch<TInner>
 
     private struct EntryComparerByTermAlphaNumeric : IEntryComparer, IComparer<UnmanagedSpan>
     {
+        public long NonExistingTermContainerId;
+        public long NullTermContainerId;
         private TermsReader _reader;
         private long _dictionaryId;
         private Lookup<Int64LookupKey> _lookup;
@@ -452,10 +455,15 @@ unsafe partial struct SortingMatch<TInner>
             _lookup = match._searcher.EntriesToTermsReader(match._orderMetadata.Field.FieldName);
             _take = match._take;
             _allocator = match._searcher.Allocator;
+            if (match._searcher.TryGetPostingListForNull(match._orderMetadata.Field.FieldName, out _, out NullTermContainerId) == false)
+                NullTermContainerId = SortingHelpers.InvalidTermId;
+            if (match._searcher.TryGetPostingListForNonExisting(match._orderMetadata.Field.FieldName, out _, out NonExistingTermContainerId) == false)
+                NonExistingTermContainerId = SortingHelpers.InvalidTermId;
         }
 
-  
-        
+
+
+
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false)
@@ -468,17 +476,33 @@ unsafe partial struct SortingMatch<TInner>
 
             match._cancellationToken.ThrowIfCancellationRequested();
             _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
+            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, NonExistingTermContainerId, NullTermContainerId, long.MinValue);
             Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
+
             var heapCapacity = _take == -1 ? batchResults.Length : Math.Min(_take, batchResults.Length);
             var documents = MemoryMarshal.Cast<long, int>(batchTermIds)[..(heapCapacity)];
 
             using var _ = _allocator.Allocate(heapCapacity, out Span<ByteString> terms);
 
-            var heap = HeapSorterBuilder.BuildSingleAlphanumericalSorter(documents, terms, _allocator, descending);
+            var heap = HeapSorterBuilder.BuildSingleAlphanumericalSorter(documents, terms, _allocator, descending, match._nullFirst);
+            ContextBoundNativeList<int> nullIndexes = default;
+            
             for (int i = 0; i < batchTermIds.Length; i++)
+            {
+                var term = batchTerms[i];
+                if (term.Address == null)
+                {
+                    if (nullIndexes.HasContext == false)
+                        nullIndexes = new ContextBoundNativeList<int>(_allocator);
+                    nullIndexes.Add(i);
+                    continue;
+                }
+                
                 heap.Insert(i, _reader.GetDecodedTerm(_dictionaryId, batchTerms[i]));
+            }
+            
 
-            heap.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty);
+            heap.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty, nullIndexes);
         }
         
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)

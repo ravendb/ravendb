@@ -35,7 +35,7 @@ internal static class HeapSorterBuilder
 
 
     public static unsafe TextualMaxHeapSorter<SkipSecondaryComparer> BuildSingleAlphanumericalSorter(Span<int> documents, Span<ByteString> terms,
-        ByteStringContext allocator, bool descending)
+        ByteStringContext allocator, bool descending, bool nullFirst)
     {
         static int CompareAlphanumericalAscending(ref TextualMaxHeapSorter<SkipSecondaryComparer> sorter, ReadOnlySpan<byte> termA, int posA, ReadOnlySpan<byte> termB,
             int posB)
@@ -50,12 +50,12 @@ internal static class HeapSorterBuilder
         }
 
         var sorter = new TextualMaxHeapSorter<SkipSecondaryComparer>();
-        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, default);
+        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, default, nullFirst);
         return sorter;
     }
 
     public static unsafe TextualMaxHeapSorter<TSecondaryCmp> BuildCompoundAlphanumericalSorter<TSecondaryCmp>(Span<int> documents, Span<ByteString> terms,
-        ByteStringContext allocator, bool descending, TSecondaryCmp secondaryCmp) where TSecondaryCmp : IComparer<int>
+        ByteStringContext allocator, bool descending, TSecondaryCmp secondaryCmp, bool nullFirst) where TSecondaryCmp : IComparer<int>
     {
         static int CompareAlphanumericalAscending(ref TextualMaxHeapSorter<TSecondaryCmp> sorter, ReadOnlySpan<byte> termA, int posA, ReadOnlySpan<byte> termB, int posB)
         {
@@ -71,7 +71,7 @@ internal static class HeapSorterBuilder
         }
 
         var sorter = new TextualMaxHeapSorter<TSecondaryCmp>();
-        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, secondaryCmp);
+        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, secondaryCmp, nullFirst);
         return sorter;
     }
 
