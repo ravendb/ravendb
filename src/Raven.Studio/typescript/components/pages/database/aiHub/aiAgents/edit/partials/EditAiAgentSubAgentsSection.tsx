@@ -30,14 +30,14 @@ export default function EditAiAgentSubAgentsSection() {
                 <FormErrorIcon control={control} paths={["subAgents"]} onError={() => setIsPanelOpen(true)} />
                 <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
             </div>
-            <div className="mb-1">TODO</div>
+            <div className="mb-1">Choose current agents to act as a sub-agent for this one.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
                 <div>
                     <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                         <div className="hstack justify-content-between">
                             <div className="hstack gap-2">
-                                <div className="tool-icon bg-faded-primary border border-primary">
-                                    <Icon icon="ai-agents" color="primary" margin="m-0" />
+                                <div className="tool-icon bg-faded-primary border border-primary small">
+                                    <Icon icon="sub-agents" color="primary" margin="m-0" />
                                 </div>
                                 <div>
                                     Sub-agents
@@ -98,6 +98,9 @@ function SubAgentItem({ index, remove, save, edit }: SubAgentItemProps) {
 
     const subAgentItem = subAgents[index];
 
+    const isAgentNotFound =
+        subAgentItem.identifier && !allIdentifiersOptions.some((option) => option.value === subAgentItem.identifier);
+
     if (!subAgentItem.isEditing) {
         return (
             <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center">
@@ -132,12 +135,17 @@ function SubAgentItem({ index, remove, save, edit }: SubAgentItemProps) {
             </div>
             <hr className="mt-2 mb-3" />
             <FormGroup>
-                <FormLabel>Identifier</FormLabel>
+                <FormLabel>Agent identifier</FormLabel>
                 <FormSelectAutocomplete
                     control={control}
                     name={`subAgents.${index}.identifier`}
                     options={allIdentifiersOptions}
                 />
+                {isAgentNotFound && (
+                    <div className="text-warning mt-1 fw-bold">
+                        Warning: This agent is currently not found in your database
+                    </div>
+                )}
             </FormGroup>
             <FormGroup>
                 <FormLabel>Description</FormLabel>
@@ -147,6 +155,7 @@ function SubAgentItem({ index, remove, save, edit }: SubAgentItemProps) {
                     control={control}
                     name={`subAgents.${index}.description`}
                     rows={4}
+                    placeholder="TODO placeholder"
                 />
             </FormGroup>
         </div>
