@@ -33,6 +33,24 @@ namespace Raven.Client.Documents.Queries
         /// </example>
         public static MethodCall Today() => Time.TodayInstance;
 
+        /// <summary>
+        /// Retrieves a compare exchange value by key for use in a query filter. Translates to the <c>cmpxchg()</c> RQL function.
+        /// </summary>
+        /// <param name="key">The key of the compare exchange value.</param>
+        /// <example>
+        /// <code>
+        /// session.Advanced.DocumentQuery&lt;User&gt;()
+        ///     .WhereEquals(x => x.Name, RavenDocumentQuery.CmpXchg("active-user"));
+        /// </code>
+        /// </example>
+        public static MethodCall CmpXchg(string key)
+        {
+            return new Session.CmpXchg
+            {
+                Args = new object[] { key }
+            };
+        }
+
         internal sealed class Time : MethodCall
         {
             internal static readonly Time NowInstance = new Time(WhereToken.MethodsType.Now);
