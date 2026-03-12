@@ -668,8 +668,22 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime > 3 * _supervisorSamplePeriod;
+            var databaseEtag = -1L;
+            if (state.HasActiveMigrations() == false)
+            {
+                // if resharding is active skip - index staleness will not prevent it from being promoted
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This only a workaround until RavenDB-21327 will be fixed properly");
+                databaseEtag = promotablePrevDbStats.LastEtag;
+            }
 
-            if (lastSentEtag < mentorsEtag || timeDiff)
+            var indexesUpToDate = CheckIndexProgress(
+                databaseEtag,
+                promotablePrevDbStats.LastIndexStats,
+                promotableDbStats.LastIndexStats,
+                mentorCurrDbStats.LastIndexStats,
+                out var outdatedIndexesReason);
+
+            if (IsMentorAhead(lastSentEtag, mentorsEtag, timeDiff, indexesUpToDate))
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
@@ -710,22 +724,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var databaseEtag = -1L;
-            if (state.HasActiveMigrations() == false)
-            {
-                // if resharding is active skip - index staleness will not prevent it from being promoted
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This only a workaround until RavenDB-21327 will be fixed properly");
-                databaseEtag = promotablePrevDbStats.LastEtag;
-            }
-
-            var indexesCaughtUp = CheckIndexProgress(
-                databaseEtag,
-                promotablePrevDbStats.LastIndexStats,
-                promotableDbStats.LastIndexStats,
-                mentorCurrDbStats.LastIndexStats,
-                out var reason);
-
-            if (indexesCaughtUp)
+            if (indexesUpToDate)
             {
                 _logger.Log($"We try to promote the database '{dbName}' on {promotable} to be a full member", state.ObserverIteration, database: dbName);
 
@@ -735,17 +734,36 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (true, $"Node {promotable} is up-to-date so promoting it to be member");
             }
 
-            _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
+            _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {outdatedIndexesReason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
 
             if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
                 || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
             {
                 var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
+                if (mentorsEtag - lastSentEtag > 1000)
+                {
+                    // The log will include the etag-lag details if the Etag difference is significant (Etag difference > 1000).
+                    msg += $", and Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})";
+                }
+
                 topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
                 topology.DemotionReasons[promotable] = msg;
                 return (false, msg);
             }
             return (false, null);
+        }
+
+        private static bool IsMentorAhead(long lastSentEtag, long mentorsEtag, bool timeDiff, bool indexesUpToDate)
+        {
+            if (indexesUpToDate == false)
+            {
+                // Normally we avoid promotion when indexes are not up-to-date.
+                // In this case, we only log the index staleness.
+                // The log will include the etag-lag details if the Etag difference is significant (Etag difference > 1000).
+                return false;
+            }
+
+            return lastSentEtag < mentorsEtag || timeDiff;
         }
 
         protected virtual void RemoveOtherNodesIfNeeded(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
