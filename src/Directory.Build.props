@@ -107,7 +107,10 @@
   <ItemGroup>
     <None Include="..\..\scripts\assets\icon.png" Pack="true" Visible="false" PackagePath="" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0'">
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
+  </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" VersionOverride="10.0.104" PrivateAssets="All"/>
   </ItemGroup>
 </Project>
