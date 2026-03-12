@@ -168,24 +168,29 @@ public sealed class MetricsProvider
     {
         var result = new GcMetrics();
 
-        var info = _server.MetricCacher.GetValue<GCMemoryInfo>(MetricCacher.Keys.Server.GcAny);
+        var info = GC.GetGCMemoryInfo(GCKind.Any);
+        if (info.Index == 0)
+            return result;
 
-        result.Index = info.Index;
-        result.Generation = info.Generation;
-        result.Compacted = info.Compacted;
-        result.Concurrent = info.Concurrent;
-        result.FinalizationPendingCount = info.FinalizationPendingCount;
-        result.FragmentedInMb = new Size(info.FragmentedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        result.HeapSizeInMb = new Size(info.HeapSizeBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        result.HighMemoryLoadThresholdInMb = new Size(info.HighMemoryLoadThresholdBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        result.MemoryLoadInMb = new Size(info.MemoryLoadBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        result.PauseDurations1InSec = GetPauseSeconds(info, 0);
-        result.PauseDurations2InSec = GetPauseSeconds(info, 1);
-        result.PauseTimePercentage = info.PauseTimePercentage;
-        result.PinnedObjectsCount = info.PinnedObjectsCount;
-        result.PromotedInMb = new Size(info.PromotedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        result.TotalAvailableMemoryInMb = new Size(info.TotalAvailableMemoryBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
-        result.TotalCommittedInMb = new Size(info.TotalCommittedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+        result.Any = new GcMemoryInfoMetrics
+        {
+            Index = info.Index,
+            Generation = info.Generation,
+            Compacted = info.Compacted,
+            Concurrent = info.Concurrent,
+            FinalizationPendingCount = info.FinalizationPendingCount,
+            FragmentedInMb = new Size(info.FragmentedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            HeapSizeInMb = new Size(info.HeapSizeBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            HighMemoryLoadThresholdInMb = new Size(info.HighMemoryLoadThresholdBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            MemoryLoadInMb = new Size(info.MemoryLoadBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            PauseDurations1InSec = GetPauseSeconds(info, 0),
+            PauseDurations2InSec = GetPauseSeconds(info, 1),
+            PauseTimePercentage = info.PauseTimePercentage,
+            PinnedObjectsCount = info.PinnedObjectsCount,
+            PromotedInMb = new Size(info.PromotedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            TotalAvailableMemoryInMb = new Size(info.TotalAvailableMemoryBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            TotalCommittedInMb = new Size(info.TotalCommittedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes)
+        };
 
         return result;
     }

@@ -141,6 +141,19 @@ namespace Raven.Server.Utils.Monitoring
     }
     public sealed class GcMetrics
     {
+        public GcMemoryInfoMetrics Any { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Any)] = Any?.ToJson()
+            };
+        }
+    }
+
+    public sealed class GcMemoryInfoMetrics
+    {
         public long Index { get; set; }
         public int Generation { get; set; }
         public bool Compacted { get; set; }

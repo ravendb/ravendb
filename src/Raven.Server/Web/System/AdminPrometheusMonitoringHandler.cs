@@ -149,9 +149,9 @@ namespace Raven.Server.Web.System
                         new Size(serverMetrics.Memory.UnmanagedMemoryInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Bytes));
 
                     // gc
-                    if (includeGc)
+                    if (includeGc && serverMetrics.Gc?.Any != null)
                     {
-                        WriteGcMetrics(writer, serverMetrics.Gc);
+                        WriteGcMetrics(writer, serverMetrics.Gc.Any, "any");
                     }
 
                     // network
@@ -203,9 +203,9 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void WriteGcMetrics(StreamWriter writer, GcMetrics gcMetrics)
+        private void WriteGcMetrics(StreamWriter writer, GcMemoryInfoMetrics gcMetrics, string gcKind)
         {
-            var tags = SerializeTags(new Dictionary<string, string> { { "gckind", "any" } });
+            var tags = SerializeTags(new Dictionary<string, string> { { "gckind", gcKind } });
 
             // HELP strings for the GC metrics below are based on the official .NET API documentation for System.GCMemoryInfo
             // property descriptions, lightly adapted to match our Prometheus help style.
