@@ -51,10 +51,13 @@ namespace FastTests.Client
             options.AdminCertificate = adminCertificate;
             options.ClientCertificate = clientCertificate;
             options.ModifyDatabaseName = s => dbName;
-            options.ModifyDocumentStore = s => s.Conventions.HttpCompressionAlgorithm = compressionAlgorithm;
+            options.ModifyDocumentStore = s =>
+            {
+                s.Conventions.HttpCompressionAlgorithm = compressionAlgorithm;
 
-            if (useSsl)
-                options.ModifyDocumentStore = s => s.OnFailedRequest += (_, args) => Console.WriteLine($"Failed Request ('{args.Database}'): {args.Url}. Exception: {args.Exception}");
+                if (useSsl)
+                    s.OnFailedRequest += (_, args) => Console.WriteLine($"Failed Request ('{args.Database}'): {args.Url}. Exception: {args.Exception}");
+            };
 
             using (var store = GetDocumentStore(options))
             {
