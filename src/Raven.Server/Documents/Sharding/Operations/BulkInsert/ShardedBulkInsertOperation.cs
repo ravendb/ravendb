@@ -168,13 +168,6 @@ internal sealed class ShardedBulkInsertOperation : BulkInsertOperationBase<Shard
             }
         }
 
-        var disposeRequests = new ExceptionAggregator("Failed to dispose bulk insert requests opened per shard");
-
-        foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
-        {
-            disposeRequests.Execute(() => _writers?[shardNumber].DisposeRequestStream());
-        }
-
         var returnContexts = new ExceptionAggregator("Failed to return bulk insert contexts allocated per shard");
 
         foreach (IDisposable returnContext in _returnContexts)
@@ -183,7 +176,6 @@ internal sealed class ShardedBulkInsertOperation : BulkInsertOperationBase<Shard
         }
 
         disposeOperations.ThrowIfNeeded();
-        disposeRequests.ThrowIfNeeded();
         returnContexts.ThrowIfNeeded();
     }
 }

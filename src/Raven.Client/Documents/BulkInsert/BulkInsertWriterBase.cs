@@ -75,7 +75,7 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
                         // Without compression, _requestBodyStream IS the HTTP stream,
                         // and disposing it would cause an ObjectDisposedException.
                         if (_isCompressionEnabled)
-                            DisposeRequestStream();
+                            _requestBodyStream.Dispose();
                     }
                 }
                 finally
@@ -204,10 +204,5 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     public virtual async ValueTask DisposeAsync()
     {
         await _disposeOnce.DisposeAsync().ConfigureAwait(false);
-    }
-
-    public void DisposeRequestStream()
-    {
-        _requestBodyStream?.Dispose();
     }
 }
